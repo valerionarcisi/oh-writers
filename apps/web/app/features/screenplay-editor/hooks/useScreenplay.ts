@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { unwrapResult } from "@oh-writers/utils";
+import { computeSaveStatus, type SaveState } from "@oh-writers/ui";
 import { useSaveStatePublisher } from "~/features/app-shell";
 import {
   getScreenplay,
@@ -62,9 +63,18 @@ export const useAutoSave = (
   savedContent: string,
   pmDoc: Record<string, unknown> | null,
   disabled: boolean = false,
+  // Optional content normaliser used ONLY for the dirty comparison (Spec 63 S2).
+  // The editor emits `docToFountain(doc)`, but a stored screenplay (PDF import,
+  // Cesare plain edit, older save) is NOT the serializer's canonical form —
+  // `docToFountain(fountainToDoc(x)) !== x` for normal inputs (the serializer
+  // re-indents character/dialogue and normalises blank lines). Without
+  // canonical comparison the screenplay is "dirty" on first render with zero
+  // edits → a phantom autosave fires and rewrites the stored content. Omitted →
+  // identity. The content we persist is always the raw `content`.
+  normalize: (s: string) => string = (s) => s,
 ): UseAutoSaveResult => {
   const save = useSaveScreenplay();
-  const isDirty = !disabled && content !== savedContent;
+  const isDirty = !disabled && normalize(content) !== normalize(savedContent);
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const [isOffline, setIsOffline] = useState(() =>
     typeof navigator !== "undefined" ? !navigator.onLine : false,
@@ -105,30 +115,37 @@ export const useAutoSave = (
   const flush = useCallback((): Promise<void> => {
     if (disabled) return Promise.resolve();
     const { screenplayId: id, content: c, pmDoc: d } = latest.current;
-    return save.mutateAsync({ screenplayId: id, content: c, pmDoc: d }).then(
-      () => undefined,
-      () => undefined, // swallow errors — caller doesn't need to handle
-    );
+    // Resolve on success, REJECT on failure (Spec 63 S3). The mutation's
+    // `isError` already drives the pill's `error` state; propagating the
+    // rejection also lets an awaiting caller (e.g. a "save before leave"
+    // guard) know the save did not land instead of silently continuing.
+    return save
+      .mutateAsync({ screenplayId: id, content: c, pmDoc: d })
+      .then(() => undefined);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [disabled]);
 
-  // Publish the auto-save state to the SaveStateProvider so the Viewbar
-  // pill ("Salvataggio…" / "Salvato N s fa" / "Offline") renders without
-  // each caller having to wire it. Choose the most informative state.
-  const publishedState = useMemo<
-    "saving" | "saved" | "offline" | undefined
-  >(() => {
+  // Publish the auto-save state to the SaveStateProvider so the Viewbar pill
+  // renders. The state machine is the SHARED one (Spec 63 F4) so the TopBar pill
+  // and the editor's own SaveIndicator agree: `dirty` is distinct from `saving`,
+  // and a failed save surfaces `error` (previously both collapsed into
+  // "saving"). `flush` makes the pill a "save now" button.
+  const publishedState = useMemo<SaveState | undefined>(() => {
     if (disabled) return undefined;
-    if (isOffline) return "offline";
-    if (save.isPending || isDirty) return "saving";
-    if (lastSavedAt !== null) return "saved";
-    return undefined;
-  }, [disabled, isOffline, save.isPending, isDirty, lastSavedAt]);
+    return computeSaveStatus({
+      isDirty,
+      isSaving: save.isPending,
+      isError: save.isError,
+      isOffline,
+    });
+  }, [disabled, isOffline, save.isPending, save.isError, isDirty]);
   const secondsAgo = useMemo(() => {
     if (!lastSavedAt) return undefined;
     return Math.floor((Date.now() - lastSavedAt) / 1000);
   }, [lastSavedAt]);
-  useSaveStatePublisher(publishedState, secondsAgo);
+  useSaveStatePublisher(publishedState, secondsAgo, () => {
+    void flush();
+  });
 
   return {
     isDirty,

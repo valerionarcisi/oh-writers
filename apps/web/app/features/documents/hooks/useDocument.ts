@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
-import { useSaveStatePublisher } from "~/features/app-shell";
+import { useEffect, useState } from "react";
 import {
   useMutation,
   useQuery,
@@ -99,7 +98,12 @@ export const useAutoSave = (
   lastSavedAt: number | null;
   flush: () => void;
 } => {
-  const isDirty = normalize(content) !== normalize(savedContent);
+  // Guard an empty document id: the logline autosave on a narrative page passes
+  // `loglineDoc?.id ?? ""` before the sibling logline doc has loaded. Saving with
+  // an empty id is a phantom request, so an unloaded doc is never "dirty" (Spec
+  // 63 P2).
+  const hasDoc = documentId !== "";
+  const isDirty = hasDoc && normalize(content) !== normalize(savedContent);
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
 
   useEffect(() => {
@@ -123,20 +127,13 @@ export const useAutoSave = (
     );
   };
 
-  // Publish to the SaveStateProvider so every narrative editor (soggetto,
-  // sinossi, scaletta, trattamento, logline) shows the auto-save pill in
-  // the Viewbar without each caller wiring it.
-  const publishedState = useMemo<"saving" | "saved" | undefined>(() => {
-    if (save.isPending || isDirty) return "saving";
-    if (lastSavedAt !== null) return "saved";
-    return undefined;
-  }, [save.isPending, isDirty, lastSavedAt]);
-  const secondsAgo = useMemo(() => {
-    if (!lastSavedAt) return undefined;
-    return Math.floor((Date.now() - lastSavedAt) / 1000);
-  }, [lastSavedAt]);
-  useSaveStatePublisher(publishedState, secondsAgo);
-
+  // NOTE: this hook does NOT publish to the SaveStateProvider. A narrative page
+  // runs two autosaves (the document + the shared logline pill), and the
+  // screenplay editor runs its own; if each instance published, they would race
+  // last-writer-wins and the TopBar pill would flicker / lie (Spec 63 P2). The
+  // page is the single publisher — it derives the pill state from the MAIN
+  // document's `{ isDirty, isSaving, isError, lastSavedAt }` and calls
+  // `useSaveStatePublisher` exactly once.
   return {
     isDirty,
     isSaving: save.isPending,

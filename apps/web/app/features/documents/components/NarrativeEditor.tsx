@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { EditorView } from "prosemirror-view";
 import { ContextActionIds, DocumentTypes } from "@oh-writers/domain";
 import type { DocumentType, TranslationKey } from "@oh-writers/domain";
-import { ActionsMenu, FloatingDock } from "@oh-writers/ui";
+import { ActionsMenu, FloatingDock, computeSaveStatus } from "@oh-writers/ui";
 import type { DocumentViewWithPermission } from "../server/documents.server";
 import {
   useAutoSave,
@@ -27,6 +27,7 @@ import { NarrativeDocsShell } from "./NarrativeDocsShell";
 import { MarginNotesColumn } from "./MarginNotesColumn";
 import { TreatmentToc } from "./TreatmentToc";
 import { getNarrativeSchema } from "../lib/narrative-schema";
+import { canonicalNarrativeHtml } from "../lib/narrative-html";
 import {
   isBulletListActive,
   isHeadingActive,
@@ -102,11 +103,28 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
 
   const [, forceToolbarUpdate] = useState(0);
   const save = useSaveDocument();
-  const { isDirty, flush } = useAutoSave(
+  // Spec 63 (extends Spec 61 beyond Soggetto) — compare dirtiness on the
+  // CANONICAL serialisation, not the raw string. The rich narrative editor
+  // emits HTML; a Cesare apply stores plain text. Without canonical comparison
+  // the round-trip looks "dirty" forever and the autosave clobbers the applied
+  // draft back (the flash-then-revert / "document deleted" bug) on Sinossi /
+  // Trattamento. Scaletta (Outline) serialises an outline string — canonicalise
+  // via parse→reserialise so a stable no-op re-serialisation is not dirty.
+  const normalizeContent = useCallback(
+    (s: string): string => {
+      if (type === DocumentTypes.OUTLINE)
+        return serializeOutline(parseOutline(s));
+      // Treatment uses headings in its schema; the others do not.
+      return canonicalNarrativeHtml(s, type === DocumentTypes.TREATMENT);
+    },
+    [type],
+  );
+  const { isDirty, isSaving, isError, lastSavedAt, flush } = useAutoSave(
     save,
     document.id,
     content,
     document.content,
+    normalizeContent,
   );
   // Spec 49 W4: Versions open via the ROUTER (`?versions=<docId>`), not the
   // legacy context drawer — same routed SplitDrawer as soggetto. The host page
@@ -167,13 +185,16 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
     if (content !== document.content) setHasEdited(true);
   }, [content, document.content]);
 
+  // Single publisher for the TopBar pill (Spec 63 P2): derived from the MAIN
+  // document's autosave only — never the logline autosave — and computing the
+  // full state so `dirty` (porcelain) is distinct from `saving` (in flight) and
+  // `error` surfaces a failed save. `flush` lets the pill act as a "save now"
+  // button (F3).
   const shouldPublishSave = hasEdited && !isReadOnly;
   const publishedSaveState = shouldPublishSave
-    ? save.isPending || isDirty
-      ? "saving"
-      : "saved"
+    ? computeSaveStatus({ isDirty, isSaving, isError, isOffline: false })
     : undefined;
-  useSaveStatePublisher(publishedSaveState);
+  useSaveStatePublisher(publishedSaveState, undefined, flush);
 
   const plainContent = isSynopsis || isTreatment ? stripHtml(content) : content;
   const charCount = plainContent.length;

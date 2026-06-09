@@ -19,28 +19,58 @@
   flex-shrink: 0;
 }
 
+/* State colours — green saved, orange dirty/saving (saving pulses to
+   distinguish it), red error, mute offline. Saving stays in the warning hue
+   rather than a blue because the design system is a clay/leaf bichromy with no
+   blue accent (Spec 63 F3/F4). */
+.saved {
+  color: var(--ds-success);
+}
 .saved .dot {
-  background: var(--ds-agent);
+  background: var(--ds-success);
+}
+
+.dirty {
+  color: var(--ds-warning);
+}
+.dirty .dot {
+  background: var(--ds-warning);
 }
 
 .saving {
   color: var(--ds-saving);
 }
-
 .saving .dot {
   background: var(--ds-saving);
   animation: pulse 1s var(--ds-ease) infinite;
 }
 
+.error {
+  color: var(--ds-danger);
+}
+.error .dot {
+  background: var(--ds-danger);
+}
+
+.offline {
+  color: var(--ds-text-mute);
+}
 .offline .dot {
   background: var(--ds-text-mute);
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0.3; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .saving .dot { animation: none; }
+  .saving .dot {
+    animation: none;
+  }
 }

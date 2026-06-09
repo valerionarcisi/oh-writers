@@ -1,7 +1,8 @@
 // packages/ui/src/primitives/SavePill/SavePill.tsx
 import styles from "./SavePill.module.css";
+import type { SaveState } from "./save-status";
 
-export type SaveState = "saved" | "saving" | "offline";
+export type { SaveState } from "./save-status";
 
 export type SavePillProps = {
   state: SaveState;
@@ -10,7 +11,9 @@ export type SavePillProps = {
 
 const labels: Record<SaveState, string> = {
   saved: "Salvato",
+  dirty: "Non salvato",
   saving: "Salvando…",
+  error: "Errore salvataggio",
   offline: "Offline",
 };
 

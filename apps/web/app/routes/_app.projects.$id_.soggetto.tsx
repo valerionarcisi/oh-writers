@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { match } from "ts-pattern";
 import { ContextActionIds, DocumentTypes } from "@oh-writers/domain";
-import { ActionsMenu, Skeleton } from "@oh-writers/ui";
+import { ActionsMenu, Skeleton, computeSaveStatus } from "@oh-writers/ui";
 import {
   canonicalNarrativeHtml,
   CesareUpdatedBanner,
@@ -29,6 +29,7 @@ import {
   useSetActiveDocument,
   useRoutedSurface,
   reportCurrentVersion,
+  useSaveStatePublisher,
 } from "~/features/app-shell";
 import type { ContextActionHandlers } from "~/features/app-shell";
 import { useSession } from "~/lib/auth-client";
@@ -220,12 +221,28 @@ function SoggettoPageReady({
     (s: string) => canonicalNarrativeHtml(s, true),
     [],
   );
-  useAutoSave(
+  const soggettoSave = useAutoSave(
     saveSoggetto,
     soggettoDoc.id,
     soggettoContent,
     soggettoDoc.content,
     normalizeSoggetto,
+  );
+  // Single publisher for the TopBar pill (Spec 63 P2): the soggetto document is
+  // the page's primary save state — never the logline autosave. Publish only
+  // after a real edit so an untouched page shows no stale "Salvato".
+  const soggettoEdited = soggettoContent !== soggettoDoc.content;
+  useSaveStatePublisher(
+    soggettoEdited
+      ? computeSaveStatus({
+          isDirty: soggettoSave.isDirty,
+          isSaving: soggettoSave.isSaving,
+          isError: soggettoSave.isError,
+          isOffline: false,
+        })
+      : undefined,
+    undefined,
+    soggettoSave.flush,
   );
   // "↩ Annulla" on the Cesare-updated banner restores the pre-edit version.
   const switchToPrevVersion = useSwitchToVersion(soggettoDoc.id);

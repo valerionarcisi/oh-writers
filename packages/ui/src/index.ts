@@ -108,6 +108,11 @@ export type {
 
 export { SavePill } from "./primitives/SavePill/SavePill";
 export type { SavePillProps, SaveState } from "./primitives/SavePill/SavePill";
+export {
+  computeSaveStatus,
+  SaveStatusValues,
+} from "./primitives/SavePill/save-status";
+export type { SaveStatusInput } from "./primitives/SavePill/save-status";
 
 export { Presence } from "./primitives/Presence/Presence";
 export type {

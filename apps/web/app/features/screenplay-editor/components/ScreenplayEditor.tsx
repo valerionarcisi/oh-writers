@@ -28,6 +28,8 @@ import {
   useRestoreVersion,
 } from "../hooks/useVersions";
 import { estimatePageCount } from "../lib/page-counter";
+import { docToFountain } from "../lib/doc-to-fountain";
+import { fountainToDoc } from "../lib/fountain-to-doc";
 import type { ElementType } from "../lib/fountain-element-detector";
 import { setElement } from "../lib/schema-commands";
 import { ProseMirrorView } from "./ProseMirrorView";
@@ -602,8 +604,24 @@ export const ScreenplayEditor = forwardRef<
   const currentPage = pageInfo.current;
   const totalPages = Math.max(pageInfo.total, fallbackTotalPages);
   const totalScenes = countHeadings(pmDoc);
+  // Spec 63 S2 — compare dirtiness on the CANONICAL fountain so a stored
+  // screenplay whose only difference from the editor's serialisation is
+  // indentation / blank-line normalisation is NOT seen as a local edit. Without
+  // this an externally-written screenplay (PDF import, Cesare) is dirty on first
+  // render and a phantom autosave clobbers the stored content.
+  const normalizeFountain = useCallback(
+    (s: string): string => docToFountain(fountainToDoc(s)),
+    [],
+  );
   const { isDirty, isSaving, isError, isOffline, lastSavedAt, flush } =
-    useAutoSave(screenplay.id, content, screenplay.content, pmDoc, isViewing);
+    useAutoSave(
+      screenplay.id,
+      content,
+      screenplay.content,
+      pmDoc,
+      isViewing,
+      normalizeFountain,
+    );
   const save = useSaveScreenplay();
 
   const restore = useRestoreVersion();

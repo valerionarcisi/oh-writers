@@ -62,7 +62,10 @@ export const appShellKeys = {
     "shell.save.savedAgoPrefix": "Saved",
     "shell.save.savedAgoSuffix": "ago",
     "shell.save.saved": "Saved",
+    "shell.save.dirty": "Unsaved",
+    "shell.save.error": "Save failed",
     "shell.save.offline": "Offline — unsaved changes",
+    "shell.save.saveNow": "Save now",
     // Notification center drawer
     "shell.notif.title": "Cesare notifications",
     "shell.notif.unreadSingular": "unread",
@@ -283,7 +286,10 @@ export const appShellKeys = {
     "shell.save.savedAgoPrefix": "Salvato",
     "shell.save.savedAgoSuffix": "fa",
     "shell.save.saved": "Salvato",
+    "shell.save.dirty": "Non salvato",
+    "shell.save.error": "Errore salvataggio",
     "shell.save.offline": "Offline — modifiche non salvate",
+    "shell.save.saveNow": "Salva ora",
     // Notification center drawer
     "shell.notif.title": "Notifiche Cesare",
     "shell.notif.unreadSingular": "non letta",

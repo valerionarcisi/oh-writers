@@ -1,38 +1,13 @@
-export const SaveStatusValues = {
-  SAVED: "saved",
-  DIRTY: "dirty",
-  SAVING: "saving",
-  ERROR: "error",
-  OFFLINE: "offline",
-} as const;
-
-export type SaveStatusValue =
-  (typeof SaveStatusValues)[keyof typeof SaveStatusValues];
-
-export interface SaveStatusInput {
-  isDirty: boolean;
-  isSaving: boolean;
-  isError: boolean;
-  isOffline: boolean;
-}
-
-/**
- * Derive the save indicator state from the primitive flags coming out of
- * the autosave hook. Offline wins over everything else because while offline
- * we neither save nor surface errors — the Yjs layer buffers updates locally.
- */
-export const computeSaveStatus = ({
-  isDirty,
-  isSaving,
-  isError,
-  isOffline,
-}: SaveStatusInput): SaveStatusValue => {
-  if (isOffline) return SaveStatusValues.OFFLINE;
-  if (isError) return SaveStatusValues.ERROR;
-  if (isSaving) return SaveStatusValues.SAVING;
-  if (isDirty) return SaveStatusValues.DIRTY;
-  return SaveStatusValues.SAVED;
-};
+// The save-status state machine is the SHARED one (Spec 63 F4) so the editor's
+// SaveIndicator and the TopBar pill derive identical states from identical
+// flags. Re-exported here for the screenplay editor's existing imports.
+export {
+  computeSaveStatus,
+  SaveStatusValues,
+  type SaveState,
+  type SaveState as SaveStatusValue,
+  type SaveStatusInput,
+} from "@oh-writers/ui";
 
 const MINUTE = 60_000;
 const HOUR = MINUTE * 60;

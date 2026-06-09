@@ -13,6 +13,19 @@
   white-space: nowrap;
   user-select: none;
   font-variant-numeric: tabular-nums;
+  /* Button reset — the pill is a react-aria button (Spec 63 F3). */
+  font: inherit;
+  font-size: 11px;
+  cursor: default;
+}
+
+.pill:not(:disabled) {
+  cursor: pointer;
+}
+
+.pill:focus-visible {
+  outline: none;
+  box-shadow: var(--ds-ring-focus, 0 0 0 2px var(--ds-action));
 }
 
 .dot {
@@ -44,6 +57,24 @@
 }
 .pill[data-state="saved"] .dot {
   background: var(--ds-success, var(--ds-agent));
+}
+
+.pill[data-state="dirty"] {
+  color: var(--ds-warning);
+  background: var(--ds-warning-soft, var(--ds-action-soft));
+  border-color: color-mix(in srgb, var(--ds-warning) 30%, transparent);
+}
+.pill[data-state="dirty"] .dot {
+  background: var(--ds-warning);
+}
+
+.pill[data-state="error"] {
+  color: var(--ds-danger);
+  background: var(--ds-danger-soft);
+  border-color: color-mix(in srgb, var(--ds-danger) 35%, transparent);
+}
+.pill[data-state="error"] .dot {
+  background: var(--ds-danger);
 }
 
 .pill[data-state="offline"] {
