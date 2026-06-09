@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Icon, Popover, Viewbar, ViewbarSep } from "@oh-writers/ui";
-import { SaveStatusIndicator } from "~/features/app-shell";
 import { useTranslation } from "~/features/i18n";
 import styles from "./ScreenplayEditorShell.module.css";
 
@@ -155,10 +154,11 @@ export function ScreenplayEditorShell({
     window.dispatchEvent(new Event("screenplay:toggleFocusMode"));
   }
 
-  // The Viewbar right slot: SaveStatus + Indice + DraftBadge + Versions.
+  // The Viewbar right slot: Indice + Focus + Cesare toggle. The save pill +
+  // version chip live in the TopBar (paired in the versionSelector slot,
+  // published by ScreenplayEditor) — consistent with the narrative docs.
   const viewbarRightNode = (
     <div className={styles.viewbarRight}>
-      <SaveStatusIndicator />
       {hasRealToc && (
         <div className={styles.indiceWrap}>
           <button

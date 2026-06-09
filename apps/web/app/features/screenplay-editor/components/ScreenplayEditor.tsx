@@ -77,6 +77,7 @@ import {
   useContextActions,
   useSetActiveScene,
   useTopBarSlotPublisher,
+  SaveStatusIndicator,
 } from "~/features/app-shell";
 import type { ContextActionHandlers } from "~/features/app-shell";
 import { useTranslation } from "~/features/i18n";
@@ -1124,17 +1125,26 @@ export const ScreenplayEditor = forwardRef<
     ? (versionsResult.value.find((v) => v.id === screenplay.currentVersionId) ??
       null)
     : null;
+  // Pair the save-status pill with the version chip in the TopBar versionSelector
+  // slot, mirroring the narrative docs (NarrativeDocsShell). The save pill sits
+  // next to the version chip near the ⋯ menu — owner preference, consistent
+  // across pages. The editor's Viewbar no longer renders the save indicator.
   const versionChipNode = useMemo(
     () =>
       isFocusMode ? null : (
-        <VersionTrigger
-          variant="pill"
-          label={t("screenplay.action.versions")}
-          versionLabel={currentVersion?.label ?? t("documents.shell.versions")}
-          dotColor={currentVersion?.draftColor ?? undefined}
-          onClick={toggleVersionsDrawer}
-          data-testid="topbar-version-chip"
-        />
+        <div className={styles.topBarVersionGroup}>
+          <SaveStatusIndicator />
+          <VersionTrigger
+            variant="pill"
+            label={t("screenplay.action.versions")}
+            versionLabel={
+              currentVersion?.label ?? t("documents.shell.versions")
+            }
+            dotColor={currentVersion?.draftColor ?? undefined}
+            onClick={toggleVersionsDrawer}
+            data-testid="topbar-version-chip"
+          />
+        </div>
       ),
     [
       isFocusMode,

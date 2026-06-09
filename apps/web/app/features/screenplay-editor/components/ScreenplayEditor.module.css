@@ -1,3 +1,11 @@
+/* TopBar pairing of the save-status pill + version chip, next to the ⋯ menu —
+   mirrors the narrative docs shell so the save state is consistent across pages. */
+.topBarVersionGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+}
+
 .page {
   display: flex;
   flex-direction: column;
