@@ -282,6 +282,13 @@ const roleForLine = (
   // Running headers / revision banners / footers that survived bucketing.
   if (isPageFurniture(line.text)) return "drop";
 
+  // A slugline (INT./EXT./…) is a scene heading by SHAPE, regardless of indent.
+  // Flush-left shooting scripts put the heading at the SAME margin as action
+  // (no separate scene gutter), so the X-bucket test below can't tell them
+  // apart — without this, headings get absorbed into the surrounding action
+  // paragraph. The pattern check is authoritative for the heading line.
+  if (SCENE_HEADING_RE.test(trimmed)) return "scene";
+
   const { x } = line;
   // Scene level (flush-left margin or scene-number gutter).
   if (buckets.sceneThreshold !== null && x <= buckets.sceneThreshold) {
@@ -369,15 +376,28 @@ const joinParagraphs = (
   buckets: Buckets,
 ): Block[] => {
   const out: Block[] = [];
+  // A blank line between two content lines is a PARAGRAPH BREAK, not a wrap.
+  // Consecutive same-role lines only join when NO blank separated them (a true
+  // column-width wrap). Without this, flush-left scripts — where every action
+  // beat sits at the same X and is separated only by a blank — collapse into one
+  // giant run-on paragraph (and dialogue runs into the following action).
+  let blankBefore = false;
   for (const line of lines) {
     const prev = out[out.length - 1];
     const role = roleForLine(line, buckets, prev);
-    if (role === "drop") continue;
+    if (role === "drop") {
+      // Only a genuinely empty line marks a paragraph boundary; dropped
+      // furniture (page numbers, headers) does not glue paragraphs together
+      // either, so treat any drop as a separator.
+      blankBefore = true;
+      continue;
+    }
 
     if (role === "scene") {
       const { heading, number } = unfuseHeading(line.text.trim());
       if (heading === "") continue;
       out.push({ role, text: heading, number });
+      blankBefore = false;
       continue;
     }
 
@@ -393,7 +413,11 @@ const joinParagraphs = (
       (prev !== undefined &&
         prev.role === role &&
         PARAGRAPH_ROLES.has(role) &&
-        !line.pageStart);
+        !line.pageStart &&
+        !blankBefore);
+
+    // A content line consumes the pending paragraph-break flag either way.
+    blankBefore = false;
 
     if (!canJoin) {
       out.push({ role, text: trimmed, number: null });

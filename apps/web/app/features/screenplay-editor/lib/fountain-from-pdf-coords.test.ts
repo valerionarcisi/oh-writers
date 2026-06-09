@@ -173,6 +173,53 @@ describe("fountainFromPdfCoords — Wolf of Wall Street (real coords)", () => {
   });
 });
 
+describe("fountainFromPdfCoords — Thirteen Days (flush-left, real coords)", () => {
+  // Thirteen Days reports EVERY line at the same X transform (72) and encodes
+  // element indentation as LEADING SPACES inside the text run. The coord
+  // extractor folds those leading spaces into the effective X (SPACE_UNIT), so
+  // this flush-left script arrives with distinct levels: action 84, dialogue 96,
+  // character 120, transition 156. The fixture is the real first-two-pages
+  // extraction. It exercises: (a) a slugline is a scene heading by SHAPE even at
+  // the action margin (no separate scene gutter), (b) a blank line is a
+  // paragraph break so action beats don't run together and dialogue doesn't
+  // bleed into the following action, (c) positional level mapping still places
+  // cues/dialogue/transitions correctly.
+  const lines = loadCoordFixture("12-thirteen-days-coords.txt");
+  const fountain = fountainFromPdfCoords(lines, { dropTitlePagePrefix: true });
+
+  it("accepts the flush-left layout (coord path, not text fallback)", () => {
+    expect(fountain).not.toBeNull();
+  });
+
+  it("detects sluglines as scene headings even at the action margin", () => {
+    expect(fountain).toContain("EXT. STRATOSPHERE - DAY");
+    expect(fountain).toContain("INT. O'DONNELL BEDROOM - DAY");
+  });
+
+  it("keeps blank-separated action beats as distinct paragraphs", () => {
+    const out = fountain!.split("\n");
+    expect(out).toContain(
+      "          SUPER: FLIGHT G-3101. OCTOBER 14TH, 1962. OVER CUBA.",
+    );
+    // The dawn description and the SUPER beat must NOT be glued into one line.
+    expect(fountain).not.toContain("edge of land. SUPER: FLIGHT");
+  });
+
+  it("does not bleed dialogue into the following action", () => {
+    expect(fountain).toMatch(
+      new RegExp(`^${DIALOGUE_INDENT}Mark, get off your father!$`, "m"),
+    );
+    expect(fountain).not.toContain("father! Kenny sits up");
+  });
+
+  it("classifies character cues and transitions", () => {
+    expect(fountain).toMatch(
+      new RegExp(`^${CHARACTER_INDENT}HELEN \\(O\\.S\\.\\)$`, "m"),
+    );
+    expect(fountain).toContain("MATCH CUT TO:");
+  });
+});
+
 describe("fountainFromPdfCoords — fallback", () => {
   it("returns null when no usable X buckets exist", () => {
     const lines: CoordLine[] = [

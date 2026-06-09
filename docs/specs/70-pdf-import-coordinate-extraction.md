@@ -17,11 +17,23 @@ Measured truth (decisive): pdf-parse bundles pdfjs; a custom `pagerender` recove
 min-X. On a clean digital PDF the X buckets are razor-sharp and classification becomes
 **deterministic**:
 
-| PDF                                   | X buckets (scene/action/dialogue/parenthetical/character)                              | Outcome today                                                             |
-| ------------------------------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| Non fa ridere (digital)               | 78 / 108 / 180 / 216 / 252                                                             | coord path → correct                                                      |
-| Wolf of Wall Street (shooting script) | scene-num gutter 47 / action 126 / dialogue 198 / character 297 (+ header X90 to drop) | **rejected by gate → text path** (parsable, but we throw the coords away) |
-| No Country (single column)            | everything X≈18                                                                        | rejected → text path                                                      |
+| PDF                                   | X buckets (scene/action/dialogue/parenthetical/character)                              | Outcome today                                                               |
+| ------------------------------------- | -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| Non fa ridere (digital)               | 78 / 108 / 180 / 216 / 252                                                             | coord path → correct                                                        |
+| Wolf of Wall Street (shooting script) | scene-num gutter 47 / action 126 / dialogue 198 / character 297 (+ header X90 to drop) | coord path → correct (gate loosened to accept the 5-level gutter layout)    |
+| Thirteen Days (flush-left)            | one X transform (72); indent encoded as LEADING SPACES → folded to 84/96/120/156       | coord path → correct (leading-space fold + slugline-by-shape + blank-break) |
+| No Country (single column)            | everything X≈18, no leading-space indent either                                        | rejected → text path                                                        |
+
+**Leading-space layouts (Thirteen Days).** Some PDFs export every line at the SAME X
+transform and encode the screenplay indentation as leading spaces inside the text run.
+`renderPageWithCoords` folds those leading spaces into the effective X (`SPACE_UNIT` units
+per space), so a flush-left script presents the same separable levels as an X-indented one.
+Two classifier rules make it parse cleanly: a slugline is a scene heading **by shape**
+(INT./EXT. regexp) even when it sits at the action margin (no scene gutter), and a blank
+line is a **paragraph break** (consecutive same-role lines join only as a true column-width
+wrap, never across a blank) so action beats don't run together and dialogue doesn't bleed
+into the following action. PDFs that indent via the X transform carry no leading spaces, so
+the fold is a no-op for them (Non fa ridere unchanged).
 
 So the coord path is correct when it fires, but it is **not universal**: a slightly
 different-but-valid layout (Wolf's left scene-number gutter, 5 levels) trips the
