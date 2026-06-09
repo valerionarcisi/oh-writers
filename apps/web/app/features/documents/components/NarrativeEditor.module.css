@@ -11,6 +11,15 @@
   min-block-size: 0;
 }
 
+/* Placeholder shown while the realtime room is syncing — holds the editor back
+   so it never mounts a throwaway non-realtime instance that would double-seed. */
+.editorLoading {
+  padding: var(--ds-space-6);
+  max-inline-size: 720px;
+  margin-inline: auto;
+  inline-size: 100%;
+}
+
 /* Export icon button in TopBar — matches soggetto's exportTrigger style. */
 .exportTrigger {
   display: flex;

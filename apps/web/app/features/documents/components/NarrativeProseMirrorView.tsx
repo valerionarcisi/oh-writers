@@ -45,6 +45,15 @@ export function NarrativeProseMirrorView({
   const mountRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const lastValueRef = useRef(value);
+  // True for one render right after the editor (re)mounts. In realtime mode the
+  // CRDT — not the HTTP `value` prop — is the source of truth on mount, so the
+  // value-sync effect must NOT push `value` over the just-loaded CRDT doc: the
+  // two differ only in markup/node identity, and re-applying `value` records a
+  // full delta into the Yjs state that GROWS the CRDT on every mount/reload
+  // (the doc bloated past its size cap and broke saving). We skip that first
+  // sync; genuine external replacements (Cesare, version restore) arrive as a
+  // later `value` change and still apply.
+  const justMountedRef = useRef(true);
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
   const onSelectionChangeRef = useRef(onSelectionChange);
@@ -52,18 +61,21 @@ export function NarrativeProseMirrorView({
 
   useEffect(() => {
     if (!mountRef.current) return;
+    justMountedRef.current = true;
 
     const schema = getNarrativeSchema(enableHeadings);
     const initialDoc = htmlToDoc(lastValueRef.current, schema);
 
-    // Realtime mode: only seed the editor from `initialDoc` when the shared Yjs
-    // fragment is still empty (this client is the first to open the room).
-    // Otherwise the doc loads from the CRDT and we MUST start empty — passing a
-    // non-empty `doc` while `ySyncPlugin` is bound to a populated fragment makes
-    // y-prosemirror merge the initial doc ON TOP of the existing content on every
-    // connect, growing the CRDT unboundedly until it serialises past V8's max
-    // string length (the narrative "Invalid string length" freeze). Mirrors the
-    // screenplay editor's seed guard.
+    // Seed the editor from the local initial doc only when the shared Yjs
+    // fragment is still empty (this client is the FIRST to open the room — a
+    // brand-new doc, or a doc whose content lives only in the HTTP `value`).
+    // The editor is held back behind a skeleton until the room has SYNCED
+    // (`realtimeAwaitingSync` in NarrativeEditor), so `isFragmentEmpty` is
+    // authoritative here: an empty fragment after sync means the room really has
+    // no content and we must seed it; a populated fragment means the CRDT is the
+    // source of truth and we start empty so ySyncPlugin loads it (seeding a
+    // non-empty doc onto a populated fragment makes y-prosemirror merge it ON
+    // TOP — the unbounded CRDT growth that broke saving).
     const seedFromInitial = !realtime || isFragmentEmpty(realtime.ydoc);
 
     const state = EditorState.create({
@@ -133,6 +145,17 @@ export function NarrativeProseMirrorView({
     const view = viewRef.current;
     if (!view) return;
     if (value === lastValueRef.current) return;
+
+    // First post-mount run in realtime mode: the CRDT has just loaded and IS the
+    // source of truth — do not push the HTTP `value` over it (that grows the Yjs
+    // state on every mount). Adopt `value` as the baseline and bail; subsequent
+    // `value` changes are real external replacements and still apply.
+    if (isRealtime && justMountedRef.current) {
+      justMountedRef.current = false;
+      lastValueRef.current = value;
+      return;
+    }
+    justMountedRef.current = false;
 
     // An incoming `value` that differs from what the editor last emitted is an
     // AUTHORITATIVE document replacement from outside the editor — a Cesare

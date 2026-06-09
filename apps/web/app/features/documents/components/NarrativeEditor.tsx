@@ -2,7 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { EditorView } from "prosemirror-view";
 import { ContextActionIds, DocumentTypes } from "@oh-writers/domain";
 import type { DocumentType, TranslationKey } from "@oh-writers/domain";
-import { ActionsMenu, FloatingDock, computeSaveStatus } from "@oh-writers/ui";
+import {
+  ActionsMenu,
+  FloatingDock,
+  Skeleton,
+  computeSaveStatus,
+} from "@oh-writers/ui";
 import type { DocumentViewWithPermission } from "../server/documents.server";
 import {
   useAutoSave,
@@ -20,7 +25,11 @@ import { DraftBanner } from "./DraftBanner";
 import { TextEditor } from "./TextEditor";
 import { NarrativeProseMirrorView } from "./NarrativeProseMirrorView";
 import { NarrativeFormatToolbar } from "./NarrativeFormatToolbar";
-import { useYjsRoom, PresenceIndicator } from "~/features/realtime";
+import {
+  useYjsRoom,
+  PresenceIndicator,
+  isRealtimeEnabled,
+} from "~/features/realtime";
 import { useSession } from "~/lib/auth-client";
 import { OutlineEditor } from "./OutlineEditor";
 import { NarrativeDocsShell } from "./NarrativeDocsShell";
@@ -176,6 +185,29 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
     realtimeProvider
       ? { ydoc: realtimeDoc, provider: realtimeProvider }
       : null;
+
+  // While a realtime room is connecting / syncing we must NOT mount a throwaway
+  // non-realtime editor: it would seed its initial doc and emit an onChange that
+  // the autosave persists, and once the realtime editor mounts the server CRDT
+  // arrives ON TOP — a second copy. Each reload then appended another copy until
+  // the doc blew past its size cap and saving broke. So hold the editor until
+  // realtime is resolved: either synced (mount realtime) or genuinely off
+  // (`disabled`/`offline` → mount the HTTP fallback). `connecting` and
+  // connected-but-not-yet-synced render a skeleton instead of a live editor.
+  // Realtime is configured (VITE_WS_URL) and this doc is editable, but the room
+  // hasn't synced yet. `useYjsRoom` starts in the `disabled` shape and only
+  // transitions to connecting→connected after the async token fetch, so we key
+  // off `isRealtimeEnabled()` (a stable env check) rather than the transient
+  // status — otherwise the very first render mounts a non-realtime editor that
+  // seeds + emits before the room arrives, the original double-seed.
+  // `offline` means the socket failed to connect — no room will ever deliver
+  // content, so falling back to the HTTP editor (which seeds) is safe and
+  // necessary (otherwise we'd hang on the skeleton forever).
+  const realtimeAwaitingSync =
+    !isReadOnly &&
+    isRealtimeEnabled() &&
+    realtimeStatus !== "offline" &&
+    narrativeRealtime === null;
 
   // Track whether the user has actually edited (vs just loaded an empty doc).
   // We only publish a saveState after the first real edit — otherwise the
@@ -470,26 +502,36 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
           )}
         </div>
       )}
-      <NarrativeProseMirrorView
-        value={content}
-        onChange={setContent}
-        placeholder={documentPlaceholder}
-        readOnly={isReadOnly}
-        enableHeadings={isTreatment}
-        realtime={narrativeRealtime}
-        onReady={(view) => {
-          editorViewRef.current = view;
-          // Re-render the toolbar on every transaction so the active
-          // pill state reflects the current selection.
-          const original = view.props.dispatchTransaction;
-          view.setProps({
-            dispatchTransaction: (tr) => {
-              original?.call(view, tr);
-              forceToolbarUpdate((n) => (n + 1) % 1_000_000);
-            },
-          });
-        }}
-      />
+      {realtimeAwaitingSync ? (
+        <div className={styles.editorLoading} aria-busy="true">
+          <Skeleton
+            lines={6}
+            widths={["70%", "100%", "100%", "90%", "100%", "60%"]}
+            ariaLabel="Caricamento documento"
+          />
+        </div>
+      ) : (
+        <NarrativeProseMirrorView
+          value={content}
+          onChange={setContent}
+          placeholder={documentPlaceholder}
+          readOnly={isReadOnly}
+          enableHeadings={isTreatment}
+          realtime={narrativeRealtime}
+          onReady={(view) => {
+            editorViewRef.current = view;
+            // Re-render the toolbar on every transaction so the active
+            // pill state reflects the current selection.
+            const original = view.props.dispatchTransaction;
+            view.setProps({
+              dispatchTransaction: (tr) => {
+                original?.call(view, tr);
+                forceToolbarUpdate((n) => (n + 1) % 1_000_000);
+              },
+            });
+          }}
+        />
+      )}
     </div>
   );
 
