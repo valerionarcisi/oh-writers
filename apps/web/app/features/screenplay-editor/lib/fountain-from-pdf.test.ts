@@ -357,3 +357,55 @@ describe("fountainFromPdf — 08-continueds", () => {
     expect(out).toContain(`${DIALOGUE_INDENT}(leaning forward)`);
   });
 });
+
+// BUG-N51: a tidy PDF (Non fa ridere) where pdf-parse stripped ALL blank-line
+// separators between elements. The classic cue rule (needs a preceding blank)
+// tagged every short ALL-CAPS cue as action, so the whole scene became one
+// undifferentiated action run. The relaxed cue rule must recover cues without a
+// preceding blank when the line is short + cue-shaped and doesn't follow a cue.
+describe("fountainFromPdf — blank-less import (no separators between elements)", () => {
+  const pdf = [
+    "INT/EXT. ANGOLO OPEN GREZZO/FUORI DALLA PORTA - NOTTE11",
+    "JOHN (35) ha il microfono in mano. È in piedi in un angolo",
+    "del ristorante adibito a palco.",
+    "JOHN",
+    "AHAHHAH! Ma tua moglie ancora ti ci",
+    "vuole a letto?",
+    "PUBBLICO",
+    "Ma che sarria? Stand che?",
+  ].join("\n");
+  const out = fountainFromPdf(pdf);
+
+  it("recovers a character cue with no preceding blank", () => {
+    expect(out).toMatch(new RegExp(`^${CHARACTER_INDENT}JOHN$`, "m"));
+    expect(out).toMatch(new RegExp(`^${CHARACTER_INDENT}PUBBLICO$`, "m"));
+  });
+
+  it("classifies the lines under a recovered cue as dialogue, not action", () => {
+    expect(out).toMatch(
+      new RegExp(
+        `^${DIALOGUE_INDENT}AHAHHAH! Ma tua moglie ancora ti ci$`,
+        "m",
+      ),
+    );
+    expect(out).toMatch(
+      new RegExp(`^${DIALOGUE_INDENT}Ma che sarria\\? Stand che\\?$`, "m"),
+    );
+  });
+
+  it("keeps the scene-opening description (before the first cue) as action", () => {
+    // "JOHN (35) ha il microfono..." is a long mixed-case line — action, not a cue.
+    expect(out).toMatch(/^JOHN \(35\) ha il microfono/m);
+  });
+
+  it("does NOT mis-tag a long ALL-CAPS line as a cue without a blank", () => {
+    const longCaps = [
+      "Some action here.",
+      "THIS IS A VERY LONG ALL CAPS LINE THAT IS NOT A CHARACTER NAME AT ALL",
+    ].join("\n");
+    const o = fountainFromPdf(longCaps);
+    expect(o).not.toMatch(
+      new RegExp(`^${CHARACTER_INDENT}THIS IS A VERY`, "m"),
+    );
+  });
+});

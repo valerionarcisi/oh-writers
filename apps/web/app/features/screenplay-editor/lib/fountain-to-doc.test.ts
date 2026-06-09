@@ -97,6 +97,29 @@ describe("fountainToDoc", () => {
     expect(headingLine(doc.child(1).firstChild!)).toBe("EXT. STREET - NIGHT");
   });
 
+  it("emits a leading 'FADE IN:' as a top-level transition, not a phantom scene (BUG-N44)", () => {
+    const text = [
+      "FADE IN:",
+      "",
+      "INT. APARTMENT - DAY",
+      "",
+      "Jane sits.",
+      "",
+      "INT. APARTMENT - NIGHT",
+      "",
+      "The light is gone.",
+    ].join("\n");
+    const doc = fountainToDoc(text);
+    // doc children: transition(FADE IN:) + scene 1 + scene 2 — NOT a synthetic
+    // empty-heading scene that would make the count read 3.
+    expect(doc.child(0).type.name).toBe("transition");
+    let sceneCount = 0;
+    doc.forEach((n) => {
+      if (n.type.name === "scene") sceneCount += 1;
+    });
+    expect(sceneCount).toBe(2);
+  });
+
   it("returns a minimal valid doc for empty input", () => {
     const doc = fountainToDoc("");
     expect(doc.type.name).toBe("doc");

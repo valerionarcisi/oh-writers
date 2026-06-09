@@ -59,4 +59,24 @@ describe("UpdateTitlePageStateInput", () => {
       }),
     ).toThrow();
   });
+
+  // BUG-N43: a PDF import must be able to update the title-page doc WITHOUT
+  // renaming the project. The wire contract defaults to syncing (manual edits)
+  // and lets the import opt out.
+  it("defaults syncProjectTitle to true (manual title-page edits rename the project)", () => {
+    const parsed = UpdateTitlePageStateInput.parse({
+      projectId: "00000000-0000-0000-0000-000000000001",
+      state: {},
+    });
+    expect(parsed.syncProjectTitle).toBe(true);
+  });
+
+  it("accepts syncProjectTitle:false (import path must not rename the project)", () => {
+    const parsed = UpdateTitlePageStateInput.parse({
+      projectId: "00000000-0000-0000-0000-000000000001",
+      state: {},
+      syncProjectTitle: false,
+    });
+    expect(parsed.syncProjectTitle).toBe(false);
+  });
 });

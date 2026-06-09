@@ -35,6 +35,11 @@ export const EMPTY_TITLE_PAGE_STATE: TitlePageState = {
 export const UpdateTitlePageStateInput = z.object({
   projectId: z.string().uuid(),
   state: TitlePageStateSchema,
+  // When true (the default), the project title is kept in sync with the title
+  // extracted from the title-page doc — the correct behaviour when the writer
+  // edits the title page by hand. A PDF import passes false: adopting a foreign
+  // PDF's title as the project name would silently rename the project.
+  syncProjectTitle: z.boolean().default(true),
 });
 
 export type UpdateTitlePageStateInput = z.infer<

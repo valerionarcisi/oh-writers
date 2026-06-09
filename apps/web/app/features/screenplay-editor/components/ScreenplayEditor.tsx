@@ -258,13 +258,13 @@ export const ScreenplayEditor = forwardRef<
   const realtimeUser = sessionData?.user
     ? { id: sessionData.user.id, name: sessionData.user.name }
     : null;
-  // Per-version CRDT room (Spec — per-version Yjs rooms). The screenplay content
-  // is version-backed, so the room is scoped to the ACTIVE version: switching the
-  // active version (Attiva) changes currentVersionId → changes the roomId →
-  // useYjsRoom tears the old room down and reopens onto the new version's CRDT,
-  // so the editor actually shows the activated version. Without the versionId in
-  // the room key, Attiva left the editor on the previous version's room.
-  const realtimeRoomId = screenplay.currentVersionId
+  // The screenplay content is version-backed: each active version is its own
+  // CRDT room (`screenplay:<id>:<versionId>`), persisted in the version's
+  // yjs_snapshot. Switching the active version (Attiva / + Nuova versione)
+  // changes currentVersionId → roomId → useYjsRoom reopens onto that version's
+  // CRDT, so the editor actually reloads. Falls back to the legacy
+  // screenplay-level room when there is no current version yet (seed/legacy).
+  const roomId = screenplay.currentVersionId
     ? `screenplay:${screenplay.id}:${screenplay.currentVersionId}`
     : `screenplay:${screenplay.id}`;
   const {
@@ -272,7 +272,7 @@ export const ScreenplayEditor = forwardRef<
     provider: realtimeProvider,
     status: realtimeStatus,
     peers: realtimePeers,
-  } = useYjsRoom(realtimeRoomId, realtimeUser, !isViewing);
+  } = useYjsRoom(roomId, realtimeUser, !isViewing);
   // Realtime sync is active for ANY connected user (viewers included — they
   // receive live content + cursors but the editor stays readOnly and the
   // ws-server drops their writes). It is NOT tied to write permission.
@@ -428,6 +428,8 @@ export const ScreenplayEditor = forwardRef<
           draftDate: current?.draftDate ?? null,
           draftColor: current?.draftColor ?? null,
         },
+        // A foreign PDF's title page must not rename the project.
+        syncProjectTitle: false,
       });
     },
     [updateTitlePage, screenplay.projectId, titlePageQ.data],
@@ -1039,10 +1041,6 @@ export const ScreenplayEditor = forwardRef<
             },
           }
         : {}),
-      [ContextActionIds.VERSIONS]: {
-        onSelect: toggleVersionsDrawer,
-        testId: "menu-item-versions",
-      },
     }),
     [
       canEdit,
@@ -1052,7 +1050,6 @@ export const ScreenplayEditor = forwardRef<
       openPdfPicker,
       pdfImport.isLoading,
       openFountainPicker,
-      toggleVersionsDrawer,
       t,
     ],
   );
@@ -1314,6 +1311,7 @@ export const ScreenplayEditor = forwardRef<
           isOpen
           onClose={pdfImport.cancel}
           title={t("screenplay.menu.importPdfTitle")}
+          size="lg"
           isDismissable={false}
           data-testid="import-confirm"
           actions={
@@ -1388,6 +1386,7 @@ export const ScreenplayEditor = forwardRef<
           isOpen
           onClose={fountainImport.cancel}
           title={t("screenplay.menu.importFountainTitle")}
+          size="lg"
           isDismissable={false}
           data-testid="import-fountain-confirm"
           actions={

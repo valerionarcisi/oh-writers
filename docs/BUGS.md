@@ -23,6 +23,51 @@ E2E first; screenshots in a recap; gates green).
 
 ## Open
 
+### BUG-N44 — screenplay opening on "FADE IN:" shows a phantom extra scene (2026-06-09)
+
+- Severity: MEDIO (wrong scene count in footer + index; throws off breakdown/schedule scene numbering)
+- Status: fixed (`fountainToDoc` emits a leading transition as a top-level node, not a synthetic empty-heading scene)
+- Repro: import/open a screenplay that opens with `FADE IN:` and has 2 scenes. Observed: footer "SCENE 3", Indice "1/3", and the index dropdown listed a phantom empty `SC.1 —` before the two real scenes.
+- Proof: verified live re-importing `with-title-page.pdf` (FADE IN: + 2 scenes) → footer "SCENE 2", Indice "1/2", index lists only the two real headings; `FADE IN:` renders as a transition node.
+- Cause: `fountainToDoc` wrapped ALL content before the first heading (the opening `FADE IN:` transition) in a synthetic `scene` with an empty heading — but the doc schema (`(scene | transition)+`) allows a top-level `transition`. The synthetic scene counted as scene 1. Fix: emit leading transition nodes directly under `doc`; only wrap the first non-transition stray node (rare: action before any heading) in the synthetic scene, order preserved.
+
+### BUG-N51 — tidy PDF with no blank separators imported as one undifferentiated action run (2026-06-09)
+
+- Severity: ALTO (every character cue + dialogue in a clean screenplay was tagged action; breakdown/character extraction unusable)
+- Status: fixed (`fountain-from-pdf` relaxed character-cue detection — no preceding blank required)
+- Repro: import a tidy PDF where pdf-parse stripped all blank-line separators between elements (the real "Non fa ridere" v13). Observed: "JOHN", "PUBBLICO", "FILIPPO", "VECCHIA 1" etc. and all their dialogue rendered as flush-left action — the classifier's cue rule required a preceding blank, which this PDF never had.
+- Proof: verified live importing `Non_fa_ridere-v13-2025-11-11.pdf` → cues are CHARACTER (6-space), speeches are DIALOGUE (10-space), scene headings correct. 4 new unit tests; screenplay lib suite green.
+- Cause: `isCharacterCue` short-circuited on `!prevBlank`. Fix: split out `looksLikeCue` (shape test) and accept a cue WITHOUT a preceding blank when it is short (≤38 chars), cue-shaped, and the previous emitted line was not itself a cue/parenthetical (a cue never directly follows a cue). Length cap rejects long ALL-CAPS action fragments.
+- KNOWN GAP (not blocking): action embedded mid-scene after a parenthetical, with no blank, can still be absorbed as dialogue; a rare short ALL-CAPS action fragment ("PROVINCIALE\"") can be mis-tagged as a cue. Tracked for the deeper parser pass.
+- HISTORY: an earlier attempt (BUG-N50, reverted) added a Pass 2b "unwrap" that merged consecutive same-type lines. On blank-less PDFs that fused whole action+dialogue blocks into a wall of text (regression seen on "Non fa ridere"), so it was reverted; the wrap-joining for clean-blank PDFs is deferred until it can be done safely on top of correct classification.
+
+### BUG-N50 — PDF import mangled paragraphs (hard-wrap → split lines) + dialogue after a cue parsed as action (2026-06-09)
+
+- Severity: ALTO (corrupts the imported screenplay: re-export emits more lines than the original; dialogue mis-typed as action breaks breakdown/character extraction)
+- Status: REVERTED (the Pass 2b unwrap fused blank-less PDFs into a wall of text; see BUG-N51). Wrap-joining deferred.
+- Repro: import a real screenplay PDF (e.g. the "Non fa ridere" import). Observed: (a) action/dialogue paragraphs were split mid-sentence into one block per visual PDF line, so the editor showed stubs and a re-export produced extra line breaks; (b) "TEA (V.O.)" with its lines rendered as Action instead of Character + Dialogue.
+- Proof: verified live re-importing `no-country-for-old-men-2007.pdf` — the VOICE OVER speech is now one dialogue paragraph (was ~6 wrapped lines), action paragraphs are single lines, and a cue's first line is dialogue. Unit tests: 7 new in `fountain-from-pdf.test.ts` (unwrap action/dialogue, no-merge across blank, no-merge into cue, hyphen rejoin, orphan-dialogue recovery) — 68/68 green; full screenplay lib suite 282/282.
+- Cause: the parser treated every pdf-parse line as a logical line. PDFs hard-wrap at the page column width, so one paragraph arrives as several consecutive same-type lines with no blank between — each became its own Fountain block. Fix: **Pass 2b** merges consecutive `action`/`dialogue` blocks (those the classifier produced back-to-back, i.e. not separated by a blank or a different element) into one space-joined logical line; a trailing hyphen rejoins with no space. Separately, pdf-parse sometimes inserts a spurious blank between a CHARACTER cue and its first dialogue line, dropping it to `action`; the classifier now recovers dialogue when `lastNonBlankType === "character"`.
+
+### BUG-N43 — importing a screenplay PDF with a title page silently renamed the project (2026-06-09)
+
+- Severity: ALTO (data corruption: the project name is overwritten by a foreign PDF's title)
+- Status: fixed (`updateTitlePageState` gains `syncProjectTitle`, default true; import passes false)
+- Repro: open project "Non fa ridere" (`…012`) → ⋯ → Importa PDF → `with-title-page.pdf` → Sovrascrivi → "Sostituisci" on the frontespizio prompt. Observed: the project was renamed "NON FA RIDERE" → "THE LAST FRAME" (sidebar, dashboard, recents) because the imported title page carried that title.
+- Proof: verified live — after the fix the same import keeps the project name "Non fa ridere" while the title-page doc still adopts "THE LAST FRAME / Jane Doe / Draft 3".
+- Cause: `updateTitlePageState` writes `projects.title = extractTitle(doc)` — correct when the writer edits the title page by hand (the title page IS the project title), wrong for import (adopting a foreign title renames the project). Fix: `syncProjectTitle` flag (default true preserves manual-edit behaviour; the import path sends false, so `nextTitle` is empty and the title write is skipped).
+- TEST DEBT: same harness gap as N-42 — the import suite isn't in CI and the realtime path has no ws-server. Add a unit test on `updateTitlePageState` asserting `syncProjectTitle:false` leaves `projects.title` untouched while persisting the doc.
+
+### BUG-N42 — screenplay PDF/Fountain import (and version restore) did nothing in realtime mode (2026-06-09)
+
+- Severity: ALTO (core feature silently broken: Sovrascrivi / "Salva come Versione N e importa" left the editor showing the old content)
+- Status: fixed (`ProseMirrorView` external-value sync no longer bails in realtime; `useYjsRoom` orphan-provider guard)
+- Repro: open a screenplay with realtime ON (ws-server up), ⋯ → Importa PDF → pick a PDF → Sovrascrivi (or "Salva come Versione N e importa"). Observed: the editor kept the previous text; the version-then-import path created a version but never applied the import.
+- Proof: verified live — imported `no-country-for-old-men-2007.pdf` into project `…012`, editor replaced the pizzeria scene with "FADE IN: / EXT. MOUNTAINS - NIGHT" and survived a reload (reached the CRDT). Title-page import also re-verified (`with-title-page.pdf` → "THE LAST FRAME / Jane Doe", persisted).
+- Cause: `ProseMirrorView` guarded the external value→editor sync with `if (isRealtime) return` (the editor went realtime-only after the recent CRDT seed-guard commits). Import/version-restore set the `content` React state but never the live Yjs doc. Fix: drop the bail — the one-shot `replaceWith` flows through `ySyncPlugin` into the shared fragment, so the replacement propagates and persists.
+- Bonus (same session): `useYjsRoom` could leak a provider whose socket opened after the effect was already disposed (fast nav away during the token fetch) → a ghost "N online" peer for ~30s. Fixed by destroying the provider/ydoc when `disposed` flipped mid-fetch.
+- TEST DEBT: this regression has **zero E2E coverage** because `playwright.config.ts` starts **no ws-server** and sets no `VITE_WS_URL`, so the test editor always runs **non-realtime** — the exact path that broke is never exercised. Compounds [N-31] (the `tests/editor/` import suite is not in CI and already fails on clean HEAD). To cover N-42 the test harness must run a ws-server + point `VITE_WS_URL` at it; track as its own infra front.
+
 ### BUG-N41 — narrative realtime editor double-seeds the CRDT → unbounded growth → "Invalid string length" freeze (2026-06-07)
 
 - Severity: ALTO (freezes the whole page; Attiva / Nuova versione appear broken because the page is already frozen when clicked)

@@ -186,10 +186,14 @@ const isAllUppercase = (text: string): boolean => {
   return text === text.toUpperCase();
 };
 
-// Character cue: ALL CAPS, letters plus digits/space/#/parens/periods/apostrophes,
-// no trailing sentence punctuation (allow closing paren).
-const isCharacterCue = (trimmed: string, prevBlank: boolean): boolean => {
-  if (!prevBlank) return false;
+// Longest a bare character cue can be before we stop trusting it as a cue
+// without a preceding blank (a longer ALL-CAPS line is more likely an action
+// fragment or a shout in dialogue than a name).
+const MAX_BLANKLESS_CUE_LEN = 38;
+
+// Is this line shaped like a character cue (ALL CAPS, name-like, optional
+// extensions) — independent of whether a blank precedes it?
+const looksLikeCue = (trimmed: string): boolean => {
   if (trimmed.length === 0) return false;
   if (SCENE_HEADING_RE.test(trimmed)) return false;
   if (TRANSITION_RE.test(trimmed)) return false;
@@ -205,6 +209,24 @@ const isCharacterCue = (trimmed: string, prevBlank: boolean): boolean => {
   // core must be "name-like": letters, digits, spaces, #, -, '
   if (!/^[A-ZÀ-Ý0-9 #\-']+$/.test(core)) return false;
   return true;
+};
+
+// Character cue. The classic rule needs a preceding blank line. Many real
+// exports (pdf-parse on a tidy PDF) strip ALL blank separators, so we also
+// accept a cue WITHOUT a preceding blank when it is a SHORT, cue-shaped line
+// and the previous emitted line was itself NOT a cue (a cue never directly
+// follows another cue — that second line is the first one's dialogue). This
+// recovers character cues in blank-less imports without mis-tagging a wrapped
+// ALL-CAPS action fragment (which is long, so the length cap rejects it).
+const isCharacterCue = (
+  trimmed: string,
+  prevBlank: boolean,
+  prevType: ElementType | null,
+): boolean => {
+  if (!looksLikeCue(trimmed)) return false;
+  if (prevBlank) return true;
+  if (prevType === "character" || prevType === "parenthetical") return false;
+  return trimmed.length <= MAX_BLANKLESS_CUE_LEN;
 };
 
 // Shot-slug openers — when they appear mid-dialogue block, they're a hint
@@ -291,7 +313,7 @@ const classify = (lines: readonly CleanedLine[]): Classified[] => {
       continue;
     }
 
-    if (isCharacterCue(trimmed, prevBlank)) {
+    if (isCharacterCue(trimmed, prevBlank, lastNonBlankType)) {
       out.push({ type: "character", text: trimmed });
       prevBlank = false;
       inDialogueBlock = true;

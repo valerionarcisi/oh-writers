@@ -78,6 +78,17 @@ export const useYjsRoom = (
       if (!opened) return;
 
       const { ydoc, provider } = opened;
+
+      // The effect may have been torn down while the token promise was in
+      // flight — `createYjsRoom` already opened the socket and registered our
+      // awareness, so without this guard the connection leaks as a ghost peer
+      // (it lingers until the y-websocket awareness timeout). Destroy it now.
+      if (disposed) {
+        provider.destroy();
+        ydoc.destroy();
+        return;
+      }
+
       const localUser = userRef.current;
       if (localUser) {
         provider.awareness.setLocalStateField("user", {
