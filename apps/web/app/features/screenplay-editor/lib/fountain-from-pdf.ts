@@ -299,6 +299,20 @@ const classify = (lines: readonly CleanedLine[]): Classified[] => {
       continue;
     }
 
+    // Orphan dialogue — pdf-parse sometimes inserts a spurious blank between a
+    // CHARACTER cue and its first dialogue line, which would otherwise drop the
+    // dialogue to `action` (the "TEA (V.O.)" → action bug). When the last
+    // non-blank emitted was a character cue, the following non-structural line
+    // is that character's dialogue; re-enter the block. (Scene heading /
+    // transition / character cases are handled above and never reach here.)
+    if (lastNonBlankType === "character") {
+      out.push({ type: "dialogue", text: trimmed });
+      prevBlank = false;
+      inDialogueBlock = true;
+      lastNonBlankType = "dialogue";
+      continue;
+    }
+
     if (inDialogueBlock) {
       out.push({ type: "dialogue", text: trimmed });
       prevBlank = false;
@@ -311,6 +325,45 @@ const classify = (lines: readonly CleanedLine[]): Classified[] => {
     lastNonBlankType = "action";
   }
 
+  return out;
+};
+
+// ─── Pass 2b — Unwrap ────────────────────────────────────────────────────────
+//
+// pdf-parse hard-wraps action and dialogue paragraphs at the page column width,
+// so one logical paragraph arrives as several consecutive same-type lines with
+// NO blank between them. Left as-is, each becomes its own Fountain block, so a
+// re-export emits more lines than the original and the editor shows a paragraph
+// split into stubs. Merge consecutive `action`/`dialogue` blocks (only those the
+// classifier produced back-to-back, i.e. not separated by a blank or a different
+// element) back into one space-joined logical line. Character cues, scene
+// headings, transitions and parentheticals are each their own unit and never
+// merge — they are exactly the boundaries that end a wrapped run.
+const MERGEABLE: ReadonlySet<ElementType> = new Set(["action", "dialogue"]);
+
+// A wrapped line that ends mid-word with a hyphen ("centro-\nsinistra") rejoins
+// with no space; every other continuation rejoins with a single space.
+const joinWrapped = (left: string, right: string): string =>
+  /[-‐]$/.test(left) ? left.slice(0, -1) + right : `${left} ${right}`;
+
+const unwrap = (blocks: readonly Classified[]): Classified[] => {
+  const out: Classified[] = [];
+  for (const block of blocks) {
+    const prev = out[out.length - 1];
+    if (
+      prev &&
+      prev.type === block.type &&
+      MERGEABLE.has(block.type) &&
+      block.text.trim() !== ""
+    ) {
+      out[out.length - 1] = {
+        type: prev.type,
+        text: joinWrapped(prev.text, block.text),
+      };
+      continue;
+    }
+    out.push(block);
+  }
   return out;
 };
 
@@ -349,7 +402,7 @@ export const fountainFromPdf = (rawText: string): string => {
     .replace(/\r/g, "\n")
     .split("\n");
   const cleaned = cleanup(rawLines);
-  const classified = classify(cleaned);
+  const classified = unwrap(classify(cleaned));
   // Don't use .trim() — it would eat the leading 6-space indent of a
   // character cue that lands on the first line. Drop empty leading/trailing
   // lines only.

@@ -23,6 +23,14 @@ E2E first; screenshots in a recap; gates green).
 
 ## Open
 
+### BUG-N50 — PDF import mangled paragraphs (hard-wrap → split lines) + dialogue after a cue parsed as action (2026-06-09)
+
+- Severity: ALTO (corrupts the imported screenplay: re-export emits more lines than the original; dialogue mis-typed as action breaks breakdown/character extraction)
+- Status: fixed (`fountain-from-pdf` Pass 2b unwrap + orphan-dialogue recovery)
+- Repro: import a real screenplay PDF (e.g. the "Non fa ridere" import). Observed: (a) action/dialogue paragraphs were split mid-sentence into one block per visual PDF line, so the editor showed stubs and a re-export produced extra line breaks; (b) "TEA (V.O.)" with its lines rendered as Action instead of Character + Dialogue.
+- Proof: verified live re-importing `no-country-for-old-men-2007.pdf` — the VOICE OVER speech is now one dialogue paragraph (was ~6 wrapped lines), action paragraphs are single lines, and a cue's first line is dialogue. Unit tests: 7 new in `fountain-from-pdf.test.ts` (unwrap action/dialogue, no-merge across blank, no-merge into cue, hyphen rejoin, orphan-dialogue recovery) — 68/68 green; full screenplay lib suite 282/282.
+- Cause: the parser treated every pdf-parse line as a logical line. PDFs hard-wrap at the page column width, so one paragraph arrives as several consecutive same-type lines with no blank between — each became its own Fountain block. Fix: **Pass 2b** merges consecutive `action`/`dialogue` blocks (those the classifier produced back-to-back, i.e. not separated by a blank or a different element) into one space-joined logical line; a trailing hyphen rejoins with no space. Separately, pdf-parse sometimes inserts a spurious blank between a CHARACTER cue and its first dialogue line, dropping it to `action`; the classifier now recovers dialogue when `lastNonBlankType === "character"`.
+
 ### BUG-N43 — importing a screenplay PDF with a title page silently renamed the project (2026-06-09)
 
 - Severity: ALTO (data corruption: the project name is overwritten by a foreign PDF's title)
