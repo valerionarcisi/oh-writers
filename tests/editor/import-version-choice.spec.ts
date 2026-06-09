@@ -127,4 +127,60 @@ test.describe("Import PDF — version choice dialog", () => {
     const rowsAfter = await page.locator(rowSel).count();
     expect(rowsAfter).toBe(rowsBefore);
   });
+
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  /**
+   * [OHW-071] Spec 71 — "Salva come Versione N e importa" must create a NEW
+   * version that becomes IMMEDIATELY ACTIVE, carrying the imported content. The
+   * regression this guards: the imported version used to activate but render
+   * EMPTY (the version-scoped CRDT seeded empty and an autosave clobbered the
+   * imported content). The fix seeds the version's CRDT snapshot server-side, so
+   * after activation the editor must still show content (a non-empty doc).
+   *
+   * BLOCKED (.fixme) by the same pre-existing breakage that reds OHW-178/179 in
+   * this file: the seeded test screenplay renders EMPTY in the editor (content
+   * lives in pm_doc/scenes but the version row's `content` is empty and the
+   * realtime room seeds from an empty fragment), so `hasContent` is false and
+   * the import-confirm dialog never opens. The Spec 71 behaviour is verified
+   * live with real content present (see BUG-N53 for the seed-render blocker).
+   */
+  test.fixme("[OHW-071] 'Salva come nuova versione e importa' activates a new version that keeps the imported content", async ({
+    authenticatedPage: page,
+  }) => {
+    const rowSel = '[data-testid^="versions-split-row-"]';
+    await openVersions(page);
+    const rowsBefore = await page.locator(rowSel).count();
+    const chipBefore = (
+      await page.getByTestId("topbar-version-chip").innerText()
+    ).trim();
+    await closeVersions(page);
+
+    await startImport(page);
+    const confirmDialog = page.getByTestId("import-confirm");
+    await expect(confirmDialog).toBeVisible({ timeout: 15_000 });
+
+    await page.getByTestId("import-confirm-new-version").click();
+    await expect(confirmDialog).not.toBeVisible({ timeout: 5_000 });
+
+    // The chip must change to the new (now active) version.
+    await expect
+      .poll(
+        async () =>
+          (await page.getByTestId("topbar-version-chip").innerText()).trim(),
+        { timeout: 15_000 },
+      )
+      .not.toBe(chipBefore);
+
+    // A new version row must exist.
+    await openVersions(page);
+    const rowsAfter = await page.locator(rowSel).count();
+    expect(rowsAfter).toBe(rowsBefore + 1);
+    await closeVersions(page);
+
+    // The active version must NOT be empty — the imported content survived
+    // (no empty-seed clobber). The editor doc must have visible text.
+    const docText = await page.locator(".ProseMirror").first().innerText();
+    expect(docText.trim().length).toBeGreaterThan(50);
+  });
 });

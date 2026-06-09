@@ -25,6 +25,7 @@ import {
   useVersion,
   useVersions,
   useCreateManualVersion,
+  useImportAsActiveVersion,
   useRestoreVersion,
 } from "../hooks/useVersions";
 import { estimatePageCount } from "../lib/page-counter";
@@ -383,18 +384,26 @@ export const ScreenplayEditor = forwardRef<
       : null;
 
   const createVersion = useCreateManualVersion();
+  const importAsVersion = useImportAsActiveVersion();
+  // Spec 71: importing "as a new version" inserts a NEW version carrying the
+  // imported Fountain and makes it ACTIVE server-side; the editor remounts on
+  // the changed `currentVersionId` (key) and reseeds from the imported content.
+  // No `setContent` here — that would double-apply against the remount + race
+  // the CRDT seed. (The "overwrite current" path still uses setContent: it
+  // edits the live active version in place.)
   const handleCreateVersionThenImport = useCallback(
     (fountain: string) => {
       if (!nextVersionLabel) {
         setContent(fountain);
         return;
       }
-      createVersion.mutate(
-        { screenplayId: screenplay.id, label: nextVersionLabel },
-        { onSettled: () => setContent(fountain) },
-      );
+      importAsVersion.mutate({
+        screenplayId: screenplay.id,
+        label: nextVersionLabel,
+        content: fountain,
+      });
     },
-    [createVersion, screenplay.id, nextVersionLabel],
+    [importAsVersion, screenplay.id, nextVersionLabel],
   );
 
   // Pass 0 of PDF import (Spec 07c): when the imported PDF carries a title

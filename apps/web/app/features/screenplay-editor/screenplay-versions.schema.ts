@@ -64,6 +64,16 @@ export const CreateManualVersionInput = z.object({
   label: z.string().min(1).max(100),
 });
 
+// Spec 71: import the given Fountain as a brand-new version that becomes the
+// ACTIVE one. The previous draft stays in its own version row. Distinct from
+// `createManualVersion` (checkpoints the current content, no activation) and
+// `createBlankVersion` (activates an EMPTY version).
+export const ImportAsActiveVersionInput = z.object({
+  screenplayId: z.string().uuid(),
+  label: z.string().min(1).max(100),
+  content: z.string(),
+});
+
 export const RestoreVersionInput = SwitchVersionInput;
 
 // Strip binary yjsSnapshot before sending to client
@@ -80,4 +90,7 @@ export type SwitchVersionData = z.infer<typeof SwitchVersionInput>;
 export type DeleteVersionData = z.infer<typeof DeleteVersionInput>;
 export type SaveVersionContentData = z.infer<typeof SaveVersionContentInput>;
 export type CreateManualVersionData = z.infer<typeof CreateManualVersionInput>;
+export type ImportAsActiveVersionData = z.infer<
+  typeof ImportAsActiveVersionInput
+>;
 export type RestoreVersionData = z.infer<typeof RestoreVersionInput>;

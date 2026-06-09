@@ -4,6 +4,7 @@ import {
   listVersions,
   getVersion,
   createManualVersion,
+  importAsActiveVersion,
   createBlankVersion,
   restoreVersion,
   deleteVersion,
@@ -16,6 +17,7 @@ import {
 } from "../server/versions.server";
 import type {
   CreateManualVersionData,
+  ImportAsActiveVersionData,
   CreateVersionFromScratchData,
   RestoreVersionData,
   DeleteVersionData,
@@ -52,6 +54,29 @@ export const useCreateManualVersion = () => {
     onSuccess: (version) => {
       void queryClient.invalidateQueries({
         queryKey: ["versions", version.screenplayId],
+      });
+    },
+  });
+};
+
+// Spec 71: import Fountain as a NEW version that becomes ACTIVE. Moves the
+// current pointer + reseeds the live editor, so refetch the mounted editor
+// content + the badge/guard pointer (mirrors createBlankVersion).
+export const useImportAsActiveVersion = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: ImportAsActiveVersionData) =>
+      unwrapResult(await importAsActiveVersion({ data: input })),
+    onSuccess: (screenplay) => {
+      void queryClient.invalidateQueries({
+        queryKey: ["versions", screenplay.id],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["screenplays"],
+        type: "active",
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["screenplay-current-version", screenplay.id],
       });
     },
   });
@@ -163,6 +188,7 @@ export {
   listVersions,
   getVersion,
   createManualVersion,
+  importAsActiveVersion,
   createBlankVersion,
   restoreVersion,
   deleteVersion,

@@ -24,10 +24,13 @@ import { getDb } from "~/server/db";
 import type { Db } from "~/server/db";
 import { requireProjectAccess } from "~/server/access";
 import { stripYjsSnapshot } from "~/server/helpers";
+import { syncScenesFromFountain } from "./scenes-sync";
+import { yjsSnapshotFromFountain } from "./yjs-seed.server";
 import {
   ListVersionsInput,
   GetVersionInput,
   CreateManualVersionInput,
+  ImportAsActiveVersionInput,
   CreateVersionFromScratchInput,
   RestoreVersionInput,
   DeleteVersionInput,
@@ -68,6 +71,11 @@ const nextVersionNumber = (db: DbOrTx, screenplayId: string): Promise<number> =>
     .then((rows) => (rows[0]?.max ?? 0) + 1);
 
 const todayIsoDate = (): string => new Date().toISOString().slice(0, 10);
+
+// Mirror of screenplay.server.ts's estimate — pages ≈ lines / 55. Kept local so
+// the import-as-version path doesn't import the screenplay save module.
+const estimatePageCount = (content: string): number =>
+  Math.max(0, Math.ceil(content.split("\n").length / 55));
 
 // Suggest the next revision color by reading existing colors for the
 // screenplay (sorted by version number ascending) and walking the cycle.
@@ -404,6 +412,133 @@ export const createBlankVersion = createServerFn({ method: "POST" })
         ).andThen((v) =>
           v ? ok(stripYjsSnapshot(v)) : err(new VersionNotFoundError("new")),
         ),
+      );
+    },
+  );
+
+// ─── Import as active version ───────────────────────────────────────────────
+// Spec 71: import the given Fountain as a NEW version that becomes ACTIVE. The
+// previous draft is preserved untouched in its own version row (it was the
+// active version; it simply stops being current). Same activation mechanics as
+// `createBlankVersion`, but seeded with imported content instead of empty:
+//   - the new version row carries `content` and a NULL `yjs_snapshot`;
+//   - `screenplays` is pointed at the new version and its `pm_doc`/`yjs_state`
+//     are cleared so the editor reseeds from `fountainToDoc(content)` on the
+//     `key={currentVersionId}` remount, with no stale pmDoc or CRDT to fight.
+
+interface ImportAsActiveVersionParams {
+  screenplayId: string;
+  label: string;
+  content: string;
+  /** The active version before this import, or null. Breakdown is cloned from it. */
+  prevActiveId: string | null;
+  userId: string;
+}
+
+// The write half, isolated so a fake-tx unit test can assert the contract
+// (insert new version, repoint current, clear pmDoc/yjsState, mark stale)
+// against the production code rather than a mock of it. Returns the updated
+// screenplay row. Caller wraps in a transaction + maps errors.
+export const importAsActiveVersionTx = async (
+  tx: DbOrTx,
+  params: ImportAsActiveVersionParams,
+): Promise<typeof screenplays.$inferSelect> => {
+  const pageCount = estimatePageCount(params.content);
+  const [number, draftColor] = await Promise.all([
+    nextVersionNumber(tx, params.screenplayId),
+    pickNextColorFor(tx, params.screenplayId),
+  ]);
+
+  // Seed the version's CRDT snapshot from the imported Fountain server-side.
+  // A NULL snapshot would make the room rely on the first client to seed it,
+  // which races the editor remount + autosave and lets an empty seed clobber
+  // the imported content (data loss). A populated snapshot makes the room
+  // authoritative: the client sees a non-empty fragment and never re-seeds.
+  const snapshot = yjsSnapshotFromFountain(params.content);
+
+  const inserted = await tx
+    .insert(screenplayVersions)
+    .values({
+      screenplayId: params.screenplayId,
+      number,
+      label: params.label,
+      content: params.content,
+      pageCount,
+      yjsSnapshot: snapshot,
+      draftColor,
+      draftDate: todayIsoDate(),
+      createdBy: params.userId,
+    })
+    .returning()
+    .then((rows) => rows[0]);
+  if (!inserted) throw new Error("Import returned no version row");
+
+  await tx
+    .update(screenplays)
+    .set({
+      content: params.content,
+      // Clear the stored PM doc so a legacy reader rebuilds from the imported
+      // Fountain. Mirror the same CRDT onto the screenplay-level state so any
+      // legacy (non-version-scoped) room also loads the imported content.
+      pmDoc: null,
+      yjsState: snapshot,
+      currentVersionId: inserted.id,
+      pageCount,
+      updatedAt: new Date(),
+      breakdownStale: true,
+      locationsStale: true,
+      budgetStale: true,
+      scheduleStale: true,
+    })
+    .where(eq(screenplays.id, params.screenplayId));
+
+  // Mirror the imported scenes so the breakdown route sees them, and carry
+  // prior breakdown tagging forward where the text still matches.
+  await syncScenesFromFountain(tx, params.screenplayId, params.content);
+  if (params.prevActiveId) {
+    await cloneBreakdownToNewVersionInline(
+      tx,
+      params.prevActiveId,
+      inserted.id,
+    );
+  }
+
+  const updated = await tx.query.screenplays.findFirst({
+    where: eq(screenplays.id, params.screenplayId),
+  });
+  if (!updated) throw new Error("Import: screenplay vanished");
+  return updated;
+};
+
+export const importAsActiveVersion = createServerFn({ method: "POST" })
+  .validator(ImportAsActiveVersionInput)
+  .handler(
+    async ({
+      data,
+    }): Promise<ResultShape<ScreenplayView, VersionAccessError>> => {
+      const user = await requireUser();
+      const db = await getDb();
+
+      const access = await resolveScreenplayAccess(db, data.screenplayId);
+      if (access.isErr()) return toShape(err(access.error));
+      const screenplay = access.value;
+
+      return toShape(
+        await ResultAsync.fromPromise(
+          db.transaction((tx) =>
+            importAsActiveVersionTx(tx, {
+              screenplayId: data.screenplayId,
+              label: data.label,
+              content: data.content,
+              prevActiveId: screenplay.currentVersionId ?? null,
+              userId: user.id,
+            }),
+          ),
+          (e) => new DbError("importAsActiveVersion", e),
+        ).map((updated) => {
+          const { yjsState: _, ...view } = updated;
+          return view;
+        }),
       );
     },
   );

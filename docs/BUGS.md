@@ -23,6 +23,15 @@ E2E first; screenshots in a recap; gates green).
 
 ## Open
 
+### BUG-N53 — seeded screenplay renders EMPTY in the editor (content unreachable to the realtime room) (2026-06-09)
+
+- Severity: ALTO (blocks the import-version-choice E2E suite and confuses manual testing; the screenplay looks blank despite having content)
+- Status: open
+- Repro: reseed (`pnpm db:seed:reset`) → open `/projects/:id/screenplay` for the seeded "Non fa ridere". Observed: editor blank, scene index `1/1`, "Esporta PDF" disabled (`hasContent` false), even though the DB seed created 9 scenes + a populated `pm_doc`.
+- Proof: DB shows `screenplay_versions.content` length 1 (empty) with `pm_doc` populated on `screenplays`; the version-scoped realtime room (`screenplay:{id}:{versionId}`) loads `yjs_snapshot` (NULL on a fresh seed) and seeds from an empty fragment, so the editor shows nothing. `getScreenplay` returns the active version's `content` (empty), not the `pm_doc`/scenes.
+- Cause (suspected): the seed stores the body in `pm_doc` + the `scenes` table but leaves `screenplay_versions.content` empty and seeds no per-version `yjs_snapshot`. The editor in realtime mode loads from the version's CRDT snapshot (NULL → empty), and `content` (the seed-from-Fountain fallback source) is also empty. The seed must populate the active version's `content` AND `yjs_snapshot` (mirror of the pm_doc), the way Spec 71's `yjsSnapshotFromFountain` now does for imports.
+- Impact: reds `tests/editor/import-version-choice.spec.ts` entirely (OHW-178/179 pre-existing, OHW-071 added as `.fixme` until this is fixed) — the import-confirm dialog needs `hasContent` true. Related to N-31 (seed gap) but distinct: this is the _runtime empty-render_, not stale test locators.
+
 ### BUG-N44 — screenplay opening on "FADE IN:" shows a phantom extra scene (2026-06-09)
 
 - Severity: MEDIO (wrong scene count in footer + index; throws off breakdown/schedule scene numbering)
