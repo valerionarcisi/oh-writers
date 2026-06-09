@@ -23,6 +23,14 @@ E2E first; screenshots in a recap; gates green).
 
 ## Open
 
+### BUG-N44 — screenplay opening on "FADE IN:" shows a phantom extra scene (2026-06-09)
+
+- Severity: MEDIO (wrong scene count in footer + index; throws off breakdown/schedule scene numbering)
+- Status: fixed (`fountainToDoc` emits a leading transition as a top-level node, not a synthetic empty-heading scene)
+- Repro: import/open a screenplay that opens with `FADE IN:` and has 2 scenes. Observed: footer "SCENE 3", Indice "1/3", and the index dropdown listed a phantom empty `SC.1 —` before the two real scenes.
+- Proof: verified live re-importing `with-title-page.pdf` (FADE IN: + 2 scenes) → footer "SCENE 2", Indice "1/2", index lists only the two real headings; `FADE IN:` renders as a transition node.
+- Cause: `fountainToDoc` wrapped ALL content before the first heading (the opening `FADE IN:` transition) in a synthetic `scene` with an empty heading — but the doc schema (`(scene | transition)+`) allows a top-level `transition`. The synthetic scene counted as scene 1. Fix: emit leading transition nodes directly under `doc`; only wrap the first non-transition stray node (rare: action before any heading) in the synthetic scene, order preserved.
+
 ### BUG-N50 — PDF import mangled paragraphs (hard-wrap → split lines) + dialogue after a cue parsed as action (2026-06-09)
 
 - Severity: ALTO (corrupts the imported screenplay: re-export emits more lines than the original; dialogue mis-typed as action breaks breakdown/character extraction)

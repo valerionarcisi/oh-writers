@@ -134,18 +134,28 @@ export const fountainToDoc = (text: string): Node => {
 
   flushScene();
 
-  // If there was content before the first scene (unusual), prepend it wrapped
-  // in a synthetic scene with an empty heading.
-  const allScenes =
-    topLevelTransitions.length > 0
-      ? [
-          schema.node("scene", null, [
-            buildHeadingNode("", ""),
-            ...topLevelTransitions,
-          ]),
-          ...scenes,
-        ]
-      : scenes;
+  // Content before the first scene heading. `doc` allows a top-level
+  // `transition` directly (e.g. an opening "FADE IN:"), so leading transitions
+  // are emitted as-is — wrapping them in a synthetic empty-heading scene would
+  // create a phantom scene that inflates the scene count and the index ("SCENE 3"
+  // for a 2-scene script that opens on FADE IN:). The first non-transition node
+  // (rare: action before any heading) and everything after it is wrapped in one
+  // synthetic scene, since action is not a valid direct child of `doc`. Order is
+  // preserved.
+  const firstStrayIdx = topLevelTransitions.findIndex(
+    (n) => n.type.name !== "transition",
+  );
+  const leadingTransitions =
+    firstStrayIdx === -1
+      ? topLevelTransitions
+      : topLevelTransitions.slice(0, firstStrayIdx);
+  const strayRest =
+    firstStrayIdx === -1 ? [] : topLevelTransitions.slice(firstStrayIdx);
+  const syntheticLead =
+    strayRest.length > 0
+      ? [schema.node("scene", null, [buildHeadingNode("", ""), ...strayRest])]
+      : [];
+  const allScenes = [...leadingTransitions, ...syntheticLead, ...scenes];
 
   // An empty doc still needs at least one valid child
   if (allScenes.length === 0) {
