@@ -428,6 +428,8 @@ export const ScreenplayEditor = forwardRef<
           draftDate: current?.draftDate ?? null,
           draftColor: current?.draftColor ?? null,
         },
+        // A foreign PDF's title page must not rename the project.
+        syncProjectTitle: false,
       });
     },
     [updateTitlePage, screenplay.projectId, titlePageQ.data],

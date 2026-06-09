@@ -14,8 +14,13 @@ export const useTitlePageState = (projectId: string) =>
 export const useUpdateTitlePageState = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { projectId: string; state: TitlePageState }) =>
-      unwrapResult(await updateTitlePageState({ data: input })),
+    mutationFn: async (input: {
+      projectId: string;
+      state: TitlePageState;
+      // Defaults to true server-side. Import passes false so a foreign PDF's
+      // title page never renames the project.
+      syncProjectTitle?: boolean;
+    }) => unwrapResult(await updateTitlePageState({ data: input })),
     onSuccess: (_, { projectId }) => {
       void queryClient.invalidateQueries({
         queryKey: ["projects", projectId, "title-page-state"],

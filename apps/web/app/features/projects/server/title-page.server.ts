@@ -264,7 +264,9 @@ export const updateTitlePageState = createServerFn({ method: "POST" })
       }
 
       const { state } = data;
-      const nextTitle = extractTitle(state.doc).trim();
+      const nextTitle = data.syncProjectTitle
+        ? extractTitle(state.doc).trim()
+        : "";
 
       // Spec 06e: draftDate / draftColor live on the screenplay version now.
       // The PM editor on the title page only persists the doc + the project

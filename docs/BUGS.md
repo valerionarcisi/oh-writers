@@ -23,6 +23,15 @@ E2E first; screenshots in a recap; gates green).
 
 ## Open
 
+### BUG-N43 — importing a screenplay PDF with a title page silently renamed the project (2026-06-09)
+
+- Severity: ALTO (data corruption: the project name is overwritten by a foreign PDF's title)
+- Status: fixed (`updateTitlePageState` gains `syncProjectTitle`, default true; import passes false)
+- Repro: open project "Non fa ridere" (`…012`) → ⋯ → Importa PDF → `with-title-page.pdf` → Sovrascrivi → "Sostituisci" on the frontespizio prompt. Observed: the project was renamed "NON FA RIDERE" → "THE LAST FRAME" (sidebar, dashboard, recents) because the imported title page carried that title.
+- Proof: verified live — after the fix the same import keeps the project name "Non fa ridere" while the title-page doc still adopts "THE LAST FRAME / Jane Doe / Draft 3".
+- Cause: `updateTitlePageState` writes `projects.title = extractTitle(doc)` — correct when the writer edits the title page by hand (the title page IS the project title), wrong for import (adopting a foreign title renames the project). Fix: `syncProjectTitle` flag (default true preserves manual-edit behaviour; the import path sends false, so `nextTitle` is empty and the title write is skipped).
+- TEST DEBT: same harness gap as N-42 — the import suite isn't in CI and the realtime path has no ws-server. Add a unit test on `updateTitlePageState` asserting `syncProjectTitle:false` leaves `projects.title` untouched while persisting the doc.
+
 ### BUG-N42 — screenplay PDF/Fountain import (and version restore) did nothing in realtime mode (2026-06-09)
 
 - Severity: ALTO (core feature silently broken: Sovrascrivi / "Salva come Versione N e importa" left the editor showing the old content)

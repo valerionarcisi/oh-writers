@@ -43,6 +43,32 @@ Item format: `[id] short title — link (spec NN / audit A-0x / learning)`
   Follow-up: logline export menu, liste lunghe (67+ versioni), rimozione file rotta
   screenplay legacy. Verificato live sul progetto reale (Chrome).
 
+- **[Spec 66 follow-up] Versions UX batch — IN PROGRESS (owner testing 2026-06-07)** —
+  working tree on `main`, NOT committed (owner is trying it live first). Done so far,
+  typecheck green + E2E green (versions-drawer 7/7):
+  - **Switch/Nuova-versione ora aggiornano davvero l'editor** — root cause: l'editor
+    sceneggiatura semina `content` da prop una volta sola e non si ri-sincronizza; fix =
+    `key={value.currentVersionId}` sul `<ScreenplayEditor>` (rimonta su Attiva/Nuova).
+  - **`createBlankVersion`** nuovo server fn (vuoto+attivo, parità col narrativo
+    `createVersionFromScratch`); il bottone "+ Nuova versione" lo usa. `createManualVersion`
+    torna al solo checkpoint (riusato dall'import). Scoperto che la sceneggiatura è già
+    version-backed (`getScreenplay` legge dalla riga della versione attiva) → niente
+    snapshot-then-blank, niente import rotto.
+  - **Modale nostra al posto di `window.confirm`** sul delete versione (`useConfirmDialog`,
+    destructive). Regola salvata in memoria: mai dialog native, ovunque.
+  - Test riallineati al chip (`topbar-version-chip`) in versions-drawer / screenplay-chrome /
+    import-version-choice (menu `menu-item-versions` ritirato).
+  - **Da chiudere**: far provare all'owner; poi commit + far girare la suite piena;
+    review delle finding minori (query ridondanti in `createManualVersion`).
+
+  **Follow-up UI in coda (richiesti owner 2026-06-07, screenshot):**
+  1. **Sidebar rotta** → sistemarla bella e coerente Notion-style.
+  2. **Spostare "Focus" della sceneggiatura vicino al nome versione** (come nel trattamento)
+     per guadagnare spazio.
+  3. (fatto, da verificare live) switch "Attiva" deve cambiare il doc sotto nell'editor.
+  4. (fatto, da verificare live) "+ Nuova versione" = nuova versione, nuovo titolo,
+     documento pulito per scrivere.
+
 ## NEXT (prioritised — narrative walk topics, then the rest)
 
 -0. **[N-38 / Spec 63] Entity change feedback — banner + adaptive block highlight** — replace the dead `DraftBanner` with a persistent banner "✦ Cesare ha aggiornato il \<Entity> · [Vedi cosa è cambiato] · [↩ Annulla]". ADAPTIVE in-text feedback: surgical edit (<~40% words) → highlight changed BLOCKS in place (clears per-block when the author edits that block / "Ho visto" / Cmd-Z); large rewrite (>=~40%) → no highlight, only the split bullets. "↩ Annulla" reverts the whole edit via the pre-edit snapshot; NO accept (already applied). Never a timeout. All narrative docs via shared editor. `docs/specs/63-entity-change-feedback-banner.md` + `docs/adr/0003` (+ ADR-0001 reconciliation). _Deferred 2026-06-05 — the inline word-diff removal shipped; this banner+adaptive-highlight is the remaining half._
@@ -76,6 +102,15 @@ Item format: `[id] short title — link (spec NN / audit A-0x / learning)`
 17. **[56-1b] a11y axe automation** — needs approval to add `@axe-core/playwright` — `docs/specs/56-continuous-qa-system.md` Phase 1b.
 18. **[56-2] DS Phase 2 remainder** — single-home action check + shell-zone structural assertions (needs Spec 55) — spec 56 Phase 2.
 19. **[56-3/4] Visual regression + DoD gate + heuristic loop + Stop-hook wiring** — spec 56 Phase 3/4.
+
+### Filed 2026-06-09 (real-use session — import/editor)
+
+20. **[BUG-N44] Screenplay footer scene counter off-by-one after import** — a 2-scene imported screenplay shows "SCENE 3" in the footer (cursor scene-index reports 3 when only 2 scenes exist). Likely `onSceneIndexChange` counts a trailing/empty heading or FADE OUT/THE END block. Repro: import `with-title-page.pdf` → place cursor at end → footer "SCENE 3 / PAGINE 1". Log a proper repro in BUGS.md when pulled.
+21. **[BUG-N45] Narrative autosave fires on every click / cursor move** — Soggetto shows "Salvataggio…" on selection/caret moves, not just real content edits. Autosave is triggered by transactions that don't change the doc (selection-only). Should debounce on doc-changing steps only. Wasteful (writes + traffic) and alarming UX. Likely related to the canonical-dirty work in `docs/specs/61-narrative-autosave-canonical-dirty.md` (untracked spec). Pair with that spec.
+22. **[BUG-N46] "Salva come nuova versione" import path still shows the overwrite confirm** — choosing "Salva come Versione N e importa" then being asked to overwrite is contradictory. Investigate `confirmWithVersion` / `handleCreateVersionThenImport` ordering. Repro to confirm + log in BUGS.md.
+23. **[N-47 / Spec 68] Narrative coherence warnings** — cross-document consistency checks (identity/premise/title/beat/setting drift) surfaced as a non-blocking warning on every narrative part. AI-backed → Cesare tracer invariant + cost smoke + feature flag. `docs/specs/68-narrative-coherence-warnings.md`. Pulled from: imported screenplay incoherent with Soggetto, no warning.
+24. **[N-48 / Spec 69] Screenplay keyboard-shortcut discoverability** — the element shortcuts already exist (`Mod-1..6` / `Alt-S/A/C/D/P/T`, Tab/Enter, `Mod-Shift-F`); make them discoverable (toolbar hints + `?` cheatsheet, single shared shortcut map) + audit gaps. `docs/specs/69-screenplay-keyboard-shortcuts.md`.
+25. **[N-49] Move the sidebar "+" into the gear/account menu** — the rail "+" (new project) could live in the `⋯`/gear menu near the account zone instead of floating in the rail. Small UI relocation; confirm placement. Measure + screenshot before/after.
 
 ## ICEBOX (not now)
 
