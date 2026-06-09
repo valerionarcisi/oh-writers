@@ -23,6 +23,16 @@ E2E first; screenshots in a recap; gates green).
 
 ## Open
 
+### BUG-N42 — screenplay PDF/Fountain import (and version restore) did nothing in realtime mode (2026-06-09)
+
+- Severity: ALTO (core feature silently broken: Sovrascrivi / "Salva come Versione N e importa" left the editor showing the old content)
+- Status: fixed (`ProseMirrorView` external-value sync no longer bails in realtime; `useYjsRoom` orphan-provider guard)
+- Repro: open a screenplay with realtime ON (ws-server up), ⋯ → Importa PDF → pick a PDF → Sovrascrivi (or "Salva come Versione N e importa"). Observed: the editor kept the previous text; the version-then-import path created a version but never applied the import.
+- Proof: verified live — imported `no-country-for-old-men-2007.pdf` into project `…012`, editor replaced the pizzeria scene with "FADE IN: / EXT. MOUNTAINS - NIGHT" and survived a reload (reached the CRDT). Title-page import also re-verified (`with-title-page.pdf` → "THE LAST FRAME / Jane Doe", persisted).
+- Cause: `ProseMirrorView` guarded the external value→editor sync with `if (isRealtime) return` (the editor went realtime-only after the recent CRDT seed-guard commits). Import/version-restore set the `content` React state but never the live Yjs doc. Fix: drop the bail — the one-shot `replaceWith` flows through `ySyncPlugin` into the shared fragment, so the replacement propagates and persists.
+- Bonus (same session): `useYjsRoom` could leak a provider whose socket opened after the effect was already disposed (fast nav away during the token fetch) → a ghost "N online" peer for ~30s. Fixed by destroying the provider/ydoc when `disposed` flipped mid-fetch.
+- TEST DEBT: this regression has **zero E2E coverage** because `playwright.config.ts` starts **no ws-server** and sets no `VITE_WS_URL`, so the test editor always runs **non-realtime** — the exact path that broke is never exercised. Compounds [N-31] (the `tests/editor/` import suite is not in CI and already fails on clean HEAD). To cover N-42 the test harness must run a ws-server + point `VITE_WS_URL` at it; track as its own infra front.
+
 ### BUG-N41 — narrative realtime editor double-seeds the CRDT → unbounded growth → "Invalid string length" freeze (2026-06-07)
 
 - Severity: ALTO (freezes the whole page; Attiva / Nuova versione appear broken because the page is already frozen when clicked)

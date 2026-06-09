@@ -324,11 +324,12 @@ export function ProseMirrorView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [readOnly, isRealtime]);
 
-  // Sync external value changes (e.g. version restore, import). Disabled in
-  // realtime mode: the CRDT is the source of truth and a replaceWith here would
-  // fight concurrent remote edits.
+  // Sync external value changes (e.g. version restore, import). This is a
+  // deliberate one-shot whole-document replace, not continuous sync — in
+  // realtime mode the dispatched transaction flows through ySyncPlugin into the
+  // shared Yjs fragment, so the replacement propagates to every peer and the
+  // CRDT stays the source of truth.
   useEffect(() => {
-    if (isRealtime) return;
     const view = viewRef.current;
     if (!view) return;
     if (value === lastValueRef.current) return;
@@ -342,7 +343,7 @@ export function ProseMirrorView({
       newDoc.content,
     );
     view.dispatch(tr);
-  }, [value, isRealtime]);
+  }, [value]);
 
   return (
     <div

@@ -258,12 +258,21 @@ export const ScreenplayEditor = forwardRef<
   const realtimeUser = sessionData?.user
     ? { id: sessionData.user.id, name: sessionData.user.name }
     : null;
+  // The screenplay content is version-backed: each active version is its own
+  // CRDT room (`screenplay:<id>:<versionId>`), persisted in the version's
+  // yjs_snapshot. Switching the active version (Attiva / + Nuova versione)
+  // changes currentVersionId → roomId → useYjsRoom reopens onto that version's
+  // CRDT, so the editor actually reloads. Falls back to the legacy
+  // screenplay-level room when there is no current version yet (seed/legacy).
+  const roomId = screenplay.currentVersionId
+    ? `screenplay:${screenplay.id}:${screenplay.currentVersionId}`
+    : `screenplay:${screenplay.id}`;
   const {
     ydoc: realtimeDoc,
     provider: realtimeProvider,
     status: realtimeStatus,
     peers: realtimePeers,
-  } = useYjsRoom(`screenplay:${screenplay.id}`, realtimeUser, !isViewing);
+  } = useYjsRoom(roomId, realtimeUser, !isViewing);
   // Realtime sync is active for ANY connected user (viewers included — they
   // receive live content + cursors but the editor stays readOnly and the
   // ws-server drops their writes). It is NOT tied to write permission.
@@ -1030,10 +1039,6 @@ export const ScreenplayEditor = forwardRef<
             },
           }
         : {}),
-      [ContextActionIds.VERSIONS]: {
-        onSelect: toggleVersionsDrawer,
-        testId: "menu-item-versions",
-      },
     }),
     [
       canEdit,
@@ -1043,7 +1048,6 @@ export const ScreenplayEditor = forwardRef<
       openPdfPicker,
       pdfImport.isLoading,
       openFountainPicker,
-      toggleVersionsDrawer,
       t,
     ],
   );
@@ -1291,6 +1295,7 @@ export const ScreenplayEditor = forwardRef<
           isOpen
           onClose={pdfImport.cancel}
           title={t("screenplay.menu.importPdfTitle")}
+          size="lg"
           isDismissable={false}
           data-testid="import-confirm"
           actions={
@@ -1365,6 +1370,7 @@ export const ScreenplayEditor = forwardRef<
           isOpen
           onClose={fountainImport.cancel}
           title={t("screenplay.menu.importFountainTitle")}
+          size="lg"
           isDismissable={false}
           data-testid="import-fountain-confirm"
           actions={
