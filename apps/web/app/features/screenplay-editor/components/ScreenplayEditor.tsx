@@ -258,12 +258,21 @@ export const ScreenplayEditor = forwardRef<
   const realtimeUser = sessionData?.user
     ? { id: sessionData.user.id, name: sessionData.user.name }
     : null;
+  // Per-version CRDT room (Spec — per-version Yjs rooms). The screenplay content
+  // is version-backed, so the room is scoped to the ACTIVE version: switching the
+  // active version (Attiva) changes currentVersionId → changes the roomId →
+  // useYjsRoom tears the old room down and reopens onto the new version's CRDT,
+  // so the editor actually shows the activated version. Without the versionId in
+  // the room key, Attiva left the editor on the previous version's room.
+  const realtimeRoomId = screenplay.currentVersionId
+    ? `screenplay:${screenplay.id}:${screenplay.currentVersionId}`
+    : `screenplay:${screenplay.id}`;
   const {
     ydoc: realtimeDoc,
     provider: realtimeProvider,
     status: realtimeStatus,
     peers: realtimePeers,
-  } = useYjsRoom(`screenplay:${screenplay.id}`, realtimeUser, !isViewing);
+  } = useYjsRoom(realtimeRoomId, realtimeUser, !isViewing);
   // Realtime sync is active for ANY connected user (viewers included — they
   // receive live content + cursors but the editor stays readOnly and the
   // ws-server drops their writes). It is NOT tied to write permission.
