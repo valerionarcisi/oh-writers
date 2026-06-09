@@ -1084,18 +1084,32 @@ export const ScreenplayEditor = forwardRef<
   // Unified TopBar version chip (same "VERSIONI ⌄" pill as the narrative docs),
   // so versions are reachable the same way everywhere — not only from the ⋯
   // menu. Hidden in focus mode.
+  // The chip shows the CURRENT version's name (its label) as a stable Notion-style
+  // identifier, not the generic word "Versioni" — falling back to "Versioni" only
+  // until the versions list has loaded. The draft colour renders as the leading dot.
+  const currentVersion = versionsResult?.isOk
+    ? (versionsResult.value.find((v) => v.id === screenplay.currentVersionId) ??
+      null)
+    : null;
   const versionChipNode = useMemo(
     () =>
       isFocusMode ? null : (
         <VersionTrigger
           variant="pill"
           label={t("screenplay.action.versions")}
-          versionLabel={t("documents.shell.versions")}
+          versionLabel={currentVersion?.label ?? t("documents.shell.versions")}
+          dotColor={currentVersion?.draftColor ?? undefined}
           onClick={toggleVersionsDrawer}
           data-testid="topbar-version-chip"
         />
       ),
-    [isFocusMode, toggleVersionsDrawer, t],
+    [
+      isFocusMode,
+      toggleVersionsDrawer,
+      t,
+      currentVersion?.label,
+      currentVersion?.draftColor,
+    ],
   );
   useTopBarSlotPublisher("versionSelector", versionChipNode);
 

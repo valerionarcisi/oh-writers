@@ -77,6 +77,12 @@ Item format: `[id] short title — link (spec NN / audit A-0x / learning)`
 18. **[56-2] DS Phase 2 remainder** — single-home action check + shell-zone structural assertions (needs Spec 55) — spec 56 Phase 2.
 19. **[56-3/4] Visual regression + DoD gate + heuristic loop + Stop-hook wiring** — spec 56 Phase 3/4.
 
+### Filed 2026-06-09 (real-use session — versions + focus)
+
+20. **[N-52] Focus mode must keep the top bar (element legend + Indice + Focus + Salvato)** — focus mode renders a `position:fixed; inset:0` overlay (`ScreenplayEditor.module.css .focusMode`) with only a bare "Esci da Focus" toolbar; the shell Viewbar (SCENA·AZIONE·… chips + Indice + Focus toggle + save state) sits underneath and is hidden. The writer wants that bar to stay visible in focus mode. Non-trivial: the element tabs live in the shell (`viewbarCenter`), not in `ScreenplayEditor` which owns the focus overlay — needs the focus overlay to reuse the Viewbar chrome (or focus mode to stop being a separate fixed overlay). Measure + screenshot before/after.
+
+_Done this session (on `feat/versions-delete-and-current`): the screenplay TopBar version chip now shows the CURRENT version's name + draft-colour dot (was the generic "Versioni"); narrative already did this. Version delete (trash + confirm, current version protected) shipped with the per-version-rooms front. Verified live._
+
 ## ICEBOX (not now)
 
 - ~~**[N-28] Spec 55 rollout to production pages**~~ — **DONE 2026-06-06 (Spec 67).** budget/breakdown/schedule/locations now publish the standard `⋯` menu with their exports; versions intentionally NOT surfaced on production pages (work on the active version). Legacy floating VersionsDrawer + compare modal retired. Branch `feat/spec-67-context-menus`.
