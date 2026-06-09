@@ -12,6 +12,8 @@ import {
 } from "../pdf-import.errors";
 import type { ImportPdfError } from "../pdf-import.errors";
 import { fountainFromPdf } from "../lib/fountain-from-pdf";
+import { fountainFromPdfCoords } from "../lib/fountain-from-pdf-coords";
+import { extractCoordLines } from "./pdf-coords.server";
 import {
   extractTitlePageFromPdf,
   type TitlePageDocJSON,
@@ -33,6 +35,33 @@ const replacementCount = (s: string): number => (s.match(/�/g) ?? []).length;
 export function bestDecoding(raw: string): string {
   const recoded = Buffer.from(raw, "latin1").toString("utf8");
   return replacementCount(recoded) < replacementCount(raw) ? recoded : raw;
+}
+
+/**
+ * Produce the body Fountain. Tries the coordinate-aware classifier first
+ * (deterministic element typing by X bucket); on any failure — no coordinates,
+ * an unrecognised layout, or an extraction error — falls back to the text-only
+ * heuristic path so no PDF that worked before regresses. The mojibake fix
+ * (`bestDecoding`) is applied per line on the coord path, mirroring the
+ * whole-text decode the text path already received.
+ */
+async function resolveFountain(
+  buffer: Buffer,
+  bodyText: string,
+  titlePageDoc: TitlePageDocJSON | null,
+): Promise<string> {
+  const coordResult = await extractCoordLines(buffer);
+  if (coordResult.isOk() && coordResult.value.length > 0) {
+    const decoded = coordResult.value.map((line) => ({
+      ...line,
+      text: bestDecoding(line.text),
+    }));
+    const coordFountain = fountainFromPdfCoords(decoded, {
+      dropTitlePagePrefix: titlePageDoc !== null,
+    });
+    if (coordFountain) return coordFountain;
+  }
+  return fountainFromPdf(bodyText);
 }
 
 const ImportPdfInput = z.object({
@@ -103,7 +132,12 @@ export const importPdf = createServerFn({ method: "POST" })
           ? rawText.split("\n").slice(consumedLines).join("\n")
           : rawText;
 
-      const fountain = fountainFromPdf(bodyText);
+      // Preferred path: classify the body by per-line X coordinate, which makes
+      // element type (scene/action/dialogue/parenthetical/character)
+      // deterministic instead of heuristic. Falls back to the text-only path
+      // when coordinates are unavailable (scanned/image PDFs, exotic encoders)
+      // or the layout isn't a recognisable screenplay.
+      const fountain = await resolveFountain(buffer, bodyText, titlePageDoc);
       if (!fountain) {
         return toShape(err(new EmptyPdfError()));
       }

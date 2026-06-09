@@ -333,6 +333,94 @@ describe("fountainFromPdf — orphan parentheticals", () => {
   });
 });
 
+// BUG: a page break can fall between a CHARACTER cue and its dialogue. pdf-parse
+// emits the cue as the last line of one page and the dialogue as the first line
+// of the next, with page junk (a bare page number, blank lines, the running
+// header) in between. Cleanup strips the page number down to a stray blank,
+// which used to reset the dialogue block and drop the spoken line to action —
+// the dialogue was lost / mis-classified. The cue→dialogue association must now
+// survive the intervening blank.
+describe("fountainFromPdf — dialogue across a page break", () => {
+  it("attaches dialogue to the cue when a bare page number sits between them", () => {
+    const out = fountainFromPdf(
+      ["TEA (V.O.)", "", "2.", "Filì venni! Corri!"].join("\n"),
+    );
+    expect(out).toMatch(
+      new RegExp(`^${CHARACTER_INDENT}TEA \\(V\\.O\\.\\)$`, "m"),
+    );
+    expect(out).toMatch(
+      new RegExp(`^${DIALOGUE_INDENT}Filì venni! Corri!$`, "m"),
+    );
+    expect(out).not.toMatch(/^Filì venni! Corri!$/m);
+  });
+
+  it("attaches dialogue to the cue across a single stray blank line", () => {
+    const out = fountainFromPdf(["TEA", "", "Filì venni! Corri!"].join("\n"));
+    expect(out).toMatch(new RegExp(`^${CHARACTER_INDENT}TEA$`, "m"));
+    expect(out).toMatch(
+      new RegExp(`^${DIALOGUE_INDENT}Filì venni! Corri!$`, "m"),
+    );
+  });
+});
+
+// A page break in a blank-less import is a BLANK line immediately followed by a
+// bare page number. Cleanup strips the number but used to leave the blank — a
+// page-break artefact that classify reads as a paragraph separator, splitting a
+// paragraph (action or dialogue) that spans the boundary. The page-break blank
+// is now collapsed, so the wrap-join keeps the paragraph whole across the break.
+describe("fountainFromPdf — paragraph wrap-join across a page break", () => {
+  it("rejoins a wrapped action paragraph split by a page break into one line", () => {
+    const out = fountainFromPdf(
+      [
+        "A wrapped action line that continues ",
+        "",
+        "5.",
+        "across the page boundary.",
+      ].join("\n"),
+    );
+    expect(out).toBe(
+      "A wrapped action line that continues across the page boundary.",
+    );
+    expect(out).not.toMatch(/^\s*$/m);
+    expect(out).not.toMatch(/^\s*5\.\s*$/m);
+  });
+
+  it("keeps a cue's dialogue continuation attached across a page break", () => {
+    const out = fountainFromPdf(
+      [
+        "JOHN",
+        "Comincio a parlare e poi ",
+        "",
+        "6.",
+        "continuo dopo la pagina.",
+      ].join("\n"),
+    );
+    expect(out).toMatch(new RegExp(`^${CHARACTER_INDENT}JOHN$`, "m"));
+    expect(out).toMatch(
+      new RegExp(
+        `^${DIALOGUE_INDENT}Comincio a parlare e poi continuo dopo la pagina\\.$`,
+        "m",
+      ),
+    );
+    expect(out).not.toMatch(/^continuo dopo la pagina\.$/m);
+  });
+});
+
+describe("fountainFromPdf — 09-no-blank-separators (TEA page break)", () => {
+  const out = fountainFromPdf(loadFixture("09-no-blank-separators.txt"));
+
+  it("keeps TEA (V.O.) as a character cue", () => {
+    expect(out).toContain(`${CHARACTER_INDENT}TEA (V.O.)`);
+  });
+
+  it("attaches 'Filì venni! Corri!' as TEA's dialogue, not action", () => {
+    expect(out).toMatch(
+      new RegExp(`^${DIALOGUE_INDENT}Filì venni! Corri!$`, "m"),
+    );
+    expect(out).not.toMatch(/^Filì venni! Corri!$/m);
+  });
+});
+
 describe("fountainFromPdf — 08-continueds", () => {
   const out = fountainFromPdf(loadFixture("08-continueds.txt"));
 
@@ -407,5 +495,223 @@ describe("fountainFromPdf — blank-less import (no separators between elements)
     expect(o).not.toMatch(
       new RegExp(`^${CHARACTER_INDENT}THIS IS A VERY`, "m"),
     );
+  });
+});
+
+// BUG-N50/N-51 follow-up: on a blank-less import the PDF column hard-wraps a
+// logical paragraph across several visual lines. A wrapped line ends with a
+// trailing space; a paragraph the writer ended with a return does not. The
+// wrap-join rejoins continuation lines using that signal WITHOUT fusing
+// distinct paragraphs and never crosses a cue/heading/parenthetical boundary.
+// The join only activates for blank-less imports (few blanks); blank-separated
+// scripts keep their per-line output (covered by 03/06 above).
+describe("fountainFromPdf — wrap-join on blank-less imports", () => {
+  // Trailing space = soft wrap; bare end = paragraph return. No blanks.
+  const wrap = (...lines: string[]): string => lines.join("\n");
+
+  it("rejoins a wrapped ACTION paragraph into one logical line", () => {
+    const out = fountainFromPdf(
+      wrap(
+        "INT. ROOM - NOTTE",
+        "JOHN ha il microfono in mano. È in piedi in un angolo ",
+        "del ristorante adibito a palco. Dietro di lui c'è un ",
+        "grande striscione con scritto OPEN GREZZO.",
+      ),
+    );
+    expect(out).toMatch(
+      /^JOHN ha il microfono in mano\. È in piedi in un angolo del ristorante adibito a palco\. Dietro di lui c'è un grande striscione con scritto OPEN GREZZO\.$/m,
+    );
+  });
+
+  it("rejoins a wrapped DIALOGUE paragraph into one logical line", () => {
+    const out = fountainFromPdf(
+      wrap(
+        "INT. ROOM - NOTTE",
+        "JOHN",
+        "AHAHHAH! Ma tua moglie ancora ti ci ",
+        "vuole a letto? AHAH! Mamma se sci ",
+        "diventato bruttu! AHAH! Nice Nice!",
+      ),
+    );
+    expect(out).toMatch(
+      new RegExp(
+        `^${DIALOGUE_INDENT}AHAHHAH! Ma tua moglie ancora ti ci vuole a letto\\? AHAH! Mamma se sci diventato bruttu! AHAH! Nice Nice!$`,
+        "m",
+      ),
+    );
+  });
+
+  it("does NOT over-merge two distinct paragraphs separated by a return", () => {
+    // Each first line ends WITHOUT a trailing space → it is a paragraph break,
+    // so the two short action lines must stay separate logical lines.
+    const out = fountainFromPdf(
+      wrap("INT. ROOM - NOTTE", "Sorride.", "Si alza e se ne va."),
+    );
+    expect(out).toMatch(/^Sorride\.$/m);
+    expect(out).toMatch(/^Si alza e se ne va\.$/m);
+    expect(out).not.toMatch(/^Sorride\. Si alza/m);
+  });
+
+  it("keeps a character cue separate from its wrapped dialogue", () => {
+    const out = fountainFromPdf(
+      wrap(
+        "INT. ROOM - NOTTE",
+        "Action che riempie la riga e va a capo da sola qui ",
+        "perché è lunga.",
+        "FILIPPO",
+        "Una battuta che riempie la riga e prosegue ",
+        "sulla riga successiva.",
+      ),
+    );
+    expect(out).toMatch(new RegExp(`^${CHARACTER_INDENT}FILIPPO$`, "m"));
+    // The cue must not be swallowed into the preceding action paragraph.
+    expect(out).not.toMatch(/perché è lunga\. FILIPPO/);
+  });
+
+  it("rejoins a word hyphenated across a wrap without a stray space", () => {
+    const out = fountainFromPdf(
+      wrap(
+        "INT. ROOM - NOTTE",
+        "Guarda la locandina dell'open- ",
+        "mic provinciale appeso fuori.",
+      ),
+    );
+    expect(out).toMatch(/open-mic provinciale/);
+    expect(out).not.toMatch(/open- mic/);
+  });
+});
+
+// BUG-N51 follow-up: on a blank-less import nothing closes a dialogue block
+// until the next cue, so (a) standalone parentheticals between dialogue lines
+// were mis-tagged and (b) Italian stage directions after a cue's speech were
+// swallowed as dialogue. A parenthetical adjacent to dialogue must stay a
+// parenthetical; third-person narration must return to action.
+describe("fountainFromPdf — blank-less parentheticals stay parenthetical", () => {
+  it("tags '(risate)' between dialogue lines as parenthetical, never a character cue", () => {
+    const out = fountainFromPdf(
+      [
+        "INT. ROOM - NOTTE",
+        "JOHN",
+        "Una battuta.",
+        "(risate)",
+        "Un'altra battuta.",
+      ].join("\n"),
+    );
+    expect(out).toMatch(new RegExp(`^${DIALOGUE_INDENT}\\(risate\\)$`, "m"));
+    // Never indented as a 6-space character cue.
+    expect(out).not.toMatch(
+      new RegExp(`^${CHARACTER_INDENT}\\(risate\\)$`, "m"),
+    );
+    // Never left flush-left as action.
+    expect(out).not.toMatch(/^\(risate\)$/m);
+  });
+
+  it("keeps a parenthetical adjacent to dialogue without dropping to action", () => {
+    const out = fountainFromPdf(
+      ["INT. ROOM - NOTTE", " JOHN", "Battuta.", "(applauso)"].join("\n"),
+    );
+    expect(out).toMatch(new RegExp(`^${DIALOGUE_INDENT}\\(applauso\\)$`, "m"));
+  });
+});
+
+describe("fountainFromPdf — blank-less narration returns to action", () => {
+  it("returns to action on a 'Vediamo …' narration line after dialogue", () => {
+    const out = fountainFromPdf(
+      [
+        "INT. ROOM - NOTTE",
+        "JOHN",
+        "Una battuta.",
+        "Vediamo Milco esibirsi.",
+      ].join("\n"),
+    );
+    expect(out).toMatch(/^Vediamo Milco esibirsi\.$/m);
+    expect(out).not.toMatch(
+      new RegExp(`^${DIALOGUE_INDENT}Vediamo Milco esibirsi\\.$`, "m"),
+    );
+  });
+
+  it("returns to action on a 'NAME (age) + lowercase' line after dialogue", () => {
+    const out = fountainFromPdf(
+      [
+        "INT. ROOM - NOTTE",
+        "JOHN",
+        "Una battuta.",
+        "FILIPPO (40) è fuori dal locale. Si accende una sigaretta.",
+      ].join("\n"),
+    );
+    expect(out).toMatch(
+      /^FILIPPO \(40\) è fuori dal locale\. Si accende una sigaretta\.$/m,
+    );
+    expect(out).not.toMatch(
+      new RegExp(`^${DIALOGUE_INDENT}FILIPPO \\(40\\)`, "m"),
+    );
+  });
+
+  it("returns to action when a known character is named in the third person", () => {
+    const out = fountainFromPdf(
+      [
+        "INT. ROOM - NOTTE",
+        "FILIPPO",
+        "Una battuta.",
+        "Filippo viene intercettato da un tavolo di vecchie.",
+      ].join("\n"),
+    );
+    expect(out).toMatch(
+      /^Filippo viene intercettato da un tavolo di vecchie\.$/m,
+    );
+    expect(out).not.toMatch(
+      new RegExp(`^${DIALOGUE_INDENT}Filippo viene intercettato`, "m"),
+    );
+  });
+
+  it("does NOT pull a real spoken line into action (under-correct, never shred)", () => {
+    const out = fountainFromPdf(
+      [
+        "INT. ROOM - NOTTE",
+        "JOHN",
+        "Allora iniziamo subito con il primo.",
+      ].join("\n"),
+    );
+    expect(out).toMatch(
+      new RegExp(
+        `^${DIALOGUE_INDENT}Allora iniziamo subito con il primo\\.$`,
+        "m",
+      ),
+    );
+  });
+
+  it("still classifies a normal cue + dialogue correctly", () => {
+    const out = fountainFromPdf(
+      ["INT. ROOM - NOTTE", "ANNA", "Ciao, come stai?"].join("\n"),
+    );
+    expect(out).toMatch(new RegExp(`^${CHARACTER_INDENT}ANNA$`, "m"));
+    expect(out).toMatch(
+      new RegExp(`^${DIALOGUE_INDENT}Ciao, come stai\\?$`, "m"),
+    );
+  });
+});
+
+describe("fountainFromPdf — 09 fixture regression (parenthetical + action)", () => {
+  const out = fountainFromPdf(loadFixture("09-no-blank-separators.txt"));
+
+  it("tags JOHN's '(risate)' parenthetical, not as a character cue", () => {
+    expect(out).toMatch(new RegExp(`^${DIALOGUE_INDENT}\\(risate\\)$`, "m"));
+    expect(out).not.toMatch(
+      new RegExp(`^${CHARACTER_INDENT}\\(risate\\)$`, "m"),
+    );
+    expect(out).not.toMatch(
+      new RegExp(`^${CHARACTER_INDENT}\\(applauso\\)$`, "m"),
+    );
+  });
+
+  it("returns the four narration lines to action after dialogue", () => {
+    expect(out).toMatch(
+      /^Filippo entra nel locale, la camera lo segue\. Scorgiamo la sagoma del NONNO \(80\) sfilargli dietro\.$/m,
+    );
+    expect(out).toMatch(/^Vediamo Milco esibirsi\.$/m);
+    expect(out).toMatch(
+      /^Filippo viene intercettato da un tavolo di vecchie\.$/m,
+    );
+    expect(out).toMatch(/^FILIPPO \(40\) è fuori dal locale\./m);
   });
 });

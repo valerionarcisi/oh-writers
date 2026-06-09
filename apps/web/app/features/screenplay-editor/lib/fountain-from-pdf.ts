@@ -12,6 +12,12 @@ type ElementType =
 interface Classified {
   type: ElementType;
   text: string;
+  // True when the source line was soft-wrapped by the PDF's column width —
+  // i.e. it ended with a trailing space because the text filled the line and
+  // continued on the next one. A line the writer ended with a return (a real
+  // paragraph break) carries no trailing space. Used by the wrap-join pass to
+  // rejoin continuation lines without fusing distinct paragraphs.
+  wrapped: boolean;
 }
 
 // ─── Pass 1 — Cleanup ────────────────────────────────────────────────────────
@@ -24,6 +30,27 @@ interface Classified {
 const BUFF_HEADER_RE = /Buff\s+Revised\s+Pages/i;
 const BARE_PAGE_NUMBER_RE = /^\s*\d+\.\s*$/;
 const MORE_CONTINUATION_RE = /^\s*\(MORE\)\s*$/i;
+
+// A title-page draft-history banner: "<Colour> Revised Pages - <date>",
+// "White Shooting Script - <date>". These sit on the cover page of a shooting
+// script and pollute the X histogram (the coordinate path sees the whole doc,
+// title page included). Anchored to the start and requiring a trailing date so
+// it never matches body action that merely mentions a draft.
+const REVISION_BANNER_RE =
+  /^[A-Za-z ]*(?:Revised\s+Pages|Shooting\s+Script)\s*[-–—]\s*\w+\s+\d/i;
+
+// A running header / revision-page banner that pollutes the X histogram on a
+// shooting script: the title-plus-revision line ("The Wolf of Wall Street
+// Buff Revised Pages 3/5/13 10."), the cover-page draft history, and the
+// distribution footer. Exported so the coordinate path can drop the same noise
+// by content before bucketing.
+export const isPageFurniture = (raw: string): boolean =>
+  BUFF_HEADER_RE.test(raw) ||
+  REVISION_BANNER_RE.test(raw) ||
+  BARE_PAGE_NUMBER_RE.test(raw) ||
+  MORE_CONTINUATION_RE.test(raw) ||
+  FOOTER_URL_RE.test(raw) ||
+  FOOTER_BOILERPLATE_RE.test(raw);
 // Accepted quote-like characters in shooting-script date stamps: backtick,
 // straight apostrophe, and both curly single quotes (U+2018, U+2019).
 const QUOTE_CLASS = "[`'\u2018\u2019]?";
@@ -64,7 +91,7 @@ const extractLeadingSceneNumber = (
 const DATE_ANNOTATION_INLINE_RE = new RegExp(
   `\\s*\\([A-Z]+\\s*${QUOTE_CLASS}\\s*\\d{2,4}\\)\\s*$`,
 );
-const stripDateAnnotationFromSlugline = (line: string): string =>
+export const stripDateAnnotationFromSlugline = (line: string): string =>
   line.replace(DATE_ANNOTATION_INLINE_RE, "");
 
 // Trailing shooting-script noise: revision asterisks, scene numbers, and
@@ -144,7 +171,18 @@ const cleanup = (rawLines: readonly string[]): CleanedLine[] => {
   for (let i = titleEnd; i < rawLines.length; i++) {
     const raw = rawLines[i]!;
     if (BUFF_HEADER_RE.test(raw)) continue;
-    if (BARE_PAGE_NUMBER_RE.test(raw)) continue;
+    if (BARE_PAGE_NUMBER_RE.test(raw)) {
+      // A blank-less PDF emits each page break as a BLANK line immediately
+      // followed by a bare page number. Dropping only the number leaves the
+      // blank, which downstream reads as a paragraph separator: it closes a
+      // dialogue block and interrupts the wrap-join run, so a paragraph that
+      // spans the page boundary gets split. Collapse that page-break blank so
+      // the break is invisible to classify/join. Only the blank directly
+      // preceding the number is removed — other blanks are untouched.
+      const last = out[out.length - 1];
+      if (last !== undefined && last.text.trim() === "") out.pop();
+      continue;
+    }
     if (MORE_CONTINUATION_RE.test(raw)) continue;
     if (DATE_ANNOTATION_STANDALONE_RE.test(raw)) continue;
     if (STANDALONE_ASTERISK_FRAGMENT_RE.test(raw)) continue;
@@ -165,7 +203,7 @@ const cleanup = (rawLines: readonly string[]): CleanedLine[] => {
 // Accept English (INT./EXT.), Italian (INT./EST.), and slug-like INSERT.
 // Lookahead for whitespace-or-EOL instead of \b — a trailing "." is not a
 // word char so \b would never trigger for "INT." / "EXT." / "EST.".
-const SCENE_HEADING_RE =
+export const SCENE_HEADING_RE =
   /^(INT\.?\/EXT\.|EXT\.?\/INT\.|INT\.?\/EST\.|EST\.?\/INT\.|INT\.|EXT\.|EST\.|I\/E|INSERT)(?=\s|$)/i;
 
 // Alternative structural sluglines — scene-level groupings that screenwriters
@@ -235,6 +273,57 @@ const isCharacterCue = (
 const SHOT_SLUG_RE =
   /^(WE\s+SEE|CAMERA\b|ANGLE\s+ON|BACK\s+TO|INTERCUT\b|MONTAGE\b|SERIES\s+OF|VARIOUS\s+SHOTS|CLOSE\s+ON|CUT\s+TO|PUSH\s+IN|PULL\s+OUT|FROM\b)/i;
 
+// Italian narration verbs that open a stage direction in the first-person-
+// plural observer voice ("Vediamo …", "Scorgiamo …"). Used ONLY to recover
+// action from inside a dialogue block on a blank-less import, where nothing
+// else closes the block. Kept to camera/observer verbs so a real spoken line
+// is never pulled into action. Anchored to the start, case-sensitive on the
+// capital so a mid-sentence "vediamo" inside dialogue is not matched.
+const NARRATION_OPENER_RE =
+  /^(Vediamo|Vedo|Scorgiamo|Sentiamo|Si\s+vede|Si\s+vedono|Si\s+sente|Si\s+sentono)\b/;
+
+// A character name announced in the third person with an age tag immediately
+// followed by lowercase narration ("FILIPPO (40) è fuori dal locale.",
+// "GUILIO (60) indossa …"). A bare cue is just "NAME" or "NAME (V.O.)" — the
+// lowercase word right after the parenthetical age is what marks this as a
+// stage direction, not a cue.
+const NAME_AGE_NARRATION_RE = /^[A-ZÀ-Ý][A-ZÀ-Ý'#\- ]*\(\d{1,3}\)\s+\p{Ll}/u;
+
+// Build the lowercase set of character names seen so far so a line that opens
+// by naming one of them in the third person ("Filippo entra …", "FILIPPO (40)
+// è fuori …") can be recovered as narration. We register the cue's leading
+// name token (before any extension/age parenthetical), lowercased.
+const cueNameToken = (cue: string): string | null => {
+  const m = cue.match(/^([A-ZÀ-Ý0-9'#\-]+)/);
+  if (!m) return null;
+  return m[1]!.toLowerCase();
+};
+
+// A line that opens by naming a known character (in any case) and continues
+// with a lowercase word is third-person narration about that character, not
+// their speech — "Filippo entra nel locale …", "Filippo viene intercettato …".
+// Conservative on purpose: it fires only for names already introduced as cues,
+// so a spoken line that merely happens to start with a capitalised word is
+// left as dialogue.
+const namesThirdPersonNarration = (
+  trimmed: string,
+  knownNames: ReadonlySet<string>,
+): boolean => {
+  const m = trimmed.match(/^([A-Za-zÀ-ÿ'#\-]+)(?:\s+\(\d{1,3}\))?\s+(\p{Ll})/u);
+  if (!m) return false;
+  return knownNames.has(m[1]!.toLowerCase());
+};
+
+// Does this line read as a stage direction that should close an open dialogue
+// block on a blank-less import? Combines the conservative signals above.
+const looksLikeNarration = (
+  trimmed: string,
+  knownNames: ReadonlySet<string>,
+): boolean =>
+  NARRATION_OPENER_RE.test(trimmed) ||
+  NAME_AGE_NARRATION_RE.test(trimmed) ||
+  namesThirdPersonNarration(trimmed, knownNames);
+
 const classify = (lines: readonly CleanedLine[]): Classified[] => {
   const out: Classified[] = [];
   let prevBlank = true;
@@ -242,12 +331,19 @@ const classify = (lines: readonly CleanedLine[]): Classified[] => {
   // Tracks the last non-blank emitted type so we can recover dialogue blocks
   // when pdf-parse inserts an extra blank between CHARACTER and its parenthetical.
   let lastNonBlankType: ElementType | null = null;
+  // Leading-name tokens of every character cue seen so far (lowercased), used
+  // to recognise third-person narration that names a known character.
+  const knownNames = new Set<string>();
 
   for (const { text: line, number } of lines) {
     const trimmed = line.trim();
+    // A soft-wrap continuation line ends with a trailing space (the column
+    // filled and the text flowed onto the next line). A return-terminated line
+    // has none. Captured before trimming so the join pass can tell them apart.
+    const wrapped = /\s$/.test(line) && trimmed !== "";
 
     if (trimmed === "") {
-      out.push({ type: "blank", text: "" });
+      out.push({ type: "blank", text: "", wrapped: false });
       prevBlank = true;
       inDialogueBlock = false;
       continue;
@@ -255,7 +351,7 @@ const classify = (lines: readonly CleanedLine[]): Classified[] => {
 
     if (prevBlank && isAllUppercase(trimmed) && ALT_HEADING_RE.test(trimmed)) {
       const headingText = number !== null ? `${trimmed} #${number}#` : trimmed;
-      out.push({ type: "scene_heading", text: headingText });
+      out.push({ type: "scene_heading", text: headingText, wrapped });
       prevBlank = false;
       inDialogueBlock = false;
       lastNonBlankType = "scene_heading";
@@ -269,7 +365,7 @@ const classify = (lines: readonly CleanedLine[]): Classified[] => {
       // "1F   WE SEE ..." stay action per spec 20 non-goals.
       const upper = trimmed.toUpperCase();
       const headingText = number !== null ? `${upper} #${number}#` : upper;
-      out.push({ type: "scene_heading", text: headingText });
+      out.push({ type: "scene_heading", text: headingText, wrapped });
       prevBlank = false;
       inDialogueBlock = false;
       lastNonBlankType = "scene_heading";
@@ -277,10 +373,32 @@ const classify = (lines: readonly CleanedLine[]): Classified[] => {
     }
 
     if (TRANSITION_RE.test(trimmed)) {
-      out.push({ type: "transition", text: trimmed });
+      out.push({ type: "transition", text: trimmed, wrapped });
       prevBlank = false;
       inDialogueBlock = false;
       lastNonBlankType = "transition";
+      continue;
+    }
+
+    // A line fully wrapped in parentheses is a parenthetical whenever it sits
+    // in or directly adjacent to a dialogue context — inside an open block, or
+    // right after a cue/dialogue/parenthetical that a stray page-break blank
+    // closed. It must be resolved BEFORE the cue and narration branches so an
+    // all-caps shout like "(RISATE)" can never be mistaken for a character cue
+    // and so a parenthetical keeps the dialogue block open instead of dropping
+    // to action. Bare action parentheticals outside any dialogue context still
+    // fall through to action below.
+    if (
+      PARENTHETICAL_RE.test(trimmed) &&
+      (inDialogueBlock ||
+        lastNonBlankType === "character" ||
+        lastNonBlankType === "dialogue" ||
+        lastNonBlankType === "parenthetical")
+    ) {
+      out.push({ type: "parenthetical", text: trimmed, wrapped });
+      prevBlank = false;
+      inDialogueBlock = true;
+      lastNonBlankType = "parenthetical";
       continue;
     }
 
@@ -288,51 +406,136 @@ const classify = (lines: readonly CleanedLine[]): Classified[] => {
     // separator line. Break out into action so "WE SEE a charging BULL."
     // doesn't get indented as dialogue.
     if (inDialogueBlock && SHOT_SLUG_RE.test(trimmed)) {
-      out.push({ type: "action", text: trimmed });
+      out.push({ type: "action", text: trimmed, wrapped });
       prevBlank = false;
       inDialogueBlock = false;
       lastNonBlankType = "action";
       continue;
     }
 
-    if (PARENTHETICAL_RE.test(trimmed) && inDialogueBlock) {
-      out.push({ type: "parenthetical", text: trimmed });
+    // Italian stage direction inside a dialogue block — on a blank-less import
+    // nothing closes the block until the next cue, so third-person narration
+    // ("Filippo entra nel locale …", "Vediamo Milco esibirsi.", "FILIPPO (40)
+    // è fuori dal locale.") would otherwise be swallowed as dialogue. Recover
+    // it to action conservatively, mirroring the SHOT_SLUG path above.
+    if (inDialogueBlock && looksLikeNarration(trimmed, knownNames)) {
+      out.push({ type: "action", text: trimmed, wrapped });
       prevBlank = false;
-      lastNonBlankType = "parenthetical";
-      continue;
-    }
-
-    // Orphan parenthetical — pdf-parse sometimes inserts a spurious blank
-    // between CHARACTER and its parenthetical. If the last non-blank was a
-    // character cue, re-enter the dialogue block instead of falling to action.
-    if (PARENTHETICAL_RE.test(trimmed) && lastNonBlankType === "character") {
-      out.push({ type: "parenthetical", text: trimmed });
-      prevBlank = false;
-      inDialogueBlock = true;
-      lastNonBlankType = "parenthetical";
+      inDialogueBlock = false;
+      lastNonBlankType = "action";
       continue;
     }
 
     if (isCharacterCue(trimmed, prevBlank, lastNonBlankType)) {
-      out.push({ type: "character", text: trimmed });
+      out.push({ type: "character", text: trimmed, wrapped });
+      const name = cueNameToken(trimmed);
+      if (name !== null) knownNames.add(name);
       prevBlank = false;
       inDialogueBlock = true;
       lastNonBlankType = "character";
       continue;
     }
 
+    // Orphan dialogue — a page break can fall between a CHARACTER cue and its
+    // dialogue, leaving page junk (a bare page number, the running header) that
+    // cleanup strips down to a stray blank line. That blank resets
+    // inDialogueBlock, so the cue's first spoken line would otherwise drop to
+    // action. When the last non-blank emitted line was the cue itself (it was
+    // not another structural element), the line here is that cue's dialogue:
+    // re-enter the dialogue block. Mirrors the orphan-parenthetical recovery.
+    if (lastNonBlankType === "character") {
+      out.push({ type: "dialogue", text: trimmed, wrapped });
+      prevBlank = false;
+      inDialogueBlock = true;
+      lastNonBlankType = "dialogue";
+      continue;
+    }
+
     if (inDialogueBlock) {
-      out.push({ type: "dialogue", text: trimmed });
+      out.push({ type: "dialogue", text: trimmed, wrapped });
       prevBlank = false;
       lastNonBlankType = "dialogue";
       continue;
     }
 
-    out.push({ type: "action", text: trimmed });
+    out.push({ type: "action", text: trimmed, wrapped });
     prevBlank = false;
     lastNonBlankType = "action";
   }
 
+  return out;
+};
+
+// ─── Pass 2b — Join wrapped lines ────────────────────────────────────────────
+//
+// Some PDFs (notably tidy exports run through pdf-parse) arrive with NO blank
+// separators between elements, and the writer's logical paragraphs are split
+// into one block per visual line at the page column width. Each wrapped line
+// must be rejoined into the single logical paragraph it belongs to.
+//
+// The reliable signal is the trailing space the PDF leaves on a soft-wrapped
+// line: a line that filled the column and flowed onto the next ends with a
+// space, while a line the writer ended with a return (a real paragraph break)
+// does not. So we append a block to its predecessor ONLY when the predecessor
+// was marked `wrapped`. This never fuses two distinct paragraphs (the break
+// line is unwrapped) and never crosses a cue, heading, parenthetical, or
+// transition boundary because we only join consecutive same-type blocks of
+// `action` or `dialogue`.
+
+const JOINABLE_TYPES: ReadonlySet<ElementType> = new Set([
+  "action",
+  "dialogue",
+]);
+
+// A word broken across the wrap by a hyphen ("open-" + "mic"). When the
+// predecessor ends in "<letter>-" and the continuation starts lowercase, rejoin
+// the two halves directly (no inserted space) and keep the hyphen — screenplay
+// monospace output does not justify, so a trailing hyphen is a real compound
+// ("open-mic") far more often than a hyphenation break, and keeping it is the
+// safe, lossless choice.
+const HYPHEN_TAIL_RE = /[A-Za-zÀ-ÿ]-$/;
+
+// A well-formed screenplay export uses blank lines to separate every element,
+// so blanks make up a large share of the document (~30–40%). The wrap-join is
+// only needed for the degenerate case where pdf-parse stripped all separators
+// and a paragraph is split across visual lines; there blanks are rare (only
+// stray page-break gaps, ~5–7%). Below this ratio we treat the import as
+// blank-less and rejoin wrapped lines; above it the per-line output is already
+// correct and joining would corrupt blank-separated paragraphs.
+const BLANKLESS_RATIO_CEILING = 0.15;
+
+const isBlankLessImport = (blocks: readonly Classified[]): boolean => {
+  if (blocks.length === 0) return false;
+  const blanks = blocks.filter((b) => b.type === "blank").length;
+  return blanks / blocks.length < BLANKLESS_RATIO_CEILING;
+};
+
+const joinWrapped = (blocks: readonly Classified[]): Classified[] => {
+  if (!isBlankLessImport(blocks)) return [...blocks];
+  const out: Classified[] = [];
+  for (const block of blocks) {
+    const prev = out[out.length - 1];
+    const isContinuation =
+      prev !== undefined &&
+      prev.wrapped &&
+      prev.type === block.type &&
+      JOINABLE_TYPES.has(block.type);
+
+    if (!isContinuation) {
+      out.push({ ...block });
+      continue;
+    }
+
+    const joined =
+      HYPHEN_TAIL_RE.test(prev.text) && /^[a-zà-ÿ]/.test(block.text)
+        ? prev.text + block.text
+        : `${prev.text} ${block.text}`;
+    out[out.length - 1] = {
+      type: prev.type,
+      text: joined,
+      wrapped: block.wrapped,
+    };
+  }
   return out;
 };
 
@@ -371,7 +574,7 @@ export const fountainFromPdf = (rawText: string): string => {
     .replace(/\r/g, "\n")
     .split("\n");
   const cleaned = cleanup(rawLines);
-  const classified = classify(cleaned);
+  const classified = joinWrapped(classify(cleaned));
   // Don't use .trim() — it would eat the leading 6-space indent of a
   // character cue that lands on the first line. Drop empty leading/trailing
   // lines only.
