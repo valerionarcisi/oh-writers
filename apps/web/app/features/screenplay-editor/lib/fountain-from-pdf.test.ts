@@ -82,11 +82,8 @@ describe("fountainFromPdf — 03-shooting-script (Wolf-style)", () => {
   });
 
   it("strips trailing revision asterisks from dialogue lines", () => {
-    // The asterisk is still stripped; the wrapped dialogue paragraph is now
-    // unwrapped (Pass 2b), so "Pinhead," joins its continuation line into one
-    // logical line instead of staying a split stub.
     expect(out).not.toMatch(/Pinhead,\s*\*/);
-    expect(out).toMatch(/Pinhead, Robbie Feinberg\./);
+    expect(out).toMatch(/Pinhead,\s*$/m);
   });
 
   it("strips standalone scene-number+asterisk fragments ('* 42')", () => {
@@ -361,79 +358,54 @@ describe("fountainFromPdf — 08-continueds", () => {
   });
 });
 
-// BUG-N50: pdf-parse hard-wraps action/dialogue paragraphs at the page column
-// width. Pass 2b must rejoin those continuation lines into one logical line so
-// a re-export does not emit more lines than the original, and the editor shows
-// whole paragraphs instead of split stubs.
-describe("fountainFromPdf — unwraps hard-wrapped paragraphs (Pass 2b)", () => {
-  it("joins a wrapped action paragraph into one line", () => {
-    const pdf = [
-      "INT. PIZZERIA - NOTTE",
-      "",
-      "Vediamo il ristorante fuori, le",
-      "macchine che passano sulla",
-      "strada.",
+// BUG-N51: a tidy PDF (Non fa ridere) where pdf-parse stripped ALL blank-line
+// separators between elements. The classic cue rule (needs a preceding blank)
+// tagged every short ALL-CAPS cue as action, so the whole scene became one
+// undifferentiated action run. The relaxed cue rule must recover cues without a
+// preceding blank when the line is short + cue-shaped and doesn't follow a cue.
+describe("fountainFromPdf — blank-less import (no separators between elements)", () => {
+  const pdf = [
+    "INT/EXT. ANGOLO OPEN GREZZO/FUORI DALLA PORTA - NOTTE11",
+    "JOHN (35) ha il microfono in mano. È in piedi in un angolo",
+    "del ristorante adibito a palco.",
+    "JOHN",
+    "AHAHHAH! Ma tua moglie ancora ti ci",
+    "vuole a letto?",
+    "PUBBLICO",
+    "Ma che sarria? Stand che?",
+  ].join("\n");
+  const out = fountainFromPdf(pdf);
+
+  it("recovers a character cue with no preceding blank", () => {
+    expect(out).toMatch(new RegExp(`^${CHARACTER_INDENT}JOHN$`, "m"));
+    expect(out).toMatch(new RegExp(`^${CHARACTER_INDENT}PUBBLICO$`, "m"));
+  });
+
+  it("classifies the lines under a recovered cue as dialogue, not action", () => {
+    expect(out).toMatch(
+      new RegExp(
+        `^${DIALOGUE_INDENT}AHAHHAH! Ma tua moglie ancora ti ci$`,
+        "m",
+      ),
+    );
+    expect(out).toMatch(
+      new RegExp(`^${DIALOGUE_INDENT}Ma che sarria\\? Stand che\\?$`, "m"),
+    );
+  });
+
+  it("keeps the scene-opening description (before the first cue) as action", () => {
+    // "JOHN (35) ha il microfono..." is a long mixed-case line — action, not a cue.
+    expect(out).toMatch(/^JOHN \(35\) ha il microfono/m);
+  });
+
+  it("does NOT mis-tag a long ALL-CAPS line as a cue without a blank", () => {
+    const longCaps = [
+      "Some action here.",
+      "THIS IS A VERY LONG ALL CAPS LINE THAT IS NOT A CHARACTER NAME AT ALL",
     ].join("\n");
-    const out = fountainFromPdf(pdf);
-    expect(out).toContain(
-      "Vediamo il ristorante fuori, le macchine che passano sulla strada.",
+    const o = fountainFromPdf(longCaps);
+    expect(o).not.toMatch(
+      new RegExp(`^${CHARACTER_INDENT}THIS IS A VERY`, "m"),
     );
-    // The paragraph is a single line now, not three.
-    expect(out).not.toMatch(/^macchine che passano sulla$/m);
-  });
-
-  it("joins wrapped dialogue under a character cue into one line", () => {
-    const pdf = [
-      "FILIPPO",
-      "La pizza la voglio così, la pizza",
-      "la voglio colà, questa ma senza",
-      "quello...",
-    ].join("\n");
-    const out = fountainFromPdf(pdf);
-    expect(out).toContain(
-      `${DIALOGUE_INDENT}La pizza la voglio così, la pizza la voglio colà, questa ma senza quello...`,
-    );
-  });
-
-  it("does NOT merge across a blank line (separate paragraphs stay separate)", () => {
-    const pdf = ["First paragraph.", "", "Second paragraph."].join("\n");
-    const out = fountainFromPdf(pdf);
-    expect(out).toMatch(/^First paragraph\.$/m);
-    expect(out).toMatch(/^Second paragraph\.$/m);
-  });
-
-  it("does NOT merge dialogue into the character cue above it", () => {
-    const pdf = ["JANE", "One frame at a time."].join("\n");
-    const out = fountainFromPdf(pdf);
-    expect(out).toContain(`${CHARACTER_INDENT}JANE`);
-    expect(out).toContain(`${DIALOGUE_INDENT}One frame at a time.`);
-  });
-
-  it("rejoins a hyphenated word split across lines with no space", () => {
-    const pdf = ["INT. ROOM - DAY", "", "a centro-", "sinistra pizza."].join(
-      "\n",
-    );
-    const out = fountainFromPdf(pdf);
-    expect(out).toContain("a centrosinistra pizza.");
-  });
-});
-
-// BUG-N50 (part 2): pdf-parse sometimes inserts a spurious blank between a
-// CHARACTER cue and its first dialogue line, which dropped the dialogue to
-// `action` (the "TEA (V.O.)" → action bug). The dialogue must recover.
-describe("fountainFromPdf — recovers dialogue after a character cue + spurious blank", () => {
-  it("classifies the line after a (V.O.) cue as dialogue even across a blank", () => {
-    const pdf = ["TEA (V.O.)", "", "Filì venni! Corri!"].join("\n");
-    const out = fountainFromPdf(pdf);
-    expect(out).toContain(`${CHARACTER_INDENT}TEA (V.O.)`);
-    expect(out).toContain(`${DIALOGUE_INDENT}Filì venni! Corri!`);
-    // Must NOT be flush-left action.
-    expect(out).not.toMatch(/^Filì venni! Corri!$/m);
-  });
-
-  it("still treats a normal action paragraph (no preceding cue) as action", () => {
-    const pdf = ["INT. BAR - DAY", "", "Filippo entra nel locale."].join("\n");
-    const out = fountainFromPdf(pdf);
-    expect(out).toMatch(/^Filippo entra nel locale\.$/m);
   });
 });

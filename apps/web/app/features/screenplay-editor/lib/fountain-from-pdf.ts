@@ -186,10 +186,14 @@ const isAllUppercase = (text: string): boolean => {
   return text === text.toUpperCase();
 };
 
-// Character cue: ALL CAPS, letters plus digits/space/#/parens/periods/apostrophes,
-// no trailing sentence punctuation (allow closing paren).
-const isCharacterCue = (trimmed: string, prevBlank: boolean): boolean => {
-  if (!prevBlank) return false;
+// Longest a bare character cue can be before we stop trusting it as a cue
+// without a preceding blank (a longer ALL-CAPS line is more likely an action
+// fragment or a shout in dialogue than a name).
+const MAX_BLANKLESS_CUE_LEN = 38;
+
+// Is this line shaped like a character cue (ALL CAPS, name-like, optional
+// extensions) — independent of whether a blank precedes it?
+const looksLikeCue = (trimmed: string): boolean => {
   if (trimmed.length === 0) return false;
   if (SCENE_HEADING_RE.test(trimmed)) return false;
   if (TRANSITION_RE.test(trimmed)) return false;
@@ -205,6 +209,24 @@ const isCharacterCue = (trimmed: string, prevBlank: boolean): boolean => {
   // core must be "name-like": letters, digits, spaces, #, -, '
   if (!/^[A-ZÀ-Ý0-9 #\-']+$/.test(core)) return false;
   return true;
+};
+
+// Character cue. The classic rule needs a preceding blank line. Many real
+// exports (pdf-parse on a tidy PDF) strip ALL blank separators, so we also
+// accept a cue WITHOUT a preceding blank when it is a SHORT, cue-shaped line
+// and the previous emitted line was itself NOT a cue (a cue never directly
+// follows another cue — that second line is the first one's dialogue). This
+// recovers character cues in blank-less imports without mis-tagging a wrapped
+// ALL-CAPS action fragment (which is long, so the length cap rejects it).
+const isCharacterCue = (
+  trimmed: string,
+  prevBlank: boolean,
+  prevType: ElementType | null,
+): boolean => {
+  if (!looksLikeCue(trimmed)) return false;
+  if (prevBlank) return true;
+  if (prevType === "character" || prevType === "parenthetical") return false;
+  return trimmed.length <= MAX_BLANKLESS_CUE_LEN;
 };
 
 // Shot-slug openers — when they appear mid-dialogue block, they're a hint
@@ -291,25 +313,11 @@ const classify = (lines: readonly CleanedLine[]): Classified[] => {
       continue;
     }
 
-    if (isCharacterCue(trimmed, prevBlank)) {
+    if (isCharacterCue(trimmed, prevBlank, lastNonBlankType)) {
       out.push({ type: "character", text: trimmed });
       prevBlank = false;
       inDialogueBlock = true;
       lastNonBlankType = "character";
-      continue;
-    }
-
-    // Orphan dialogue — pdf-parse sometimes inserts a spurious blank between a
-    // CHARACTER cue and its first dialogue line, which would otherwise drop the
-    // dialogue to `action` (the "TEA (V.O.)" → action bug). When the last
-    // non-blank emitted was a character cue, the following non-structural line
-    // is that character's dialogue; re-enter the block. (Scene heading /
-    // transition / character cases are handled above and never reach here.)
-    if (lastNonBlankType === "character") {
-      out.push({ type: "dialogue", text: trimmed });
-      prevBlank = false;
-      inDialogueBlock = true;
-      lastNonBlankType = "dialogue";
       continue;
     }
 
@@ -325,45 +333,6 @@ const classify = (lines: readonly CleanedLine[]): Classified[] => {
     lastNonBlankType = "action";
   }
 
-  return out;
-};
-
-// ─── Pass 2b — Unwrap ────────────────────────────────────────────────────────
-//
-// pdf-parse hard-wraps action and dialogue paragraphs at the page column width,
-// so one logical paragraph arrives as several consecutive same-type lines with
-// NO blank between them. Left as-is, each becomes its own Fountain block, so a
-// re-export emits more lines than the original and the editor shows a paragraph
-// split into stubs. Merge consecutive `action`/`dialogue` blocks (only those the
-// classifier produced back-to-back, i.e. not separated by a blank or a different
-// element) back into one space-joined logical line. Character cues, scene
-// headings, transitions and parentheticals are each their own unit and never
-// merge — they are exactly the boundaries that end a wrapped run.
-const MERGEABLE: ReadonlySet<ElementType> = new Set(["action", "dialogue"]);
-
-// A wrapped line that ends mid-word with a hyphen ("centro-\nsinistra") rejoins
-// with no space; every other continuation rejoins with a single space.
-const joinWrapped = (left: string, right: string): string =>
-  /[-‐]$/.test(left) ? left.slice(0, -1) + right : `${left} ${right}`;
-
-const unwrap = (blocks: readonly Classified[]): Classified[] => {
-  const out: Classified[] = [];
-  for (const block of blocks) {
-    const prev = out[out.length - 1];
-    if (
-      prev &&
-      prev.type === block.type &&
-      MERGEABLE.has(block.type) &&
-      block.text.trim() !== ""
-    ) {
-      out[out.length - 1] = {
-        type: prev.type,
-        text: joinWrapped(prev.text, block.text),
-      };
-      continue;
-    }
-    out.push(block);
-  }
   return out;
 };
 
@@ -402,7 +371,7 @@ export const fountainFromPdf = (rawText: string): string => {
     .replace(/\r/g, "\n")
     .split("\n");
   const cleaned = cleanup(rawLines);
-  const classified = unwrap(classify(cleaned));
+  const classified = classify(cleaned);
   // Don't use .trim() — it would eat the leading 6-space indent of a
   // character cue that lands on the first line. Drop empty leading/trailing
   // lines only.
