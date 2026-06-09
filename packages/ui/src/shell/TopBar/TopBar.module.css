@@ -26,26 +26,31 @@
   min-width: 0;
 }
 
-/* When a center slot is present, use a 3-column approach so the center
-   is truly centred regardless of left/right widths. */
+/* When a center slot is present, lay the row out as a real 3-column grid:
+   left (auto) · center (1fr) · right (auto). The center used to be absolutely
+   positioned + screen-centred, so a wide logline pill slid UNDER the right
+   page-actions cluster (save pill + version chip + ⋯) and visually swallowed
+   it — worse when the save pill widened from "Salvato" to "Salvataggio…".
+   The grid gives the center only the space LEFT OVER between the two side
+   clusters, so it physically cannot overlap them; the pill truncates with an
+   ellipsis inside its column. */
 .rowHasCenter {
-  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
 }
 
 .center {
-  position: absolute;
-  inset-inline-start: 50%;
-  transform: translateX(-50%);
-  max-inline-size: 640px;
-  inline-size: max-content;
+  /* Fill the 1fr track (justify-self defaults to stretch) so the slot is
+     bounded by the space between the side clusters, then centre the pill inside
+     it. The pill itself truncates (it has min-inline-size:0 + ellipsis), so it
+     can never push past the track into the right cluster. */
+  min-inline-size: 0;
   display: flex;
   justify-content: center;
-  pointer-events: none;
-  /* Clip so it doesn't visually overflow into left/right when viewport narrow */
   overflow: hidden;
 
   & > * {
-    pointer-events: auto;
+    min-inline-size: 0;
   }
 }
 
