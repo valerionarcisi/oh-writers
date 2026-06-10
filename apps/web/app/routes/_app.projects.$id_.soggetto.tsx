@@ -19,6 +19,7 @@ import {
   useExportSubjectDocx,
   useSaveDocument,
   useSiaeMetadata,
+  useVersionResync,
   emptyNarrativeDocument,
 } from "~/features/documents";
 import { toErrorView } from "~/components/ResultErrorView";
@@ -29,6 +30,7 @@ import {
   useSetActiveDocument,
   useRoutedSurface,
   reportCurrentVersion,
+  useHasEdited,
   useSaveStatePublisher,
 } from "~/features/app-shell";
 import type { ContextActionHandlers } from "~/features/app-shell";
@@ -128,35 +130,21 @@ function SoggettoPageReady({
   void _openCesare;
   const setActiveDocument = useSetActiveDocument();
   const [loglineContent, setLoglineContent] = useState(loglineDoc.content);
+  const saveSoggetto = useSaveDocument();
+  const saveLogline = useSaveDocument();
 
   // When the server-side current version changes (e.g. user activates a
   // Cesare draft from the drawer, or promotes a version), the route query
-  // refetches and `soggettoDoc.content` is now the new active text — but the
-  // local `useState` initial value is frozen at mount. Re-sync the editor
-  // state whenever the active version id changes. We don't sync on every
-  // content change to avoid stomping over the user's in-flight edits, and we
-  // skip the mount run: state is already initialised from the same document,
-  // and in realtime mode pushing a (possibly stale) HTTP value into a
-  // just-synced CRDT editor is exactly the external replace that clobbers the
-  // shared doc (BUG-N53).
-  const versionSyncMountedRef = useRef(false);
-  useEffect(() => {
-    if (!versionSyncMountedRef.current) {
-      versionSyncMountedRef.current = true;
-      return;
-    }
-    setSoggettoContent(soggettoDoc.content);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [soggettoDoc.currentVersionId]);
-  const loglineSyncMountedRef = useRef(false);
-  useEffect(() => {
-    if (!loglineSyncMountedRef.current) {
-      loglineSyncMountedRef.current = true;
-      return;
-    }
-    setLoglineContent(loglineDoc.content);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loglineDoc.currentVersionId]);
+  // refetches and the doc content is the new active text — but the local
+  // `useState` initial value is frozen at mount. Re-sync on version change,
+  // but never on mount or for a version our own save created
+  // (BUG-N53/BUG-N56 — see useVersionResync).
+  useVersionResync(soggettoDoc.currentVersionId, saveSoggetto, () =>
+    setSoggettoContent(soggettoDoc.content),
+  );
+  useVersionResync(loglineDoc.currentVersionId, saveLogline, () =>
+    setLoglineContent(loglineDoc.content),
+  );
 
   // Publish the soggetto as the active document so Cesare's tool router can
   // operate on its content when this page is open.
@@ -194,8 +182,6 @@ function SoggettoPageReady({
     savedMetadata,
   };
 
-  const saveSoggetto = useSaveDocument();
-  const saveLogline = useSaveDocument();
   const exportDocx = useExportSubjectDocx();
   // Spec 49 W2: Versions open via the ROUTER (`?versions=<docId>`), not the
   // legacy context drawer. The host page compresses beside the routed
@@ -244,8 +230,9 @@ function SoggettoPageReady({
   );
   // Single publisher for the TopBar pill (Spec 63 P2): the soggetto document is
   // the page's primary save state — never the logline autosave. Publish only
-  // after a real edit so an untouched page shows no stale "Salvato".
-  const soggettoEdited = soggettoContent !== soggettoDoc.content;
+  // after a real edit so an untouched page shows no stale "Salvato"; the flag
+  // is sticky (BUG-N55 — see useHasEdited).
+  const soggettoEdited = useHasEdited(soggettoSave.isDirty, soggettoDoc.id);
   useSaveStatePublisher(
     soggettoEdited
       ? computeSaveStatus({

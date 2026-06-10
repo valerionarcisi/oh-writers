@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   useMutation,
   useQuery,
@@ -141,6 +141,48 @@ export const useAutoSave = (
     lastSavedAt,
     flush,
   };
+};
+
+// ─── Version resync ───────────────────────────────────────────────────────────
+
+/**
+ * Re-sync the local editor state when the document's ACTIVE VERSION changes
+ * from outside the editor (switchToVersion, version restore, a Cesare draft
+ * promotion) — those refetch the route query, but the editor's `useState` was
+ * frozen at mount.
+ *
+ * Two version changes must NOT resync:
+ * - the mount run (state is already initialised from the same document; in
+ *   realtime mode pushing a possibly-stale HTTP value into a just-synced CRDT
+ *   editor is the external replace that clobbers the shared doc — BUG-N53);
+ * - a version id OUR OWN SAVE created (the first save of a doc snapshots
+ *   "Versione 1", flipping currentVersionId null→v1). That refetch carries the
+ *   content as of the save request — resyncing stomps every keystroke typed
+ *   while the save was in flight, and the autosave then persists the truncated
+ *   text (BUG-N56: the editor visibly ate its own content mid-typing).
+ */
+export const useVersionResync = (
+  currentVersionId: string | null,
+  save: SaveDocumentMutation,
+  resync: () => void,
+): void => {
+  const mountedRef = useRef(false);
+  const saveRef = useRef(save);
+  saveRef.current = save;
+  const resyncRef = useRef(resync);
+  resyncRef.current = resync;
+  useEffect(() => {
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      return;
+    }
+    if (
+      currentVersionId !== null &&
+      currentVersionId === saveRef.current.data?.currentVersionId
+    )
+      return;
+    resyncRef.current();
+  }, [currentVersionId]);
 };
 
 // ─── Export narrative PDF ─────────────────────────────────────────────────────

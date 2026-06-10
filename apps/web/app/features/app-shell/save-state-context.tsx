@@ -66,6 +66,25 @@ export function useSaveStateValue(): SaveStateValue {
  * The pill clears automatically on unmount so a previous editor cannot leak
  * its state into a sibling route that does not publish.
  */
+/**
+ * Sticky "the user edited this document" flag for the pill publish gate. Flips
+ * true on the first dirty signal and STAYS true — gating the publisher on a raw
+ * content === saved-content equality unpublished the pill on the very click
+ * that saved it (the post-save refetch made the two equal — BUG-N55). Resets
+ * when `resetKey` (the document id) changes so a different document never
+ * inherits the flag and flashes a stale "Salvato".
+ */
+export function useHasEdited(isDirty: boolean, resetKey: string): boolean {
+  const [edited, setEdited] = useState(false);
+  useEffect(() => {
+    setEdited(false);
+  }, [resetKey]);
+  useEffect(() => {
+    if (isDirty) setEdited(true);
+  }, [isDirty, resetKey]);
+  return edited;
+}
+
 export function useSaveStatePublisher(
   state: SaveState | undefined,
   secondsAgo?: number,

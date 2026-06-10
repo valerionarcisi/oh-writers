@@ -46,6 +46,7 @@ export type {
 } from "./use-context-actions";
 export {
   SaveStateProvider,
+  useHasEdited,
   useSaveStatePublisher,
   useSaveStateValue,
 } from "./save-state-context";

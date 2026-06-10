@@ -4,6 +4,7 @@ import { renderHook, act, cleanup } from "@testing-library/react";
 import type { ReactNode } from "react";
 import {
   SaveStateProvider,
+  useHasEdited,
   useSaveStateValue,
   useSaveStatePublisher,
 } from "./save-state-context";
@@ -69,5 +70,39 @@ describe("save-state-context (Spec 63 P2/F3)", () => {
     rerender({ state: undefined });
     expect(result.current.state).toBeUndefined();
     expect(result.current.onFlush).toBeUndefined();
+  });
+});
+
+describe("useHasEdited (BUG-N55)", () => {
+  it("starts false and flips true on the first dirty signal", () => {
+    const { result, rerender } = renderHook(
+      ({ isDirty }: { isDirty: boolean }) => useHasEdited(isDirty, "doc-1"),
+      { initialProps: { isDirty: false } },
+    );
+    expect(result.current).toBe(false);
+    rerender({ isDirty: true });
+    expect(result.current).toBe(true);
+  });
+
+  it("STAYS true when the document goes clean again (post-save refetch)", () => {
+    const { result, rerender } = renderHook(
+      ({ isDirty }: { isDirty: boolean }) => useHasEdited(isDirty, "doc-1"),
+      { initialProps: { isDirty: true } },
+    );
+    expect(result.current).toBe(true);
+    // The save landed: dirty flips false — the flag must NOT unpublish the pill.
+    rerender({ isDirty: false });
+    expect(result.current).toBe(true);
+  });
+
+  it("resets when the document changes (no inherited stale 'Salvato')", () => {
+    const { result, rerender } = renderHook(
+      ({ isDirty, key }: { isDirty: boolean; key: string }) =>
+        useHasEdited(isDirty, key),
+      { initialProps: { isDirty: true, key: "doc-1" } },
+    );
+    expect(result.current).toBe(true);
+    rerender({ isDirty: false, key: "doc-2" });
+    expect(result.current).toBe(false);
   });
 });

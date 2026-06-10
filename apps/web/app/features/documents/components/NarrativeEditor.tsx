@@ -13,6 +13,7 @@ import {
   useAutoSave,
   useDocument,
   useSaveDocument,
+  useVersionResync,
   useExportNarrativePdf,
 } from "../hooks/useDocument";
 import {
@@ -45,6 +46,7 @@ import {
 } from "../lib/narrative-plugins";
 import { useDocumentVersions } from "~/features/documents";
 import {
+  useHasEdited,
   useSaveStatePublisher,
   useCesareOpen,
   useContextActions,
@@ -211,11 +213,9 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
 
   // Track whether the user has actually edited (vs just loaded an empty doc).
   // We only publish a saveState after the first real edit — otherwise the
-  // TopBar pill would show a stale "Salvato" on an empty page (V7 bug).
-  const [hasEdited, setHasEdited] = useState(content !== document.content);
-  useEffect(() => {
-    if (content !== document.content) setHasEdited(true);
-  }, [content, document.content]);
+  // TopBar pill would show a stale "Salvato" on an empty page (V7 bug). Sticky
+  // + reset on document change (BUG-N55 — see useHasEdited).
+  const hasEdited = useHasEdited(content !== document.content, document.id);
 
   // Single publisher for the TopBar pill (Spec 63 P2): derived from the MAIN
   // document's autosave only — never the logline autosave — and computing the
@@ -233,20 +233,11 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
   const loglineOverCap = isLogline && charCount >= LOGLINE_MAX;
 
   // When the active version changes (e.g. after switchToVersion), reload content
-  // from the freshly-fetched document. We key on currentVersionId rather than
-  // content itself to avoid overwriting in-progress edits. Skip the mount run:
-  // state is already initialised from the same document, and in realtime mode
-  // pushing a (possibly stale) HTTP value into a just-synced CRDT editor is
-  // exactly the external replace that clobbers the shared doc (BUG-N53).
-  const versionSyncMountedRef = useRef(false);
-  useEffect(() => {
-    if (!versionSyncMountedRef.current) {
-      versionSyncMountedRef.current = true;
-      return;
-    }
-    setContent(document.content);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [document.currentVersionId]);
+  // from the freshly-fetched document — but never on mount or for a version our
+  // own save created (BUG-N53/BUG-N56 — see useVersionResync).
+  useVersionResync(document.currentVersionId, save, () =>
+    setContent(document.content),
+  );
 
   // E2E test hook: trigger a save with raw content bypassing the textarea
   // (textarea has HTML maxLength enforcement — tests use this to verify

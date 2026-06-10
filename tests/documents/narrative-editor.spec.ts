@@ -409,6 +409,45 @@ test.describe("Narrative Editor — happy paths & navigation", () => {
   // (SaveState is saved|saving|offline — SavePill). Failed saves surface
   // through the offline/retry path, not a distinct error pill.
 
+  test("[OHW-N55] soggetto: the save pill survives a manual flush (stays 'saved', never unpublishes)", async ({
+    authenticatedPage: page,
+    testProjectId,
+  }) => {
+    await page.goto(SOGGETTO_PATH(testProjectId));
+    await expect(pmEditorLocator(page)).toBeVisible({ timeout: 10_000 });
+
+    const pill = page.getByTestId("save-status-indicator");
+    // Untouched page → no pill (the publisher gate).
+    await expect(pill).toHaveCount(0);
+
+    // Caret moves without an edit must NOT publish the pill (BUG-N45).
+    const editor = pmEditorLocator(page);
+    await editor.click();
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("ArrowRight");
+    await expect(pill).toHaveCount(0);
+
+    // Edit → dirty pill appears.
+    await page.keyboard.press("End");
+    await page.keyboard.type(` pill-flush-${Date.now()}`);
+    await expect(pill).toHaveAttribute("data-state", "dirty", {
+      timeout: 5_000,
+    });
+
+    // Manual flush via the pill. BUG-N55: the publisher gate compared raw
+    // content === saved content, so the post-save refetch flipped it false and
+    // the pill VANISHED on the very click that saved. It must stay, as "saved".
+    await Promise.all([waitForAutosave(page), pill.click()]);
+    await expect(pill).toHaveAttribute("data-state", "saved", {
+      timeout: 10_000,
+    });
+
+    // …and survive the query refetch + further caret moves.
+    await editor.click();
+    await page.keyboard.press("ArrowLeft");
+    await expect(pill).toHaveAttribute("data-state", "saved");
+  });
+
   test.skip("[OHW-214] versions drawer opens for a narrative doc — pending Spec 06b integration", async () => {
     // The narrative editor does not yet render a Versions button. The
     // universal drawer (Spec 06b) is wired for screenplays only. Re-enable
