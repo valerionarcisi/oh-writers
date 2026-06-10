@@ -66,7 +66,12 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: `PORT=${TEST_PORT} BETTER_AUTH_URL=${TEST_BASE_URL} DATABASE_URL=${TEST_DB_URL} LLM_FIRST_BREAKDOWN=false MOCK_AI=true CRON_SECRET=test-cron-secret pnpm --filter @oh-writers/web dev`,
+      // VITE_WS_URL is force-emptied: without it the test server inherits the
+      // dev ws-server from apps/web/.env, whose auth/persistence DB does not
+      // match the test DB — the editor then remount-loops between skeleton and
+      // editor and eats keystrokes (BUG-N57). The E2E stack is non-realtime by
+      // contract (N-42) until it runs its own ws-server.
+      command: `PORT=${TEST_PORT} BETTER_AUTH_URL=${TEST_BASE_URL} DATABASE_URL=${TEST_DB_URL} VITE_WS_URL= LLM_FIRST_BREAKDOWN=false MOCK_AI=true CRON_SECRET=test-cron-secret pnpm --filter @oh-writers/web dev`,
       url: TEST_BASE_URL,
       // Always start a dedicated test server so it uses the test DB, never the
       // dev DB. Locally a warm server (already bound to the test DB) can be
