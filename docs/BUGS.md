@@ -23,6 +23,13 @@ E2E first; screenshots in a recap; gates green).
 
 ## Open
 
+### BUG-N61 — 3 mock-ui E2E red on main: honest-card entity label + updated-banner show-changes/stack (2026-06-10)
+
+- Severity: MEDIO (test debt or product regression — undetermined; the mock-ui project is where the agentic-edit UX contract lives)
+- Status: open (found during the Lane-4 gate; verified red on clean main with isolated infra, retries=2)
+- Failing: `tests/cesare-agentic-honest-card.spec.ts` [OHW-AUDIT-FM1] (logline edit card labelled by edited entity); `tests/cesare-agentic-updated-banner.spec.ts` "hides 'Mostra modifiche' when the editor is in front" + "two turns stack: counter collapses" (OHW-063).
+- Notes: failure shapes are show-changes-btn visibility + stack counter + card label — could be Spec 66-era drift in the result-card surface or real regressions in the agentic-edit flash. Triage = run each, read the page state, decide stale-test vs product; per policy E2E edits need Valerio's go.
+
 ### BUG-N58 — OBSERVATION: seeded demo screenplay (project `…011` "Team Thriller", version `…023`) found clobbered to empty during a dev session (2026-06-10)
 
 - Severity: BASSO as observed (seed data, no real loss) — ALTO if the signature reproduces on real data
