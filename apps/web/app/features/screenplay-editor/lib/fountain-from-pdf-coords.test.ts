@@ -77,10 +77,33 @@ describe("fountainFromPdfCoords — Non fa ridere (real coords)", () => {
     `${CHARACTER_INDENT}TEA (V.O.)`,
   ];
 
+  // Blocks are separated by blank lines in the rendered Fountain (canonical
+  // spacing — without it `fountainToDoc` absorbs a flush-left action that
+  // follows dialogue into the speech). The ground-truth sequence compares the
+  // ELEMENT order, so blanks are filtered here and asserted separately below.
+  const nonBlank = out.filter((l) => l !== "");
+
   it("matches the page-2 element sequence exactly", () => {
-    const start = out.indexOf(PAGE_2[0]!);
+    const start = nonBlank.indexOf(PAGE_2[0]!);
     expect(start).toBeGreaterThanOrEqual(0);
-    expect(out.slice(start, start + PAGE_2.length)).toEqual(PAGE_2);
+    expect(nonBlank.slice(start, start + PAGE_2.length)).toEqual(PAGE_2);
+  });
+
+  it("separates blocks with blank lines but keeps dialogue groups glued", () => {
+    // dialogue → action: blank line (the BUG the spacing exists to fix —
+    // without it the editor renders "Sorride." as part of Filippo's speech).
+    expect(fountain).toContain(
+      `${DIALOGUE_INDENT}Ma vaffanculo è una pizza non una colazione di centrosinistra!\n\nSorride.`,
+    );
+    // action → character: blank line; character → dialogue: glued.
+    expect(fountain).toContain(
+      `Sorride.\n\n${CHARACTER_INDENT}TEA (V.O.)\n${DIALOGUE_INDENT}Filì venni! Corri!`,
+    );
+    // dialogue → interleaved action and back: blanks on both sides, the
+    // resumed speech keeps its dialogue indent.
+    expect(fountain).toContain(
+      `\n\nVediamo il ristorante fuori, le macchine che passano sulla strada.\n\n${DIALOGUE_INDENT}Allora iniziamo subito`,
+    );
   });
 
   it("emits the scene heading at column 0 with its forced scene number", () => {
@@ -151,7 +174,8 @@ describe("fountainFromPdfCoords — Wolf of Wall Street (real coords)", () => {
   ];
 
   it("matches the page 1–2 element sequence exactly", () => {
-    expect(out.slice(0, PAGE_1_2.length)).toEqual(PAGE_1_2);
+    const nonBlank = out.filter((l) => l !== "");
+    expect(nonBlank.slice(0, PAGE_1_2.length)).toEqual(PAGE_1_2);
   });
 
   it("emits scene headings with their fused gutter number as #N#", () => {

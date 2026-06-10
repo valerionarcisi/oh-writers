@@ -495,7 +495,28 @@ export const fountainFromPdfCoords = (
   const blocks = options.dropTitlePagePrefix
     ? dropBeforeFirstScene(joined)
     : joined;
-  const rendered = blocks.map(renderBlock).filter((l) => l !== "");
+
+  // Canonical Fountain spacing: a blank line between blocks, EXCEPT inside a
+  // dialogue group (character → parentheticals/dialogue stay glued). Without
+  // the blank, `fountainToDoc` treats a flush-left action that directly
+  // follows dialogue as a continuation of the speech — the imported "Filippo
+  // entra nel locale…" beats rendered as dialogue. Dialogue that resumes
+  // after an interleaved action keeps its DIALOGUE_INDENT, which the editor
+  // detects by indentation, so the blank never breaks a resumed speech.
+  const rendered: string[] = [];
+  let prevRole: Block["role"] | null = null;
+  for (const block of blocks) {
+    const line = renderBlock(block);
+    if (line === "") continue;
+    const gluedToDialogueGroup =
+      (block.role === "parenthetical" || block.role === "dialogue") &&
+      (prevRole === "character" ||
+        prevRole === "parenthetical" ||
+        prevRole === "dialogue");
+    if (prevRole !== null && !gluedToDialogueGroup) rendered.push("");
+    rendered.push(line);
+    prevRole = block.role;
+  }
   if (rendered.length === 0) return null;
   return rendered.join("\n");
 };
