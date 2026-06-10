@@ -11,6 +11,7 @@
   border-block-end: 1px solid transparent;
   transition: border-color var(--ds-duration-1) var(--ds-ease);
   flex-shrink: 0;
+  container-type: inline-size;
 }
 
 .isScrolled {
@@ -46,6 +47,40 @@
 
   & > * {
     pointer-events: auto;
+  }
+}
+
+/* Below ~1180px of bar width the absolutely-centred slot collides with the
+   right cluster: measured worst case, the cluster spans 433px from the bar's
+   right edge and the centred pill extends 156px past the midpoint, so they
+   meet at 2 × (156 + 433) ≈ 1178px. At 768px the cluster's left edge even
+   crosses the row midpoint, covering the pill entirely (BUG-N38). Below the
+   threshold, drop the center slot into the flow as a full-width second line:
+   never overlapped, always clickable. (1440px viewport keeps the inline
+   centred pill — the bar is 1200px there with the rail open.) */
+@container (max-width: 1180px) {
+  .rowHasCenter {
+    flex-wrap: wrap;
+
+    /* Keep the actions right-aligned even when wrapping puts them on a
+       line of their own (space-between has no effect on a 1-item line). */
+    & > .right {
+      margin-inline-start: auto;
+    }
+  }
+
+  .center {
+    position: static;
+    transform: none;
+    order: 1;
+    flex-basis: 100%;
+    max-inline-size: 100%;
+    min-inline-size: 0;
+
+    & > * {
+      max-inline-size: 100%;
+      min-inline-size: 0;
+    }
   }
 }
 
