@@ -113,3 +113,20 @@ force-empties `VITE_WS_URL`; never remove that. (b) When an E2E failure implies 
 product behaviour, verify the DOM is STABLE first (marker trick) before theorising about
 data flow. (c) Cross-stack interference is a standing suspect for "fails only on my
 machine": enumerate every server the page can reach, not just the one the test started.
+
+### 2026-06-10 — Two textually-clean fixes for the same bug collide semantically (epic gate catch)
+
+**What went wrong** — A parallel lane fixed the BUG-N38 TopBar overlap with a flexbox
+container query, tested green on ITS worktree — which was based on a commit BEFORE main
+had independently restructured the same row into a grid (`ec00a38e`). Git merged both
+changes without a single conflict marker; on the integrated tree the flex `order`/
+`flex-basis` overrides corrupted the grid auto-placement and re-created the exact
+overlap the lane had just fixed. Lane-green, epic-red.
+
+**Rule going forward** — (a) Parallel lanes must branch from CURRENT main, and the
+orchestrator should verify each lane's merge-base before trusting its green gates.
+(b) A clean textual merge of two changes that touch the same layout/algorithm is not
+integration — only the epic-level re-run of the lane's own tests on the merged tree is.
+(c) When overriding a layout inside a media/container query, express the override in the
+SAME layout system as the base rule (grid base → grid placement), or the override is
+dead weight at best and corruption at worst.
