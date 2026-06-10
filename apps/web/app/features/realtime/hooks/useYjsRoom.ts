@@ -3,8 +3,23 @@ import type * as Y from "yjs";
 import type { WebsocketProvider } from "y-websocket";
 import { userColor } from "@oh-writers/utils";
 import { createYjsRoom, isRealtimeEnabled } from "../lib/provider";
+import {
+  INITIAL_SYNC_LATCH_STATE,
+  SYNC_DEADLINE_MS,
+  recordPreSyncDrop,
+} from "../lib/sync-latch";
 import { getRealtimeToken } from "../server/realtime-token.server";
 
+/**
+ * `connecting` covers the whole pre-sync phase, including provider retry
+ * cycles — a transient drop before the first sync never reports `offline`
+ * (BUG-N57: that flip-flopped the editors between skeleton and HTTP editor).
+ * Before the first sync, `offline` is TERMINAL for the mount: token fetch
+ * failed, the drop latch fired, or the sync deadline passed — the provider is
+ * destroyed and the status never changes again. After the first sync,
+ * `offline` is informational (connection lost, provider retrying) and editors
+ * keep their latched room.
+ */
 export type RealtimeStatus =
   | "disabled"
   | "connecting"
@@ -135,33 +150,85 @@ export const useYjsRoom = (
         // the fragment now reflects the canonical content and is safe to seed
         // against. Never flips back — a later reconnect re-syncs onto the same doc.
         let synced = provider.synced;
+        // BUG-N57: a reachable-but-misbehaving server (accepts the socket,
+        // never syncs, drops, retries with ~100ms backoff) must not make the
+        // status oscillate forever. Pre-sync drops are counted; past the
+        // policy limit (or past the sync deadline for a server that holds the
+        // socket open but stays mute) the room latches a TERMINAL `offline`:
+        // the provider is destroyed, no further event can flip the status, and
+        // the editors fall back to the HTTP path exactly once.
+        let latchState = INITIAL_SYNC_LATCH_STATE;
+        let lastStatus: RealtimeStatus = "connecting";
+        let tornDown = false;
+        let syncDeadline: ReturnType<typeof setTimeout> | undefined;
 
-        const update = (status: RealtimeStatus): void => {
-          if (disposed) return;
-          setRoom({ ydoc, provider, status, peers: readPeers(), synced });
-        };
-
-        const onStatus = (e: { status: string }): void =>
-          update(e.status === "connected" ? "connected" : "offline");
-        const onSync = (): void => {
-          synced = true;
-          update("connected");
-        };
-        const onAwareness = (): void => update(statusOf(provider));
-
-        provider.on("status", onStatus);
-        provider.on("sync", onSync);
-        provider.awareness.on("update", onAwareness);
-
-        update("connecting");
-
-        cleanup = () => {
+        const teardown = (): void => {
+          if (tornDown) return;
+          tornDown = true;
+          if (syncDeadline !== undefined) clearTimeout(syncDeadline);
           provider.off("status", onStatus);
           provider.off("sync", onSync);
           provider.awareness.off("update", onAwareness);
           provider.destroy();
           ydoc.destroy();
         };
+
+        const latchOffline = (): void => {
+          teardown();
+          if (!disposed) setRoom({ ...DISABLED, status: "offline" });
+        };
+
+        const update = (status: RealtimeStatus): void => {
+          if (disposed || tornDown) return;
+          lastStatus = status;
+          setRoom({ ydoc, provider, status, peers: readPeers(), synced });
+        };
+
+        const onStatus = (e: { status: string }): void => {
+          if (e.status === "connected") {
+            update("connected");
+            return;
+          }
+          if (synced) {
+            // Post-sync drop: the provider keeps retrying on the SAME doc and
+            // Yjs buffers edits offline, so this is informational (presence
+            // dot) — editors keep their latched room (useRealtimeEditorGate).
+            update("offline");
+            return;
+          }
+          // Pre-sync drop ("disconnected" after an accepted socket, or
+          // "connecting" on a retry attempt). The provider is still retrying,
+          // so report `connecting` — never a transient `offline` that would
+          // flip the editors onto the HTTP path and back (the remount loop).
+          const decision = recordPreSyncDrop(latchState, Date.now());
+          latchState = decision.state;
+          if (decision.latchOffline) {
+            latchOffline();
+            return;
+          }
+          update("connecting");
+        };
+        // y-websocket emits `sync` with `false` too (reconnect attempts reset
+        // the provider's flag) — only a `true` latches.
+        const onSync = (isSynced: boolean): void => {
+          if (!isSynced) return;
+          synced = true;
+          if (syncDeadline !== undefined) clearTimeout(syncDeadline);
+          update("connected");
+        };
+        const onAwareness = (): void => update(lastStatus);
+
+        provider.on("status", onStatus);
+        provider.on("sync", onSync);
+        provider.awareness.on("update", onAwareness);
+
+        syncDeadline = setTimeout(() => {
+          if (!synced) latchOffline();
+        }, SYNC_DEADLINE_MS);
+
+        update("connecting");
+
+        cleanup = teardown;
       });
 
     return () => {
@@ -176,6 +243,3 @@ export const useYjsRoom = (
 
   return room;
 };
-
-const statusOf = (provider: WebsocketProvider): RealtimeStatus =>
-  provider.wsconnected ? "connected" : "offline";

@@ -34,7 +34,11 @@ import { fountainToDoc } from "../lib/fountain-to-doc";
 import type { ElementType } from "../lib/fountain-element-detector";
 import { setElement } from "../lib/schema-commands";
 import { ProseMirrorView } from "./ProseMirrorView";
-import { useYjsRoom, PresenceIndicator } from "~/features/realtime";
+import {
+  useYjsRoom,
+  useLatchedRealtime,
+  PresenceIndicator,
+} from "~/features/realtime";
 import { useSession } from "~/lib/auth-client";
 import {
   cesareAppliedHighlightKey,
@@ -271,23 +275,22 @@ export const ScreenplayEditor = forwardRef<
   const roomId = screenplay.currentVersionId
     ? `screenplay:${screenplay.id}:${screenplay.currentVersionId}`
     : `screenplay:${screenplay.id}`;
-  const {
-    ydoc: realtimeDoc,
-    provider: realtimeProvider,
-    status: realtimeStatus,
-    peers: realtimePeers,
-    synced: realtimeSynced,
-  } = useYjsRoom(roomId, realtimeUser, !isViewing);
+  const realtimeRoom = useYjsRoom(roomId, realtimeUser, !isViewing);
+  const { status: realtimeStatus, peers: realtimePeers } = realtimeRoom;
   // Realtime sync is active for ANY connected user (viewers included — they
   // receive live content + cursors but the editor stays readOnly and the
   // ws-server drops their writes). It is NOT tied to write permission.
-  // Gated on `synced`, not bare `connected`: the editor remounts into realtime
-  // mode and must only do so once the server state has landed — on bare
-  // `connected` the fragment still looks empty for a room that has content,
-  // and the first-client seeding would race the arriving snapshot (BUG-N54;
-  // the ws-server also replies to sync only after loading the room, so a
-  // post-sync empty fragment genuinely means an empty room).
-  const realtimeActive = realtimeStatus === "connected" && realtimeSynced;
+  // Latched on the first `synced`, not derived from the live status: the
+  // editor remounts into realtime mode and must only do so once the server
+  // state has landed — on bare `connected` the fragment still looks empty for
+  // a room that has content, and the first-client seeding would race the
+  // arriving snapshot (BUG-N54; the ws-server also replies to sync only after
+  // loading the room, so a post-sync empty fragment genuinely means an empty
+  // room). And once IN realtime mode it stays there: deriving from the status
+  // would rebuild the EditorView on every connection flap, eating keystrokes
+  // (BUG-N57) — Yjs buffers edits across the disconnected stretch instead.
+  const latchedRealtime = useLatchedRealtime(realtimeRoom);
+  const realtimeActive = latchedRealtime !== null;
 
   // ─── Cesare propose/accept wiring ──────────────────────────────────────
   // Proposals live in a server-side in-memory store; the chat hook
@@ -1284,8 +1287,8 @@ export const ScreenplayEditor = forwardRef<
             onSceneIndexChange={setCurrentSceneIndex}
             onPageChange={(current, total) => setPageInfo({ current, total })}
             readOnly={isViewing || !(screenplay.canEdit ?? false)}
-            ydoc={realtimeDoc}
-            provider={realtimeProvider}
+            ydoc={latchedRealtime?.ydoc ?? null}
+            provider={latchedRealtime?.provider ?? null}
             realtime={realtimeActive}
             pluginsExtra={pluginsExtraRef.current ?? undefined}
             onReady={(view) => {

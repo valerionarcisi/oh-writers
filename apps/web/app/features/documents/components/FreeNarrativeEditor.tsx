@@ -8,8 +8,8 @@ import { toCartelle } from "../lib/cartelle-counter";
 import { useTranslation } from "~/features/i18n";
 import {
   useYjsRoom,
+  useRealtimeEditorGate,
   PresenceIndicator,
-  isRealtimeEnabled,
 } from "~/features/realtime";
 import { useSession } from "~/lib/auth-client";
 import styles from "./FreeNarrativeEditor.module.css";
@@ -70,23 +70,15 @@ export function FreeNarrativeEditor({
     canEdit && !!documentId,
   );
   const { status: realtimeStatus, peers: realtimePeers } = room;
-  // Mount the realtime editor only AFTER the first sync, mirroring
-  // NarrativeEditor: on bare `connected` (websocket open, server state still
-  // in flight) `isFragmentEmpty` is not authoritative — the editor would seed
-  // the CRDT from its local doc and the arriving server content would merge ON
-  // TOP (the BUG-N41 double-seed). While the room is connecting/syncing we
-  // hold a skeleton instead of a live editor; `offline` falls back to the
-  // HTTP editor (no room will ever deliver content).
-  const realtime =
-    room.status === "connected" && room.synced && room.ydoc && room.provider
-      ? { ydoc: room.ydoc, provider: room.provider }
-      : null;
-  const realtimeAwaitingSync =
-    canEdit &&
-    !!documentId &&
-    isRealtimeEnabled() &&
-    realtimeStatus !== "offline" &&
-    realtime === null;
+  // Same gate as NarrativeEditor (see useRealtimeEditorGate): realtime mounts
+  // only AFTER the first sync (BUG-N41/BUG-N54 double-seed), the skeleton is
+  // for the FIRST load only, and once an editor has mounted later status
+  // oscillation never unmounts it (BUG-N57 remount loop).
+  const { realtime, awaitingFirstSync: realtimeAwaitingSync } =
+    useRealtimeEditorGate(room, {
+      enabled: canEdit && !!documentId,
+      resetKey: documentId ?? "",
+    });
 
   const [editorView, setEditorView] = useState<EditorView | null>(null);
 

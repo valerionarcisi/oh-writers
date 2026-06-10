@@ -28,8 +28,8 @@ import { NarrativeProseMirrorView } from "./NarrativeProseMirrorView";
 import { NarrativeFormatToolbar } from "./NarrativeFormatToolbar";
 import {
   useYjsRoom,
+  useRealtimeEditorGate,
   PresenceIndicator,
-  isRealtimeEnabled,
 } from "~/features/realtime";
 import { useSession } from "~/lib/auth-client";
 import { OutlineEditor } from "./OutlineEditor";
@@ -168,48 +168,31 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
   const realtimeUser = sessionData?.user
     ? { id: sessionData.user.id, name: sessionData.user.name }
     : null;
+  const realtimeRoom = useYjsRoom(
+    `document:${document.id}`,
+    realtimeUser,
+    !isReadOnly,
+  );
+  const { status: realtimeStatus, peers: realtimePeers } = realtimeRoom;
+  // The gate enforces both room-load contracts at once (see
+  // useRealtimeEditorGate):
+  // - the realtime editor mounts only AFTER the first sync — mounting on bare
+  //   `connected` would seed the CRDT while the server state is in flight and
+  //   merge the arriving content on top (BUG-N41/BUG-N54 double-seed), and a
+  //   throwaway HTTP editor must not mount while the room resolves (its seed +
+  //   onChange would autosave and duplicate once realtime arrives) — hence the
+  //   first-load skeleton;
+  // - once an editor HAS mounted, later status oscillation never swaps it back
+  //   to a skeleton or rebuilds it (BUG-N57 remount loop ate keystrokes):
+  //   `realtime` stays latched on the synced doc and Yjs buffers any
+  //   disconnected stretch.
   const {
-    ydoc: realtimeDoc,
-    provider: realtimeProvider,
-    status: realtimeStatus,
-    peers: realtimePeers,
-    synced: realtimeSynced,
-  } = useYjsRoom(`document:${document.id}`, realtimeUser, !isReadOnly);
-  // Mount the realtime editor only AFTER the first sync. Mounting on bare
-  // `connected` (websocket open, server state still in flight) would seed the
-  // CRDT from the local initial doc while the fragment momentarily looks empty,
-  // then merge the arriving server content on top of it — the BUG-N41
-  // double-seed. Waiting for `synced` makes `isFragmentEmpty` authoritative.
-  const narrativeRealtime =
-    realtimeStatus === "connected" &&
-    realtimeSynced &&
-    realtimeDoc &&
-    realtimeProvider
-      ? { ydoc: realtimeDoc, provider: realtimeProvider }
-      : null;
-
-  // While a realtime room is connecting / syncing we must NOT mount a throwaway
-  // non-realtime editor: it would seed its initial doc and emit an onChange that
-  // the autosave persists, and once the realtime editor mounts the server CRDT
-  // arrives ON TOP — a second copy. Each reload then appended another copy until
-  // the doc blew past its size cap and saving broke. So hold the editor until
-  // realtime is resolved: either synced (mount realtime) or genuinely off
-  // (`disabled`/`offline` → mount the HTTP fallback). `connecting` and
-  // connected-but-not-yet-synced render a skeleton instead of a live editor.
-  // Realtime is configured (VITE_WS_URL) and this doc is editable, but the room
-  // hasn't synced yet. `useYjsRoom` starts in the `disabled` shape and only
-  // transitions to connecting→connected after the async token fetch, so we key
-  // off `isRealtimeEnabled()` (a stable env check) rather than the transient
-  // status — otherwise the very first render mounts a non-realtime editor that
-  // seeds + emits before the room arrives, the original double-seed.
-  // `offline` means the socket failed to connect — no room will ever deliver
-  // content, so falling back to the HTTP editor (which seeds) is safe and
-  // necessary (otherwise we'd hang on the skeleton forever).
-  const realtimeAwaitingSync =
-    !isReadOnly &&
-    isRealtimeEnabled() &&
-    realtimeStatus !== "offline" &&
-    narrativeRealtime === null;
+    realtime: narrativeRealtime,
+    awaitingFirstSync: realtimeAwaitingSync,
+  } = useRealtimeEditorGate(realtimeRoom, {
+    enabled: !isReadOnly,
+    resetKey: document.id,
+  });
 
   // Track whether the user has actually edited (vs just loaded an empty doc).
   // We only publish a saveState after the first real edit — otherwise the

@@ -47,6 +47,17 @@ vi.mock("~/features/realtime", async (importOriginal) => {
   };
 });
 
+// The real `useRealtimeEditorGate` (re-exported above via `importOriginal`)
+// reads `isRealtimeEnabled` from the provider lib directly — stub it there too
+// so the gate believes realtime is configured.
+vi.mock("~/features/realtime/lib/provider", async (importOriginal) => {
+  const original = await importOriginal<object>();
+  return {
+    ...original,
+    isRealtimeEnabled: () => true,
+  };
+});
+
 vi.mock("~/lib/auth-client", () => ({
   useSession: () => ({ data: { user: { id: "u1", name: "Test" } } }),
 }));
