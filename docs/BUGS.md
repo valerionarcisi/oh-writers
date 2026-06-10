@@ -23,6 +23,14 @@ E2E first; screenshots in a recap; gates green).
 
 ## Open
 
+### BUG-N58 — OBSERVATION: seeded demo screenplay (project `…011` "Team Thriller", version `…023`) found clobbered to empty during a dev session (2026-06-10)
+
+- Severity: BASSO as observed (seed data, no real loss) — ALTO if the signature reproduces on real data
+- Status: open (observation only — the session was too polluted for a clean repro)
+- Observed: at ~14:33 the editor rendered ~13.9k chars for `…011` and survived a reload; by 15:05 (db backup) the version row was already `content` ≈ empty with a ~1.1 KB `yjs_snapshot`, and the page now renders blank. The REAL projects (`…010` v13, `…012` First draft) are intact (14366 chars / 25876-byte snapshots) and `…010` renders 13924 chars on merged main with realtime ON.
+- Pollution caveats: during that window the dev stack was killed with `pkill` (no clean room flush), branches were switched main↔branch with the dev server + an open browser page live (main lacked the N54 fixes), and the page sat connected throughout. Any of these can explain the wipe — or mask a real one.
+- Next: if a blank seeded/real screenplay shows up again under a CLEAN stack, treat it as a live N54-class clobber and capture `yjs_snapshot`+`content` immediately. Until then, no repro to chase.
+
 ### BUG-N57 — a reachable-but-rejecting ws-server puts the narrative editor in a skeleton↔editor REMOUNT LOOP that eats keystrokes (2026-06-10)
 
 - Severity: ALTO (silent data loss while typing — the editor node is replaced every ~100ms, focus dies, typed text lands nowhere; persists a truncated save)
