@@ -698,15 +698,16 @@ test("[OHW-092] Element type of an imported transition can be changed via the el
 
 // ─── OHW-093  File too large — error message ──────────────────────────────────
 
-test("[OHW-093] Importing a PDF larger than 10 MB shows an error message", async ({
+test("[OHW-093] Importing a PDF larger than 25 MB shows an error message", async ({
   browser,
 }) => {
-  // Create a temporary file just over 10 MB.
-  // Using 10.1 MB: base64-encoded = ~13.5 MB which is under MAX_BASE64_LENGTH
-  // (~14.7 MB), so the Zod validator passes and the server-side buffer check
-  // catches it with FileTooLargeError.
+  // Create a temporary file just over the import limit (MAX_FILE_BYTES in
+  // pdf-import.server.ts — 25 MB since real screenplays with embedded fonts
+  // routinely exceed the old 10 MB cap). The server-side decoded-byte-length
+  // guard rejects it with FileTooLargeError, rendered as the localised
+  // "Il PDF deve essere inferiore a 25 MB." banner.
   const tmpFile = path.join(os.tmpdir(), "large-test.pdf");
-  const largeBuf = Buffer.alloc(Math.ceil(10.1 * 1024 * 1024), 0x20);
+  const largeBuf = Buffer.alloc(Math.ceil(25.1 * 1024 * 1024), 0x20);
   largeBuf.write("%PDF-1.4\n", 0, "ascii");
   fs.writeFileSync(tmpFile, largeBuf);
 
@@ -720,10 +721,12 @@ test("[OHW-093] Importing a PDF larger than 10 MB shows an error message", async
   const fileChooser = await fileChooserPromise;
   await fileChooser.setFiles(tmpFile);
 
+  // Reading + uploading ~25 MB (base64 ≈ 33 MB) takes longer than the small
+  // fixtures — give the round-trip more headroom.
   await expect(page.getByTestId("import-error")).toBeVisible({
-    timeout: 8_000,
+    timeout: 15_000,
   });
-  await expect(page.getByTestId("import-error")).toContainText(/10 MB/i);
+  await expect(page.getByTestId("import-error")).toContainText(/25 MB/i);
 
   fs.unlinkSync(tmpFile);
   await page.close();
