@@ -60,3 +60,4 @@ vernissage/*/failures.json
 
 # Langfuse self-hosted secrets
 infra/langfuse/.env
+backups/

@@ -23,6 +23,31 @@ E2E first; screenshots in a recap; gates green).
 
 ## Open
 
+### BUG-N57 — a reachable-but-rejecting ws-server puts the narrative editor in a skeleton↔editor REMOUNT LOOP that eats keystrokes (2026-06-10)
+
+- Severity: ALTO (silent data loss while typing — the editor node is replaced every ~100ms, focus dies, typed text lands nowhere; persists a truncated save)
+- Status: open (root cause isolated, fix direction below)
+- Repro (deterministic): web app pointed at a ws-server whose auth/persistence DB does NOT match the app's (locally: playwright's test server on :3002/test-DB while the dev ws-server on :1234/dev-DB is up — `apps/web/.env` `VITE_WS_URL` leaks into the test server). Open any NarrativeEditor doc: `useYjsRoom` connects, the server rejects/never syncs, the provider retries → `realtimeAwaitingSync` oscillates → the `realtimeAwaitingSync ? <Skeleton/> : <NarrativeProseMirrorView/>` ternary remounts the editor continuously (DOM marker on the wrapper dies in ≤100ms; `activeElement` falls back to BODY). Typing mid-loop lands partially ("aut" of "autosaved-…") and the autosave persists the stub.
+- Impact: this is what redded 5/11 of `tests/documents/narrative-editor.spec.ts` whenever the dev stack runs alongside the test run (the realigned suite is green with the stack down — verified 11/11). In production the same loop fires for any client whose ws connection is accepted then repeatedly dropped (auth expiry, proxy flap).
+- Fix direction: `useYjsRoom` must LATCH `offline` after N failed connect/sync cycles (it already latches on token-fetch failure — N54 #3 — but not on a server that accepts then never syncs); and/or the editors should never swap an already-mounted HTTP editor back to a skeleton — the skeleton gate is for first mount only. Also consider: playwright's webServer should explicitly set `VITE_WS_URL=""` so the test stack can never adopt the dev ws-server.
+
+### BUG-N56 — first autosave of a fresh doc can stomp the keystrokes typed while it was in flight (2026-06-10)
+
+- Severity: MEDIO (data loss window of one save round-trip, only on the FIRST save of a doc with no version row)
+- Status: fixed (`useVersionResync` — shared own-save guard at all three resync sites)
+- Mechanism (code-traced): fresh doc with NO version row → first autosave creates "Versione 1" (`saveDocument` → `ensureFirstDocumentVersion`, `currentVersionId` null→v1) → the query refetch fires the version-resync effect (keyed on `currentVersionId`) → `setContent(document.content)` replaces the editor with the content AS OF THE SAVE REQUEST — keystrokes typed during the save round-trip are stomped and the next autosave persists the truncated text. Real for a human typing with pauses ≥ the debounce on a brand-new doc.
+- Cause: the resync effects (NarrativeEditor + soggetto route ×2 for soggetto/logline) could not tell an EXTERNAL version switch (switchToVersion/restore — must resync) from the version id their OWN save had just created (must not). Skip-mount (the N54 fix) was not enough — the first save bumps the id mid-session.
+- Fix: `useVersionResync(currentVersionId, save, resync)` in `useDocument.ts` — skips the mount run AND any version id matching `save.data.currentVersionId` (the id returned by this editor's own last save). All three sites now share it; switchToVersion still resyncs (different id than the last save's).
+- Note: first suspected as the cause of the 5 red narrative-editor tests — those turned out to be BUG-N57 (the remount loop). This guard is kept as the correct semantics for the resync regardless.
+
+### BUG-N55 — soggetto save pill vanished on the very click that saved (2026-06-10)
+
+- Severity: MEDIO (the save LANDED — but the pill disappearing on press read as "il salvataggio non funziona")
+- Status: fixed (sticky `soggettoEdited` flag in the soggetto route publisher)
+- Repro (pre-fix): soggetto → type → pill "Non salvato" → click the pill (Salva) → save succeeds, query refetches → the pill VANISHES instead of reading "Salvato". Other narrative pages unaffected.
+- Cause: the soggetto route gated `useSaveStatePublisher` on a RAW equality (`soggettoContent !== soggettoDoc.content`). The post-save refetch made the two equal, flipping the gate false and unpublishing the pill. `NarrativeEditor` (synopsis/treatment) uses a STICKY `hasEdited` state — that's why those pages were fine. Fix mirrors it: `soggettoEdited` flips true on the first canonical-dirty and stays true, so after a flush the pill reads "Salvato".
+- Proof: verified live on :3000 (edit → "Non salvato" → click → "Salvato" persists across refetch, caret moves, and the content round-trips a reload). E2E: `tests/documents/narrative-editor.spec.ts` [OHW-N55] (also asserts caret moves never publish the pill — the BUG-N45 symptom). Same gate flapping explains N45's "pill appears on every click": any re-render while raw-unequal republished the pill mid-autosave.
+
 ### BUG-N54 — soggetto realtime clobber: opening the page emptied the document for every peer (2026-06-10)
 
 - Severity: ALTO (silent data loss on a live document; reported as "il salvataggio non funziona" — the user's text vanished and the save pill showed nothing)
