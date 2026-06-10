@@ -1,44 +1,17 @@
 import { useEffect, useRef } from "react";
 import { EditorState, Plugin } from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
-import { updateYFragment } from "y-prosemirror";
-import * as Y from "yjs";
-import type { Node as PMNode } from "prosemirror-model";
 import { getNarrativeSchema } from "../lib/narrative-schema";
 import {
   buildNarrativePlugins,
   type NarrativeRealtime,
 } from "../lib/narrative-plugins";
 import { docToHtml, htmlToDoc } from "../lib/narrative-html";
-import { isFragmentEmpty } from "~/features/realtime";
-import { XML_FRAGMENT } from "~/features/realtime/lib/yjs-plugins";
+import { isFragmentEmpty, seedFragmentFromDoc } from "~/features/realtime";
 import { cesareHighlightPlugin } from "../lib/cesare-highlight-plugin";
 import "~/features/realtime/lib/cursor-styles.css";
 import "../lib/cesare-highlight.css";
 import styles from "./NarrativeProseMirrorView.module.css";
-
-// Build the CRDT update that seeds an empty room from the initial doc. The
-// seeding doc's clientID is a HASH of the content, so two clients that race
-// the first-open of the same document generate byte-identical ops and the
-// double-apply deduplicates (random clientIDs would keep BOTH copies — the
-// text would render twice). Divergent contents hash to different clientIDs
-// and merge as duplication, never as same-ID corruption.
-const seedUpdateFromDoc = (initialDoc: PMNode): Uint8Array => {
-  const json = JSON.stringify(initialDoc.toJSON());
-  let hash = 0x811c9dc5;
-  for (let i = 0; i < json.length; i++) {
-    hash = ((hash ^ json.charCodeAt(i)) * 0x01000193) >>> 0;
-  }
-  const seedDoc = new Y.Doc();
-  seedDoc.clientID = hash;
-  const fragment = seedDoc.getXmlFragment(XML_FRAGMENT);
-  seedDoc.transact(() => {
-    updateYFragment(seedDoc, fragment, initialDoc, new Map());
-  });
-  const update = Y.encodeStateAsUpdate(seedDoc);
-  seedDoc.destroy();
-  return update;
-};
 
 interface NarrativeProseMirrorViewProps {
   value: string;
@@ -106,7 +79,7 @@ export function NarrativeProseMirrorView({
     // state, so `isFragmentEmpty` is authoritative here: an empty fragment
     // means the room is genuinely empty.
     if (realtime && isFragmentEmpty(realtime.ydoc)) {
-      Y.applyUpdate(realtime.ydoc, seedUpdateFromDoc(initialDoc));
+      seedFragmentFromDoc(realtime.ydoc, initialDoc);
     }
 
     const state = EditorState.create({

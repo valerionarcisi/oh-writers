@@ -30,7 +30,11 @@ import { migratePmDoc } from "@oh-writers/domain";
 import type { ElementType } from "../lib/fountain-element-detector";
 import type * as Y from "yjs";
 import type { WebsocketProvider } from "y-websocket";
-import { buildYjsPlugins, isFragmentEmpty } from "~/features/realtime";
+import {
+  buildYjsPlugins,
+  isFragmentEmpty,
+  seedFragmentFromDoc,
+} from "~/features/realtime";
 import "~/features/realtime/lib/cursor-styles.css";
 
 interface ProseMirrorViewProps {
@@ -142,14 +146,20 @@ export function ProseMirrorView({
 
     // Realtime mode swaps prosemirror-history for the Yjs sync/undo/cursor
     // plugins (history and ySyncPlugin are incompatible). When the shared
-    // fragment is empty this is the first client, so we let ySyncPlugin seed it
-    // from `initialPmDoc`; otherwise the doc loads from the CRDT and we ignore
-    // `initialPmDoc` to avoid a double-seed.
-    const seedFromInitial = !isRealtime || isFragmentEmpty(ydoc!);
+    // fragment is genuinely empty this is the first client: seed the FRAGMENT
+    // directly (merge a CRDT update) — passing `doc: initialPmDoc` to
+    // EditorState does NOT seed, y-prosemirror renders the fragment over the
+    // editor on bind, so an empty fragment would WIPE the initial doc and the
+    // wipe leaks into onChange → autosave (the BUG-N54 clobber, seen on the
+    // imported screenplay version). A populated fragment is the source of
+    // truth and the state starts empty so ySyncPlugin renders it.
+    if (isRealtime && isFragmentEmpty(ydoc!)) {
+      seedFragmentFromDoc(ydoc!, initialPmDoc);
+    }
     const yjsPlugins = isRealtime ? buildYjsPlugins(ydoc!, provider!) : [];
 
     const state = EditorState.create({
-      ...(seedFromInitial ? { doc: initialPmDoc } : { schema }),
+      ...(isRealtime ? { schema } : { doc: initialPmDoc }),
       plugins: [
         ...(isRealtime ? [] : [history()]),
         // Scene-heading pickers: each fires only when the cursor is inside

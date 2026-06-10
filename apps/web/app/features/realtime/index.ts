@@ -5,7 +5,11 @@ export {
   type RealtimeStatus,
   type Peer,
 } from "./hooks/useYjsRoom";
-export { buildYjsPlugins, isFragmentEmpty } from "./lib/yjs-plugins";
+export {
+  buildYjsPlugins,
+  isFragmentEmpty,
+  seedFragmentFromDoc,
+} from "./lib/yjs-plugins";
 export {
   buildConnectedRealtime,
   type ConnectedRealtime,

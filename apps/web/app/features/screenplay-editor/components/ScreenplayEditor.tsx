@@ -276,11 +276,18 @@ export const ScreenplayEditor = forwardRef<
     provider: realtimeProvider,
     status: realtimeStatus,
     peers: realtimePeers,
+    synced: realtimeSynced,
   } = useYjsRoom(roomId, realtimeUser, !isViewing);
   // Realtime sync is active for ANY connected user (viewers included — they
   // receive live content + cursors but the editor stays readOnly and the
   // ws-server drops their writes). It is NOT tied to write permission.
-  const realtimeActive = realtimeStatus === "connected";
+  // Gated on `synced`, not bare `connected`: the editor remounts into realtime
+  // mode and must only do so once the server state has landed — on bare
+  // `connected` the fragment still looks empty for a room that has content,
+  // and the first-client seeding would race the arriving snapshot (BUG-N54;
+  // the ws-server also replies to sync only after loading the room, so a
+  // post-sync empty fragment genuinely means an empty room).
+  const realtimeActive = realtimeStatus === "connected" && realtimeSynced;
 
   // ─── Cesare propose/accept wiring ──────────────────────────────────────
   // Proposals live in a server-side in-memory store; the chat hook
