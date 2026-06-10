@@ -44,7 +44,12 @@ test.describe("Audit ALTO #5/#6 — Export & Import reachable (TopBar)", () => {
 
     const modal = page.getByTestId("screenplay-export-modal");
     await expect(modal).toBeVisible({ timeout: 5_000 });
-    // The format picker lives inside the modal now.
+    // The format picker is a <select> inside the modal (Spec 66/67 menu
+    // consolidation): each production format is an <option> — attached in the
+    // DOM but never "visible" while the native dropdown is closed.
+    const formatSelect = modal.getByTestId("screenplay-export-format");
+    await expect(formatSelect).toBeVisible();
+    await expect(formatSelect.locator("option")).toHaveCount(5);
     for (const id of [
       "standard",
       "sides",
@@ -54,8 +59,12 @@ test.describe("Audit ALTO #5/#6 — Export & Import reachable (TopBar)", () => {
     ]) {
       await expect(
         modal.getByTestId(`screenplay-export-format-${id}`),
-      ).toBeVisible();
+      ).toBeAttached();
     }
+    // Every format is actually selectable from the picker.
+    await formatSelect.selectOption("one_scene_per_page");
+    await expect(formatSelect).toHaveValue("one_scene_per_page");
+    await formatSelect.selectOption("standard");
     await expect(page.getByTestId("screenplay-export-generate")).toBeEnabled();
   });
 

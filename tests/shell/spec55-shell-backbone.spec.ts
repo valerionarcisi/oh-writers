@@ -8,10 +8,13 @@
 //   N-01 — bell lives in the TopBar account zone on every narrative page;
 //          clicking it opens the notifications SplitDrawer; no legacy
 //          bottom-left / rail-footer notification drawer remains.
-//   N-02 — a "Versioni" action is registered in the TopBar zone on every
-//          narrative document page; it opens the Versions SplitDrawer.
+//   N-02 — the TopBar version chip (`topbar-version-chip`, Spec 66) is present
+//          on every narrative document page; it opens the routed Versions
+//          SplitDrawer (`?versions=<docId>`). Versions is NOT a ⋯-menu entry
+//          any more — Spec 66 moved it out of the ActionsMenu into the chip.
 //   N-03 — each narrative page's export actions (DOCX/SIAE/PDF) are rendered
-//          from the shared TopBar action registry — no mid-page export menu.
+//          from the shared TopBar action registry — no mid-page export menu,
+//          and no "Versioni" entry in the menu (it lives in the version chip).
 //   N-04 — the only drawer patterns are Cesare (floating bottom-right) +
 //          SplitDrawer; no rail-footer AccountRow.
 //   N-05 — Cesare starts CLOSED on first load (no auto-open).
@@ -84,16 +87,15 @@ test.describe("[Spec 55] narrative shell backbone", () => {
     }
   });
 
-  // ── N-02 — Versioni action registered in the TopBar zone, opens the split ──
-  test("N-02 — the Versioni action is in the TopBar menu on every narrative page and opens the Versions SplitDrawer", async ({
+  // ── N-02 — version chip in the TopBar zone, opens the split (Spec 66) ──
+  test("N-02 — the TopBar version chip is on every narrative page and opens the Versions SplitDrawer", async ({
     authenticatedPage: page,
   }) => {
     for (const segment of NARRATIVE_SEGMENTS) {
       await gotoNarrative(page, segment);
-      await openActionsMenu(page);
-      const versioni = page.getByRole("menuitem", { name: "Versioni" });
-      await expect(versioni).toBeVisible({ timeout: 5_000 });
-      await versioni.click();
+      const chip = page.getByTestId("topbar-version-chip");
+      await expect(chip).toBeVisible({ timeout: 5_000 });
+      await chip.click();
       await expect(page.getByTestId("versions-split-lane")).toBeVisible({
         timeout: 5_000,
       });
@@ -119,12 +121,14 @@ test.describe("[Spec 55] narrative shell backbone", () => {
     ).toBeVisible({ timeout: 5_000 });
     // SIAE is IT-gated by the registry; the default test user is IT.
     await expect(page.getByTestId("action-export-siae")).toBeVisible();
-    await expect(
-      page.getByRole("menuitem", { name: "Versioni" }),
-    ).toBeVisible();
+    // Spec 66: Versions is NOT a ⋯-menu entry — it lives in the TopBar chip.
+    await expect(page.getByRole("menuitem", { name: "Versioni" })).toHaveCount(
+      0,
+    );
+    await expect(page.getByTestId("topbar-version-chip")).toBeVisible();
   });
 
-  test("N-03 — synopsis/treatment export PDF + Versioni come from the TopBar menu", async ({
+  test("N-03 — synopsis/treatment export PDF is in the TopBar menu; Versioni lives in the version chip", async ({
     authenticatedPage: page,
   }) => {
     for (const segment of ["synopsis", "treatment"] as const) {
@@ -133,9 +137,11 @@ test.describe("[Spec 55] narrative shell backbone", () => {
       await expect(
         page.getByRole("menuitem", { name: "Esporta PDF" }),
       ).toBeVisible({ timeout: 5_000 });
+      // Spec 66: Versions is NOT a ⋯-menu entry — it lives in the TopBar chip.
       await expect(
         page.getByRole("menuitem", { name: "Versioni" }),
-      ).toBeVisible();
+      ).toHaveCount(0);
+      await expect(page.getByTestId("topbar-version-chip")).toBeVisible();
       await page.keyboard.press("Escape");
     }
   });
