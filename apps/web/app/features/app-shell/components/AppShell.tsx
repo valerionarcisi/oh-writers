@@ -8,6 +8,7 @@ import {
 } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter, useRouterState } from "@tanstack/react-router";
+import { match } from "ts-pattern";
 import {
   TopBar,
   TopBarAccount,
@@ -33,14 +34,13 @@ import type {
 } from "@oh-writers/ui";
 import {
   CesareSheet,
-  parseToolsExecuted,
   appliedEntityDomains,
   parseLiveDiffMarkers,
   parseDocAppliedMarker,
   extractChangeSummary,
   CesareChatStoreProvider,
 } from "~/features/predictions";
-import type { CesarePage, AskCesareFn } from "~/features/predictions";
+import type { CesarePage, CesareTurnSettle } from "~/features/predictions";
 import { askCesare } from "~/features/predictions/cesare.server";
 import { narrativeProgressQueryKey } from "~/features/documents";
 import type { AppUser } from "~/server/context";
@@ -78,7 +78,9 @@ import {
 import {
   ACTION_LABEL_KEY_BY_PAGE,
   deriveResultLabel,
+  isAgenticPage,
 } from "../cesare-notification-labels";
+import { decideTurnSettle } from "../cesare-turn-notifications";
 import { useWebPush } from "../hooks/useWebPush";
 import { pulseAffectedEntities } from "../cesare-pulse";
 import { buildRailNav } from "../nav";
@@ -329,6 +331,8 @@ function AppShellInner({
     notifications,
     startNotification,
     completeNotification,
+    failNotification,
+    dismissNotification,
     markAllSeen,
     hasUnseen,
   } = useCesareNotifications();
@@ -648,16 +652,74 @@ function AppShellInner({
   const { fire: firePush } = useWebPush();
   const pendingPulseEntities = useRef<CesareNotification | null>(null);
 
-  const wrappedAskCesare = useCallback<AskCesareFn>(
-    async (params) => {
-      // Notifications are now emitted in `handleCesareAssistantResponse`, which
-      // runs on EVERY completed turn (streaming-primary or this fallback). This
-      // wrapper only marks existing notifications seen on a new request so the
-      // bell's unread dot clears when the user starts a turn.
-      markAllSeen();
-      return askCesare(params);
+  // BUG-066 — ONE bell notification per Cesare turn. The turn lifecycle owns
+  // the emission: `onTurnStart` creates the in-progress row ("Cesare sta
+  // lavorando…") and returns its id as the correlation token; `onTurnSettled`
+  // updates the SAME row in place — completed ("Cesare ha aggiornato il
+  // <doc>" + "Vai al <documento>" link), failed, or dismissed — never
+  // appending a second row. The page/projectId are captured at start so a
+  // mid-turn navigation can't mislabel the settle.
+  const pendingTurnsRef = useRef(
+    new Map<string, { page: CesarePage; projectId: string }>(),
+  );
+
+  const handleCesareTurnStart = useCallback((): string | null => {
+    // A new request clears the bell's unread dot regardless of page.
+    markAllSeen();
+    if (!cesarePage || !projectId || !isAgenticPage(cesarePage)) return null;
+    const id = startNotification({
+      actionLabel: t(ACTION_LABEL_KEY_BY_PAGE[cesarePage]),
+      page: cesarePage,
+      projectId,
+    });
+    pendingTurnsRef.current.set(id, { page: cesarePage, projectId });
+    return id;
+  }, [cesarePage, projectId, markAllSeen, startNotification, t]);
+
+  const handleCesareTurnSettled = useCallback(
+    ({ token, outcome, reply }: CesareTurnSettle) => {
+      if (!token) return;
+      const pending = pendingTurnsRef.current.get(token);
+      pendingTurnsRef.current.delete(token);
+      if (!pending) return;
+
+      const decision = decideTurnSettle(outcome, reply);
+      match(decision)
+        .with({ kind: "dismiss" }, () => dismissNotification(token))
+        .with({ kind: "fail" }, () =>
+          failNotification(token, t("shell.notification.failed")),
+        )
+        .with({ kind: "complete-applied" }, ({ target }) => {
+          const resultLabel = t(target.updatedLabelKey);
+          completeNotification(token, {
+            resultLabel,
+            target: { page: target.page, goToLabel: t(target.goToLabelKey) },
+          });
+          firePush({
+            title: "Cesare",
+            body: resultLabel,
+            onClick: () => {
+              setCesareOpen(true);
+              markAllSeen();
+            },
+          });
+        })
+        .with({ kind: "complete-replied" }, () => {
+          completeNotification(token, {
+            resultLabel: deriveResultLabel(pending.page, reply ?? "", t),
+          });
+        })
+        .exhaustive();
     },
-    [markAllSeen],
+    [
+      completeNotification,
+      dismissNotification,
+      failNotification,
+      firePush,
+      markAllSeen,
+      setCesareOpen,
+      t,
+    ],
   );
 
   const handleCesareAssistantResponse = useCallback(
@@ -677,12 +739,9 @@ function AppShellInner({
       // must not pop a "✦ Cesare ha aggiornato …" toast.
       const applied = appliedEntityDomains(reply);
 
-      // N-33 — drop a Notification Center entry on EVERY completed agentic turn.
-      // The legacy start/complete pair lived only in `wrappedAskCesare` (the
-      // non-streaming path); the streaming path — now primary — never fired it,
-      // so completed runs went unnotified. Emit here, which runs on every
-      // successful turn (streaming or fallback), when the turn actually applied a
-      // change (tools ran).
+      // Bell notifications are NOT emitted here: the turn lifecycle owns them
+      // (`handleCesareTurnStart` / `handleCesareTurnSettled`, BUG-066) so the
+      // start row collapses into the completed row instead of appending.
       // Publish the live edit(s) so the entity-page banner can surface "Cesare ha
       // aggiornato il <Entity>" with the change + the pre-edit version for ↩ Annulla
       // (Spec 63). One entry per touched document; live-only (not persisted).
@@ -702,24 +761,6 @@ function AppShellInner({
               previousVersionId,
             })),
         );
-      }
-
-      if (cesarePage && projectId && parseToolsExecuted(reply) > 0) {
-        const resultLabel = deriveResultLabel(cesarePage, reply, t);
-        const nid = startNotification({
-          actionLabel: t(ACTION_LABEL_KEY_BY_PAGE[cesarePage]),
-          page: cesarePage,
-          projectId,
-        });
-        completeNotification(nid, { resultLabel });
-        firePush({
-          title: "Cesare",
-          body: resultLabel,
-          onClick: () => {
-            setCesareOpen(true);
-            markAllSeen();
-          },
-        });
       }
 
       if (cesarePage === "locations" && projectId) {
@@ -821,19 +862,7 @@ function AppShellInner({
         void queryClient.invalidateQueries({ queryKey: ["versions"] });
       }
     },
-    [
-      cesarePage,
-      projectId,
-      queryClient,
-      showToast,
-      activeDocument,
-      t,
-      startNotification,
-      completeNotification,
-      firePush,
-      markAllSeen,
-      setCesareOpen,
-    ],
+    [cesarePage, projectId, queryClient, showToast, activeDocument, t],
   );
 
   const openPalette = useCallback(() => setPaletteOpen(true), []);
@@ -895,6 +924,23 @@ function AppShellInner({
         window.setTimeout(() => {
           pulseAffectedEntities(notification.affectedEntities!);
         }, 250);
+      }
+    },
+    [markAllSeen, router],
+  );
+
+  // BUG-066 — "Vai al <documento>" on an applied-change row navigates to the
+  // AFFECTED document's page (which may differ from the page the turn ran on:
+  // a cross-domain edit links to the entity it actually wrote).
+  const handleGoToNotificationTarget = useCallback(
+    (notification: CesareNotification) => {
+      markAllSeen();
+      const targetPage = notification.target?.page ?? notification.page;
+      const pageSegment = PAGE_TO_ROUTE_SEGMENT[targetPage];
+      if (notification.projectId && pageSegment) {
+        void router.navigate({
+          to: `/projects/${notification.projectId}/${pageSegment}`,
+        });
       }
     },
     [markAllSeen, router],
@@ -1187,8 +1233,10 @@ function AppShellInner({
             setCesareState(normalised);
             setCesareOpen(next !== "closed");
           }}
-          askCesare={wrappedAskCesare}
+          askCesare={askCesare}
           onAssistantResponse={handleCesareAssistantResponse}
+          onTurnStart={handleCesareTurnStart}
+          onTurnSettled={handleCesareTurnSettled}
           focusedSessionId={focusedSessionId}
           onActiveSessionChange={setFocusedSessionId}
         />
@@ -1206,8 +1254,9 @@ function AppShellInner({
       cesareSeedPrompt,
       handleOpenAsSplit,
       onClosePeek,
-      wrappedAskCesare,
       handleCesareAssistantResponse,
+      handleCesareTurnStart,
+      handleCesareTurnSettled,
       focusedSessionId,
       setFocusedSessionId,
       router,
@@ -1377,6 +1426,10 @@ function AppShellInner({
             handleActivateNotification(notification);
             splitDrawer.close();
           }}
+          onNotificationGoTo={(notification) => {
+            handleGoToNotificationTarget(notification);
+            splitDrawer.close();
+          }}
         />
       </div>
     </CesareProvider>
@@ -1394,6 +1447,7 @@ interface SplitDrawerHostProps {
   splitDrawerWidth: number;
   setSplitDrawerWidth: (next: number) => void;
   onNotificationActivate: (notification: CesareNotification) => void;
+  onNotificationGoTo: (notification: CesareNotification) => void;
 }
 
 function SplitDrawerHost({
@@ -1401,6 +1455,7 @@ function SplitDrawerHost({
   splitDrawerWidth,
   setSplitDrawerWidth,
   onNotificationActivate,
+  onNotificationGoTo,
 }: SplitDrawerHostProps) {
   const { t } = useTranslation();
   if (!splitDrawer.payload) return null;
@@ -1458,7 +1513,10 @@ function SplitDrawerHost({
         reduceLabel={t("shell.splitDrawer.reduce")}
         testId="notification-center-drawer"
       >
-        <NotificationCenterDrawerContent onActivate={onNotificationActivate} />
+        <NotificationCenterDrawerContent
+          onActivate={onNotificationActivate}
+          onGoTo={onNotificationGoTo}
+        />
       </SplitDrawer>
     );
   }

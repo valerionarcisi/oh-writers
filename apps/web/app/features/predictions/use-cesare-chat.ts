@@ -18,7 +18,7 @@ import {
   type ChatState,
 } from "./use-cesare-chat-reducer";
 import { streamCesare, type StreamCesareInput } from "./cesare-stream-client";
-import { useCesareChatStore } from "./cesare-chat-store";
+import { useCesareChatStore, type CesareTurnSettle } from "./cesare-chat-store";
 import type { AskCesareFn } from "./components/CesareSheet";
 
 const newId = (): string =>
@@ -38,6 +38,10 @@ export interface UseCesareChatArgs {
   };
   /** Fires with the final assistant reply (delivered or error text). */
   readonly onAssistantResponse?: (reply: string) => void;
+  /** BUG-066 — turn lifecycle for the bell: start returns a correlation
+   *  token; settled receives it back when the same turn ends. */
+  readonly onTurnStart?: () => string | null;
+  readonly onTurnSettled?: (settle: CesareTurnSettle) => void;
 }
 
 export interface UseCesareChat {
@@ -56,10 +60,29 @@ export const useCesareChat = (args: UseCesareChatArgs): UseCesareChat => {
   // Publish the live transport + page context so the store's `send` (used by
   // BOTH the floating composer and the full-page composer) always targets the
   // page the user currently has open.
-  const { askCesare, pageContext, onAssistantResponse } = args;
+  const {
+    askCesare,
+    pageContext,
+    onAssistantResponse,
+    onTurnStart,
+    onTurnSettled,
+  } = args;
   useEffect(() => {
-    store?.setSendDeps({ askCesare, pageContext, onAssistantResponse });
-  }, [store, askCesare, pageContext, onAssistantResponse]);
+    store?.setSendDeps({
+      askCesare,
+      pageContext,
+      onAssistantResponse,
+      onTurnStart,
+      onTurnSettled,
+    });
+  }, [
+    store,
+    askCesare,
+    pageContext,
+    onAssistantResponse,
+    onTurnStart,
+    onTurnSettled,
+  ]);
 
   // Keep the store's active session in sync with this surface's selection.
   const desiredSession = args.activeSessionId ?? "__pending__";
@@ -101,6 +124,8 @@ const useLocalCesareChat = (
     askCesare,
     pageContext,
     onAssistantResponse,
+    onTurnStart,
+    onTurnSettled,
   }: UseCesareChatArgs,
   inert: boolean,
 ): UseCesareChat => {
@@ -147,6 +172,10 @@ const useLocalCesareChat = (
         });
         return;
       }
+
+      // BUG-066 — mirror the shared store's turn lifecycle so the bell
+      // behaves identically outside a provider (isolated tests/Storybook).
+      const turnToken = onTurnStart?.() ?? null;
 
       // Cap to the most recent 20 turns: spec 51 persists messages, so a long
       // session can exceed the server's `max(20)` on `conversationHistory`.
@@ -216,6 +245,11 @@ const useLocalCesareChat = (
           content: finalReply,
         });
         onAssistantResponse?.(finalReply);
+        onTurnSettled?.({
+          token: turnToken,
+          outcome: "delivered",
+          reply: finalReply,
+        });
       } else {
         dispatch({
           type: "message/failed",
@@ -224,9 +258,17 @@ const useLocalCesareChat = (
           assistantMessageId,
           content: FAILURE_TEXT,
         });
+        onTurnSettled?.({ token: turnToken, outcome: "failed", reply: null });
       }
     },
-    [inert, askCesare, onAssistantResponse, pageContext],
+    [
+      inert,
+      askCesare,
+      onAssistantResponse,
+      pageContext,
+      onTurnStart,
+      onTurnSettled,
+    ],
   );
 
   const messages = activeThread(state);

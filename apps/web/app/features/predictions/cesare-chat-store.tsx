@@ -50,6 +50,14 @@ const FAILURE_TEXT = "Mi dispiace, si è verificato un errore. Riprova.";
 const STOPPED_TEXT = "⏹ Interrotto.";
 const PENDING_SESSION = "__pending__";
 
+/** How a Cesare turn ended. `delivered` carries the final reply; `failed`
+ *  covers both transports erroring; `aborted` is the user's Cmd+C. */
+export interface CesareTurnSettle {
+  readonly token: string | null;
+  readonly outcome: "delivered" | "failed" | "aborted";
+  readonly reply: string | null;
+}
+
 /** Page context + transport the send pipeline needs. Published by the floating
  *  sheet (the only surface that owns them) so any surface's composer can send. */
 export interface CesareSendDeps {
@@ -58,6 +66,11 @@ export interface CesareSendDeps {
     readonly projectId: string;
   };
   readonly onAssistantResponse?: (reply: string) => void;
+  /** BUG-066 — fired when a turn starts; returns a correlation token (the
+   *  bell notification id) that `onTurnSettled` receives when the SAME turn
+   *  ends, so the shell updates one row in place instead of appending. */
+  readonly onTurnStart?: () => string | null;
+  readonly onTurnSettled?: (settle: CesareTurnSettle) => void;
 }
 
 export interface CesareChatStore {
@@ -188,6 +201,11 @@ export function CesareChatStoreProvider({ children }: { children: ReactNode }) {
       }
 
       const { askCesare, pageContext, onAssistantResponse } = deps;
+
+      // BUG-066 — one bell row per turn: the shell creates it now and settles
+      // the SAME row (via the token) when this turn ends, on every path.
+      const turnToken = deps.onTurnStart?.() ?? null;
+
       // Cap to the most recent 20 turns: spec 51 persists messages, so a long
       // session can exceed the server's `max(20)` on `conversationHistory`.
       // Send only the latest 20 (newest context) so a long thread never fails
@@ -261,6 +279,11 @@ export function CesareChatStoreProvider({ children }: { children: ReactNode }) {
           assistantMessageId,
           content: STOPPED_TEXT,
         });
+        deps.onTurnSettled?.({
+          token: turnToken,
+          outcome: "aborted",
+          reply: null,
+        });
         return;
       }
 
@@ -291,6 +314,11 @@ export function CesareChatStoreProvider({ children }: { children: ReactNode }) {
           content: finalReply,
         });
         onAssistantResponse?.(finalReply);
+        deps.onTurnSettled?.({
+          token: turnToken,
+          outcome: "delivered",
+          reply: finalReply,
+        });
         // Persist the turn so the conversation survives reload. Best-effort: a
         // failed persist never breaks the live UI (the bubble is already shown).
         // Only real (UUID) sessions are persisted — the synthetic pending session
@@ -340,6 +368,11 @@ export function CesareChatStoreProvider({ children }: { children: ReactNode }) {
           userMessageId,
           assistantMessageId,
           content: FAILURE_TEXT,
+        });
+        deps.onTurnSettled?.({
+          token: turnToken,
+          outcome: "failed",
+          reply: null,
         });
       }
     },

@@ -26,6 +26,15 @@ export interface AffectedEntity {
   id: string;
 }
 
+/** BUG-066 — where the "Vai al <documento>" link on an applied-change row
+ *  navigates. Present ONLY on completed rows whose turn actually applied an
+ *  edit (honest markers); never on "sta lavorando" rows. */
+export interface NotificationTarget {
+  page: CesarePage;
+  /** Pre-translated link label, e.g. "Vai al soggetto". */
+  goToLabel: string;
+}
+
 export interface CesareNotification {
   id: string;
   status: NotificationStatus;
@@ -39,6 +48,7 @@ export interface CesareNotification {
   /** Whether the user has already opened the sheet for this result. */
   seen: boolean;
   affectedEntities?: AffectedEntity[];
+  target?: NotificationTarget;
 }
 
 export interface StartNotificationInput {
@@ -50,6 +60,7 @@ export interface StartNotificationInput {
 export interface CompleteNotificationInput {
   resultLabel: string;
   affectedEntities?: AffectedEntity[];
+  target?: NotificationTarget;
 }
 
 interface ContextValue {
@@ -75,6 +86,7 @@ type Action =
       completedAt: number;
       resultLabel: string;
       affectedEntities: AffectedEntity[] | undefined;
+      target: NotificationTarget | undefined;
     }
   | {
       type: "fail";
@@ -106,6 +118,7 @@ const reducer = (state: State, action: Action): State =>
               completedAt: a.completedAt,
               resultLabel: a.resultLabel,
               affectedEntities: a.affectedEntities,
+              target: a.target,
               seen: false,
             }
           : n,
@@ -149,7 +162,12 @@ const loadFromSession = (): CesareNotification[] => {
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed as CesareNotification[];
+    // A reload kills any in-flight turn, so a persisted "sta lavorando" row
+    // can never settle — drop it instead of resurrecting a stuck spinner
+    // (BUG-066: these orphans were one source of the duplicated rows).
+    return (parsed as CesareNotification[]).filter(
+      (n) => n.status !== "in-progress",
+    );
   } catch {
     return [];
   }
@@ -235,6 +253,7 @@ export function CesareNotificationProvider({
         completedAt: Date.now(),
         resultLabel: result.resultLabel,
         affectedEntities: result.affectedEntities,
+        target: result.target,
       });
     },
     [],
