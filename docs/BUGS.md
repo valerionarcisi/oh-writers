@@ -169,6 +169,7 @@ E2E first; screenshots in a recap; gates green).
 - Repro: any narrative page (Soggetto seen) → top-right presence indicator briefly shows "online" then switches to "offline" and stays there.
 - Proof: reported live by Valerio on :3000 (visible in every recent screenshot — the "offline" label top-right of the editor card).
 - Notes / suspected cause: the realtime/presence indicator (`PresenceIndicator`, Yjs room `document:<id>`) reports connected then drops to disconnected. Likely the y-websocket provider never connects (no/wrong `VITE_WS_URL` in dev) so it falls back to "offline", or a connect→disconnect race on mount. Investigate `useYjsRoom` status transitions + the dev ws-server. Decide: is "offline" expected in single-instance dev (no ws-server running) — if so, hide/soften the label — or is the ws-server meant to be up?
+- PLACEMENT DECIDED (2026-06-10, with N-59): the presence/sync status MOVES to the rail FOOTER as a discreet ambient dot + label ("Sincronizzato · 2 online" / "Offline"), out of the document header where it flaps in the writer's face. This bug keeps the transport half (why it flips connected→offline — see also BUG-N57's latch direction); N-59 owns the footer rendering.
 
 ### BUG-066 — Cesare bell: missing "go to document" link + duplicated start/done notifications (2026-06-06)
 
