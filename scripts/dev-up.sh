@@ -43,6 +43,14 @@ fi
 
 ok "Prerequisites OK"
 
+# Fresh clone / post-nuke safety: the seed chain's yjs step (and `pnpm dev`
+# itself) import workspace packages through their dist export maps.
+if [[ ! -d "packages/db/dist" || ! -d "packages/domain/dist" ]]; then
+  step "Building workspace packages (dist missing)"
+  pnpm --filter './packages/*' build
+  ok "Packages built"
+fi
+
 # ── 0b. Git hooks ─────────────────────────────────────────────────────────────
 
 git config core.hooksPath .githooks 2>/dev/null && ok "Git hooks configured" || true

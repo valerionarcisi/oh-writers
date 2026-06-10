@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
+    "seed:yjs": "pnpm exec tsx scripts/seed-yjs-snapshots.ts",
     "vernissage:walk": "pnpm exec tsx ../../scripts/vernissage-walk.ts --target=test",
     "vernissage:scaffold": "pnpm exec tsx ../../scripts/vernissage-scaffold.ts"
   },

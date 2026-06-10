@@ -11,7 +11,11 @@ import {
 import { keymap } from "prosemirror-keymap";
 import { cursorBuilder } from "./cursor-builder";
 
-const XML_FRAGMENT = "prosemirror";
+// The shared Yjs XML fragment key. Server-side CRDT seeding (the per-feature
+// `yjs-seed.server.ts` helpers) MUST write under this same key, or the editor
+// binds an empty fragment, sees a "fresh" room, and re-seeds over the
+// persisted content.
+export const XML_FRAGMENT = "prosemirror";
 
 /**
  * The Yjs plugin trio shared by both editors: CRDT sync, remote cursors, and

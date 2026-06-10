@@ -12,14 +12,12 @@
 // never re-seeds, and the autosave's canonical dirty-check matches (no clobber).
 //
 // ProseMirror + Yjs are heavy and browser-leaning but legal here (apps/web
-// server code, not a shared package). The XML fragment key MUST match the
-// client's (`yjs-plugins.ts` → "prosemirror").
+// server code, not a shared package).
 
 import { prosemirrorToYDoc } from "y-prosemirror";
 import * as Y from "yjs";
+import { XML_FRAGMENT } from "../../realtime/lib/yjs-plugins";
 import { fountainToDoc } from "../lib/fountain-to-doc";
-
-const XML_FRAGMENT = "prosemirror";
 
 /**
  * Build a Yjs CRDT snapshot (as a Buffer ready for the `bytea` column) from a

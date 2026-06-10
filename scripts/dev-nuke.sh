@@ -78,6 +78,13 @@ step "Installing dependencies (fresh)"
 pnpm install
 ok "Dependencies installed"
 
+# Workspace packages were just wiped (step 3 removed every dist/): rebuild
+# them — `pnpm dev` resolves the built dists, and the seed chain's yjs step
+# imports @oh-writers/db + @oh-writers/domain through their export maps.
+step "Building workspace packages"
+pnpm --filter './packages/*' build
+ok "Packages built"
+
 # ── 5. Restart Docker ─────────────────────────────────────────────────────────
 
 step "Starting Docker services"
