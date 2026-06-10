@@ -66,11 +66,14 @@ export function Popover({
       const overlay = ref.current;
       if (!trigger || !overlay) return;
       const t = trigger.getBoundingClientRect();
-      const o = overlay.getBoundingClientRect();
+      // Layout size, not getBoundingClientRect: the popIn animation scales the
+      // overlay from 0.96, so a rect measured mid-animation understates the
+      // size by 4% and the viewport clamp then lands the dialog off-screen at
+      // narrow widths (BUG-N38). offsetWidth/Height ignore transforms.
       setCoords(
         computeAnchoredPosition({
           trigger: t,
-          overlay: { width: o.width, height: o.height },
+          overlay: { width: overlay.offsetWidth, height: overlay.offsetHeight },
           viewport: { width: window.innerWidth, height: window.innerHeight },
           placement,
         }),

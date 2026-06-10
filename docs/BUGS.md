@@ -151,18 +151,18 @@ E2E first; screenshots in a recap; gates green).
 ### BUG-N39 — Tab from a dialogue block goes to Parenthetical, not Action (2026-06-06)
 
 - Severity: BASSO
-- Status: open
+- Status: fixed (`tabCommand` empty-dialogue special case removed — dialogue now follows `nextElementOnTab`)
 - Repro: screenplay editor → place cursor in an empty block → Alt+D (dialogue) → Tab. Expected the block to cycle to Action (Spec 05e Tab matrix: dialogue → action); observed it becomes Parenthetical.
-- Proof: `tests/screenplay-editor/screenplay-editor-ux.spec.ts` [OHW-417] (test.fixme, asserts the correct "action"). The transform library is correct — `nextElementOnTab(dialogue) === "action"` is green in `fountain-element-transforms.test.ts` (30/30). So the divergence is in the editor's Tab keymap wiring for the dialogue case, not the pure function.
-- Notes / suspected cause: the PM Tab keymap likely doesn't route the dialogue case through `nextElementOnTab`, or an empty dialogue block is mis-detected. Fix the keymap wiring, then un-fixme OHW-417.
+- Proof: `tests/screenplay-editor/screenplay-editor-ux.spec.ts` [OHW-417] re-enabled and green (17/17 in the file). Unit: `keymap.test.ts` "empty dialogue → action" + `fountain-element-transforms.test.ts` (30/30).
+- Root cause: the Tab keymap (`apps/web/app/features/screenplay-editor/lib/plugins/keymap.ts`, `tabCommand`) had an explicit empty-dialogue branch that converted the block to a parenthetical pre-filled with "()" instead of routing through `nextElementOnTab` — exactly the post-Enter state the repro hits. The branch was removed; every non-prefix block now follows the Spec 05e Tab matrix.
 
 ### BUG-N38 — TopBar center pill overlaps the right cluster below ~900px (2026-06-06)
 
 - Severity: MEDIO
-- Status: open
+- Status: fixed (TopBar container query drops the center slot to its own line below 1180px of bar width + Popover measures layout size, not the mid-animation rect)
 - Repro: any narrative page (Soggetto/Sinossi/…) → shrink the viewport below ~900px (768 or 390) → the TopBar center slot (logline pill) and the right cluster (version chip + ⋯ "Altre azioni") overlap. The `topbar-version-chip` ("Versioni") renders on top of the logline pill, so `elementFromPoint` at the pill's centre returns the version chip — the pill is not clickable and the logline popover can't be opened.
-- Proof: `tests/documents/logline-popover-viewport.spec.ts` narrow (768px) + mobile (390px) cases hang on `pill.click()` (target intercepted) and are skipped pending this fix; hit-test chain at 768px: `SPAN._label (Versioni)` → `BUTTON[data-testid=topbar-version-chip]` → `_topBarVersionGroup` → `_versionSlot` → `_pageActions`. Desktop (1440px) passes.
-- Notes / suspected cause: the TopBar row (`_pageActions` / center + right slots) does not wrap or shrink the pill below a threshold, so the right cluster collides with the centred pill. Fix the TopBar responsive layout (wrap/clamp the center pill, or move it out of the center slot at narrow widths). Re-enable the two skipped N-16 cases once fixed.
+- Proof: `tests/documents/logline-popover-viewport.spec.ts` 768px + 390px cases re-enabled and green (3/3). Live measurements (Soggetto, rail open): before at 768px the right cluster's left edge (369px) crossed the row midpoint (384px) — no centred pill can fit, `elementFromPoint` at the pill centre hit the chip label; after, the pill sits on its own line and the hit-test returns the pill at 1440/768/390. Screenshots: `docs/audits/2026-06-10-n38/`.
+- Root cause (two-part): (1) `TopBar.module.css` `.center` is an absolutely-positioned overlay, so the in-flow right cluster slid under it at narrow widths — fixed with a container query (`@container (max-width: 1180px)`, threshold derived from the measured worst case: 433px cluster + 156px pill half-extent → collision below ≈1178px) that drops the center slot into the flow as a full-width second line. (2) `Popover.tsx` measured the overlay with `getBoundingClientRect()` while the `popIn` animation scales from 0.96, understating the width 4% — the viewport clamp then landed the dialog 7px off-screen at 390px; fixed by measuring `offsetWidth`/`offsetHeight` (transform-free layout size).
 
 ### BUG-067 — TopBar status shows "online" then flips to "offline" (2026-06-06)
 
