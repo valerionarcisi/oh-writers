@@ -176,11 +176,12 @@ E2E first; screenshots in a recap; gates green).
 ### BUG-066 — Cesare bell: missing "go to document" link + duplicated start/done notifications (2026-06-06)
 
 - Severity: MEDIO
-- Status: open
+- Status: fixed (2026-06-10, branch `fix/bug-066-bell-dedupe`)
 - Repro: trigger several Cesare turns that touch a document → open the bell (NotificationCenter) → (a) NO explicit "Vai al <documento>" link on applied-change notifications; (b) the list fills with repeated "Cesare sta lavorando…/ha risposto" rows (≈8 seen) instead of one entry per turn.
 - Proof: img #6 (NotificationCenter full of repeated "CESARE STA LAVORANDO SUL SOGGETTO…" rows).
 - Desired (decided 2026-06-06): one notification PER TURN (collapse start→done into a single row that goes "sta lavorando" → "ha aggiornato il <doc>"); an explicit "Vai al <documento>" link ONLY on applied-change notifications (not on "sta lavorando"). The Mostra/Nascondi underline stays in the document with Cesare open on the right page — NOT in the bell. Scenario: on Location, a change lands on Soggetto via floating Cesare → the float/bell shows the link to Soggetto → click navigates there → in the doc with Cesare open, Mostra/Nascondi is available.
-- Notes / suspected cause: the bell likely emits separate start + complete notifications (or re-emits on the streaming + fallback paths) instead of updating one id. Investigate `handleCesareAssistantResponse` + `startNotification`/`completeNotification` emission in `AppShell.tsx`, and the render in `NotificationCenterDrawer.tsx` (add the link off `affectedEntities`/`page`).
+- Root cause: (1) every row rendered the in-progress action label ("Cesare sta lavorando sul …") as its headline TWICE (page label + actionLabel were the same string) regardless of status, so N completed turns read as a flood of duplicated "sta lavorando" rows; (2) the legacy emission lived in the non-streaming fallback (`wrappedAskCesare`), so streamed turns could leave start rows that never settled, persisted forever via sessionStorage; (3) the N-33 patch then emitted start+complete back-to-back at turn END (no live in-progress row at all, `useCesareIsThinking` dead).
+- Fix: turn-lifecycle emission — the chat store fires `onTurnStart` (creates ONE in-progress row, returns its id as correlation token) and `onTurnSettled` (the SAME row completes/fails/dismisses in place via `decideTurnSettle`, `cesare-turn-notifications.ts`). Applied-change rows get the headline "Cesare ha aggiornato il <doc>" + a "Vai al <documento>" button (`notification-go-to`) that navigates to the AFFECTED document's page (cross-domain safe, logline→soggetto). Persisted in-progress rows are dropped on hydrate. Tests: `cesare-turn-notifications.test.ts`, `cesare-notification-context.test.tsx`, E2E `tests/cesare-agentic-bell-notifications.spec.ts` [OHW-066].
 
 ### BUG-065 — Cesare needs a presence "glow" effect (closed pill + open chat header) (2026-06-06)
 

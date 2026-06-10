@@ -39,6 +39,7 @@ import type { TranslationKey } from "@oh-writers/domain";
 import { useTranslation } from "~/features/i18n";
 import { setHighlight, clearHighlight } from "~/features/documents";
 import { useCesareChat } from "../use-cesare-chat";
+import type { CesareTurnSettle } from "../cesare-chat-store";
 import {
   CesareConversation,
   pageLabel,
@@ -90,6 +91,7 @@ export {
   appliedEntityDomains,
   parseLiveDiffMarkers,
   parseDocAppliedMarker,
+  parseEntityAppliedMarkers,
   extractChangeSummary,
 } from "./CesareConversation";
 
@@ -216,6 +218,10 @@ export interface CesareSheetProps {
   askCesare?: AskCesareFn | null;
   /** Called after each assistant response — used to invalidate queries. */
   onAssistantResponse?: (reply: string) => void;
+  /** BUG-066 — bell turn lifecycle: start returns the notification id used
+   *  as correlation token; settled receives it when the same turn ends. */
+  onTurnStart?: () => string | null;
+  onTurnSettled?: (settle: CesareTurnSettle) => void;
   /** Spec 47-A5 — focused session published by the central route. */
   focusedSessionId?: string | null;
   /** Spec 47-A5 — mirror of the active session id back to the shell. */
@@ -246,6 +252,8 @@ export function CesareSheet({
   onCesareStateChange,
   askCesare = null,
   onAssistantResponse,
+  onTurnStart,
+  onTurnSettled,
   focusedSessionId = null,
   onActiveSessionChange,
   surface = "floating",
@@ -338,6 +346,8 @@ export function CesareSheet({
       shootingDayNumber: shootingDayNumber ?? null,
     },
     onAssistantResponse: handleAssistantSideChannels,
+    onTurnStart,
+    onTurnSettled,
   });
   const messages = chat.messages;
   const isLoading = chat.isLoading;

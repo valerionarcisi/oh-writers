@@ -8,8 +8,6 @@ import {
   type CesareNotification,
   type AffectedEntity,
 } from "../cesare-notification-context";
-import { ACTION_LABEL_KEY_BY_PAGE } from "../cesare-notification-labels";
-import type { CesarePage } from "~/features/predictions";
 import { useTranslation } from "~/features/i18n";
 import styles from "./NotificationCenterDrawer.module.css";
 
@@ -17,6 +15,9 @@ type Translate = (key: TranslationKey) => string;
 
 interface NotificationCenterDrawerContentProps {
   readonly onActivate: (notification: CesareNotification) => void;
+  /** BUG-066 — "Vai al <documento>": navigate to the AFFECTED document of an
+   *  applied-change notification. Rendered only when the row has a target. */
+  readonly onGoTo?: (notification: CesareNotification) => void;
 }
 
 interface NotificationCenterDrawerHeaderProps {
@@ -99,6 +100,7 @@ function MarkAllSeenButton({ onPress }: { onPress: () => void }) {
  */
 export function NotificationCenterDrawerContent({
   onActivate,
+  onGoTo,
 }: NotificationCenterDrawerContentProps) {
   const { t, locale } = useTranslation();
   const { notifications, dismissNotification, clearCompleted } =
@@ -173,6 +175,7 @@ export function NotificationCenterDrawerContent({
                     notification={n}
                     onClick={() => handleClickItem(n)}
                     onDismiss={() => dismissNotification(n.id)}
+                    onGoTo={onGoTo ? () => onGoTo(n) : undefined}
                     t={t}
                     locale={locale}
                   />
@@ -214,14 +217,29 @@ interface RowProps {
   readonly notification: CesareNotification;
   readonly onClick: () => void;
   readonly onDismiss: () => void;
+  readonly onGoTo?: () => void;
   readonly t: Translate;
   readonly locale: Locale;
 }
+
+// BUG-066 — ONE line per turn, status-driven: the in-progress headline
+// ("Cesare sta lavorando…") is REPLACED in place by the completed one
+// ("Cesare ha aggiornato il <doc>") when the same notification settles.
+// The old markup repeated the in-progress action label as the title of
+// every row regardless of status, which read as a flood of duplicated
+// "sta lavorando" entries.
+const headlineFor = (n: CesareNotification, t: Translate): string =>
+  match(n.status)
+    .with("in-progress", () => n.actionLabel)
+    .with("completed", () => n.resultLabel ?? t("shell.notif.rowCompleted"))
+    .with("failed", () => n.errorLabel ?? t("shell.notif.rowError"))
+    .exhaustive();
 
 function NotificationRow({
   notification,
   onClick,
   onDismiss,
+  onGoTo,
   t,
   locale,
 }: RowProps) {
@@ -236,47 +254,58 @@ function NotificationRow({
     )
     .with("failed", () => t("shell.notif.statusError"))
     .exhaustive();
+  const showGoTo =
+    notification.status === "completed" &&
+    notification.target !== undefined &&
+    onGoTo !== undefined;
   return (
     <li className={styles.row} data-status={notification.status}>
-      <button
-        type="button"
-        className={styles.rowMain}
-        onClick={onClick}
-        data-testid={`notification-row-${notification.id}`}
-      >
-        <span
-          className={styles.dot}
-          data-status={notification.status}
-          data-seen={notification.seen ? "true" : "false"}
-          aria-label={dot}
-        />
-        <span className={styles.rowBody}>
-          <span className={styles.rowTitle}>
-            <span className={styles.rowSparkle} aria-hidden="true">
-              ✦
-            </span>{" "}
-            {labelForPage(notification.page, t)}{" "}
-            <span className={styles.rowAction}>·</span>{" "}
-            <span className={styles.rowAction}>{notification.actionLabel}</span>
-          </span>
-          <span className={styles.rowText}>
-            {notification.status === "completed"
-              ? (notification.resultLabel ?? t("shell.notif.rowCompleted"))
-              : notification.status === "failed"
-                ? (notification.errorLabel ?? t("shell.notif.rowError"))
-                : t("shell.notif.rowInProgress")}
-          </span>
-          {notification.affectedEntities &&
-            notification.affectedEntities.length > 0 && (
+      <div className={styles.rowStack}>
+        <button
+          type="button"
+          className={styles.rowMain}
+          onClick={onClick}
+          data-testid={`notification-row-${notification.id}`}
+        >
+          <span
+            className={styles.dot}
+            data-status={notification.status}
+            data-seen={notification.seen ? "true" : "false"}
+            aria-label={dot}
+          />
+          <span className={styles.rowBody}>
+            <span className={styles.rowText}>
+              <span className={styles.rowSparkle} aria-hidden="true">
+                ✦
+              </span>{" "}
+              {headlineFor(notification, t)}
+            </span>
+            {notification.status === "in-progress" && (
               <span className={styles.rowEntities}>
-                {summariseEntities(notification.affectedEntities, t)}
+                {t("shell.notif.rowInProgress")}
               </span>
             )}
-        </span>
-        <time className={styles.rowTime} dateTime={new Date(ts).toISOString()}>
-          {time}
-        </time>
-      </button>
+            {notification.affectedEntities &&
+              notification.affectedEntities.length > 0 && (
+                <span className={styles.rowEntities}>
+                  {summariseEntities(notification.affectedEntities, t)}
+                </span>
+              )}
+          </span>
+          <time
+            className={styles.rowTime}
+            dateTime={new Date(ts).toISOString()}
+          >
+            {time}
+          </time>
+        </button>
+        {showGoTo && notification.target && (
+          <GoToTargetButton
+            label={notification.target.goToLabel}
+            onPress={onGoTo!}
+          />
+        )}
+      </div>
       <button
         type="button"
         className={styles.rowDismiss}
@@ -290,6 +319,28 @@ function NotificationRow({
   );
 }
 
+function GoToTargetButton({
+  label,
+  onPress,
+}: {
+  readonly label: string;
+  readonly onPress: () => void;
+}) {
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const { buttonProps } = useButton({ onPress }, buttonRef);
+  return (
+    <button
+      ref={buttonRef}
+      {...buttonProps}
+      type="button"
+      className={styles.rowGoTo}
+      data-testid="notification-go-to"
+    >
+      {label} →
+    </button>
+  );
+}
+
 const formatRelativeTime = (ts: number, locale: Locale): string => {
   const d = new Date(ts);
   const today = new Date();
@@ -298,11 +349,6 @@ const formatRelativeTime = (ts: number, locale: Locale): string => {
     return formatTime(d, locale);
   }
   return formatDate(d, locale);
-};
-
-const labelForPage = (page: CesarePage, t: Translate): string => {
-  const key = ACTION_LABEL_KEY_BY_PAGE[page] as TranslationKey | undefined;
-  return key ? t(key) : page;
 };
 
 const summariseEntities = (
