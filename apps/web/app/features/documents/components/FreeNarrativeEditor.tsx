@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import type { EditorView } from "prosemirror-view";
 import { formatInteger } from "@oh-writers/domain";
+import { Skeleton } from "@oh-writers/ui";
 import { NarrativeProseMirrorView } from "./NarrativeProseMirrorView";
 import { NarrativeFormatToolbar } from "./NarrativeFormatToolbar";
 import { toCartelle } from "../lib/cartelle-counter";
@@ -8,7 +9,7 @@ import { useTranslation } from "~/features/i18n";
 import {
   useYjsRoom,
   PresenceIndicator,
-  buildConnectedRealtime,
+  isRealtimeEnabled,
 } from "~/features/realtime";
 import { useSession } from "~/lib/auth-client";
 import styles from "./FreeNarrativeEditor.module.css";
@@ -69,7 +70,23 @@ export function FreeNarrativeEditor({
     canEdit && !!documentId,
   );
   const { status: realtimeStatus, peers: realtimePeers } = room;
-  const realtime = buildConnectedRealtime(room);
+  // Mount the realtime editor only AFTER the first sync, mirroring
+  // NarrativeEditor: on bare `connected` (websocket open, server state still
+  // in flight) `isFragmentEmpty` is not authoritative — the editor would seed
+  // the CRDT from its local doc and the arriving server content would merge ON
+  // TOP (the BUG-N41 double-seed). While the room is connecting/syncing we
+  // hold a skeleton instead of a live editor; `offline` falls back to the
+  // HTTP editor (no room will ever deliver content).
+  const realtime =
+    room.status === "connected" && room.synced && room.ydoc && room.provider
+      ? { ydoc: room.ydoc, provider: room.provider }
+      : null;
+  const realtimeAwaitingSync =
+    canEdit &&
+    !!documentId &&
+    isRealtimeEnabled() &&
+    realtimeStatus !== "offline" &&
+    realtime === null;
 
   const [editorView, setEditorView] = useState<EditorView | null>(null);
 
@@ -85,16 +102,26 @@ export function FreeNarrativeEditor({
           <NarrativeFormatToolbar view={editorView} enableHeadings={true} />
         </div>
       )}
-      <NarrativeProseMirrorView
-        value={content}
-        onChange={onChange}
-        enableHeadings={true}
-        readOnly={!canEdit}
-        placeholder={t("documents.freeNarrative.placeholder")}
-        realtime={realtime}
-        onReady={setEditorView}
-        {...(documentType ? { documentType } : {})}
-      />
+      {realtimeAwaitingSync ? (
+        <div aria-busy="true">
+          <Skeleton
+            lines={6}
+            widths={["70%", "100%", "100%", "90%", "100%", "60%"]}
+            ariaLabel={t("documents.loading.document")}
+          />
+        </div>
+      ) : (
+        <NarrativeProseMirrorView
+          value={content}
+          onChange={onChange}
+          enableHeadings={true}
+          readOnly={!canEdit}
+          placeholder={t("documents.freeNarrative.placeholder")}
+          realtime={realtime}
+          onReady={setEditorView}
+          {...(documentType ? { documentType } : {})}
+        />
+      )}
       {!hideCounter && (
         <div className={styles.counter} aria-live="polite">
           {cartelle}{" "}

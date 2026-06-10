@@ -1,6 +1,9 @@
 import { useEffect, useRef } from "react";
 import { EditorState, Plugin } from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
+import { updateYFragment } from "y-prosemirror";
+import * as Y from "yjs";
+import type { Node as PMNode } from "prosemirror-model";
 import { getNarrativeSchema } from "../lib/narrative-schema";
 import {
   buildNarrativePlugins,
@@ -8,10 +11,34 @@ import {
 } from "../lib/narrative-plugins";
 import { docToHtml, htmlToDoc } from "../lib/narrative-html";
 import { isFragmentEmpty } from "~/features/realtime";
+import { XML_FRAGMENT } from "~/features/realtime/lib/yjs-plugins";
 import { cesareHighlightPlugin } from "../lib/cesare-highlight-plugin";
 import "~/features/realtime/lib/cursor-styles.css";
 import "../lib/cesare-highlight.css";
 import styles from "./NarrativeProseMirrorView.module.css";
+
+// Build the CRDT update that seeds an empty room from the initial doc. The
+// seeding doc's clientID is a HASH of the content, so two clients that race
+// the first-open of the same document generate byte-identical ops and the
+// double-apply deduplicates (random clientIDs would keep BOTH copies — the
+// text would render twice). Divergent contents hash to different clientIDs
+// and merge as duplication, never as same-ID corruption.
+const seedUpdateFromDoc = (initialDoc: PMNode): Uint8Array => {
+  const json = JSON.stringify(initialDoc.toJSON());
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < json.length; i++) {
+    hash = ((hash ^ json.charCodeAt(i)) * 0x01000193) >>> 0;
+  }
+  const seedDoc = new Y.Doc();
+  seedDoc.clientID = hash;
+  const fragment = seedDoc.getXmlFragment(XML_FRAGMENT);
+  seedDoc.transact(() => {
+    updateYFragment(seedDoc, fragment, initialDoc, new Map());
+  });
+  const update = Y.encodeStateAsUpdate(seedDoc);
+  seedDoc.destroy();
+  return update;
+};
 
 interface NarrativeProseMirrorViewProps {
   value: string;
@@ -66,20 +93,24 @@ export function NarrativeProseMirrorView({
     const schema = getNarrativeSchema(enableHeadings);
     const initialDoc = htmlToDoc(lastValueRef.current, schema);
 
-    // Seed the editor from the local initial doc only when the shared Yjs
-    // fragment is still empty (this client is the FIRST to open the room — a
-    // brand-new doc, or a doc whose content lives only in the HTTP `value`).
-    // The editor is held back behind a skeleton until the room has SYNCED
-    // (`realtimeAwaitingSync` in NarrativeEditor), so `isFragmentEmpty` is
-    // authoritative here: an empty fragment after sync means the room really has
-    // no content and we must seed it; a populated fragment means the CRDT is the
-    // source of truth and we start empty so ySyncPlugin loads it (seeding a
-    // non-empty doc onto a populated fragment makes y-prosemirror merge it ON
-    // TOP — the unbounded CRDT growth that broke saving).
-    const seedFromInitial = !realtime || isFragmentEmpty(realtime.ydoc);
+    // Realtime: the shared fragment is the source of truth. When it is still
+    // empty (this client is the FIRST to open the room — a brand-new doc, or a
+    // doc whose content lives only in the HTTP `value`), seed the FRAGMENT
+    // directly by merging a CRDT update built from the initial doc. Passing
+    // `doc: initialDoc` to EditorState does NOT seed: y-prosemirror's binding
+    // renders the fragment over the editor on init (`_forceRerender`), so an
+    // empty fragment WIPES the initial doc and the wipe leaks into onChange →
+    // autosave (the BUG-N53 clobber). The editor is held back behind a
+    // skeleton until the room has SYNCED (NarrativeEditor/FreeNarrativeEditor
+    // gates) and the ws-server replies to sync only after loading persisted
+    // state, so `isFragmentEmpty` is authoritative here: an empty fragment
+    // means the room is genuinely empty.
+    if (realtime && isFragmentEmpty(realtime.ydoc)) {
+      Y.applyUpdate(realtime.ydoc, seedUpdateFromDoc(initialDoc));
+    }
 
     const state = EditorState.create({
-      ...(seedFromInitial ? { doc: initialDoc } : { schema }),
+      ...(realtime ? { schema } : { doc: initialDoc }),
       plugins: [
         ...buildNarrativePlugins(schema, { placeholder, realtime }),
         ...(documentType ? [cesareHighlightPlugin(documentType)] : []),
@@ -170,9 +201,24 @@ export function NarrativeProseMirrorView({
     // editor's CURRENT doc actually differs from the incoming value — a remote
     // peer edit may have already advanced the doc past a now-stale `value`
     // prop, and re-applying it would clobber the concurrent change.
-    if (isRealtime && docToHtml(view.state.doc, schema) === value) {
-      lastValueRef.current = value;
-      return;
+    if (isRealtime) {
+      const currentHtml = docToHtml(view.state.doc, schema);
+      if (currentHtml === value) {
+        lastValueRef.current = value;
+        return;
+      }
+      // An external value that EMPTIES a populated live doc is applied (it is
+      // authoritative: "riparti da zero" / switching to a blank version flow
+      // through this prop), but it is also the signature of the BUG-N54
+      // stale-value clobber — every kill emptied a populated realtime doc
+      // from the outside. Log it so a regression is visible in the console /
+      // client events instead of silent data loss.
+      if (value.trim().length === 0 && currentHtml.length > 0) {
+        console.warn(
+          "[narrative-editor] external value emptied a populated realtime doc",
+          { documentType },
+        );
+      }
     }
 
     const newDoc = htmlToDoc(value, schema);

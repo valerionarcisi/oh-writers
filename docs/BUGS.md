@@ -23,6 +23,24 @@ E2E first; screenshots in a recap; gates green).
 
 ## Open
 
+### BUG-N54 — soggetto realtime clobber: opening the page emptied the document for every peer (2026-06-10)
+
+- Severity: ALTO (silent data loss on a live document; reported as "il salvataggio non funziona" — the user's text vanished and the save pill showed nothing)
+- Status: fixed (4-layer fix, see below)
+- Repro (deterministic, pre-fix): soggetto with content + populated CRDT → open the page with realtime ON → editor renders EMPTY, the shared fragment is wiped (delete-all propagated to every peer), the room flush persists the empty CRDT and the autosave writes `content=""` into BOTH `documents` and the active `document_versions` row. Every later visit then reads the empty version row and re-kills any repair that only fixes `documents.content`.
+- Root chain (verified live with instrumentation):
+  1. **ws-server**: y-websocket calls `bindState` (the async DB load) WITHOUT awaiting it and replies syncStep1 immediately → the first client completes its sync against a still-EMPTY doc; `provider.synced` fires before the persisted state lands.
+  2. **y-prosemirror**: passing `doc: initialDoc` to `EditorState` does NOT seed the room — on bind the plugin renders the fragment over the editor (`_forceRerender`), so an empty fragment WIPES the initial doc; the wipe leaks into `onChange` → autosave → version row, and a later editor→fragment diff deletes the server content when it arrives.
+  3. **FreeNarrativeEditor** (soggetto only) mounted the PM view on `connected` without the `synced` gate NarrativeEditor has (N41), maximising the race window.
+  4. Route + version-backed reads: `getDocument` serves the ACTIVE VERSION row's content; once the clobber wrote `""` there, every mount passed `value=""` and the mount-firing `[currentVersionId]` resync effect pushed it over the CRDT.
+- Fix:
+  1. ws-server `ws-handler`/`persistence-binding`: `whenRoomLoaded(docName)` — the connection handler triggers doc creation, AWAITS the persisted load, and only then runs `setupWSConnection`; client messages arriving during the wait are buffered and replayed (otherwise the client's syncStep1 is lost and `synced` never fires).
+  2. `NarrativeProseMirrorView`: realtime seeding now merges the initial doc INTO the fragment as a CRDT update with a content-hash `clientID` (two racing first-clients generate identical ops → double-apply dedupes) when the fragment is genuinely empty; the editor state always starts `{schema}` in realtime. A post-mount external value that EMPTIES a populated doc still applies (authoritative: blank-version flows) but logs the clobber signature.
+  3. `FreeNarrativeEditor`: mounts the editor only after `synced` (skeleton while connecting/syncing), mirroring NarrativeEditor; `useYjsRoom` reports `offline` on token failure so the gate falls back to the HTTP editor instead of an infinite skeleton.
+  4. Version-resync effects (`NarrativeEditor`, soggetto route) skip their mount run. Server-side, a failed room load refuses the connection (1011) + evicts the half-bound doc, and a socket that closed mid-load is never attached (zombie-conn flush blocker).
+- Proof: deterministic kill reproduced 5× pre-fix (yjs 96→121-byte empty paragraph, decoded); post-fix the same flow renders the text, typing autosaves to BOTH rows (30s debounce), reload persists (CRDT 146 bytes), synopsis/treatment unaffected. Unit: `free-narrative-realtime-gate.test.tsx` (4) — gate, fragment-seeding, empty-value guard. Screenshot: `sog-save-fixed.png`.
+- Note: the screenplay `ProseMirrorView` shares the `doc: initialDoc` non-seeding pattern but is shielded by server-seeded version snapshots (Spec 71/72); its genuinely-blank-room case renders blank either way. Worth migrating to the same fragment-merge seeding when touched next.
+
 ### BUG-N53 — seeded screenplay renders EMPTY in the editor (content unreachable to the realtime room) (2026-06-09)
 
 - Severity: ALTO (blocks the import-version-choice E2E suite and confuses manual testing; the screenplay looks blank despite having content)

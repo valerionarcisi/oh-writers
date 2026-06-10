@@ -35,6 +35,25 @@ const FLUSH_INTERVAL_MS = 60_000;
 // Rooms that received an update since their last flush.
 const dirtyRooms = new Set<string>();
 
+// Per-room "persisted state has been applied" promise. y-websocket calls
+// `bindState` WITHOUT awaiting it and sends syncStep1 immediately, so the
+// first client always syncs against a still-empty doc and receives the
+// persisted content only as a later update. A client that mounts its editor
+// on `synced` then sees an empty fragment for a room that has content — it
+// seeds/renders empty over it and the autosave persists the wipe (the
+// BUG-N53 narrative clobber). The ws-handler awaits `whenRoomLoaded` before
+// `setupWSConnection`, so the first sync reply already carries the persisted
+// state and an empty fragment after sync means the room is GENUINELY empty.
+const roomLoaded = new Map<string, Promise<void>>();
+
+export const whenRoomLoaded = (docName: string): Promise<void> =>
+  roomLoaded.get(docName) ?? Promise.resolve();
+
+/** Drop the loaded-marker for a room evicted outside the writeState path. */
+export const forgetRoomLoaded = (docName: string): void => {
+  roomLoaded.delete(docName);
+};
+
 /**
  * Wire DB persistence into y-websocket. `bindState` runs once per room when the
  * first client connects (load persisted state, then mark the room dirty on
@@ -46,25 +65,39 @@ export const installPersistence = async (): Promise<void> => {
 
   utils.setPersistence({
     provider: null,
-    bindState: async (docName, ydoc) => {
-      const room = parseRoomId(docName);
-      if (!room) return;
+    bindState: (docName, ydoc) => {
+      const loading = (async (): Promise<void> => {
+        const room = parseRoomId(docName);
+        if (!room) return;
 
-      const persisted = await loadYjsState(room);
-      if (persisted) applyUpdate(ydoc, persisted);
+        const persisted = await loadYjsState(room);
+        if (persisted) applyUpdate(ydoc, persisted);
 
-      ydoc.on("update", () => {
-        dirtyRooms.add(docName);
+        ydoc.on("update", () => {
+          dirtyRooms.add(docName);
+        });
+
+        // Cross-instance fan-out (no-op unless REDIS_URL is set): publish this
+        // room's local updates + awareness to peers and apply theirs back. Full-
+        // state `encodeStateAsUpdate` flushes converge under last-writer-wins, so
+        // multiple instances persisting the same room stays benign — `flushRoom`
+        // is unchanged.
+        registerRoom(docName, ydoc as SharedAwarenessDoc);
+      })();
+      // The rejection must reach the connection handler (a failed load means
+      // the room would be served EMPTY for a document that has content — the
+      // handler refuses the connection instead). The extra `.catch` tap only
+      // prevents an unhandledRejection when no handler is awaiting yet.
+      loading.catch((err) => {
+        console.error("bindState failed for", docName, err);
       });
-
-      // Cross-instance fan-out (no-op unless REDIS_URL is set): publish this
-      // room's local updates + awareness to peers and apply theirs back. Full-
-      // state `encodeStateAsUpdate` flushes converge under last-writer-wins, so
-      // multiple instances persisting the same room stays benign — `flushRoom`
-      // is unchanged.
-      registerRoom(docName, ydoc as SharedAwarenessDoc);
+      roomLoaded.set(docName, loading);
+      return loading;
     },
     writeState: async (docName, ydoc) => {
+      // Runs when the last client disconnects and y-websocket evicts the doc —
+      // drop the loaded-marker so a re-created room re-binds cleanly.
+      roomLoaded.delete(docName);
       const room = parseRoomId(docName);
       if (!room) return;
       await flushRoom(room, ydoc);

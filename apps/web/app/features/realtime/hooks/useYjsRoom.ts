@@ -72,86 +72,97 @@ export const useYjsRoom = (
     let disposed = false;
     let cleanup: (() => void) | undefined;
 
-    void getRealtimeToken().then((result) => {
-      if (disposed || !result) return;
-      const opened = createYjsRoom(roomId, result.token);
-      if (!opened) return;
-
-      const { ydoc, provider } = opened;
-
-      // The effect may have been torn down while the token promise was in
-      // flight — `createYjsRoom` already opened the socket and registered our
-      // awareness, so without this guard the connection leaks as a ghost peer
-      // (it lingers until the y-websocket awareness timeout). Destroy it now.
-      if (disposed) {
-        provider.destroy();
-        ydoc.destroy();
-        return;
-      }
-
-      const localUser = userRef.current;
-      if (localUser) {
-        provider.awareness.setLocalStateField("user", {
-          userId: localUser.id,
-          name: localUser.name,
-          color: userColor(localUser.id),
-        });
-      }
-
-      const readPeers = (): Peer[] => {
-        const states = provider.awareness.getStates();
-        const self = provider.awareness.clientID;
-        const peers: Peer[] = [];
-        states.forEach((state, clientId) => {
-          if (clientId === self) return;
-          const u = (
-            state as {
-              user?: { userId?: string; name?: string; color?: string };
-            }
-          ).user;
-          if (!u) return;
-          peers.push({
-            clientId,
-            userId: u.userId ?? null,
-            name: u.name ?? "?",
-            color: u.color ?? userColor(String(clientId)),
-          });
-        });
-        return peers;
-      };
-
-      // Latches on the first `sync`: the server's initial state has landed, so
-      // the fragment now reflects the canonical content and is safe to seed
-      // against. Never flips back — a later reconnect re-syncs onto the same doc.
-      let synced = provider.synced;
-
-      const update = (status: RealtimeStatus): void => {
+    void getRealtimeToken()
+      .catch(() => null)
+      .then((result) => {
         if (disposed) return;
-        setRoom({ ydoc, provider, status, peers: readPeers(), synced });
-      };
+        // No token (server fn failed / unauthenticated) → the room will never
+        // open. Report `offline` instead of staying in the initial `disabled`
+        // shape: editors gate their mount on "realtime is resolving" and only
+        // fall back to the HTTP editor on `offline` — without this they would
+        // hold their loading skeleton forever (BUG-N54 review finding).
+        if (!result) {
+          setRoom({ ...DISABLED, status: "offline" });
+          return;
+        }
+        const opened = createYjsRoom(roomId, result.token);
+        if (!opened) return;
 
-      const onStatus = (e: { status: string }): void =>
-        update(e.status === "connected" ? "connected" : "offline");
-      const onSync = (): void => {
-        synced = true;
-        update("connected");
-      };
-      const onAwareness = (): void => update(statusOf(provider));
+        const { ydoc, provider } = opened;
 
-      provider.on("status", onStatus);
-      provider.on("sync", onSync);
-      provider.awareness.on("update", onAwareness);
+        // The effect may have been torn down while the token promise was in
+        // flight — `createYjsRoom` already opened the socket and registered our
+        // awareness, so without this guard the connection leaks as a ghost peer
+        // (it lingers until the y-websocket awareness timeout). Destroy it now.
+        if (disposed) {
+          provider.destroy();
+          ydoc.destroy();
+          return;
+        }
 
-      update("connecting");
+        const localUser = userRef.current;
+        if (localUser) {
+          provider.awareness.setLocalStateField("user", {
+            userId: localUser.id,
+            name: localUser.name,
+            color: userColor(localUser.id),
+          });
+        }
 
-      cleanup = () => {
-        provider.off("status", onStatus);
-        provider.off("sync", onSync);
-        provider.awareness.off("update", onAwareness);
-        provider.destroy();
-        ydoc.destroy();
-      };
-    });
+        const readPeers = (): Peer[] => {
+          const states = provider.awareness.getStates();
+          const self = provider.awareness.clientID;
+          const peers: Peer[] = [];
+          states.forEach((state, clientId) => {
+            if (clientId === self) return;
+            const u = (
+              state as {
+                user?: { userId?: string; name?: string; color?: string };
+              }
+            ).user;
+            if (!u) return;
+            peers.push({
+              clientId,
+              userId: u.userId ?? null,
+              name: u.name ?? "?",
+              color: u.color ?? userColor(String(clientId)),
+            });
+          });
+          return peers;
+        };
+
+        // Latches on the first `sync`: the server's initial state has landed, so
+        // the fragment now reflects the canonical content and is safe to seed
+        // against. Never flips back — a later reconnect re-syncs onto the same doc.
+        let synced = provider.synced;
+
+        const update = (status: RealtimeStatus): void => {
+          if (disposed) return;
+          setRoom({ ydoc, provider, status, peers: readPeers(), synced });
+        };
+
+        const onStatus = (e: { status: string }): void =>
+          update(e.status === "connected" ? "connected" : "offline");
+        const onSync = (): void => {
+          synced = true;
+          update("connected");
+        };
+        const onAwareness = (): void => update(statusOf(provider));
+
+        provider.on("status", onStatus);
+        provider.on("sync", onSync);
+        provider.awareness.on("update", onAwareness);
+
+        update("connecting");
+
+        cleanup = () => {
+          provider.off("status", onStatus);
+          provider.off("sync", onSync);
+          provider.awareness.off("update", onAwareness);
+          provider.destroy();
+          ydoc.destroy();
+        };
+      });
 
     return () => {
       disposed = true;

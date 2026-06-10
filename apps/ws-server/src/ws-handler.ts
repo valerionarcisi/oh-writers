@@ -6,16 +6,37 @@ import { WebSocketServer, type WebSocket } from "ws";
 // it directly (handleUpgrade owns it), the type is just for the listener arg.
 import { validateSession } from "./auth-bridge.js";
 import { parseRoomId, resolveRoomAccess } from "./room.js";
-import { getYWebsocketUtils } from "./persistence-binding.js";
+import {
+  getYWebsocketUtils,
+  whenRoomLoaded,
+  forgetRoomLoaded,
+} from "./persistence-binding.js";
 import { attachViewerConnection } from "./viewer-connection.js";
 
 // WebSocket close codes (spec §Error Codes).
 const CLOSE_UNAUTHORIZED = 4001;
 const CLOSE_FORBIDDEN = 4003;
 const CLOSE_NOT_FOUND = 4004;
+const CLOSE_INTERNAL_ERROR = 1011;
 
 const roomIdFromUrl = (url: string | undefined): string =>
   decodeURIComponent((url ?? "/").slice(1).split("?")[0] ?? "");
+
+// Drop a doc that was created for a connection we never attached (failed
+// load, or the socket closed during the load). Only safe while no client is
+// connected — an attached doc is owned by y-websocket's closeConn lifecycle.
+const evictUnservedRoom = (
+  utils: Awaited<ReturnType<typeof getYWebsocketUtils>>,
+  roomId: string,
+): void => {
+  const doc = utils.docs.get(roomId) as
+    | { conns?: Map<unknown, unknown> }
+    | undefined;
+  if (doc && (doc.conns?.size ?? 0) === 0) {
+    utils.docs.delete(roomId);
+    forgetRoomLoaded(roomId);
+  }
+};
 
 /**
  * Attach the Yjs WebSocket upgrade handler to the shared HTTP server. Every
@@ -28,51 +49,48 @@ const roomIdFromUrl = (url: string | undefined): string =>
 export const attachWsServer = (server: HttpServer): void => {
   const wss = new WebSocketServer({ noServer: true });
 
-  server.on(
-    "upgrade",
-    (req: IncomingMessage, socket: Duplex, head: Buffer) => {
-      // We always complete the WS handshake first, then close with a specific
-      // code on rejection. A pre-handshake socket.destroy() would only surface
-      // as an abnormal 1006 on the client — completing the upgrade lets us send
-      // a real close frame (4001/4003/4004) the client can act on.
-      void (async () => {
-        const roomId = roomIdFromUrl(req.url);
-        const room = parseRoomId(roomId);
-        const session = room ? await validateSession(req) : null;
-        const access =
-          room && session ? await resolveRoomAccess(room, session.userId) : null;
+  server.on("upgrade", (req: IncomingMessage, socket: Duplex, head: Buffer) => {
+    // We always complete the WS handshake first, then close with a specific
+    // code on rejection. A pre-handshake socket.destroy() would only surface
+    // as an abnormal 1006 on the client — completing the upgrade lets us send
+    // a real close frame (4001/4003/4004) the client can act on.
+    void (async () => {
+      const roomId = roomIdFromUrl(req.url);
+      const room = parseRoomId(roomId);
+      const session = room ? await validateSession(req) : null;
+      const access =
+        room && session ? await resolveRoomAccess(room, session.userId) : null;
 
-        let rejectCode: number | null = null;
-        let canWrite = false;
-        if (!room) {
-          rejectCode = CLOSE_NOT_FOUND;
-        } else if (!session) {
-          rejectCode = CLOSE_UNAUTHORIZED;
-        } else if (!access || access.isErr()) {
-          rejectCode = CLOSE_FORBIDDEN;
-        } else if (access.value.kind === "not-found") {
-          rejectCode = CLOSE_NOT_FOUND;
-        } else if (access.value.kind === "forbidden") {
-          rejectCode = CLOSE_FORBIDDEN;
-        } else {
-          canWrite = access.value.access.canWrite;
+      let rejectCode: number | null = null;
+      let canWrite = false;
+      if (!room) {
+        rejectCode = CLOSE_NOT_FOUND;
+      } else if (!session) {
+        rejectCode = CLOSE_UNAUTHORIZED;
+      } else if (!access || access.isErr()) {
+        rejectCode = CLOSE_FORBIDDEN;
+      } else if (access.value.kind === "not-found") {
+        rejectCode = CLOSE_NOT_FOUND;
+      } else if (access.value.kind === "forbidden") {
+        rejectCode = CLOSE_FORBIDDEN;
+      } else {
+        canWrite = access.value.access.canWrite;
+      }
+
+      wss.handleUpgrade(req, socket, head, (conn) => {
+        if (rejectCode !== null) {
+          // Close with the application code only once the socket is OPEN, so
+          // the close frame is actually transmitted (closing during CONNECTING
+          // drops the frame and the client sees a bare 1006).
+          const closeWithCode = (): void => conn.close(rejectCode);
+          if (conn.readyState === conn.OPEN) closeWithCode();
+          else conn.once("open", closeWithCode);
+          return;
         }
-
-        wss.handleUpgrade(req, socket, head, (conn) => {
-          if (rejectCode !== null) {
-            // Close with the application code only once the socket is OPEN, so
-            // the close frame is actually transmitted (closing during CONNECTING
-            // drops the frame and the client sees a bare 1006).
-            const closeWithCode = (): void => conn.close(rejectCode);
-            if (conn.readyState === conn.OPEN) closeWithCode();
-            else conn.once("open", closeWithCode);
-            return;
-          }
-          void onConnection(conn, roomId, canWrite);
-        });
-      })();
-    },
-  );
+        void onConnection(conn, roomId, canWrite);
+      });
+    })();
+  });
 };
 
 const onConnection = async (
@@ -82,26 +100,66 @@ const onConnection = async (
 ): Promise<void> => {
   const utils = await getYWebsocketUtils();
 
-  if (canWrite) {
-    utils.setupWSConnection(conn, { url: `/${roomId}` }, {
-      docName: roomId,
-      gc: true,
-    });
+  // Create + bind the doc FIRST and wait for its persisted state to apply.
+  // y-websocket's setupWSConnection sends syncStep1 synchronously without
+  // awaiting bindState, so without this the first client syncs against a
+  // still-empty doc, mounts an "empty" room for a document that has content,
+  // and its editor/autosave can persist the wipe (the BUG-N53 clobber).
+  //
+  // While we wait, the client's own opening messages (its syncStep1 +
+  // awareness) are already arriving — with no listener attached they would be
+  // LOST and the client would never receive the syncStep2 that fires its
+  // `synced`, hanging the editor behind its loading gate forever. Buffer them
+  // and replay once the real listener is attached.
+  conn.binaryType = "arraybuffer";
+  const buffered: unknown[] = [];
+  const bufferMessage = (data: unknown): void => {
+    buffered.push(data);
+  };
+  conn.on("message", bufferMessage);
+
+  (
+    utils as unknown as { getYDoc: (n: string, gc: boolean) => unknown }
+  ).getYDoc(roomId, true);
+  try {
+    await whenRoomLoaded(roomId);
+  } catch {
+    // The persisted load failed: serving the room would present an EMPTY doc
+    // as authoritative for a document that has content (the N54 clobber).
+    // Refuse the connection and evict the half-bound doc so the next attempt
+    // re-binds from scratch.
+    evictUnservedRoom(utils, roomId);
+    conn.close(CLOSE_INTERNAL_ERROR);
     return;
   }
 
-  // Read-only path: ensure the shared doc exists (loads persisted state via the
-  // bindState hook), then attach a write-blocked connection.
-  const docMap = utils.docs;
-  let doc = docMap.get(roomId);
-  if (!doc) {
-    // getYDoc creates + binds the doc through the registered persistence.
-    (utils as unknown as { getYDoc: (n: string, gc: boolean) => unknown }).getYDoc(
-      roomId,
-      true,
-    );
-    doc = docMap.get(roomId);
+  conn.off("message", bufferMessage);
+
+  // The socket may have closed while the load was in flight. Attaching a
+  // connection now would register a zombie in `doc.conns` whose close event
+  // already fired — the room would never reach zero connections, so the
+  // final-disconnect flush and doc eviction would be blocked forever.
+  if (conn.readyState !== conn.OPEN) {
+    evictUnservedRoom(utils, roomId);
+    return;
   }
+
+  if (canWrite) {
+    utils.setupWSConnection(
+      conn,
+      { url: `/${roomId}` },
+      {
+        docName: roomId,
+        gc: true,
+      },
+    );
+    for (const msg of buffered) conn.emit("message", msg);
+    return;
+  }
+
+  // Read-only path: the doc now exists and is loaded; attach a write-blocked
+  // connection.
+  const doc = utils.docs.get(roomId);
   if (!doc) {
     conn.close(CLOSE_NOT_FOUND);
     return;
@@ -110,4 +168,5 @@ const onConnection = async (
     conn,
     doc as unknown as Parameters<typeof attachViewerConnection>[1],
   );
+  for (const msg of buffered) conn.emit("message", msg);
 };

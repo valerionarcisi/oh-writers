@@ -1,6 +1,6 @@
 // IT is the default runtime language (Spec 04f). Hook up the shared i18n
 // layer later to surface English copy for non-IT users.
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { match } from "ts-pattern";
 import { ContextActionIds, DocumentTypes } from "@oh-writers/domain";
@@ -134,12 +134,26 @@ function SoggettoPageReady({
   // refetches and `soggettoDoc.content` is now the new active text — but the
   // local `useState` initial value is frozen at mount. Re-sync the editor
   // state whenever the active version id changes. We don't sync on every
-  // content change to avoid stomping over the user's in-flight edits.
+  // content change to avoid stomping over the user's in-flight edits, and we
+  // skip the mount run: state is already initialised from the same document,
+  // and in realtime mode pushing a (possibly stale) HTTP value into a
+  // just-synced CRDT editor is exactly the external replace that clobbers the
+  // shared doc (BUG-N53).
+  const versionSyncMountedRef = useRef(false);
   useEffect(() => {
+    if (!versionSyncMountedRef.current) {
+      versionSyncMountedRef.current = true;
+      return;
+    }
     setSoggettoContent(soggettoDoc.content);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [soggettoDoc.currentVersionId]);
+  const loglineSyncMountedRef = useRef(false);
   useEffect(() => {
+    if (!loglineSyncMountedRef.current) {
+      loglineSyncMountedRef.current = true;
+      return;
+    }
     setLoglineContent(loglineDoc.content);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loglineDoc.currentVersionId]);

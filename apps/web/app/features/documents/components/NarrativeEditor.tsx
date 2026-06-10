@@ -234,8 +234,16 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
 
   // When the active version changes (e.g. after switchToVersion), reload content
   // from the freshly-fetched document. We key on currentVersionId rather than
-  // content itself to avoid overwriting in-progress edits.
+  // content itself to avoid overwriting in-progress edits. Skip the mount run:
+  // state is already initialised from the same document, and in realtime mode
+  // pushing a (possibly stale) HTTP value into a just-synced CRDT editor is
+  // exactly the external replace that clobbers the shared doc (BUG-N53).
+  const versionSyncMountedRef = useRef(false);
   useEffect(() => {
+    if (!versionSyncMountedRef.current) {
+      versionSyncMountedRef.current = true;
+      return;
+    }
     setContent(document.content);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [document.currentVersionId]);
