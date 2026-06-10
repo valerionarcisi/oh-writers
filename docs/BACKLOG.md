@@ -43,6 +43,19 @@ Item format: `[id] short title — link (spec NN / audit A-0x / learning)`
   Follow-up: logline export menu, liste lunghe (67+ versioni), rimozione file rotta
   screenplay legacy. Verificato live sul progetto reale (Chrome).
 
+- **[Stabilization batch] versions/import/realtime/save — MERGED to main (2026-06-10).**
+  `feat/versions-delete-and-current` (~26 commits) landed: per-version Yjs rooms +
+  delete/blank/current-version chip, import-as-active-version (Spec 71), seed CRDT
+  snapshots (Spec 72), coord-path PDF import (Spec 70) + flush-left + cue recovery,
+  BUG-N54 4-layer realtime clobber fix + screenplay fragment-merge seeding,
+  **BUG-N55** (pill vanish on Salva → sticky `useHasEdited`), **BUG-N56** (own-save
+  resync guard `useVersionResync`), **BUG-N45** (closed — caret moves never publish),
+  OHW-140 + OHW-083 branch regressions fixed at the gate. Gates: unit 1847+30 green;
+  full chromium green at parity with main minus **7 pre-existing stale tests**
+  (OHW-093, audit-export, spec55-backbone ×3, versions-splitdrawer ×2 — red on main
+  too, stale vs Spec 66; need Valerio's go to realign, see N-31). New: `pnpm db:backup`;
+  playwright webServer hardened against the dev ws-server (**BUG-N57**, open).
+
 - **[Spec 66 follow-up] Versions UX batch — IN PROGRESS (owner testing 2026-06-07)** —
   working tree on `main`, NOT committed (owner is trying it live first). Done so far,
   typecheck green + E2E green (versions-drawer 7/7):

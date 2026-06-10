@@ -92,3 +92,24 @@ cold/slow servers and cascades. Failure counts are not a reliable signal on thei
 on a clean baseline (stash) and compare. Lean on the deterministic layers (unit + the
 focused regression spec) and verify the actual target live; treat the broad flaky suite
 as advisory, not a gate.
+
+### 2026-06-10 — A running dev stack silently corrupts the local E2E run (BUG-N57)
+
+**What went wrong** — 5/11 narrative-editor E2E failed locally, looking exactly like a
+product data-loss bug (typed markers persisted truncated, the editor wiped itself).
+Hours went into a save/resync theory before the real cause surfaced: with `pnpm dev`
+running, the playwright-spawned test server (test DB) inherits `VITE_WS_URL` from
+`apps/web/.env` and connects to the DEV ws-server (dev DB). The auth/persistence
+mismatch flaps the room and the editor remount-loops (skeleton ↔ editor every ~100ms),
+eating keystrokes. With the dev stack down the same suite is 11/11 green.
+
+**How it was caught** — Not from the test output: from driving the failing flow manually
+and planting a DOM marker on the editor node, which died in ≤100ms — a remount loop, not
+a content bug. Walking the marker up the tree (`contenteditable` → wrapper → pageShell)
+pinpointed the flipping ternary.
+
+**Rule going forward** — (a) The fix is in `playwright.config.ts`: the webServer command
+force-empties `VITE_WS_URL`; never remove that. (b) When an E2E failure implies impossible
+product behaviour, verify the DOM is STABLE first (marker trick) before theorising about
+data flow. (c) Cross-stack interference is a standing suspect for "fails only on my
+machine": enumerate every server the page can reach, not just the one the test started.
