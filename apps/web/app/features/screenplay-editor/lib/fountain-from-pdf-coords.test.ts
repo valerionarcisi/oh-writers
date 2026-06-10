@@ -240,7 +240,10 @@ describe("fountainFromPdfCoords — Thirteen Days (flush-left, real coords)", ()
     expect(fountain).toMatch(
       new RegExp(`^${CHARACTER_INDENT}HELEN \\(O\\.S\\.\\)$`, "m"),
     );
-    expect(fountain).toContain("MATCH CUT TO:");
+    // FLUSH LEFT, by shape: a typeset transition sits flush right, an X bucket
+    // the indent model maps to dialogue — a substring match would pass even on
+    // that mis-classification (OHW-083 regression).
+    expect(fountain!.split("\n")).toContain("MATCH CUT TO:");
   });
 });
 

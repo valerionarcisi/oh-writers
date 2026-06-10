@@ -214,7 +214,7 @@ const ALT_HEADING_RE =
 
 // Transitions: ALL-CAPS phrase ending with TO:, IN:, OUT., or specific
 // recognised phrases (CUT TO BLACK., FADE TO BLACK., DISSOLVENZA A NERO.).
-const TRANSITION_RE =
+export const TRANSITION_RE =
   /^[A-ZÀ-Ý][A-ZÀ-Ý0-9 ]*(?:TO:|IN:|OUT\.|TO BLACK\.|A NERO\.)\s*$/;
 
 const PARENTHETICAL_RE = /^\s*\(.+\)\s*$/;

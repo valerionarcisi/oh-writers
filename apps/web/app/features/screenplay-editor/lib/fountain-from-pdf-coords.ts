@@ -27,6 +27,7 @@ import {
   isPageFurniture,
   stripDateAnnotationFromSlugline,
   SCENE_HEADING_RE,
+  TRANSITION_RE,
 } from "./fountain-from-pdf";
 
 export interface CoordLine {
@@ -41,6 +42,7 @@ type Role =
   | "dialogue"
   | "parenthetical"
   | "character"
+  | "transition"
   | "drop";
 
 // ─── X clustering ────────────────────────────────────────────────────────────
@@ -289,6 +291,11 @@ const roleForLine = (
   // paragraph. The pattern check is authoritative for the heading line.
   if (SCENE_HEADING_RE.test(trimmed)) return "scene";
 
+  // A transition ("CUT TO:", "FADE OUT.") is recognised by SHAPE, not indent:
+  // it sits flush RIGHT in a typeset screenplay, an X bucket the indent model
+  // doesn't track — by bucket alone it would land in the dialogue group.
+  if (TRANSITION_RE.test(trimmed)) return "transition";
+
   const { x } = line;
   // Scene level (flush-left margin or scene-number gutter).
   if (buckets.sceneThreshold !== null && x <= buckets.sceneThreshold) {
@@ -443,6 +450,7 @@ const renderBlock = ({ role, text, number }: Block): string => {
       return number !== null ? `${upper} #${number}#` : upper;
     }
     case "action":
+    case "transition":
       return text;
     case "character":
       return CHARACTER_INDENT + text;
