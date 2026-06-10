@@ -7,6 +7,8 @@ import {
 import { Features } from "../features/flags.js";
 
 describe("resolveContextActions", () => {
+  // Spec 66: VERSIONS left the per-page ⋯ menu on every segment — it lives in
+  // the TopBar version chip now. No menu may surface it.
   it("returns soggetto actions ordered, gating SIAE on the feature", () => {
     const withSiae = resolveContextActions(
       "soggetto",
@@ -15,25 +17,23 @@ describe("resolveContextActions", () => {
     expect(withSiae.map((a) => a.id)).toEqual([
       ContextActionIds.EXPORT_DOCX,
       ContextActionIds.EXPORT_SIAE,
-      ContextActionIds.VERSIONS,
     ]);
 
     const withoutSiae = resolveContextActions("soggetto", new Set());
     expect(withoutSiae.map((a) => a.id)).toEqual([
       ContextActionIds.EXPORT_DOCX,
-      ContextActionIds.VERSIONS,
     ]);
   });
 
-  it("returns export + versions for every other narrative segment", () => {
+  it("returns export-only for every other narrative segment", () => {
     for (const segment of ["synopsis", "outline", "treatment"] as const) {
       expect(
         resolveContextActions(segment, new Set()).map((a) => a.id),
-      ).toEqual([ContextActionIds.EXPORT_PDF, ContextActionIds.VERSIONS]);
+      ).toEqual([ContextActionIds.EXPORT_PDF]);
     }
   });
 
-  it("returns screenplay export/import/versions ordered (Spec 55a, no gate)", () => {
+  it("returns screenplay export/import ordered (Spec 55a, no gate)", () => {
     expect(
       resolveContextActions("screenplay", new Set()).map((a) => a.id),
     ).toEqual([
@@ -41,8 +41,17 @@ describe("resolveContextActions", () => {
       ContextActionIds.EXPORT_FOUNTAIN,
       ContextActionIds.IMPORT_PDF,
       ContextActionIds.IMPORT_FOUNTAIN,
-      ContextActionIds.VERSIONS,
     ]);
+  });
+
+  it("never surfaces VERSIONS in any segment's menu (Spec 66 — TopBar chip)", () => {
+    for (const segment of Object.keys(CONTEXT_ACTIONS)) {
+      expect(
+        resolveContextActions(segment, new Set([Features.SIAE_EXPORT])).map(
+          (a) => a.id,
+        ),
+      ).not.toContain(ContextActionIds.VERSIONS);
+    }
   });
 
   it("returns export-only for the production pages (no versions) — Spec 67", () => {
