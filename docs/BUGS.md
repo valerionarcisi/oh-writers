@@ -42,10 +42,10 @@ E2E first; screenshots in a recap; gates green).
 ### BUG-N39 — Tab from a dialogue block goes to Parenthetical, not Action (2026-06-06)
 
 - Severity: BASSO
-- Status: open
+- Status: fixed (`tabCommand` empty-dialogue special case removed — dialogue now follows `nextElementOnTab`)
 - Repro: screenplay editor → place cursor in an empty block → Alt+D (dialogue) → Tab. Expected the block to cycle to Action (Spec 05e Tab matrix: dialogue → action); observed it becomes Parenthetical.
-- Proof: `tests/screenplay-editor/screenplay-editor-ux.spec.ts` [OHW-417] (test.fixme, asserts the correct "action"). The transform library is correct — `nextElementOnTab(dialogue) === "action"` is green in `fountain-element-transforms.test.ts` (30/30). So the divergence is in the editor's Tab keymap wiring for the dialogue case, not the pure function.
-- Notes / suspected cause: the PM Tab keymap likely doesn't route the dialogue case through `nextElementOnTab`, or an empty dialogue block is mis-detected. Fix the keymap wiring, then un-fixme OHW-417.
+- Proof: `tests/screenplay-editor/screenplay-editor-ux.spec.ts` [OHW-417] re-enabled and green (17/17 in the file). Unit: `keymap.test.ts` "empty dialogue → action" + `fountain-element-transforms.test.ts` (30/30).
+- Root cause: the Tab keymap (`apps/web/app/features/screenplay-editor/lib/plugins/keymap.ts`, `tabCommand`) had an explicit empty-dialogue branch that converted the block to a parenthetical pre-filled with "()" instead of routing through `nextElementOnTab` — exactly the post-Enter state the repro hits. The branch was removed; every non-prefix block now follows the Spec 05e Tab matrix.
 
 ### BUG-N38 — TopBar center pill overlaps the right cluster below ~900px (2026-06-06)
 
