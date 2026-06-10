@@ -391,11 +391,16 @@ docker compose -f docker/docker-compose.dev.yml up -d
 # Start all apps in parallel (web on :3000, ws-server on :1234)
 pnpm dev
 
+# OR: same thing wrapped in automatic DB snapshots (pre/post session)
+pnpm dev:session
+
 # In a separate terminal — run tests in watch mode
 pnpm test:ui
 ```
 
 The `pnpm dev` command runs `vinxi dev` (web) and `tsx watch` (ws-server) in parallel. Both support hot reload.
+
+`pnpm dev:session` is the recommended wrapper when working on real project data: it snapshots the dev database before starting the stack and again on exit (Ctrl+C included). A standalone snapshot is `pnpm db:backup [label]` — dumps land in `backups/` (git-ignored); the restore command is documented in `scripts/backup-dev-db.sh`.
 
 ### Ports
 

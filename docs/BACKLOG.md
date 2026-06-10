@@ -20,67 +20,11 @@ Item format: `[id] short title — link (spec NN / audit A-0x / learning)`
 
 ## NOW (max 1)
 
-- _(empty — pull the top NEXT item)_
-
-  **Narrative Walk fleet — DONE (2026-06-05).** All lanes merged to `main`:
-  A1 (`82202c6`), A2 (`98a513a`), A3/N-27 (`08ef8bc`), A4 sessions, A6 (`dd35ff2`),
-  N-20 i18n (`dad1c1e`), and **A5 screenplay chrome (`31c0c87` — N-18 borderless page +
-  N-19 TopBar action menu, Spec 55a)**. Follow-ups filed during the A5 gate:
-  **N-31** (editor/screenplay-editor E2E suites not in CI + rotted locators/assertions +
-  DB-truncation races) and **N-32** (touch focus-enter affordance + localise "Exit Focus").
-  Also merged this session outside the fleet: **N-30 / Spec 60** route error boundary
-  (`dfe58f3`).
-
-- **[Spec 66] Versions master→detail (unificato) + per-feature action menu** —
-  **BUILT 2026-06-06** on `feat/spec-66-versions-master-detail` (8 fasi, commit
-  `797b18b`..`b1b5163e`). Master→detail (lista → versione read-only + Attiva/Indietro),
-  NIENTE diff; narrative+screenplay unificati nella stessa surface (Attiva=restore per
-  screenplay, `?vkind=`); `[● Versioni]` chip in TopBar; cluster azioni-pagina
-  Notion-style vicino all'account zone; migration 0037; OHW-066 E2E (5/5) +
-  splitdrawer (5/5) + unit 1763. **Bug di prodotto trovato+fixato dagli E2E**: badge
-  "Attuale" non si spostava dopo Attiva (leggeva l'URL hint statico) → ora legge il
-  current live. Assorbe N-34/N-35/N-36. **Resta**: gate Design/QA/Lead + merge.
-  Follow-up: logline export menu, liste lunghe (67+ versioni), rimozione file rotta
-  screenplay legacy. Verificato live sul progetto reale (Chrome).
-
-- **[Stabilization batch] versions/import/realtime/save — MERGED to main (2026-06-10).**
-  `feat/versions-delete-and-current` (~26 commits) landed: per-version Yjs rooms +
-  delete/blank/current-version chip, import-as-active-version (Spec 71), seed CRDT
-  snapshots (Spec 72), coord-path PDF import (Spec 70) + flush-left + cue recovery,
-  BUG-N54 4-layer realtime clobber fix + screenplay fragment-merge seeding,
-  **BUG-N55** (pill vanish on Salva → sticky `useHasEdited`), **BUG-N56** (own-save
-  resync guard `useVersionResync`), **BUG-N45** (closed — caret moves never publish),
-  OHW-140 + OHW-083 branch regressions fixed at the gate. Gates: unit 1847+30 green;
-  full chromium green at parity with main minus **7 pre-existing stale tests**
-  (OHW-093, audit-export, spec55-backbone ×3, versions-splitdrawer ×2 — red on main
-  too, stale vs Spec 66; need Valerio's go to realign, see N-31). New: `pnpm db:backup`;
-  playwright webServer hardened against the dev ws-server (**BUG-N57**, open).
-
-- **[Spec 66 follow-up] Versions UX batch — IN PROGRESS (owner testing 2026-06-07)** —
-  working tree on `main`, NOT committed (owner is trying it live first). Done so far,
-  typecheck green + E2E green (versions-drawer 7/7):
-  - **Switch/Nuova-versione ora aggiornano davvero l'editor** — root cause: l'editor
-    sceneggiatura semina `content` da prop una volta sola e non si ri-sincronizza; fix =
-    `key={value.currentVersionId}` sul `<ScreenplayEditor>` (rimonta su Attiva/Nuova).
-  - **`createBlankVersion`** nuovo server fn (vuoto+attivo, parità col narrativo
-    `createVersionFromScratch`); il bottone "+ Nuova versione" lo usa. `createManualVersion`
-    torna al solo checkpoint (riusato dall'import). Scoperto che la sceneggiatura è già
-    version-backed (`getScreenplay` legge dalla riga della versione attiva) → niente
-    snapshot-then-blank, niente import rotto.
-  - **Modale nostra al posto di `window.confirm`** sul delete versione (`useConfirmDialog`,
-    destructive). Regola salvata in memoria: mai dialog native, ovunque.
-  - Test riallineati al chip (`topbar-version-chip`) in versions-drawer / screenplay-chrome /
-    import-version-choice (menu `menu-item-versions` ritirato).
-  - **Da chiudere**: far provare all'owner; poi commit + far girare la suite piena;
-    review delle finding minori (query ridondanti in `createManualVersion`).
-
-  **Follow-up UI in coda (richiesti owner 2026-06-07, screenshot):**
-  1. **Sidebar rotta** → sistemarla bella e coerente Notion-style.
-  2. **Spostare "Focus" della sceneggiatura vicino al nome versione** (come nel trattamento)
-     per guadagnare spazio.
-  3. (fatto, da verificare live) switch "Attiva" deve cambiare il doc sotto nell'editor.
-  4. (fatto, da verificare live) "+ Nuova versione" = nuova versione, nuovo titolo,
-     documento pulito per scrivere.
+- **[Real-project trial] 2026-06-11 — Valerio uses the tool on a real project, locally.**
+  Protocol: `pnpm dev:session` (auto pre/post DB snapshot) · `MOCK_AI=false` · bugs go
+  in `docs/BUGS.md` with screenshots, NO fixing mid-session · post-session triage puts
+  the findings at the top of NEXT. The stabilization sprint continues after — **no new
+  features** until the existing surface is solid.
 
 ## NEXT (prioritised — narrative walk topics, then the rest)
 
@@ -123,9 +67,11 @@ Item format: `[id] short title — link (spec NN / audit A-0x / learning)`
 22. **[BUG-N46] "Salva come nuova versione" import path** — _resolved by Spec 71 (2026-06-09)._ The new-version import path was wrong end-to-end: it called `createManualVersion` (checkpoint of the OLD content) + `setContent`, so the import overwrote the _original_ active version and the new version held the old draft (and could land empty via an autosave clobber). Rebuilt as `importAsActiveVersion` — inserts a NEW version with the imported content, makes it ACTIVE, server-seeds its CRDT snapshot so the editor doesn't reseed empty. Verified live: import → new active "Versione 2" with content, old "v13" preserved & restorable, no clobber. `docs/specs/71-import-as-active-version.md`.
 23. **[N-47 / Spec 68] Narrative coherence warnings** — cross-document consistency checks (identity/premise/title/beat/setting drift) surfaced as a non-blocking warning on every narrative part. AI-backed → Cesare tracer invariant + cost smoke + feature flag. `docs/specs/68-narrative-coherence-warnings.md`. Pulled from: imported screenplay incoherent with Soggetto, no warning.
 24. **[N-48 / Spec 69] Screenplay keyboard-shortcut discoverability** — the element shortcuts already exist (`Mod-1..6` / `Alt-S/A/C/D/P/T`, Tab/Enter, `Mod-Shift-F`); make them discoverable (toolbar hints + `?` cheatsheet, single shared shortcut map) + audit gaps. `docs/specs/69-screenplay-keyboard-shortcuts.md`.
-25. **[N-49] Move the sidebar "+" into the gear/account menu** — the rail "+" (new project) could live in the `⋯`/gear menu near the account zone instead of floating in the rail. Small UI relocation; confirm placement. Measure + screenshot before/after.
+25. ~~**[N-49] Move the sidebar "+" into the gear/account menu**~~ — ✅ done 2026-06-10: "+ Nuovo progetto" lives in the project-header dropdown (with Apri/Impostazioni/Cambia); the orphan rail "+" toolbar is retired. E2E `tests/settings/settings-pages.spec.ts` N-49.
 26. **[BUG-N51 follow-up] PDF wrap-joining** — reconstruct wrapped action/dialogue paragraphs into one logical line on top of the now-correct classification (deferred from the reverted unwrap attempt). Export should not emit more lines than the original.
 27. **[N-52] Focus mode must keep the top bar (element legend + Indice + Focus + Salvato)** — focus mode renders a `position:fixed; inset:0` overlay (`ScreenplayEditor.module.css .focusMode`) with only a bare "Esci da Focus" toolbar; the shell Viewbar sits underneath and is hidden. The writer wants that bar visible in focus mode. Non-trivial: the element tabs live in the shell (`viewbarCenter`), not in `ScreenplayEditor` which owns the focus overlay. Measure + screenshot before/after.
+28. **[N-59] Sidebar polish — make the rail "bella e coerente" Notion-style** (owner ask 2026-06-07, screenshot). Carried over from the Spec 66 follow-up batch; with the rail "+" gone (N-49) re-audit spacing/sections live before styling.
+29. **[N-60] Move the screenplay "Focus" control next to the version name** (like the treatment) to reclaim Viewbar space (owner ask 2026-06-07). Related to but distinct from N-52.
 
 ## ICEBOX (not now)
 
@@ -135,6 +81,23 @@ Item format: `[id] short title — link (spec NN / audit A-0x / learning)`
 - BYOK encrypted user key + model choice (noted in spec 48).
 
 ## DONE (recent — trim periodically)
+
+- **[Stabilization batch 2026-06-10] versions/import/realtime/save — merged to `main`**
+  (`feat/versions-delete-and-current`, ~28 commits): per-version Yjs rooms + delete/blank
+  - current-version chip; import-as-active-version (Spec 71); seed-time CRDT snapshots
+    (Spec 72); coord-path PDF import (Spec 70: X-bucket classification, flush-left, cue
+    recovery N51, transitions); BUG-N54 4-layer realtime clobber fix + screenplay
+    fragment-merge seeding; BUG-N55 (pill vanish → sticky `useHasEdited`); BUG-N56
+    (own-save guard `useVersionResync`); BUG-N45 closed; OHW-140/OHW-083 caught+fixed at
+    the gate; N-49 (rail "+" → project menu). Absorbs the Spec 66 follow-up batch of
+    2026-06-07 (switch/Nuova versione editor resync via `key={currentVersionId}`,
+    `createBlankVersion`, delete-version modal, chip-aligned tests). Gates: unit 1847+30;
+    full chromium at parity with main minus 7 pre-existing stale tests (need Valerio's go
+    to realign — OHW-093, audit-export, spec55-backbone ×3, versions-splitdrawer ×2).
+    New: `pnpm db:backup` + `pnpm dev:session`; E2E webServer hardened vs dev ws-server.
+    Open follow-ups: **BUG-N57** (ws flap remount loop), **BUG-N58** (observation).
+- [Spec 66] Versions master→detail unificato + `[● Versioni]` chip in TopBar + per-page
+  action cluster — merged via the stabilization batch above. Assorbe N-34/N-35/N-36.
 
 - [Spec 59] App recap HTML — `docs/recap/2026-06-05-app-recap.html` (self-contained, base64 screenshots): 13-slide showcase tour (login→dashboard→overview→narrativa→sceneggiatura→breakdown→budget→schedule→locations→Cesare→settings) + 8-strip Narrative-Walk changelog (technical voice, separated). On-brand palette/fonts. Generator: `docs/recap/build-recap.mjs`. Live captures on the dev stack (reseeded) at 1440px.
 - [Spec 55a / A5 / N-18+N-19] Screenplay borderless page + TopBar action menu (`31c0c87`).

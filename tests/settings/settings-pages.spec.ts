@@ -122,4 +122,36 @@ test.describe("[Spec 58] settings pages polish", () => {
       `/projects/${TEAM_PROJECT_ID}/settings`,
     );
   });
+
+  // ── N-49 — "Nuovo progetto" lives in the project menu, not as a rail "+" ──
+  test("N-49 — project menu has 'Nuovo progetto' → /projects/new; the rail tools toolbar is gone", async ({
+    authenticatedPage: page,
+  }) => {
+    await page.goto(`${BASE_URL}/projects/${TEAM_PROJECT_ID}/soggetto`);
+    await expect(page.getByTestId("topbar-account")).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect
+      .poll(
+        () => page.evaluate(() => document.body.getAttribute("data-shell")),
+        { timeout: 10_000 },
+      )
+      .not.toBeNull();
+
+    // The orphan "+" toolbar no longer renders in the rail.
+    await expect(
+      page.locator('[role="toolbar"][aria-label="Strumenti"]'),
+    ).toHaveCount(0);
+
+    const trigger = page.getByTestId("rail-project-menu-trigger");
+    await expect(trigger).toBeVisible({ timeout: 10_000 });
+    await trigger.click();
+    await expect(page.getByTestId("rail-project-menu")).toBeVisible({
+      timeout: 5_000,
+    });
+
+    await page.getByTestId("project-menu-new").click();
+    await page.waitForURL("**/projects/new", { timeout: 10_000 });
+    expect(new URL(page.url()).pathname).toBe("/projects/new");
+  });
 });

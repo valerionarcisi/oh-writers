@@ -962,8 +962,22 @@ function AppShellInner({
         onClick: handleBrandClick,
         testId: "project-menu-switch",
       },
+      // N-49 — "new project" lives here with the other project-level actions;
+      // it used to float alone as a "+" toolbar in the rail.
+      {
+        label: t("shell.projectMenu.new"),
+        icon: "+",
+        onClick: () => void router.navigate({ to: "/projects/new" }),
+        testId: "project-menu-new",
+      },
     ],
-    [t, handleProjectHeaderClick, handleProjectSettings, handleBrandClick],
+    [
+      t,
+      handleProjectHeaderClick,
+      handleProjectSettings,
+      handleBrandClick,
+      router,
+    ],
   );
 
   const paletteItems = useMemo<CommandPaletteItem[]>(() => {
@@ -1018,20 +1032,11 @@ function AppShellInner({
     return items;
   }, [router, projectId, activeSegment, openCesare, onCesareSessionNew, t]);
 
-  // ── Rail tools — only "New project" (the rest moved out per UX review).
+  // ── Rail tools — empty since N-49: the last tool ("+", new project) moved
+  // into the project-header dropdown with the other project-level actions.
   // Search lives in the TopBar (⌘K palette), project-switch is the brand
-  // dropdown, and help/more was noise; the rail keeps just the "+".
-  const railTools = useMemo<RailToolItem[]>(
-    () => [
-      {
-        id: "new",
-        label: t("shell.rail.new"),
-        icon: "plus",
-        onPress: () => router.navigate({ to: "/projects/new" }),
-      },
-    ],
-    [router, t],
-  );
+  // dropdown. An empty array hides the toolbar row entirely.
+  const railTools = useMemo<RailToolItem[]>(() => [], []);
 
   // ── TopBar account zone (bell / avatar / gear) ───────────────
   // Spec 55: the account actions live in the TopBar right zone (the single

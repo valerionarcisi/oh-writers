@@ -164,6 +164,7 @@ export const appShellKeys = {
     "shell.projectMenu.open": "Open project",
     "shell.projectMenu.settings": "Project settings",
     "shell.projectMenu.switch": "Switch project",
+    "shell.projectMenu.new": "New project",
     // Command palette listbox
     "shell.palette.empty": "No results",
     "shell.palette.results": "Results",
@@ -389,6 +390,7 @@ export const appShellKeys = {
     "shell.projectMenu.open": "Apri progetto",
     "shell.projectMenu.settings": "Impostazioni progetto",
     "shell.projectMenu.switch": "Cambia progetto",
+    "shell.projectMenu.new": "Nuovo progetto",
     // Command palette listbox
     "shell.palette.empty": "Nessun risultato",
     "shell.palette.results": "Risultati",
