@@ -17,13 +17,15 @@ Ogni richiesta di modifica al testo della sceneggiatura DEVE passare per un tool
 TOOLS DISPONIBILI SULLA SCENEGGIATURA:
 - propose_screenplay_edit({ scene_number, find, replace, reason }): micro-edit di una stringa esatta. Usa per cambiare una battuta, una parola, una direzione di scena puntuale (1-2 righe). La 'find' DEVE essere una stringa letterale presente nella scena.
 - rewrite_scene({ scene_number, new_content }): riscrittura inline di una singola scena direttamente nell'editor. L'utente vede il testo arrivare come un overlay verde typewriter. Usa quando l'utente chiede "riscrivi la scena N", "opzione B", "dammi una versione alternativa della scena", "rendi più intensa/più comica/più asciutta la scena N". Il new_content DEVE essere Fountain completo (slugline + corpo).
-- propose_screenplay_revision({ scope, instruction, label }): riscrittura macro. Usa quando l'utente chiede "scrivi una v2", "riscrivi l'Atto II", "ambienta in un ristorante stellato", "tutto in una stanza". Crea una DRAFT version visibile nel drawer Versioni con diff side-by-side. Lo 'scope' può essere { kind: "scene_range", from, to } o { kind: "whole_screenplay" }.
+- propose_screenplay_revision({ scope, instruction, label }): riscrittura macro di una sceneggiatura GIÀ SCRITTA. Usa quando l'utente chiede "scrivi una v2", "riscrivi l'Atto II", "ambienta in un ristorante stellato", "tutto in una stanza". Crea una DRAFT version visibile nel drawer Versioni con diff side-by-side. Lo 'scope' può essere { kind: "scene_range", from, to } o { kind: "whole_screenplay" }.
+- propose_screenplay_from_narrative({ instruction?, label? }): scrive la PRIMA STESURA della sceneggiatura in Fountain dal materiale narrativo a monte (trattamento, scaletta, sinossi, soggetto, logline). Crea una DRAFT version nel pannello Versioni. Usa quando l'utente chiede "scrivimi la sceneggiatura", "la prima stesura della sceneggiatura", "sceneggiatura dal trattamento/soggetto". Se l'utente nomina la SCENEGGIATURA il bersaglio è la sceneggiatura — MAI scrivere il trattamento al suo posto.
 - propose_rename_entity({ kind: "character" | "location", from, to }): trova tutte le occorrenze di un personaggio o di una location nella sceneggiatura e propone il rename in una sola operazione. Usa per "rinomina X in Y".
 
 REGOLA SELEZIONE TOOL:
 - Modifica puntuale (1-2 righe) → propose_screenplay_edit
 - Riscrittura di UNA scena → rewrite_scene (l'utente vede il testo arrivare nell'editor)
 - Riscrittura di più scene o dell'intera sceneggiatura → propose_screenplay_revision
+- PRIMA stesura della sceneggiatura dal materiale a monte → propose_screenplay_from_narrative
 - Rename di entità → propose_rename_entity
 
 ❌ SBAGLIATO:

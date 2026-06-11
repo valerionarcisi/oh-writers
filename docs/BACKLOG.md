@@ -28,7 +28,7 @@ Item format: `[id] short title — link (spec NN / audit A-0x / learning)`
 
 ### Filed 2026-06-11 (real-use session #2 — Valerio + collega, progetto reale) — TOP PRIORITY
 
--A. **[BUG-N67] Cesare scrive il TRATTAMENTO quando gli chiedi la SCENEGGIATURA** — entity routing dei tool universali, bug con AI reale, fix + real-AI smoke obbligatorio. `docs/BUGS.md`.
+-A. ~~**[BUG-N67] Cesare scrive il TRATTAMENTO quando gli chiedi la SCENEGGIATURA**~~ — ✅ fixed (lane A, `fix/n67-cesare-entity-routing`): `write_screenplay` intent + entity-fidelity rule nel classifier, nuovo tool `propose_screenplay_from_narrative` (prima stesura Fountain dal materiale a monte, DRAFT version); proof = real-AI smoke `pnpm cost:smoke:cesare-entity-routing` (transcript in `vernissage/n67-entity-routing/`). `docs/BUGS.md`.
 -B. **[BUG-N66] Versioning Cesare: una versione per OGNI tentativo** — policy owner: default sovrascrive la corrente, nuova versione solo su richiesta esplicita (o Cesare chiede). Vale per tutte le parti narrative. Serve spec (tocca auto-version invariant). `docs/BUGS.md`.
 -C. **[BUG-N63] Export PDF sceneggiatura: dialoghi persi + frontespizio incompleto + bold scene heading** — fedeltà export, tre superfici in un fronte. `docs/BUGS.md`.
 -D. **[BUG-N64] `?versions=…&peek=cesare` spacca la pagina** — contesa fra surface routate, deve fallire chiuso. `docs/BUGS.md`.

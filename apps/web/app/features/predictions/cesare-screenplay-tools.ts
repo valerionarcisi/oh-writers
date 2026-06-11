@@ -7,6 +7,13 @@ import type { Db } from "~/server/db";
 import { callHaiku, extractText } from "~/features/ai";
 import { sanitizeAiText } from "@oh-writers/utils";
 import { CesareError } from "./cesare.errors";
+import { SONNET_MODEL } from "./cesare-model-router";
+import { loadScreenplayUpstreamNarrative } from "./cesare-document-tools";
+import {
+  FOUNTAIN_FORMAT_RULES,
+  SCREENPLAY_FIRST_DRAFT_SYSTEM,
+  buildFirstDraftUserPrompt,
+} from "./cesare-screenplay-draft-prompt";
 
 // ─── Tool definitions ─────────────────────────────────────────────────────────
 
@@ -96,6 +103,32 @@ export const CESARE_SCREENPLAY_TOOLS = [
         to: { type: "string" },
       },
       required: ["kind", "from", "to"],
+    },
+  },
+  {
+    name: "propose_screenplay_from_narrative",
+    description:
+      "Scrive la PRIMA STESURA completa della sceneggiatura in formato Fountain derivandola " +
+      "dal materiale narrativo a monte (trattamento, scaletta, sinossi, soggetto, logline — usa il più vicino disponibile). " +
+      "Crea una DRAFT version visibile nel pannello Versioni della Sceneggiatura, che l'utente può confrontare e promuovere. " +
+      "Usa SEMPRE questo tool quando l'utente chiede di SCRIVERE la sceneggiatura " +
+      "(es. 'scrivimi la sceneggiatura', 'la prima stesura della sceneggiatura', 'partendo dal soggetto scrivimi la sceneggiatura'). " +
+      "Se l'utente nomina la SCENEGGIATURA il bersaglio è la sceneggiatura: NON scrivere il trattamento al suo posto. " +
+      "Per riscrivere una sceneggiatura già esistente usa invece propose_screenplay_revision.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        instruction: {
+          type: "string",
+          description:
+            "Istruzione opzionale per orientare tono/struttura della prima stesura (es. 'tono noir', 'massimo 20 scene').",
+        },
+        label: {
+          type: "string",
+          description:
+            "Etichetta breve per la versione draft (default 'Prima stesura').",
+        },
+      },
     },
   },
   {
@@ -214,6 +247,38 @@ export const createScreenplayTools = (db: Db, projectId: string) => ({
     execute: async (input, _opts) => {
       const result = await executeProposeRenameEntity(
         input as RenameInput,
+        db,
+        projectId,
+      );
+      if (result.isErr()) return { error: result.error.message };
+      return result.value;
+    },
+  }),
+  propose_screenplay_from_narrative: tool({
+    description:
+      "Scrive la PRIMA STESURA completa della sceneggiatura in formato Fountain derivandola " +
+      "dal materiale narrativo a monte (trattamento, scaletta, sinossi, soggetto, logline — usa il più vicino disponibile). " +
+      "Crea una DRAFT version visibile nel pannello Versioni della Sceneggiatura. " +
+      "Usa SEMPRE questo tool quando l'utente chiede di SCRIVERE la sceneggiatura ('scrivimi la sceneggiatura', " +
+      "'la prima stesura della sceneggiatura'). Se l'utente nomina la SCENEGGIATURA il bersaglio è la sceneggiatura: " +
+      "NON scrivere il trattamento al suo posto. Per riscrivere una sceneggiatura già esistente usa propose_screenplay_revision.",
+    inputSchema: z.object({
+      instruction: z
+        .string()
+        .optional()
+        .describe(
+          "Istruzione opzionale per orientare tono/struttura della prima stesura (es. 'tono noir', 'massimo 20 scene').",
+        ),
+      label: z
+        .string()
+        .optional()
+        .describe(
+          "Etichetta breve per la versione draft (default 'Prima stesura').",
+        ),
+    }),
+    execute: async (input, _opts) => {
+      const result = await executeProposeScreenplayFromNarrative(
+        input as FirstDraftInput,
         db,
         projectId,
       );
@@ -625,21 +690,7 @@ const REVISION_MODEL = "claude-haiku-4-5";
 
 const reviseSystemPrompt = `Sei uno sceneggiatore italiano esperto, specializzato nella riscrittura strutturale di sceneggiature in formato Fountain.
 Output: SOLO il nuovo testo Fountain, senza meta-commenti, senza intestazioni esterne, senza markdown.
-Mantieni la struttura Fountain:
-- Slugline: INT./EXT. LUOGO - MOMENTO (tutto maiuscolo)
-- Azione: testo normale, ogni paragrafo separato da una RIGA VUOTA
-- Personaggio: tutto maiuscolo, centrato (6 spazi), preceduto da riga vuota
-- Dialogo: testo normale con 10 spazi di rientro
-- Parentetica: (testo) con 10 spazi di rientro
-
-REGOLE DI A CAPO (criticissime, non sgarrare):
-- Scrivi ogni paragrafo di azione su UNA SOLA RIGA, anche se lungo. NON spezzare frasi a metà.
-- Usa "\\n\\n" (riga vuota) SOLO per separare paragrafi DISTINTI con significato narrativo diverso (cambio di soggetto, beat narrativo, stacco temporale).
-- NON wrappare il testo a 50/60/80 caratteri. NON inserire newline a metà frase. NON aggiungere "\\n\\n" dopo ogni virgola o frase breve.
-- Esempio CORRETTO (una sola riga): "Una villetta liberty stretta tra due palazzi di cemento anni Sessanta. Freddo di novembre. L'insegna del RADICE è al neon — metà lettere spente, le altre arancioni, sufficienti."
-- Esempio SBAGLIATO (NON fare così): "Una villetta liberty stretta tra due palazzi di cemento\\n\\nanni Sessanta. Freddo di novembre. L'insegna del RADICE\\n\\nè al neon — metà lettere spente, le altre arancioni,\\n\\nsufficienti."
-
-CRITICO: ogni blocco di azione distinto deve essere separato da una riga completamente vuota. Non concatenare più azioni senza riga vuota tra loro.`;
+${FOUNTAIN_FORMAT_RULES}`;
 
 const reviseUserPrompt = (
   instruction: string,
@@ -874,6 +925,158 @@ const executeProposeScreenplayRevision = (
     });
   });
 
+// ─── propose_screenplay_from_narrative executor (BUG-N67) ─────────────────────
+//
+// The screenplay FIRST DRAFT generator. Before this tool existed there was no
+// way to WRITE the screenplay from the upstream narrative — only revision tools
+// over an existing Fountain text — so "scrivimi la prima stesura della
+// sceneggiatura" was routed to the nearest available generator and Cesare wrote
+// the TREATMENT instead. Like propose_screenplay_revision it never touches the
+// live screenplay content (which is realtime/Yjs-backed): it creates a DRAFT
+// version + proposal banner the user promotes from the Versions panel.
+
+interface FirstDraftInput {
+  instruction?: string;
+  label?: string;
+}
+
+const DEFAULT_FIRST_DRAFT_LABEL = "Prima stesura";
+
+const MOCK_FIRST_DRAFT_FOUNTAIN = `INT. CASA DI MARCO - NOTTE
+
+Marco rilegge il copione e segna gli appunti della madre.
+
+EXT. FALERONE - PIAZZA - GIORNO
+
+La troupe arriva. La piazza è semivuota.
+
+      MARCO
+          Cominciamo da qui.
+
+[OHW-MOCK] Prima stesura generata dal materiale narrativo a monte.`;
+
+const generateFirstDraftFountain = (
+  upstreamText: string,
+  instruction: string | null,
+): ResultAsync<string, CesareError> => {
+  if (process.env["MOCK_AI"] === "true") {
+    return okAsync(MOCK_FIRST_DRAFT_FOUNTAIN);
+  }
+  return callHaiku(
+    {
+      system: SCREENPLAY_FIRST_DRAFT_SYSTEM,
+      fewShot: [],
+      user: buildFirstDraftUserPrompt(upstreamText, instruction),
+      model: SONNET_MODEL,
+      maxTokens: 4000,
+    },
+    "cesare.screenplay.firstDraft",
+  )
+    .mapErr(
+      (e) => new CesareError(`First draft generation failed: ${e.message}`),
+    )
+    .andThen((reply) => {
+      const text = extractText(reply.content);
+      return text
+        ? okAsync(sanitizeAiText(text))
+        : errAsync(new CesareError("First draft call returned no text"));
+    });
+};
+
+const executeProposeScreenplayFromNarrative = (
+  input: FirstDraftInput,
+  db: Db,
+  projectId: string,
+): ResultAsync<
+  {
+    version_id: string;
+    label: string;
+    proposal_id: string;
+    source_label: string;
+    target_entity: "screenplay";
+  },
+  CesareError
+> =>
+  ResultAsync.combine([
+    loadScreenplayForProject(db, projectId),
+    loadScreenplayUpstreamNarrative(db, projectId),
+  ]).andThen(([sp, upstream]) => {
+    if (upstream.text.length === 0) {
+      return errAsync(
+        new CesareError(
+          "Non c'è ancora materiale da cui scrivere la sceneggiatura: scrivi prima il soggetto, la scaletta o il trattamento.",
+        ),
+      );
+    }
+    const label = (input.label ?? "").trim() || DEFAULT_FIRST_DRAFT_LABEL;
+    const instruction = (input.instruction ?? "").trim() || null;
+
+    return generateFirstDraftFountain(upstream.text, instruction).andThen(
+      (fountain) => {
+        if (fountain.trim().length === 0) {
+          return errAsync(
+            new CesareError(
+              "Il modello ha restituito una sceneggiatura vuota. Riformula l'istruzione.",
+            ),
+          );
+        }
+        return nextDraftNumberFor(db, sp.id)
+          .andThen((versionNumber) =>
+            findCreatorUserId(db, sp.id).map((userId) => ({
+              versionNumber,
+              userId,
+            })),
+          )
+          .andThen(({ versionNumber, userId }) =>
+            ResultAsync.fromPromise(
+              db
+                .insert(screenplayVersions)
+                .values({
+                  screenplayId: sp.id,
+                  number: versionNumber,
+                  label,
+                  content: fountain,
+                  pageCount: 0,
+                  isDraft: true,
+                  draftDate: new Date().toISOString().slice(0, 10),
+                  createdBy: userId,
+                })
+                .returning({ id: screenplayVersions.id })
+                .then((rows) => rows[0] ?? null),
+              (e) =>
+                new CesareError(
+                  `insert first-draft version: ${e instanceof Error ? e.message : String(e)}`,
+                ),
+            ),
+          )
+          .andThen((row) => {
+            if (!row) {
+              return errAsync(
+                new CesareError("First-draft version insert returned no rows"),
+              );
+            }
+            const proposal: DraftRevisionProposal = {
+              id: crypto.randomUUID(),
+              screenplayId: sp.id,
+              versionId: row.id,
+              label,
+              instruction: instruction ?? "Prima stesura dal materiale a monte",
+              scenesChanged: 0,
+              createdAt: Date.now(),
+            };
+            getBucket(sp.id).drafts.push(proposal);
+            return okAsync({
+              version_id: row.id,
+              label,
+              proposal_id: proposal.id,
+              source_label: upstream.label,
+              target_entity: "screenplay" as const,
+            });
+          });
+      },
+    );
+  });
+
 // ─── rewrite_scene executor ───────────────────────────────────────────────────
 
 interface RewriteSceneInput {
@@ -976,6 +1179,13 @@ export const executeScreenplayTool = (
   if (block.name === "propose_rename_entity") {
     return executeProposeRenameEntity(
       block.input as RenameInput,
+      db,
+      projectId,
+    ).map((r) => toResult(block.id, r));
+  }
+  if (block.name === "propose_screenplay_from_narrative") {
+    return executeProposeScreenplayFromNarrative(
+      block.input as FirstDraftInput,
       db,
       projectId,
     ).map((r) => toResult(block.id, r));

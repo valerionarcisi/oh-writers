@@ -1,10 +1,38 @@
 import { describe, it, expect } from "vitest";
 import {
+  CESARE_SCREENPLAY_TOOLS,
   countWholeWordOccurrences,
   clampSceneRange,
+  createScreenplayTools,
   sliceFountainSceneRange,
   executeScreenplayTool,
 } from "./cesare-screenplay-tools";
+import { mappingForTool } from "./cesare-tool-entity-map";
+
+// BUG-N67 — the screenplay FIRST DRAFT tool must be registered on every
+// surface (block defs, AI SDK factory, tracer entity map), otherwise a
+// request naming the sceneggiatura has no correct tool to land on and falls
+// back to the treatment generator.
+describe("propose_screenplay_from_narrative — registration (BUG-N67)", () => {
+  it("is declared in the block-format tool list", () => {
+    const names = CESARE_SCREENPLAY_TOOLS.map((t) => t.name);
+    expect(names).toContain("propose_screenplay_from_narrative");
+  });
+
+  it("is exposed by the AI SDK factory (universal dispatch)", () => {
+    // The factory only closes over db at build time — no query runs here.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const tools = createScreenplayTools(null as any, "project-1");
+    expect(Object.keys(tools)).toContain("propose_screenplay_from_narrative");
+  });
+
+  it("maps to a WRITE on the screenplay entity in the tracer map", () => {
+    expect(mappingForTool("propose_screenplay_from_narrative")).toEqual({
+      access: "write",
+      domain: "screenplay",
+    });
+  });
+});
 
 describe("countWholeWordOccurrences", () => {
   it("counts a single whole-word match (case-insensitive)", () => {
