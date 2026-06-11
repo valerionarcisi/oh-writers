@@ -27,16 +27,14 @@ const readMainWidth = async (page: Page): Promise<number> =>
     return el ? Math.round(el.getBoundingClientRect().width) : -1;
   });
 
-// Open the routed Versions surface via the TopBar "Altre azioni" (⋯) menu →
-// "Versioni". The handler sets `?versions=<docId>`; we read that value back so
-// the caller learns the soggetto document id without hardcoding it.
+// Open the routed Versions surface via the TopBar version chip (Spec 66 moved
+// Versions out of the ⋯ ActionsMenu into the dedicated `topbar-version-chip`).
+// The handler sets `?versions=<docId>`; we read that value back so the caller
+// learns the soggetto document id without hardcoding it.
 const openVersionsViaUi = async (page: Page): Promise<string> => {
-  const trigger = page.getByLabel("Altre azioni");
-  await expect(trigger).toBeVisible({ timeout: 15_000 });
-  await trigger.click();
-  const item = page.getByRole("menuitem", { name: "Versioni" });
-  await expect(item).toBeVisible({ timeout: 5_000 });
-  await item.click();
+  const chip = page.getByTestId("topbar-version-chip");
+  await expect(chip).toBeVisible({ timeout: 15_000 });
+  await chip.click();
   await expect(page.getByTestId("versions-split-lane")).toBeVisible({
     timeout: 5_000,
   });
