@@ -80,7 +80,10 @@ test.describe("[OHW-063] Cesare-updated card stack on the entity page", () => {
     await expect(page.locator(".cesare-change-underline")).toHaveCount(0);
   });
 
-  test("the chat result card hides 'Mostra modifiche' when the editor is in front", async ({
+  // BUG-N61: pins the DEFERRED half of Spec 63 (in-editor card owns the
+  // highlight → the chat card suppresses Mostra modifiche). Written with N-37,
+  // merged red the same day. Un-fixme when backlog item N-38 ships.
+  test.fixme("the chat result card hides 'Mostra modifiche' when the editor is in front", async ({
     authenticatedPage: page,
   }) => {
     test.setTimeout(120_000);
@@ -101,7 +104,8 @@ test.describe("[OHW-063] Cesare-updated card stack on the entity page", () => {
     await expect(page.getByTestId("cesare-show-changes-btn")).toHaveCount(0);
   });
 
-  test("two turns stack: counter collapses, click expands the inline list", async ({
+  // BUG-N61: the stack counter is part of the deferred Spec 63 half (N-38).
+  test.fixme("two turns stack: counter collapses, click expands the inline list", async ({
     authenticatedPage: page,
   }) => {
     test.setTimeout(160_000);

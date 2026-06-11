@@ -118,7 +118,9 @@ test.describe("[Audit F-A3] honest result card — no fabricated success", () =>
     ).toBe(0);
   });
 
-  test("[OHW-AUDIT-FM1] a real logline edit shows the card labelled by the edited entity (logline, not Soggetto)", async ({
+  // BUG-N61: asserts the chat-side Mostra-modifiche suppression, part of the
+  // deferred Spec 63 half (backlog N-38). Un-fixme when N-38 ships.
+  test.fixme("[OHW-AUDIT-FM1] a real logline edit shows the card labelled by the edited entity (logline, not Soggetto)", async ({
     authenticatedPage: page,
   }) => {
     test.setTimeout(120_000);

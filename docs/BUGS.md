@@ -23,6 +23,13 @@ E2E first; screenshots in a recap; gates green).
 
 ## Open
 
+### BUG-N61 — 3 mock-ui E2E red on main: honest-card entity label + updated-banner show-changes/stack (2026-06-10)
+
+- Severity: MEDIO (contract gap, not a regression)
+- Status: triaged 2026-06-11 — `test.fixme` ×3 pointing at backlog N-38; un-fixme when N-38 ships
+- Failing: `tests/cesare-agentic-honest-card.spec.ts` [OHW-AUDIT-FM1]; `tests/cesare-agentic-updated-banner.spec.ts` "hides 'Mostra modifiche' when the editor is in front" + "two turns stack: counter collapses" (OHW-063).
+- VERDICT (code-traced): the three tests pin the **deferred half of Spec 63** — the in-editor card owns the highlight, so the chat result card suppresses `cesare-show-changes-btn`, and multiple turns stack with a counter. The suppression was never implemented (`CesareSheet` passes `onShowChanges` unconditionally → `ChangeTrace` always renders the button) and the stack/counter is part of the same deferred work (backlog item **N-38 / Spec 63**, top of NEXT). The tests were written with N-37 (`4bb75a6f`, 2026-06-06) and merged already-red the same day Spec 66 landed — aspirational pins, not regressions. They become the ready-made acceptance tests for N-38. These reds also blocked every push to main (the pre-push `ci:repro` mirrors the mock-ui job).
+
 ### BUG-N58 — OBSERVATION: seeded demo screenplay (project `…011` "Team Thriller", version `…023`) found clobbered to empty during a dev session (2026-06-10)
 
 - Severity: BASSO as observed (seed data, no real loss) — ALTO if the signature reproduces on real data
