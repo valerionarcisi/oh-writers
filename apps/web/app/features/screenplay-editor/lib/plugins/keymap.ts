@@ -76,12 +76,13 @@ const positionAtTitleStart = (state: EditorState): number | null => {
 /**
  * Tab — cycle the current block to the next element type.
  *
- * Special cases:
- * - Tab inside `prefix` hops to start of `title`, consuming the key.
- *   Matches the idiomatic flow: INT. + Tab → ready to type location.
- * - Tab on an empty dialogue node (the typical post-Enter state after
- *   a character cue) converts to a parenthetical pre-filled with "()"
- *   and places the cursor between the parens. Final Draft's author flow.
+ * Special case: Tab inside `prefix` hops to start of `title`, consuming
+ * the key. Matches the idiomatic flow: INT. + Tab → ready to type location.
+ *
+ * Every other block — dialogue included, empty or not — follows the
+ * Spec 05e Tab matrix via `nextElementOnTab` (dialogue → action). An
+ * earlier empty-dialogue special case forked to parenthetical, diverging
+ * from the matrix (BUG-N39); a parenthetical stays one Alt+P away.
  */
 export const tabCommand: Command = (state, dispatch, view) => {
   const { $from } = state.selection;
@@ -92,24 +93,6 @@ export const tabCommand: Command = (state, dispatch, view) => {
     if (pos === null) return false;
     if (!dispatch) return true;
     const tr = state.tr.setSelection(TextSelection.create(state.doc, pos));
-    dispatch(tr);
-    return true;
-  }
-
-  // Empty dialogue + Tab → parenthetical pre-filled with "()" and cursor
-  // between the parens. Final Draft's author flow (character → empty
-  // dialogue after Enter → Tab adds the parenthetical scaffold).
-  if (
-    blockType.type.name === "dialogue" &&
-    blockType.textContent.length === 0
-  ) {
-    const parenType = schema.nodes["parenthetical"];
-    if (!parenType) return false;
-    if (!dispatch) return true;
-    const blockStart = $from.before($from.depth);
-    const tr = state.tr.setNodeMarkup(blockStart, parenType);
-    tr.insertText("()", blockStart + 1);
-    tr.setSelection(TextSelection.create(tr.doc, blockStart + 2));
     dispatch(tr);
     return true;
   }

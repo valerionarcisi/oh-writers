@@ -11,6 +11,7 @@
   border-block-end: 1px solid transparent;
   transition: border-color var(--ds-duration-1) var(--ds-ease);
   flex-shrink: 0;
+  container-type: inline-size;
 }
 
 .isScrolled {
@@ -51,6 +52,25 @@
 
   & > * {
     min-inline-size: 0;
+  }
+}
+
+/* Below ~1180px of bar width the centre track squeezed between the side
+   clusters gets too narrow for the pill to stay readable — and at phone
+   widths effectively disappears (BUG-N38). The row is a GRID
+   (auto minmax(0,1fr) auto), so the narrow-bar layout is expressed as grid
+   placement: the centre slot drops to a full-width second row, the side
+   clusters keep row one. Never overlapped, always clickable; wide bars keep
+   the single-row centred layout. */
+@container (max-width: 1180px) {
+  .center {
+    grid-column: 1 / -1;
+    grid-row: 2;
+
+    & > * {
+      max-inline-size: 100%;
+      min-inline-size: 0;
+    }
   }
 }
 

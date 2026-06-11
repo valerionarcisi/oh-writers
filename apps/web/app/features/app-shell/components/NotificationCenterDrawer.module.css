@@ -137,6 +137,36 @@
   border-color: color-mix(in srgb, var(--ds-danger) 35%, transparent);
 }
 
+/* Stack: main row + optional "Vai al <documento>" link (BUG-066). A separate
+ * sibling button — never nested inside the rowMain button. */
+.rowStack {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.rowGoTo {
+  align-self: start;
+  background: transparent;
+  border: none;
+  color: var(--ds-action);
+  font-family: var(--ds-font-sans);
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0 var(--ds-space-2) var(--ds-space-2);
+  margin-inline-start: calc(10px + var(--ds-space-2) + var(--ds-space-1));
+  border-radius: var(--ds-radius-sm);
+}
+.rowGoTo:hover {
+  text-decoration: underline;
+}
+.rowGoTo:focus-visible {
+  outline: 2px solid var(--ds-action);
+  outline-offset: 2px;
+}
+
 .rowMain {
   flex: 1;
   display: grid;
@@ -193,23 +223,8 @@
   min-width: 0;
 }
 
-.rowTitle {
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--ds-text-2);
-  font-weight: 600;
-}
-
 .rowSparkle {
   color: var(--ds-agent);
-}
-
-.rowAction {
-  text-transform: none;
-  letter-spacing: 0;
-  color: var(--ds-text-3);
-  font-weight: 500;
 }
 
 .rowText {

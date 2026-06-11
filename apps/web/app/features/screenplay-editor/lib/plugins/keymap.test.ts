@@ -53,7 +53,7 @@ const runCommand = (
 };
 
 describe("tabCommand", () => {
-  it("empty dialogue → parenthetical with '()' and cursor between", () => {
+  it("empty dialogue → action (Spec 05e Tab matrix, BUG-N39)", () => {
     const doc = buildDoc([
       node("scene", [
         heading("INT. ROOM - DAY"),
@@ -64,13 +64,7 @@ describe("tabCommand", () => {
     const state = stateAtBlock(doc, [0, 2]);
     const { ok, state: next } = runCommand(state, tabCommand);
     expect(ok).toBe(true);
-    const paren = next.doc.firstChild!.child(2);
-    expect(paren.type.name).toBe("parenthetical");
-    expect(paren.textContent).toBe("()");
-    const cursorPos = next.selection.from;
-    const $p = next.doc.resolve(cursorPos);
-    expect($p.parent.type.name).toBe("parenthetical");
-    expect($p.parentOffset).toBe(1);
+    expect(next.doc.firstChild!.child(2).type.name).toBe("action");
   });
 
   it("character → parenthetical (non-empty)", () => {
@@ -211,7 +205,9 @@ describe("setElement — Cmd+N / Alt+letter shortcuts (matrix verification)", ()
     ["parenthetical", "action"] as const,
     ["transition", "action"] as const,
   ])("setElement converts %s → %s", (from, to) => {
-    const doc = buildDoc([node("scene", [heading("INT. X - DAY"), node(from)])]);
+    const doc = buildDoc([
+      node("scene", [heading("INT. X - DAY"), node(from)]),
+    ]);
     const state = stateAtBlock(doc, [0, 1], 0);
     const { ok, state: next } = runCommand(state, setElement(to));
     expect(ok).toBe(true);

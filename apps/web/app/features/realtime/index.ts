@@ -6,6 +6,11 @@ export {
   type Peer,
 } from "./hooks/useYjsRoom";
 export {
+  useLatchedRealtime,
+  useRealtimeEditorGate,
+  type RealtimeEditorGate,
+} from "./hooks/useRealtimeEditorGate";
+export {
   buildYjsPlugins,
   isFragmentEmpty,
   seedFragmentFromDoc,

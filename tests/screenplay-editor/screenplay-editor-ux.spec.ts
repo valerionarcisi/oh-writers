@@ -203,13 +203,7 @@ test.describe("Tab/Enter flow matrix — Spec 05e", () => {
     expect(await focusedBlockType(page)).toBe("parenthetical");
   });
 
-  // BUG N-39 (docs/BUGS.md): in the live editor, Tab from a dialogue block
-  // lands on "parenthetical" instead of "action". The transform library is
-  // correct (nextElementOnTab(dialogue) === "action", covered by the
-  // fountain-element-transforms unit test), so the bug is in the editor's Tab
-  // keymap wiring for the dialogue case. Marked fixme until the wiring is fixed
-  // — the assertion below encodes the CORRECT (spec) behaviour.
-  test.fixme("[OHW-417] Dialogue → Tab → exits to Action", async ({
+  test("[OHW-417] Dialogue → Tab → exits to Action", async ({
     authenticatedPage: page,
   }) => {
     await openScreenplay(page, TEST_PROJECT_ID);
