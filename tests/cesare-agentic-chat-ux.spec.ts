@@ -114,7 +114,10 @@ test.describe("[cesare-agentic-chat-ux] Cesare chat UX (N-06/07/09/26)", () => {
     await expect(composer).toHaveValue("Ciao Cesare");
   });
 
-  test("[N-09 / ADR-0003] Mostra modifiche on a logline edit never paints an inline editor diff", async ({
+  // BUG-N61 (fixme ×8, Valerio's go 2026-06-11): asserts the show-changes
+  // suppression contract (ADR-0003) that contradicts CLAUDE.md's toggle and was
+  // never implemented. Decision + un-fixme with backlog N-38.
+  test.fixme("[N-09 / ADR-0003] Mostra modifiche on a logline edit never paints an inline editor diff", async ({
     authenticatedPage: page,
   }) => {
     test.setTimeout(150_000);

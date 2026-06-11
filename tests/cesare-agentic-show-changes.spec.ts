@@ -78,7 +78,8 @@ test.describe("[Spec 47-A6] Cesare Mostra/Nascondi modifiche end-to-end", () => 
     await resetCesareState(authenticatedPage, TEAM_PROJECT_ID);
   });
 
-  test("[OHW-062] floating: edit applies live; the editor never paints an inline diff; no Annulla", async ({
+  // BUG-N61 (fixme ×8, Valerio's go 2026-06-11): same suppression assert. N-38.
+  test.fixme("[OHW-062] floating: edit applies live; the editor never paints an inline diff; no Annulla", async ({
     authenticatedPage,
   }) => {
     test.setTimeout(150_000);

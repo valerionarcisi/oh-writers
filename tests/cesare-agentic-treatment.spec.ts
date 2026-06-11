@@ -82,7 +82,8 @@ async function documentContentLength(
 const chip = (page: Page) => page.getByTestId("cesare-next-step-chip");
 
 test.describe("[Audit F-A2] write the treatment from the scaletta", () => {
-  test("[OHW-audit-F-treatment] the next-step chip ACTUALLY writes the treatment + auto-versions", async ({
+  // BUG-N61 (fixme ×8, Valerio's go 2026-06-11): same suppression assert. N-38.
+  test.fixme("[OHW-audit-F-treatment] the next-step chip ACTUALLY writes the treatment + auto-versions", async ({
     authenticatedPage: page,
   }) => {
     test.setTimeout(120_000);

@@ -90,7 +90,9 @@ const createSecondVersion = async (
 };
 
 test.describe("[OHW-audit-F-versions] Versions deep-link + clean diff", () => {
-  test("[F-A1] a bare ?versions= deep-link (no vcur) shows the vs-current diff", async ({
+  // BUG-N61 (fixme ×8, Valerio's go 2026-06-11): asserts the side-by-side diff
+  // that Spec 66 / ADR-0004 removed (master→detail). Realign or retire with N-38.
+  test.fixme("[F-A1] a bare ?versions= deep-link (no vcur) shows the vs-current diff", async ({
     authenticatedPage: page,
   }) => {
     test.setTimeout(120_000);
@@ -133,7 +135,8 @@ test.describe("[OHW-audit-F-versions] Versions deep-link + clean diff", () => {
     ).toHaveCount(1);
   });
 
-  test("[F-M2] the side-by-side diff shows words, never raw <p> markup", async ({
+  // BUG-N61 (fixme ×8, Valerio's go 2026-06-11): diff surface removed by ADR-0004.
+  test.fixme("[F-M2] the side-by-side diff shows words, never raw <p> markup", async ({
     authenticatedPage: page,
   }) => {
     test.setTimeout(120_000);

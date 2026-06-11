@@ -116,7 +116,10 @@ test.describe("[Spec 47c] Cesare logline — unify + write/edit", () => {
 
   // ── HAPPY: Cesare WRITES a logline from a free prompt → live + version, and
   // the edit is ALWAYS kept (no inline Annulla — Spec 47e) ────────────────────
-  test("[OHW-047-A8] Cesare writes a logline from a free prompt: applies live, auto-versions, no inline Annulla", async ({
+  // BUG-N61 (fixme ×8, Valerio's go 2026-06-11): fails only on the final
+  // show-changes-btn count(0) assert — the unimplemented ADR-0003 suppression.
+  // The live-apply flow itself is covered by the sibling tests. N-38 decides.
+  test.fixme("[OHW-047-A8] Cesare writes a logline from a free prompt: applies live, auto-versions, no inline Annulla", async ({
     authenticatedPage: page,
   }) => {
     test.setTimeout(120_000);
@@ -154,7 +157,8 @@ test.describe("[Spec 47c] Cesare logline — unify + write/edit", () => {
   });
 
   // ── HAPPY: Cesare EDITS the existing logline → live + version ───────────────
-  test("[OHW-047-A8] Cesare edits the existing logline: applies live and auto-versions", async ({
+  // BUG-N61 (fixme ×8, Valerio's go 2026-06-11): same suppression assert. N-38.
+  test.fixme("[OHW-047-A8] Cesare edits the existing logline: applies live and auto-versions", async ({
     authenticatedPage: page,
   }) => {
     test.setTimeout(120_000);

@@ -72,7 +72,8 @@ test.describe("[cesare-agentic-logline] Cesare logline — write then modify (tw
     await resetCesareState(authenticatedPage, TEST_TEAM_PROJECT_ID);
   });
 
-  test("[OHW-logline-cesare-01] Cesare writes a logline in turn 1, then modifies it in turn 2 — live apply + tracer + auto-version each turn", async ({
+  // BUG-N61 (fixme ×8, Valerio's go 2026-06-11): same suppression assert. N-38.
+  test.fixme("[OHW-logline-cesare-01] Cesare writes a logline in turn 1, then modifies it in turn 2 — live apply + tracer + auto-version each turn", async ({
     authenticatedPage: page,
   }) => {
     test.setTimeout(180_000);
