@@ -52,6 +52,7 @@ import {
   useContextActions,
   useSetActiveDocument,
   useRoutedSurface,
+  CESARE_PEEK_PARAMS,
 } from "~/features/app-shell";
 import type { ContextActionHandlers } from "~/features/app-shell";
 import { createVersionFromScratch } from "../server/versions.server";
@@ -145,6 +146,7 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
   const versionsSurface = useRoutedSurface({
     param: "versions",
     companions: ["vstate", "vcur", "compare"],
+    excludes: CESARE_PEEK_PARAMS,
   });
   const isVersionsOpen = versionsSurface.value === document.id;
   // Flush a pending autosave before opening Versions so the listed/diffed

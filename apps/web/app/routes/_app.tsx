@@ -6,7 +6,7 @@ import {
   useLocation,
   useNavigate,
 } from "@tanstack/react-router";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { createServerFn } from "@tanstack/start";
 import type { Locale, UserId, TranslationKey } from "@oh-writers/domain";
 import { useTranslation } from "~/features/i18n";
@@ -17,8 +17,13 @@ import { AppShell } from "~/features/app-shell";
 import {
   peekSearchSchema,
   CESARE_PEEK_TOKEN,
+  CESARE_PEEK_PARAMS,
+  VERSIONS_SURFACE_PARAMS,
   versionsSearchSchema,
   useRoutedSurface,
+  arbitrateRoutedSurfaces,
+  isCesarePeek,
+  parseVersionsPeek,
 } from "~/features/app-shell";
 import type { CesarePage } from "~/features/predictions";
 import {
@@ -216,10 +221,14 @@ function AppLayout() {
   // path — we target the live `pathname` so the host page stays mounted (it
   // only compresses) and only the search param changes. Browser-back then
   // closes the peek (the param pops). Each open is a distinct history entry.
+  // Opening the peek strips the Versions params: the shell has ONE auxiliary
+  // slot, so the surface being opened claims it (BUG-N64 arbitration).
   const openCesarePeek = useCallback(() => {
+    const rest = { ...search };
+    for (const p of VERSIONS_SURFACE_PARAMS) delete rest[p];
     void navigate({
       to: pathname,
-      search: { ...search, peek: CESARE_PEEK_TOKEN },
+      search: { ...rest, peek: CESARE_PEEK_TOKEN },
     });
   }, [navigate, pathname, search]);
   const closePeek = useCallback(() => {
@@ -230,10 +239,12 @@ function AppLayout() {
   // Versions SplitDrawer (Spec 49 routing + Spec 66 master→detail).
   // `useRoutedSurface` owns the URL ↔ surface mapping so this layout never
   // hand-rolls the param mutation. `vstate`/`vcur` are companions cleared
-  // together with `versions` on close.
+  // together with `versions` on close; `peek` is the rival surface stripped
+  // when the Versions lane (re-)opens (BUG-N64).
   const versionsSurface = useRoutedSurface({
     param: "versions",
     companions: ["vstate", "vcur", "vkind"],
+    excludes: CESARE_PEEK_PARAMS,
   });
   const closeVersions = versionsSurface.close;
   // `↗` expand → real navigation to the full-screen versions route (new history
@@ -254,6 +265,29 @@ function AppLayout() {
     if (vkind != null) companions["vkind"] = vkind;
     versionsSurface.navigateState(versions, companions);
   }, [versionsSurface, versions, vcur, vkind]);
+
+  // BUG-N64 — fail-closed URL normalisation for the auxiliary-slot conflict.
+  // A deep link (or stale param) can claim BOTH routed surfaces at once
+  // (`?versions=…&peek=cesare`); AppShell already arbitrates at render time
+  // (the loser never mounts), and this effect makes the URL truthful too: the
+  // loser's params are stripped with a `replace` so history carries no broken
+  // combo. Interactive opens never get here (openers strip the rival's params).
+  const auxConflict = arbitrateRoutedSurfaces({
+    versionsOpen: parseVersionsPeek(versions, vstate, vcur, vkind).isOk(),
+    cesarePeekOpen: isCesarePeek(peek, projectId ?? null),
+  });
+  const paramsToStrip = auxConflict.paramsToStrip;
+  useEffect(() => {
+    if (paramsToStrip.length === 0) return;
+    const rest = { ...search };
+    for (const p of paramsToStrip) {
+      delete rest[p as keyof typeof rest];
+    }
+    void navigate({ to: pathname, search: rest, replace: true });
+    // `search` is a fresh object every render; keying on the serialised strip
+    // list keeps the effect firing only when a real conflict appears.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paramsToStrip.join(","), pathname, navigate]);
 
   const lastMatch = matches[matches.length - 1];
   const sectionName = lastMatch
