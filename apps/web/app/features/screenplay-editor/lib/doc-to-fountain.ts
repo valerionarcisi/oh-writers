@@ -39,6 +39,13 @@ export const docToFountain = (doc: Node): string => {
   const lines: string[] = [];
 
   doc.forEach((scene) => {
+    // The doc schema allows top-level transitions (e.g. an opening FADE IN:).
+    // Skipping them here would silently delete them on every save round-trip.
+    if (scene.type.name === "transition") {
+      if (lines.length > 0) lines.push("");
+      lines.push(scene.textContent);
+      return;
+    }
     if (scene.type.name !== "scene") return;
 
     scene.forEach((block, _, index) => {
@@ -58,8 +65,12 @@ export const docToFountain = (doc: Node): string => {
           break;
 
         case "character":
+          // Canonical Fountain cues are uppercase. The editor displays the
+          // cue uppercase via CSS but stores the writer's typing verbatim —
+          // serializing it as-is would make a lowercase cue unrecognizable
+          // to both the element detector and the PDF renderer.
           lines.push("");
-          lines.push(`${CHARACTER_INDENT}${text}`);
+          lines.push(`${CHARACTER_INDENT}${text.toUpperCase()}`);
           break;
 
         case "parenthetical":

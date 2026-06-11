@@ -97,6 +97,81 @@ describe("docToFountain", () => {
     expect(output.endsWith("\n\n")).toBe(false);
   });
 
+  describe("dialogue preservation (BUG-N63)", () => {
+    it("keeps every line of consecutive dialogue blocks", () => {
+      const doc = makeDoc(
+        makeScene(
+          "INT. AULA - GIORNO",
+          { type: "character", text: "MARCO" },
+          { type: "dialogue", text: "Prima battuta." },
+          { type: "dialogue", text: "Seconda battuta consecutiva." },
+          { type: "character", text: "SOFIA" },
+          { type: "dialogue", text: "Risposta immediata." },
+        ),
+      );
+      const out = docToFountain(doc);
+      expect(out).toContain(`${DIALOGUE_INDENT}Prima battuta.`);
+      expect(out).toContain(`${DIALOGUE_INDENT}Seconda battuta consecutiva.`);
+      expect(out).toContain(`${DIALOGUE_INDENT}Risposta immediata.`);
+    });
+
+    it("keeps dialogue placed after a transition inside a scene", () => {
+      const doc = makeDoc(
+        makeScene(
+          "EXT. CORTILE - GIORNO",
+          { type: "transition", text: "CUT TO:" },
+          { type: "character", text: "GIULIA" },
+          { type: "dialogue", text: "Passamela!" },
+        ),
+      );
+      const out = docToFountain(doc);
+      expect(out).toContain("CUT TO:");
+      expect(out).toContain(`${DIALOGUE_INDENT}Passamela!`);
+    });
+
+    it("emits dialogue immediately under its cue (no blank line between)", () => {
+      const doc = makeDoc(
+        makeScene(
+          "INT. CUCINA - SERA",
+          { type: "character", text: "ANNA" },
+          { type: "dialogue", text: "Ciao." },
+        ),
+      );
+      expect(docToFountain(doc)).toContain(
+        `${CHARACTER_INDENT}ANNA\n${DIALOGUE_INDENT}Ciao.`,
+      );
+    });
+
+    it("serializes a lowercase-typed cue as uppercase (stable round-trip)", () => {
+      // The PM editor stores the writer's typing verbatim and uppercases the
+      // cue via CSS only; the serializer must emit the canonical uppercase
+      // form or the cue would be re-parsed as dialogue on reload.
+      const doc = makeDoc(
+        makeScene(
+          "INT. BAR - SERA",
+          { type: "character", text: "marco" },
+          { type: "dialogue", text: "Un caffè, grazie." },
+        ),
+      );
+      const out = docToFountain(doc);
+      expect(out).toContain(`${CHARACTER_INDENT}MARCO`);
+      expect(out).not.toContain(`${CHARACTER_INDENT}marco`);
+    });
+
+    it("keeps a top-level transition (opening FADE IN:) instead of dropping it", () => {
+      const doc = schema.node("doc", null, [
+        schema.node("transition", null, [schema.text("FADE IN:")]),
+        makeScene("INT. KITCHEN - DAY", {
+          type: "action",
+          text: "She pours coffee.",
+        }),
+      ]);
+      const out = docToFountain(doc);
+      expect(out.startsWith("FADE IN:")).toBe(true);
+      expect(out).toContain("INT. KITCHEN - DAY");
+    });
+  });
+
   describe("forced scene numbers (locked headings)", () => {
     const makeLockedScene = (heading: string, number: string) => {
       const { prefix, title } = splitLegacyHeading(heading);

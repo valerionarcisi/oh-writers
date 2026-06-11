@@ -67,6 +67,44 @@ describe("fountain roundtrip", () => {
     expect(stableRoundtrip("\n\n\n")).toBe(true);
   });
 
+  it("heals AI-shaped speech at cue indent into a real dialogue block (BUG-N63)", () => {
+    // Shape observed in the real project export: the AI writes the spoken
+    // line at the same 6-space indent as the cue, with a blank line between.
+    // Before the fix the speech became a `character` node and the PDF lost
+    // the dialogue block (cue rendered as shot, speech as action).
+    const corrupted = [
+      "EXT. MURETTO - NOTTE",
+      "",
+      "Marco parla al telefono.",
+      "",
+      "      MARCO (V.O.)",
+      "",
+      "      Luca, ascolta. Non interrompermi.",
+    ].join("\n");
+
+    const doc = fountainToDoc(corrupted);
+    const bodyTypes: string[] = [];
+    doc.firstChild?.forEach((node) => {
+      if (node.type.name !== "heading") bodyTypes.push(node.type.name);
+    });
+    expect(bodyTypes).toEqual(["action", "character", "dialogue"]);
+
+    const healed = docToFountain(doc);
+    expect(healed).toContain(
+      "      MARCO (V.O.)\n          Luca, ascolta. Non interrompermi.",
+    );
+    expect(stableRoundtrip(corrupted)).toBe(true);
+  });
+
+  it("keeps an opening top-level FADE IN: across the roundtrip", () => {
+    const input = ["FADE IN:", "", "INT. KITCHEN - DAY", "", "She waits."].join(
+      "\n",
+    );
+    const fountain = docToFountain(fountainToDoc(input));
+    expect(fountain.startsWith("FADE IN:")).toBe(true);
+    expect(stableRoundtrip(input)).toBe(true);
+  });
+
   it("docToFountain output re-parses to the same structure as the original doc", () => {
     const input = [
       "EXT. ROOFTOP - DUSK",

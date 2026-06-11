@@ -126,6 +126,41 @@ describe("detectElement — transition", () => {
   });
 });
 
+describe("detectElement — speech at character indent (BUG-N63)", () => {
+  it("classifies mixed-case text at CHARACTER_INDENT as dialogue", () => {
+    // AI/import-produced Fountain often indents the spoken line at the cue
+    // indent; before the fix this became a character node and the dialogue
+    // block was destroyed in the PDF export.
+    expect(
+      detectElement(`${CHARACTER_INDENT}Luca, ascolta. Non mollare.`),
+    ).toBe("dialogue");
+  });
+
+  it("keeps ALL-CAPS text at CHARACTER_INDENT as character", () => {
+    expect(detectElement(`${CHARACTER_INDENT}MARCO (V.O.)`)).toBe("character");
+  });
+
+  it("keeps punctuated ALL-CAPS cues like DOTT. ROSSI as character", () => {
+    // The indented-cue path must stay looser than the plain-Fountain
+    // heuristic: dots in abbreviated honorifics are valid in cues.
+    expect(detectElement(`${CHARACTER_INDENT}DOTT. ROSSI`)).toBe("character");
+  });
+
+  it("keeps an empty CHARACTER_INDENT line as character (writer typing)", () => {
+    expect(detectElement(CHARACTER_INDENT)).toBe("character");
+  });
+
+  it("classifies indented text with no letters as dialogue", () => {
+    expect(detectElement(`${CHARACTER_INDENT}1234.`)).toBe("dialogue");
+  });
+
+  it("does not affect canonical DIALOGUE_INDENT speech", () => {
+    expect(detectElement(`${DIALOGUE_INDENT}Va bene, arrivo.`)).toBe(
+      "dialogue",
+    );
+  });
+});
+
 describe("detectElement — action", () => {
   it("is the default for plain text", () => {
     expect(detectElement("Filippo entra in cucina.")).toBe("action");
