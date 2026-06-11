@@ -511,6 +511,38 @@ const loadUpstreamNarrative = (
   );
 };
 
+// The screenplay's upstream chain, nearest-first. The screenplay is NOT a
+// DocumentType (it lives in its own table), so it cannot key UPSTREAM_SOURCES —
+// but its first draft derives from the same narrative chain (BUG-N67).
+const SCREENPLAY_UPSTREAM_SOURCES: readonly DocumentType[] = [
+  DocumentTypes.TREATMENT,
+  DocumentTypes.OUTLINE,
+  DocumentTypes.SYNOPSIS,
+  DocumentTypes.SOGGETTO,
+  DocumentTypes.LOGLINE,
+];
+
+/**
+ * Loads the narrative material the screenplay FIRST DRAFT builds from
+ * (treatment → scaletta → sinossi → soggetto → logline, nearest-first).
+ * Unlike `loadUpstreamNarrative` there is no screenplay fallback — the
+ * screenplay IS the target. Returns an empty `UpstreamSource` when nothing
+ * upstream has content, so the caller fails loudly instead of generating from
+ * thin air. Consumed by `propose_screenplay_from_narrative` (BUG-N67).
+ */
+export const loadScreenplayUpstreamNarrative = (
+  db: Db,
+  projectId: string,
+): ResultAsync<UpstreamSource, CesareError> => {
+  const docLoads = SCREENPLAY_UPSTREAM_SOURCES.map((type) =>
+    loadDocumentForType(db, projectId, type).map((doc) => ({
+      label: docTypeLabelUpper(type),
+      content: doc?.content ?? "",
+    })),
+  );
+  return ResultAsync.combine(docLoads).map(formatUpstreamSource);
+};
+
 // ─── Draft insertion ──────────────────────────────────────────────────────────
 //
 // Auto-versioning (create-version-before-apply + rollback-on-error) now lives in

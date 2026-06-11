@@ -22,12 +22,15 @@ const haikuJson = (json: string): HaikuResult => ({
   stopReason: "end_turn",
 });
 
+// Mirrors production `DOCUMENT_PAGE_CLASSIFIER_TOOLS` (cesare.server.ts): the
+// document generators PLUS the screenplay first-draft tool (BUG-N67).
 const DOC_TOOLS = new Set([
   "write_logline",
   "propose_soggetto_v2",
   "propose_synopsis_from_screenplay",
   "propose_scaletta_from_soggetto",
   "propose_treatment_from_narrative",
+  "propose_screenplay_from_narrative",
 ]);
 
 const SCREENPLAY_TOOLS = new Set([
@@ -380,6 +383,32 @@ const DOC_INTENT_ROWS: ReadonlyArray<IntentRow> = [
     confidence: 0.75,
     expectedTool: "propose_treatment_from_narrative",
   },
+  // ── sceneggiatura: first draft (BUG-N67) ──
+  {
+    phrasing:
+      "partendo dal soggetto attivo, riesci a scrivermi la prima stesura della sceneggiatura?",
+    type: "write_screenplay",
+    confidence: 0.95,
+    expectedTool: "propose_screenplay_from_narrative",
+  },
+  {
+    phrasing: "scrivimi la prima stesura della sceneggiatura",
+    type: "write_screenplay",
+    confidence: 0.95,
+    expectedTool: "propose_screenplay_from_narrative",
+  },
+  {
+    phrasing: "genera la sceneggiatura dal trattamento",
+    type: "write_screenplay",
+    confidence: 0.95,
+    expectedTool: "propose_screenplay_from_narrative",
+  },
+  {
+    phrasing: "buttami giù la sceneggiatura",
+    type: "write_screenplay",
+    confidence: 0.9,
+    expectedTool: "propose_screenplay_from_narrative",
+  },
 ];
 
 describe("classifyIntent — R3 broad document table (write + derive + edit)", () => {
@@ -476,6 +505,42 @@ describe("classifyIntent — R3 broad screenplay table", () => {
       expect(result._unsafeUnwrap().suggestedTool).toBe(row.expectedTool);
     });
   }
+});
+
+// BUG-N67 — asking for the SCREENPLAY from the soggetto page must route to the
+// screenplay first-draft tool. Before the fix the document-page classifier had
+// NO screenplay intent: Haiku was forced to bucket "scrivimi la prima stesura
+// della sceneggiatura" into the nearest document intent (write_treatment) and
+// the loop then FORCED propose_treatment_from_narrative — the wrong entity.
+describe("classifyIntent — BUG-N67 screenplay-from-soggetto entity routing", () => {
+  it("routes the exact real-use phrasing to the screenplay tool, never the treatment", async () => {
+    callHaikuMock.mockReturnValue(
+      okAsync(haikuJson('{"type":"write_screenplay","confidence":0.95}')),
+    );
+    const result = await classifyIntent({
+      userMessage:
+        "partendo dal soggetto attivo, riesci a scrivermi la prima stesura della sceneggiatura?",
+      page: "soggetto",
+      availableTools: DOC_TOOLS,
+    });
+    const intent = result._unsafeUnwrap();
+    expect(intent.suggestedTool).toBe("propose_screenplay_from_narrative");
+    expect(intent.suggestedTool).not.toBe("propose_treatment_from_narrative");
+  });
+
+  it("sends the soggetto page a classifier schema that OFFERS write_screenplay", async () => {
+    callHaikuMock.mockReturnValue(
+      okAsync(haikuJson('{"type":"question","confidence":0.5}')),
+    );
+    await classifyIntent({
+      userMessage: "scrivimi la prima stesura della sceneggiatura",
+      page: "soggetto",
+      availableTools: DOC_TOOLS,
+    });
+    const callArgs = callHaikuMock.mock.calls[0]?.[0] as { system: string };
+    expect(callArgs.system).toContain('"write_screenplay"');
+    expect(callArgs.system).toContain("NOMINA vince SEMPRE");
+  });
 });
 
 // Genuine questions / comments must NEVER force a tool — they stay a chat answer.

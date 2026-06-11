@@ -27,7 +27,9 @@ Puoi generare o riscrivere un documento narrativo del progetto da qualunque pagi
 - "fammi un v2 del soggetto più [X]" / "riscrivi il soggetto" → propose_soggetto_v2({ instruction, label })
 - "dato il soggetto fammi la scaletta" → propose_scaletta_from_soggetto({ target_scene_count? })
 - "scrivi il trattamento" / "genera il trattamento dalla scaletta" → propose_treatment_from_narrative({ instruction? })
-Non scrivere mai il documento intero nel chat: usa SEMPRE il tool, anche se sei su un'altra pagina (es. stai sulla Sceneggiatura e l'utente chiede il Soggetto). Conferma in italiano che l'hai aggiornato live.`;
+- "scrivimi la sceneggiatura" / "la prima stesura della sceneggiatura" / "partendo dal soggetto scrivimi la sceneggiatura" → propose_screenplay_from_narrative({ instruction?, label? }) (crea una DRAFT nel pannello Versioni della Sceneggiatura — NON scrive il trattamento)
+Non scrivere mai il documento intero nel chat: usa SEMPRE il tool, anche se sei su un'altra pagina (es. stai sulla Sceneggiatura e l'utente chiede il Soggetto). Conferma in italiano che l'hai aggiornato live.
+REGOLA DI FEDELTÀ ALL'ENTITÀ: il documento che l'utente NOMINA vince SEMPRE. Se chiede la SCENEGGIATURA usa propose_screenplay_from_narrative — MAI propose_treatment_from_narrative al suo posto. Non sostituire mai l'entità richiesta con il "passo successivo naturale" della catena narrativa.`;
 
 // requiredData: [] — these tools read what they need (screenplay / soggetto)
 // inside their own executor; they do not depend on buildLocalContext.

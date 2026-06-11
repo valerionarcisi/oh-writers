@@ -914,19 +914,24 @@ const assembleContext = (
                         // / outline / treatment). This defines the race out of
                         // existence: text tools like expand_section always see
                         // the open document, never an empty context.
-                        const activeDocument: ActiveDocumentRow | null = (() => {
-                          const byId = activeDocId
-                            ? projectDocuments.find((d) => d.id === activeDocId)
-                            : undefined;
-                          const byPage =
-                            byId ??
-                            (isDocumentPage(pageContext.page)
+                        const activeDocument: ActiveDocumentRow | null =
+                          (() => {
+                            const byId = activeDocId
                               ? projectDocuments.find(
-                                  (d) => d.type === pageContext.page,
+                                  (d) => d.id === activeDocId,
                                 )
-                              : undefined);
-                          return byPage ? { ...byPage, isActive: true } : null;
-                        })();
+                              : undefined;
+                            const byPage =
+                              byId ??
+                              (isDocumentPage(pageContext.page)
+                                ? projectDocuments.find(
+                                    (d) => d.type === pageContext.page,
+                                  )
+                                : undefined);
+                            return byPage
+                              ? { ...byPage, isActive: true }
+                              : null;
+                          })();
                         // Load bible lazily — never block on errors (return null on failure)
                         return loadFilmBible(db, projectId)
                           .map((bible) => ({
@@ -1137,18 +1142,23 @@ WORKFLOW:
 - "fammi un v2 del soggetto più [X]" / "riscrivi il soggetto in modo [X]" → propose_soggetto_v2({ instruction: "...", label: "v2 [hint]" })
 - "dato il soggetto fammi la scaletta" / "genera la scaletta dal soggetto" → propose_scaletta_from_soggetto({ target_scene_count? })
 - "scrivi il trattamento" / "genera il trattamento dalla scaletta" → propose_treatment_from_narrative({ instruction? })
+- "scrivimi la sceneggiatura" / "la prima stesura della sceneggiatura" / "partendo dal soggetto scrivimi la sceneggiatura" → propose_screenplay_from_narrative({ instruction?, label? }) (crea una DRAFT nel pannello Versioni della Sceneggiatura — NON scrive il trattamento)
 
 ❌ SBAGLIATO:
 "Ora ti scrivo la logline: …"
 (Scrive il testo nella chat, non chiama il tool. NON FARE COSÌ.)
 "Leggo la sceneggiatura, poi ti scrivo la sinossi qui sotto."
 (Stessa cosa. Niente testo nel chat per documenti interi.)
+[utente chiede la SCENEGGIATURA → propose_treatment_from_narrative]
+(Entità sbagliata: l'utente ha nominato la sceneggiatura, non il trattamento. NON FARE COSÌ.)
 
 ✅ CORRETTO:
 [propose_logline_from_screenplay({ instruction: "più commerciale" })]
 "Ho generato una logline draft per il progetto. Vai sulla pagina logline per accettarla o scartarla dal banner sopra l'editor."
 
-REGOLA FORTE: se il documento attivo è VUOTO o l'utente chiede "scrivi/genera/crea il [documento]", DEVI chiamare il tool propose_*. Mai scrivere il documento intero nel chat. Sei attualmente sul documento ${label}. Tutti i tool di generazione sono comunque disponibili: se l'utente chiede un documento diverso, eseguilo lo stesso e indica nel messaggio finale dove vedere la draft.`;
+REGOLA FORTE: se il documento attivo è VUOTO o l'utente chiede "scrivi/genera/crea il [documento]", DEVI chiamare il tool propose_*. Mai scrivere il documento intero nel chat. Sei attualmente sul documento ${label}. Tutti i tool di generazione sono comunque disponibili: se l'utente chiede un documento diverso, eseguilo lo stesso e indica nel messaggio finale dove vedere la draft.
+
+REGOLA DI FEDELTÀ ALL'ENTITÀ: il documento che l'utente NOMINA vince SEMPRE. Se chiede la SCENEGGIATURA usa propose_screenplay_from_narrative — MAI propose_treatment_from_narrative al suo posto. Non sostituire mai l'entità richiesta con il "passo successivo naturale" della catena narrativa: la catena suggerisce, l'utente decide.`;
 };
 
 const buildBreakdownToolsGuidance = (_page: PageContext["page"]): string => {
@@ -1362,7 +1372,8 @@ TOOLS DISPONIBILI SULLA SCENEGGIATURA:
 - rewrite_scene({ scene_number, new_content }): riscrive UNA SOLA scena con effetto typewriter. Il new_content DEVE contenere ESATTAMENTE UNO slugline (INT./EXT.) — mai due. Per riscritture multi-scena usa propose_screenplay_revision o merge_scenes.
 - merge_scenes({ from, to, hint? }): FONDE più scene consecutive in una sola. Usa quando l'utente dice "unisci le scene N-M", "queste due scene sono in realtà una", "compatta queste scene". Il numero finale di scene cala.
 - delete_scene({ scene_number }): ELIMINA una scena. Usa quando l'utente dice "togli questa scena", "elimina sc.N", "rimuovi". Le scene successive vengono rinumerate.
-- propose_screenplay_revision({ scope, instruction, label }): riscrittura macro libera. Usa quando l'utente chiede "scrivi una v2", "riscrivi l'Atto II", "ambienta in un ristorante stellato", "tutto in una stanza", "rendi più tesa l'intera scena". Crea una DRAFT version visibile nel drawer Versioni con diff side-by-side. Lo 'scope' può essere { kind: "scene_range", from, to } o { kind: "whole_screenplay" }.
+- propose_screenplay_revision({ scope, instruction, label }): riscrittura macro libera di una sceneggiatura GIÀ SCRITTA. Usa quando l'utente chiede "scrivi una v2", "riscrivi l'Atto II", "ambienta in un ristorante stellato", "tutto in una stanza", "rendi più tesa l'intera scena". Crea una DRAFT version visibile nel drawer Versioni con diff side-by-side. Lo 'scope' può essere { kind: "scene_range", from, to } o { kind: "whole_screenplay" }.
+- propose_screenplay_from_narrative({ instruction?, label? }): scrive la PRIMA STESURA della sceneggiatura in Fountain dal materiale narrativo a monte (trattamento, scaletta, sinossi, soggetto, logline). Crea una DRAFT version nel pannello Versioni. Usa quando l'utente chiede "scrivimi la sceneggiatura", "la prima stesura della sceneggiatura", "sceneggiatura dal trattamento/soggetto". Se l'utente nomina la SCENEGGIATURA il bersaglio è la sceneggiatura — MAI scrivere il trattamento al suo posto.
 - propose_rename_entity({ kind: "character" | "location", from, to }): trova tutte le occorrenze di un personaggio o di una location nella sceneggiatura e propone il rename in una sola operazione. Usa per "rinomina X in Y".
 
 ROUTING TOOL — REGOLE DI SCELTA:
@@ -1371,6 +1382,7 @@ ROUTING TOOL — REGOLE DI SCELTA:
 - "unisci scene N e M" / "fondi sc.N-M" / "queste due scene sono una sola" → merge_scenes
 - "elimina/togli sc.N" → delete_scene
 - "riscrivi atto II" / "ambienta tutto in X" / range >1 scena con cambio strutturale → propose_screenplay_revision
+- "scrivimi la sceneggiatura" / "prima stesura della sceneggiatura" (dal materiale a monte) → propose_screenplay_from_narrative
 - "rinomina personaggio/location" → propose_rename_entity
 
 REGOLA TASSATIVA: per QUALSIASI richiesta che produca testo nuovo lungo (più di 2-3 righe Fountain), DEVI chiamare un tool propose_/rewrite_/merge_/delete_. Mai scrivere il Fountain risultante nel chat.
@@ -1666,6 +1678,8 @@ const SCREENPLAY_PROPOSE_TOOLS = new Set<string>([
   "rewrite_scene",
   "merge_scenes",
   "delete_scene",
+  // BUG-N67 — the screenplay FIRST DRAFT generator (from upstream narrative).
+  "propose_screenplay_from_narrative",
 ]);
 
 // Bug #4 — the document-generation tools the intent classifier may force on a
@@ -1678,6 +1692,18 @@ const DOCUMENT_GEN_TOOLS = new Set<string>([
   "propose_synopsis_from_screenplay",
   "propose_scaletta_from_soggetto",
   "propose_treatment_from_narrative",
+]);
+
+// BUG-N67 — a request NAMING the sceneggiatura issued from a document page
+// (e.g. "partendo dal soggetto, scrivimi la prima stesura della sceneggiatura"
+// on the Soggetto page) must be forcible to the screenplay first-draft tool.
+// Before this set existed the classifier had no screenplay option on document
+// pages and remapped the request onto the nearest document generator
+// (write_treatment → propose_treatment_from_narrative): Cesare wrote the
+// WRONG entity. Universal dispatch already exposes the tool on every page.
+const DOCUMENT_PAGE_CLASSIFIER_TOOLS = new Set<string>([
+  ...DOCUMENT_GEN_TOOLS,
+  "propose_screenplay_from_narrative",
 ]);
 
 // The screenplay page is ALSO the page a Cesare SESSION resolves to by default
@@ -1699,10 +1725,10 @@ const SCREENPLAY_PAGE_CLASSIFIER_TOOLS = new Set<string>([
 const CLASSIFIER_TOOLS_BY_PAGE: Readonly<Record<string, ReadonlySet<string>>> =
   {
     screenplay: SCREENPLAY_PAGE_CLASSIFIER_TOOLS,
-    soggetto: DOCUMENT_GEN_TOOLS,
-    synopsis: DOCUMENT_GEN_TOOLS,
-    outline: DOCUMENT_GEN_TOOLS,
-    treatment: DOCUMENT_GEN_TOOLS,
+    soggetto: DOCUMENT_PAGE_CLASSIFIER_TOOLS,
+    synopsis: DOCUMENT_PAGE_CLASSIFIER_TOOLS,
+    outline: DOCUMENT_PAGE_CLASSIFIER_TOOLS,
+    treatment: DOCUMENT_PAGE_CLASSIFIER_TOOLS,
   };
 
 const callCesareWithScreenplayTools = (
