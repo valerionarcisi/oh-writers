@@ -26,6 +26,14 @@ Item format: `[id] short title — link (spec NN / audit A-0x / learning)`
   the findings at the top of NEXT. The stabilization sprint continues after — **no new
   features** until the existing surface is solid.
 
+### Filed 2026-06-11 (real-use session #2 — Valerio + collega, progetto reale) — TOP PRIORITY
+
+-A. **[BUG-N67] Cesare scrive il TRATTAMENTO quando gli chiedi la SCENEGGIATURA** — entity routing dei tool universali, bug con AI reale, fix + real-AI smoke obbligatorio. `docs/BUGS.md`.
+-B. **[BUG-N66] Versioning Cesare: una versione per OGNI tentativo** — policy owner: default sovrascrive la corrente, nuova versione solo su richiesta esplicita (o Cesare chiede). Vale per tutte le parti narrative. Serve spec (tocca auto-version invariant). `docs/BUGS.md`.
+-C. **[BUG-N63] Export PDF sceneggiatura: dialoghi persi + frontespizio incompleto + bold scene heading** — fedeltà export, tre superfici in un fronte. `docs/BUGS.md`.
+-D. **[BUG-N64] `?versions=…&peek=cesare` spacca la pagina** — contesa fra surface routate, deve fallire chiuso. `docs/BUGS.md`.
+-E. **[BUG-N65] Composer Cesare rigido** — textarea auto-grow nel drawer e nella session page. `docs/BUGS.md`.
+
 ## NEXT (prioritised — narrative walk topics, then the rest)
 
 -0. **[N-38 / Spec 63] Entity change feedback — banner + adaptive block highlight** — replace the dead `DraftBanner` with a persistent banner "✦ Cesare ha aggiornato il \<Entity> · [Vedi cosa è cambiato] · [↩ Annulla]". ADAPTIVE in-text feedback: surgical edit (<~40% words) → highlight changed BLOCKS in place (clears per-block when the author edits that block / "Ho visto" / Cmd-Z); large rewrite (>=~40%) → no highlight, only the split bullets. "↩ Annulla" reverts the whole edit via the pre-edit snapshot; NO accept (already applied). Never a timeout. All narrative docs via shared editor. `docs/specs/63-entity-change-feedback-banner.md` + `docs/adr/0003` (+ ADR-0001 reconciliation). _Deferred 2026-06-05 — the inline word-diff removal shipped; this banner+adaptive-highlight is the remaining half._

@@ -23,6 +23,40 @@ E2E first; screenshots in a recap; gates green).
 
 ## Open
 
+### BUG-N63 — screenplay PDF export loses dialogue, title page incomplete, scene-heading bold mismatch (2026-06-11, real-use session)
+
+- Severity: ALTO (the export is the deliverable a writer hands out; silent content loss)
+- Status: open
+- Repro: real project "Scienze Naturali - Federico II" → export PDF. Observed: (a) DIALOGUE lines present in the editor are missing from the PDF; (b) the frontespizio carries only the title — author/contact info missing; (c) scene-heading bold in the PDF does not match the editor's settings.
+- Proof: owner screenshots 2026-06-11 (title page bare; p.2 shows sceneggiatura where later dialogue runs are dropped).
+- Notes: three distinct surfaces (doc→PDF serializer dropping dialogue nodes; title-page template fields; heading style mapping) — triage as one export-fidelity front.
+
+### BUG-N64 — `?vcur=…&versions=…&peek=cesare` combo blanks the whole page (2026-06-11, real-use session)
+
+- Severity: ALTO (page fully broken, only the Versions lane renders; no error fallback)
+- Repro: `/projects/:id/soggetto?vcur=<id>&versions=<docId>&peek=cesare` → main lane EMPTY (white), Versions SplitDrawer on the right, no editor, no Cesare lane, no error boundary.
+- Proof: owner screenshot 2026-06-11. Likely the two routed surfaces (versions lane + cesare peek) contend for the split slot and the host lane unmounts; should be fail-closed (one surface wins) per Spec 46/49.
+
+### BUG-N65 — Cesare composer textbox is rigid and uncomfortable for writing (2026-06-11, real-use session)
+
+- Severity: MEDIO (UX, hit on every interaction)
+- Repro: the "Chiedi a Cesare…" input is a fixed single-line box; writing multi-sentence prompts (the normal case in a real session) is cramped. Owner: "deve essere più comodo ed elastico".
+- Fix direction: auto-growing textarea (min 1 row → grows with content up to a cap, Shift+Enter newline), in both the floating drawer and the session page composer.
+
+### BUG-N66 — Cesare creates a version for EVERY attempt/draft; owner policy: overwrite current unless a new version is asked (2026-06-11, real-use session)
+
+- Severity: ALTO (version list floods — v13/v14/v15 "Cesare · modifica" + 5-6 drafts for one screenplay request; the Versions surface becomes unusable)
+- Repro: iterative Cesare work on soggetto/screenplay → every turn lands a new version; a single "write the screenplay" request produced 5/6 drafts before the right one.
+- OWNER POLICY (decided 2026-06-11, applies to EVERY narrative part): by default Cesare OVERWRITES the current version with surgical edits; a NEW version only when the user explicitly asks — or Cesare may ASK the user ("ne faccio una nuova versione?") when the requested change is large. Reconcile with the auto-version invariant (CLAUDE.md point 3: snapshot-before-apply for revertibility) — e.g. ONE auto-checkpoint per session/turn-group instead of per turn, or collapse consecutive Cesare versions.
+- Needs a spec before implementation (touches auto-version.effect, version naming, and the agentic-edit contract).
+
+### BUG-N67 — asked Cesare for the SCREENPLAY from the soggetto; it wrote the TREATMENT (2026-06-11, real-use session, real AI)
+
+- Severity: ALTO (wrong entity written — trust-breaking; user said "scrivimi la prima stesura della sceneggiatura" and the reply says "Ho applicato la prima stesura nel documento Trattamento")
+- Repro: flow logline → soggetto → then "partendo dal soggetto attivo, riesci a scrivermi la prima stesura della sceneggiatura?" → Cesare wrote the Trattamento document instead of the screenplay.
+- Proof: owner screenshot of the session (reply card "Aggiornato Soggetto" then "…nel documento Trattamento").
+- Notes: tool-routing/entity-selection failure in the universal tools (possibly the prompt biases toward the "next narrative step" trattamento, or the screenplay write-tool is gated/missing from that page context). REAL-AI bug — must be fixed and verified with a real-AI smoke (`cost:smoke:cesare`-style), not mock.
+
 ### BUG-N61 — 3 mock-ui E2E red on main: honest-card entity label + updated-banner show-changes/stack (2026-06-10)
 
 - Severity: MEDIO (contract gap, not a regression)
