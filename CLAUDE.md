@@ -23,6 +23,7 @@ Detailed rules live in `docs/conventions/`. Load the file that matches the task:
 - [React Patterns](docs/conventions/react.md) — reducer + ts-pattern, feature folder
 - [CSS](docs/conventions/css.md) — CSS Modules, tokens, flex-first, nesting, container queries, logical props
 - [Loading states](docs/conventions/loading-states.md) — `Skeleton`/`SkeletonCard` mandatory
+- [Specs](docs/conventions/specs.md) — when a spec is required (invariants, irreversibility, shared truth, new domain) vs straight-to-code
 - [Naming](docs/conventions/naming.md)
 - [Code Comments](docs/conventions/code-comments.md)
 - [Testing](docs/conventions/testing.md) — Vitest + Playwright + Vernissage + cost smoke
@@ -52,7 +53,7 @@ Detailed rules live in `docs/conventions/`. Load the file that matches the task:
 
 A change is **done** only when it meets the [Definition of Done](docs/conventions/definition-of-done.md): tests at every applicable layer (E2E first), screenshots in a final recap, gates green, tracked in `docs/BACKLOG.md`/`docs/BUGS.md`.
 
-**Before implementation:** every plan or brainstorm that gets approved must produce a spec file in `docs/specs/` before any code is written. Name it `NN-feature-name.md` (or `NNb-feature-name.md` for sub-specs of an existing numbered spec). The spec is written first, then implementation starts.
+**Before implementation:** a spec in `docs/specs/` is required ONLY when the work changes a product invariant/contract, makes a hard-to-reverse decision (schema, API shape, dependency, pattern), needs to be shared across agents/sessions, or designs a new domain. Bug fixes, refactors, and small reversible improvements do NOT get a spec — the `docs/BUGS.md` entry or the tests are the contract. Full criterion: [Specs](docs/conventions/specs.md). Name specs `NN-feature-name.md` (or `NNb-…` for sub-specs); when one is required, it is written first.
 
 When in doubt about an architectural decision, stop and ask.
 
