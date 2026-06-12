@@ -33,6 +33,7 @@ Item format: `[id] short title — link (spec NN / audit A-0x / learning)`
 -C. **[BUG-N63] Export PDF sceneggiatura: dialoghi persi + frontespizio incompleto + bold scene heading** — fedeltà export, tre superfici in un fronte. `docs/BUGS.md`.
 -D. **[BUG-N64] `?versions=…&peek=cesare` spacca la pagina** — contesa fra surface routate, deve fallire chiuso. `docs/BUGS.md`.
 -E. **[BUG-N65] Composer Cesare rigido** — textarea auto-grow nel drawer e nella session page. `docs/BUGS.md`.
+-F. **[BUG-N68] Breakdown "Per scena" spaginato + spoglio algoritmico** — audit codice breakdown, fix scoping/layout, spec per spoglio corretto SENZA AI (deterministico). `docs/BUGS.md`.
 
 ## NEXT (prioritised — narrative walk topics, then the rest)
 

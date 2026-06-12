@@ -57,6 +57,14 @@ E2E first; screenshots in a recap; gates green).
 - Proof: owner screenshot of the session (reply card "Aggiornato Soggetto" then "…nel documento Trattamento").
 - Notes: tool-routing/entity-selection failure in the universal tools (possibly the prompt biases toward the "next narrative step" trattamento, or the screenplay write-tool is gated/missing from that page context). REAL-AI bug — must be fixed and verified with a real-AI smoke (`cost:smoke:cesare`-style), not mock.
 
+### BUG-N68 — breakdown "Per scena" is mis-paginated; spoglio needs a correct AI-free algorithmic basis (2026-06-11, real-use session)
+
+- Severity: MEDIO (core production surface; wrong scoping/layout on a real project)
+- Status: open (lane E — audit + fix, wave 2)
+- Repro: real project "Scienze Naturali - Federico II" → `/breakdown`, "Per scena" tab: the header says SC. 1 (€3360/giornata, Cast 1 · Location 1 · Oggetti 3 · Suono 2) but the sheet below renders the WHOLE screenplay (scenes 1..N) in one continuous run, with element underlines spanning scenes that are not SC. 1. Owner: "lo spoglio sembra spaginato".
+- Proof: owner screenshot 2026-06-11.
+- Owner ask: audit the breakdown code, improve it, fix the bugs found, AND determine what a CORRECT spoglio requires with NO AI — purely algorithmic/deterministic extraction from the screenplay structure (scene scoping, headings → INT/EXT·location·day/night, character cues → cast, counts). Analysis spec + concrete fixes.
+
 ### BUG-N61 — 3 mock-ui E2E red on main: honest-card entity label + updated-banner show-changes/stack (2026-06-10)
 
 - Severity: MEDIO (contract gap, not a regression)
