@@ -146,6 +146,10 @@ describe("detectElement — speech at character indent (BUG-N63)", () => {
     expect(detectElement(`${CHARACTER_INDENT}DOTT. ROSSI`)).toBe("character");
   });
 
+  it("keeps an accented ALL-CAPS cue as character", () => {
+    expect(detectElement(`${CHARACTER_INDENT}È`)).toBe("character");
+  });
+
   it("keeps an empty CHARACTER_INDENT line as character (writer typing)", () => {
     expect(detectElement(CHARACTER_INDENT)).toBe("character");
   });

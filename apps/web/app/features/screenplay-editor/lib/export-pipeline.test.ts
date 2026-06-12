@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { buildExportPipeline, buildFountainFilename } from "./export-pipeline.js";
+import {
+  buildExportPipeline,
+  buildFountainFilename,
+} from "./export-pipeline.js";
 
 const FOUNTAIN = `Title: Test\n\nINT. UNO - GIORNO\n\nx\n\nEXT. DUE - SERA\n\ny\n\nINT. TRE - NOTTE\n\nz\n`;
 
@@ -55,12 +58,30 @@ describe("buildExportPipeline", () => {
     expect(r.invocation.cliSettings).toContain("each_scene_on_new_page=true");
     expect(r.invocation.profileOverrides).toEqual({});
   });
+
+  // BUG-N63 defect 3: the editor always renders scene headings bold, while
+  // afterwriting defaults to non-bold — every format must carry the override.
+  it.each([
+    "standard",
+    "sides",
+    "ad_copy",
+    "reading_copy",
+    "one_scene_per_page",
+  ] as const)("%s emboldens scene headings to match the editor", (format) => {
+    const r = buildExportPipeline(format, {
+      fountain: FOUNTAIN,
+      sceneSelection: ["1"],
+    });
+    expect(r.invocation.cliSettings).toContain("embolden_scene_headers=true");
+  });
 });
 
 describe("buildFountainFilename", () => {
   it("slugifies project and screenplay titles into a .fountain filename", () => {
     const name = buildFountainFilename("Il Grande Film", "Versione Definitiva");
-    expect(name).toMatch(/^il-grande-film-versione-definitiva-\d{4}-\d{2}-\d{2}\.fountain$/);
+    expect(name).toMatch(
+      /^il-grande-film-versione-definitiva-\d{4}-\d{2}-\d{2}\.fountain$/,
+    );
   });
 
   it("handles special characters and spaces safely", () => {

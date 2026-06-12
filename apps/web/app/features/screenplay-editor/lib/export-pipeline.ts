@@ -54,11 +54,19 @@ export interface PipelineResult {
 }
 
 /**
+ * The editor always renders scene headings bold (prosemirror.module.css
+ * `.pmHeading`), while afterwriting's `embolden_scene_headers` defaults to
+ * false — every format must carry the override or the PDF diverges from
+ * what the writer sees (BUG-N63 defect 3).
+ */
+const SCENE_HEADING_STYLE_SETTING = "embolden_scene_headers=true";
+
+/**
  * Standard production format. Industry default = scene numbers visible on
  * BOTH sides of every slugline (afterwriting's built-in default is "none").
  */
 const STANDARD_INVOCATION: AwcInvocation = {
-  cliSettings: ["scenes_numbers=both"],
+  cliSettings: ["scenes_numbers=both", SCENE_HEADING_STYLE_SETTING],
   profileOverrides: {},
 };
 
@@ -68,7 +76,7 @@ const STANDARD_INVOCATION: AwcInvocation = {
  * thinks 57 lines fit on a page and overflow ruins pagination.
  */
 const READING_COPY_INVOCATION: AwcInvocation = {
-  cliSettings: ["scenes_numbers=none"],
+  cliSettings: ["scenes_numbers=none", SCENE_HEADING_STYLE_SETTING],
   profileOverrides: {
     a4: { line_spacing: 2, lines_per_page: 28 },
     usletter: { line_spacing: 2, lines_per_page: 30 },
@@ -84,7 +92,7 @@ const READING_COPY_INVOCATION: AwcInvocation = {
  * runner preserves the default `feed`/`italic`/etc.
  */
 const AD_COPY_INVOCATION: AwcInvocation = {
-  cliSettings: ["scenes_numbers=both"],
+  cliSettings: ["scenes_numbers=both", SCENE_HEADING_STYLE_SETTING],
   profileOverrides: {
     a4: {
       scene_heading: { max: 36 },
@@ -114,14 +122,18 @@ const AD_COPY_INVOCATION: AwcInvocation = {
 };
 
 const ONE_SCENE_PER_PAGE_INVOCATION: AwcInvocation = {
-  cliSettings: ["each_scene_on_new_page=true", "scenes_numbers=both"],
+  cliSettings: [
+    "each_scene_on_new_page=true",
+    "scenes_numbers=both",
+    SCENE_HEADING_STYLE_SETTING,
+  ],
   profileOverrides: {},
 };
 
 const SIDES_INVOCATION: AwcInvocation = {
   // Sides need numbers visible on both sides; cover page is suppressed via
   // the modal's `includeCoverPage=false` default.
-  cliSettings: ["scenes_numbers=both"],
+  cliSettings: ["scenes_numbers=both", SCENE_HEADING_STYLE_SETTING],
   profileOverrides: {},
 };
 

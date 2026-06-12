@@ -86,7 +86,7 @@ export const detectElement = (
 // old rule accepted every indented line, so this only ever reclassifies
 // mixed-case lines (speech) — never fewer cues than before.
 const isUppercaseCue = (trimmed: string): boolean =>
-  trimmed === trimmed.toUpperCase() && /[A-Z]/.test(trimmed);
+  trimmed === trimmed.toUpperCase() && /\p{L}/u.test(trimmed);
 
 // Permissive plain-Fountain cue detector.
 //

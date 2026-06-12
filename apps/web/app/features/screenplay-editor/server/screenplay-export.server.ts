@@ -125,24 +125,23 @@ export const exportScreenplayPdf = createServerFn({ method: "POST" })
 
       const { buildScreenplayPdf, buildScreenplayFilename } =
         await import("../lib/pdf-screenplay");
-      const { prependTitlePageToFountain } =
-        await import("../lib/title-page-prepend");
-      const { buildExportPipeline } = await import("../lib/export-pipeline");
+      const { serializeScreenplayExport } =
+        await import("../lib/screenplay-export-serializer");
 
-      // Cover page is prepended BEFORE the format pipeline so Sides can
-      // strip it back out (sides shouldn't carry a cover page even if the
-      // user toggles it on by mistake).
-      const fountainWithCover = data.includeCoverPage
-        ? prependTitlePageToFountain(fountain, {
-            title: project.title,
-            author: project.titlePageAuthor,
-            draftDate: project.titlePageDraftDate,
-          })
-        : fountain;
-
-      const pipelineResult = buildExportPipeline(data.format, {
-        fountain: fountainWithCover,
+      const pipelineResult = serializeScreenplayExport({
+        fountain,
+        format: data.format,
+        includeCoverPage: data.includeCoverPage,
         sceneSelection: data.sceneNumbers,
+        legacyTitlePage: {
+          title: project.title,
+          author: project.titlePageAuthor,
+          basedOn: project.titlePageBasedOn,
+          contact: project.titlePageContact,
+          notes: project.titlePageNotes,
+          draftDate: project.titlePageDraftDate,
+        },
+        titlePageDoc: project.titlePageDoc,
       });
 
       const buffer = await buildScreenplayPdf(pipelineResult.fountain, {
