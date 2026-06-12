@@ -31,8 +31,6 @@ Item format: `[id] short title — link (spec NN / audit A-0x / learning)`
 -A. **[BUG-N67] Cesare scrive il TRATTAMENTO quando gli chiedi la SCENEGGIATURA** — entity routing dei tool universali, bug con AI reale, fix + real-AI smoke obbligatorio. `docs/BUGS.md`.
 -B. **[BUG-N66] Versioning Cesare: una versione per OGNI tentativo** — policy owner: default sovrascrive la corrente, nuova versione solo su richiesta esplicita (o Cesare chiede). Vale per tutte le parti narrative. Serve spec (tocca auto-version invariant). `docs/BUGS.md`.
 -C. **[BUG-N63] Export PDF sceneggiatura: dialoghi persi + frontespizio incompleto + bold scene heading** — fedeltà export, tre superfici in un fronte. `docs/BUGS.md`.
--D. **[BUG-N64] `?versions=…&peek=cesare` spacca la pagina** — contesa fra surface routate, deve fallire chiuso. `docs/BUGS.md`.
--E. **[BUG-N65] Composer Cesare rigido** — textarea auto-grow nel drawer e nella session page. `docs/BUGS.md`.
 -F. **[BUG-N68] Breakdown "Per scena" spaginato + spoglio algoritmico** — audit codice breakdown, fix scoping/layout, spec per spoglio corretto SENZA AI (deterministico). `docs/BUGS.md`.
 
 ## NEXT (prioritised — narrative walk topics, then the rest)
@@ -106,6 +104,14 @@ Item format: `[id] short title — link (spec NN / audit A-0x / learning)`
     to realign — OHW-093, audit-export, spec55-backbone ×3, versions-splitdrawer ×2).
     New: `pnpm db:backup` + `pnpm dev:session`; E2E webServer hardened vs dev ws-server.
     Open follow-ups: **BUG-N57** (ws flap remount loop), **BUG-N58** (observation).
+- [BUG-N64 + BUG-N65] routed aux surfaces fail-closed + Cesare composer auto-grow —
+  merged in `dbeffbcb` (`fix/n64-n65-current`): Versions now wins and strips `peek=cesare`
+  when both routed surfaces compete for the split slot; the Cesare composer is a shared
+  auto-growing textarea used by the floating drawer and session page. Gates: `tests/
+versions-peek-combo.spec.ts`, `tests/cesare-composer-autogrow.spec.ts`, unit
+  `packages/ui/src/primitives/ComposerTextarea/ComposerTextarea.test.tsx`. Screenshots:
+  `docs/audits/2026-06-12-n64-n65/composer-autogrow.png`,
+  `docs/audits/2026-06-12-n64-n65/versions-peek-failclosed.png`.
 - [Spec 66] Versions master→detail unificato + `[● Versioni]` chip in TopBar + per-page
   action cluster — merged via the stabilization batch above. Assorbe N-34/N-35/N-36.
 
