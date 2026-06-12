@@ -49,6 +49,14 @@ export interface UseRoutedSurfaceOptions {
   readonly param: string;
   /** Companion params cleared together with the primary on `close`. */
   readonly companions?: readonly string[];
+  /**
+   * Params of RIVAL routed surfaces, stripped on `open`/`navigateState`. The
+   * shell grid reserves a single auxiliary track (Spec 46/49), so the surface
+   * being opened claims it and its rivals must close — never two lanes at
+   * once (BUG-N64). See `routed-surface-arbitration.ts` for the deep-link
+   * backstop of the same rule.
+   */
+  readonly excludes?: readonly string[];
 }
 
 /**
@@ -69,7 +77,7 @@ function readSearch(search: unknown): Record<string, string> {
 export function useRoutedSurface(
   options: UseRoutedSurfaceOptions,
 ): UseRoutedSurfaceResult {
-  const { param, companions = [] } = options;
+  const { param, companions = [], excludes = [] } = options;
   const navigate = useNavigate();
   const location = useLocation();
   const { pathname } = location;
@@ -91,15 +99,22 @@ export function useRoutedSurface(
     () => (companionsKey ? companionsKey.split(",") : []),
     [companionsKey],
   );
+  const excludesKey = excludes.join(",");
+  const excludesList = useMemo(
+    () => (excludesKey ? excludesKey.split(",") : []),
+    [excludesKey],
+  );
 
   const open = useCallback(
     (next: string, extra?: Readonly<Record<string, string>>) => {
+      const rest = { ...searchRef.current };
+      for (const x of excludesList) delete rest[x];
       void navigate({
         to: pathname,
-        search: { ...searchRef.current, ...extra, [param]: next },
+        search: { ...rest, ...extra, [param]: next },
       });
     },
-    [navigate, pathname, param],
+    [navigate, pathname, param, excludesList],
   );
 
   const close = useCallback(() => {
@@ -125,12 +140,13 @@ export function useRoutedSurface(
     (next: string, extra?: Readonly<Record<string, string>>) => {
       const rest = { ...searchRef.current };
       for (const c of companionsList) delete rest[c];
+      for (const x of excludesList) delete rest[x];
       void navigate({
         to: pathname,
         search: { ...rest, ...extra, [param]: next },
       });
     },
-    [navigate, pathname, param, companionsList],
+    [navigate, pathname, param, companionsList, excludesList],
   );
 
   return {

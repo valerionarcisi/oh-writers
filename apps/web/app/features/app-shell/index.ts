@@ -34,6 +34,16 @@ export type {
   VersionsSurfaceState,
   VersionKind,
 } from "./versions-peek";
+export {
+  arbitrateRoutedSurfaces,
+  CESARE_PEEK_PARAMS,
+  VERSIONS_SURFACE_PARAMS,
+} from "./routed-surface-arbitration";
+export type {
+  RoutedSurfaceClaims,
+  RoutedSurfaceWinner,
+  RoutedSurfaceArbitration,
+} from "./routed-surface-arbitration";
 export { useRoutedSurface } from "./use-routed-surface";
 export type {
   UseRoutedSurfaceResult,

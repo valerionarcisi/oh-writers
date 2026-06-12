@@ -98,6 +98,7 @@ import { SplitToggleProvider, useSplitToggle } from "../split-toggle-context";
 import { publishLiveEdits } from "../cesare-live-edit-store";
 import { isCesarePeek } from "../cesare-peek";
 import { parseVersionsPeek } from "../versions-peek";
+import { arbitrateRoutedSurfaces } from "../routed-surface-arbitration";
 import { CesarePeekLane } from "./CesarePeekLane";
 import { SplitDrawerPreviewBody } from "./SplitDrawerPreviewBody";
 import { VersionsSplitLane } from "./VersionsSplitLane";
@@ -431,7 +432,34 @@ function AppShellInner({
   // the shell grid to add the peek lane column and the main lane reflows. The
   // floating Cesare sheet is unmounted while the lane is open so the chat never
   // duplicates.
-  const isCesareSplitActive = isCesarePeek(peek, projectId ?? null);
+  const isCesarePeekRequested = isCesarePeek(peek, projectId ?? null);
+
+  // Versions SplitDrawer (Spec 49). The raw `?versions` param is validated to a
+  // UUID (fail closed); a malformed / foreign id renders the host alone.
+  const versionsPeekResult = parseVersionsPeek(
+    versionsParam,
+    versionsStateParam,
+    versionsCurrentParam,
+    versionsKindParam,
+  );
+  const requestedVersionsPeek = versionsPeekResult.isOk()
+    ? versionsPeekResult.value
+    : null;
+
+  // BUG-N64 — the shell grid reserves ONE auxiliary track, so exactly one
+  // routed surface may mount beside the main lane. When a URL claims both
+  // (`?versions=…&peek=cesare`), the arbitration closes the loser at render
+  // time — the main lane never unmounts, no param combo can blank the page.
+  // The host route additionally strips the loser's params from the URL (see
+  // `_app.tsx`); this render-time gate is the synchronous backstop so even the
+  // first paint of a hostile deep link is already arbitrated.
+  const { winner: auxSurfaceWinner } = arbitrateRoutedSurfaces({
+    versionsOpen: requestedVersionsPeek !== null,
+    cesarePeekOpen: isCesarePeekRequested,
+  });
+  const isCesareSplitActive = auxSurfaceWinner === "cesare-peek";
+  const versionsPeek =
+    auxSurfaceWinner === "versions" ? requestedVersionsPeek : null;
 
   // When the split lane opens, collapse the rail ONCE to give the lane room.
   // We only act on the false→true edge so the user can re-open the rail
@@ -458,21 +486,10 @@ function AppShellInner({
     };
   }, [isCesareSplitActive]);
 
-  // Versions SplitDrawer (Spec 49). The raw `?versions` param is validated to a
-  // UUID (fail closed); a malformed / foreign id renders the host alone. When
-  // valid AND in the split state, `body[data-versions-split]` grows the third
-  // grid track so the page COMPRESSES beside the lane (same grid mechanism as
-  // the Cesare split). In `full` the lane escalates to its own overlay, so no
-  // grid track is reserved.
-  const versionsPeekResult = parseVersionsPeek(
-    versionsParam,
-    versionsStateParam,
-    versionsCurrentParam,
-    versionsKindParam,
-  );
-  const versionsPeek = versionsPeekResult.isOk()
-    ? versionsPeekResult.value
-    : null;
+  // When the Versions lane is open AND in the split state,
+  // `body[data-versions-split]` grows the third grid track so the page
+  // COMPRESSES beside the lane (same grid mechanism as the Cesare split). In
+  // `full` the lane escalates to its own overlay, so no grid track is reserved.
   const isVersionsSplitActive =
     versionsPeek !== null && versionsPeek.state === "split";
   // Master→detail width: the LIST is a narrow rail; opening a version's DETAIL

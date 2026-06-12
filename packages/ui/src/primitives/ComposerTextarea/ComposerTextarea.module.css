@@ -1,0 +1,21 @@
+.composerTextarea {
+  inline-size: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  resize: none;
+  line-height: 1.5;
+  min-block-size: 1.5em;
+  max-block-size: calc(8 * 1.5em);
+  overflow-y: auto;
+
+  &::placeholder {
+    color: var(--ds-text-faint);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+  }
+}

@@ -82,6 +82,7 @@ import {
   useSetActiveScene,
   useTopBarSlotPublisher,
   SaveStatusIndicator,
+  CESARE_PEEK_PARAMS,
 } from "~/features/app-shell";
 import type { ContextActionHandlers } from "~/features/app-shell";
 import { useTranslation } from "~/features/i18n";
@@ -978,11 +979,17 @@ export const ScreenplayEditor = forwardRef<
   const toggleVersionsDrawer = useCallback(() => {
     void navigate({
       to: ".",
-      search: (prev) => ({
-        ...prev,
-        versions: screenplay.id,
-        vkind: "screenplay" as const,
-      }),
+      search: (prev) => {
+        // Opening the Versions lane claims the single auxiliary slot: the
+        // rival Cesare peek closes (BUG-N64 arbitration).
+        const rest = { ...prev } as Record<string, unknown>;
+        for (const p of CESARE_PEEK_PARAMS) delete rest[p];
+        return {
+          ...rest,
+          versions: screenplay.id,
+          vkind: "screenplay" as const,
+        };
+      },
     });
   }, [navigate, screenplay.id]);
 

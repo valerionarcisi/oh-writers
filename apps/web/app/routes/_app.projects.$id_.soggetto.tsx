@@ -29,6 +29,7 @@ import {
   useContextActions,
   useSetActiveDocument,
   useRoutedSurface,
+  CESARE_PEEK_PARAMS,
   reportCurrentVersion,
   useHasEdited,
   useSaveStatePublisher,
@@ -190,6 +191,7 @@ function SoggettoPageReady({
   const versionsSurface = useRoutedSurface({
     param: "versions",
     companions: ["vstate", "vcur"],
+    excludes: CESARE_PEEK_PARAMS,
   });
   const isVersionsOpen = versionsSurface.value === soggettoDoc.id;
   const versionsOpen = versionsSurface.open;

@@ -34,14 +34,18 @@ E2E first; screenshots in a recap; gates green).
 ### BUG-N64 — `?vcur=…&versions=…&peek=cesare` combo blanks the whole page (2026-06-11, real-use session)
 
 - Severity: ALTO (page fully broken, only the Versions lane renders; no error fallback)
+- Status: fixed (`dbeffbcb`)
 - Repro: `/projects/:id/soggetto?vcur=<id>&versions=<docId>&peek=cesare` → main lane EMPTY (white), Versions SplitDrawer on the right, no editor, no Cesare lane, no error boundary.
-- Proof: owner screenshot 2026-06-11. Likely the two routed surfaces (versions lane + cesare peek) contend for the split slot and the host lane unmounts; should be fail-closed (one surface wins) per Spec 46/49.
+- Proof: `docs/audits/2026-06-12-n64-n65/versions-peek-failclosed.png`; verified by `tests/versions-peek-combo.spec.ts` against `dbeffbcb`.
+- Notes: the routed surfaces now fail closed: Versions wins, `peek=cesare` is stripped, and the main lane stays mounted.
 
 ### BUG-N65 — Cesare composer textbox is rigid and uncomfortable for writing (2026-06-11, real-use session)
 
 - Severity: MEDIO (UX, hit on every interaction)
+- Status: fixed (`dbeffbcb`)
 - Repro: the "Chiedi a Cesare…" input is a fixed single-line box; writing multi-sentence prompts (the normal case in a real session) is cramped. Owner: "deve essere più comodo ed elastico".
-- Fix direction: auto-growing textarea (min 1 row → grows with content up to a cap, Shift+Enter newline), in both the floating drawer and the session page composer.
+- Proof: `docs/audits/2026-06-12-n64-n65/composer-autogrow.png`; unit `packages/ui/src/primitives/ComposerTextarea/ComposerTextarea.test.tsx`; E2E `tests/cesare-composer-autogrow.spec.ts` on `dbeffbcb`.
+- Notes: shared `ComposerTextarea` primitive now powers both the floating Cesare drawer and the session page composer, with Shift+Enter newline and a capped auto-grow height.
 
 ### BUG-N66 — Cesare creates a version for EVERY attempt/draft; owner policy: overwrite current unless a new version is asked (2026-06-11, real-use session)
 
