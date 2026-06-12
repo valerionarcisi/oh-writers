@@ -79,6 +79,11 @@ export interface SkillBuildContext {
   readonly activeSceneId: string | null;
   readonly activeDayNumber: number | null;
   readonly requirementId: string | null;
+  /** The Cesare chat session driving this turn (Spec 75). Document write tools
+   *  use it as the turn-group key: consecutive edits from the same session
+   *  overwrite the working version instead of inserting a new one. Null when
+   *  the caller has no session — every edit then inserts a version. */
+  readonly cesareSessionId: string | null;
 }
 
 // ─── Skill ────────────────────────────────────────────────────────────────────

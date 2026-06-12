@@ -8,45 +8,94 @@ import type { Db } from "~/server/db";
 import { DbService, toResultAsync } from "~/server/effect";
 import { CesareError } from "./cesare.errors";
 
-// ─── Auto-versioning as `acquireRelease` (Spec 48 W-E4) ──────────────────────────
+// ─── Auto-versioning as `acquireRelease` (Spec 48 W-E4, reshaped by Spec 75) ─────
 //
-// The canonical Agentic Edit Pattern (CLAUDE.md): for every Cesare edit a version
-// is ALWAYS auto-created BEFORE the change is applied, and on error the apply
-// rolls back so the document is never left half-applied.
+// The canonical Agentic Edit Pattern (CLAUDE.md point 3, Spec 75 / BUG-N66): ONE
+// checkpoint per turn group, not a version per turn. The FIRST Cesare edit of a
+// turn group INSERTS a new "working version" (the previous version, untouched, is
+// the revert checkpoint); every subsequent edit in the same group OVERWRITES that
+// working version in place. On error the apply rolls back so the document is
+// never left half-applied.
 //
-// Here that invariant is made EXPLICIT and impossible to forget with Effect's
-// `acquireRelease`/`Scope`, so any future tool that mutates an entity inherits it
-// for free instead of hand-rolling the ordering:
+// The invariant is made EXPLICIT with Effect's `acquireRelease`/`Scope`, so any
+// future tool that mutates an entity inherits it for free:
 //
-//   acquire  → create the version: capture the "before" snapshot
-//              (`previousVersionId` + `previousContent`) and INSERT the new
-//              version row. This is the resource — it exists before any apply.
-//   use      → apply live: point the document at the new version and mirror its
-//              content, so the open editor updates behind the floating chat.
-//   release  → ON FAILURE/INTERRUPTION ONLY, compensate: revert the document
-//              pointer + content to the captured "before" and delete the version
-//              row, so the document is never left half-applied. No-op on success.
+//   acquire  → prepare the version: decide insert-vs-overwrite (the turn-group
+//              membership, `resolveVersionWriteMode`), capture the "before"
+//              snapshot, and on the insert path INSERT the new version row.
+//   use      → apply live: write the content (and on insert, repoint the
+//              document at the new version), so the open editor updates behind
+//              the floating chat.
+//   release  → ON FAILURE/INTERRUPTION ONLY, compensate: restore the captured
+//              "before" (insert: revert pointer + delete row; overwrite: restore
+//              the working version's prior content + label). No-op on success.
 //
 // The surrounding `db.transaction` is the real atomicity boundary — a throw rolls
 // the whole tx back. The `acquireRelease` wrapper is the documented, testable
-// guarantee on top of it: the version is created in `acquire` (before `use`), and
-// the compensating revert is bound to the resource's lifecycle, not left to a
-// caller to remember. Belt and suspenders, by design.
+// guarantee on top of it. Belt and suspenders, by design.
+
+// How the model asked this edit to be versioned: "overwrite" (default — stay in
+// the turn group) or "new" (the user explicitly asked for a new version).
+export type VersionIntent = "overwrite" | "new";
+
+export interface VersionWriteOptions {
+  readonly cesareSessionId: string | null;
+  readonly intent: VersionIntent;
+}
+
+// A working version older than this is stale: reopening a chat session days
+// later must never silently overwrite old work (Spec 75 condition 3).
+export const CESARE_VERSION_GROUP_TTL_MS = 30 * 60 * 1000;
+
+export interface CurrentVersionGroupMeta {
+  readonly cesareSessionId: string | null;
+  readonly updatedAt: Date;
+}
+
+export type VersionWriteMode = "insert" | "overwrite";
+
+/**
+ * The turn-group decision (Spec 75): overwrite the document's current version
+ * in place iff the turn carries a session id, the current version is that same
+ * session's working version, it is fresh within the group TTL, and the model
+ * did not request a new version. Pure — pinned by Vitest.
+ */
+export const resolveVersionWriteMode = (
+  intent: VersionIntent,
+  cesareSessionId: string | null,
+  currentVersion: CurrentVersionGroupMeta | null,
+  now: Date,
+): VersionWriteMode => {
+  if (intent === "new") return "insert";
+  if (!cesareSessionId || !currentVersion) return "insert";
+  if (currentVersion.cesareSessionId !== cesareSessionId) return "insert";
+  const ageMs = now.getTime() - currentVersion.updatedAt.getTime();
+  return ageMs < CESARE_VERSION_GROUP_TTL_MS ? "overwrite" : "insert";
+};
 
 export interface CreatedDraft {
   versionId: string;
+  /** Null on overwrite turns — no separate version row was created, so there is
+   *  no per-turn revert target (rollback lives in the Versions SplitDrawer). */
   previousVersionId: string | null;
   documentType: DocumentType;
   label: string;
+  /** Whether this turn inserted a new version row or overwrote the group's
+   *  working version in place, so callers can phrase the outcome honestly. */
+  writeMode: VersionWriteMode;
   diffSegments: ReturnType<typeof buildWordDiffSegments>;
 }
 
-// The resource produced by `acquire`: the new version row plus the "before"
-// snapshot needed to (a) build the word diff and (b) compensate on failure.
+// The resource produced by `acquire`: which row will receive the content plus
+// the "before" snapshot needed to (a) build the word diff and (b) compensate on
+// failure. On the insert path the row already exists when `use` runs; on the
+// overwrite path `previousLabel` lets release restore the working version.
 interface AcquiredVersion {
+  mode: VersionWriteMode;
   versionId: string;
   previousVersionId: string | null;
   previousContent: string;
+  previousLabel: string | null;
 }
 
 const fail = (cause: string): CesareError => new CesareError(cause);
@@ -64,14 +113,16 @@ const dbStep = <A>(
       fail(e instanceof Error ? e.message : `${context}: ${String(e)}`),
   });
 
-// acquire: create the version BEFORE any apply. Runs the empty-content and
-// duplicate-content guards first (fail fast, identical copy), reads the active
-// version as the "before" snapshot, then inserts the new version row.
+// acquire: prepare the version BEFORE any apply. Runs the empty-content guard
+// first (fail fast, identical copy), reads the active version's group meta to
+// decide insert-vs-overwrite, runs the mode-scoped duplicate guard, and on the
+// insert path creates the new version row.
 const acquireVersion = (
   documentId: string,
   createdBy: string,
   content: string,
   label: string,
+  options: VersionWriteOptions,
 ): Effect.Effect<AcquiredVersion, CesareError, DbService> =>
   Effect.gen(function* () {
     const { db } = yield* DbService;
@@ -81,6 +132,72 @@ const acquireVersion = (
         fail("Il modello ha restituito un contenuto vuoto."),
       );
     }
+    const [docRow] = yield* dbStep(
+      () =>
+        db
+          .select({
+            currentVersionId: documents.currentVersionId,
+            content: documents.content,
+          })
+          .from(documents)
+          .where(eq(documents.id, documentId))
+          .limit(1),
+      "acquireVersion.docRow",
+    );
+    const currentVersionId = docRow?.currentVersionId ?? null;
+    const previousContent = docRow?.content ?? "";
+
+    const [currentVersion] = currentVersionId
+      ? yield* dbStep(
+          () =>
+            db
+              .select({
+                cesareSessionId: documentVersions.cesareSessionId,
+                updatedAt: documentVersions.updatedAt,
+                content: documentVersions.content,
+                label: documentVersions.label,
+              })
+              .from(documentVersions)
+              .where(eq(documentVersions.id, currentVersionId))
+              .limit(1),
+          "acquireVersion.currentVersion",
+        )
+      : [];
+
+    const mode = resolveVersionWriteMode(
+      options.intent,
+      options.cesareSessionId,
+      currentVersion
+        ? {
+            cesareSessionId: currentVersion.cesareSessionId,
+            updatedAt: currentVersion.updatedAt,
+          }
+        : null,
+      new Date(),
+    );
+
+    if (mode === "overwrite" && currentVersionId && currentVersion) {
+      // Overwrite turns cannot flood the version list, so the duplicate guard
+      // only rejects a true no-op: content identical to the working version's
+      // own current text (Spec 75).
+      if (currentVersion.content.trim() === trimmed) {
+        return yield* Effect.fail(
+          fail(
+            "Il modello ha restituito un testo identico a una versione esistente. Riformula la richiesta con un'istruzione più specifica (tono, struttura, lunghezza).",
+          ),
+        );
+      }
+      return {
+        mode,
+        versionId: currentVersionId,
+        previousVersionId: null,
+        // The version row is the source of truth for the "before" text: a
+        // manual save can update the version while `documents.content` lags.
+        previousContent: currentVersion.content,
+        previousLabel: currentVersion.label,
+      };
+    }
+
     const existing = yield* dbStep(
       () =>
         db
@@ -96,20 +213,6 @@ const acquireVersion = (
         ),
       );
     }
-    const [docRow] = yield* dbStep(
-      () =>
-        db
-          .select({
-            currentVersionId: documents.currentVersionId,
-            content: documents.content,
-          })
-          .from(documents)
-          .where(eq(documents.id, documentId))
-          .limit(1),
-      "acquireVersion.docRow",
-    );
-    const previousVersionId = docRow?.currentVersionId ?? null;
-    const previousContent = docRow?.content ?? "";
     const [maxRow] = yield* dbStep(
       () =>
         db
@@ -131,6 +234,7 @@ const acquireVersion = (
             label,
             content,
             isDraft: false,
+            cesareSessionId: options.cesareSessionId,
             createdBy,
           })
           .returning({ id: documentVersions.id }),
@@ -139,18 +243,47 @@ const acquireVersion = (
     if (!inserted) {
       return yield* Effect.fail(fail("applyVersionLive returned no rows"));
     }
-    return { versionId: inserted.id, previousVersionId, previousContent };
+    return {
+      mode: "insert",
+      versionId: inserted.id,
+      previousVersionId: currentVersionId,
+      previousContent,
+      previousLabel: null,
+    };
   });
 
-// use: apply live — point the document at the new version and mirror its content
-// so the open editor reflects it behind the floating chat.
+// use: apply live so the open editor reflects the edit behind the floating chat.
+// Insert mode points the document at the new version and mirrors its content;
+// overwrite mode rewrites the working version in place (content + refreshed
+// label — the label always describes the latest edit, Spec 75) and mirrors the
+// content on the document row (the pointer is already correct).
 const applyLive = (
   documentId: string,
   acquired: AcquiredVersion,
   content: string,
+  label: string,
 ): Effect.Effect<void, CesareError, DbService> =>
   Effect.gen(function* () {
     const { db } = yield* DbService;
+    if (acquired.mode === "overwrite") {
+      yield* dbStep(
+        () =>
+          db
+            .update(documentVersions)
+            .set({ content, label, updatedAt: new Date() })
+            .where(eq(documentVersions.id, acquired.versionId)),
+        "applyLive.overwriteVersion",
+      );
+      yield* dbStep(
+        () =>
+          db
+            .update(documents)
+            .set({ content, updatedAt: new Date() })
+            .where(eq(documents.id, documentId)),
+        "applyLive.mirrorContent",
+      );
+      return;
+    }
     yield* dbStep(
       () =>
         db
@@ -165,16 +298,48 @@ const applyLive = (
     );
   });
 
-// release (failure path only): revert the document pointer + content to the
-// captured "before" and delete the version row, so a failed apply never leaves a
-// half-applied document. Best-effort — the outer tx rollback is the hard
-// guarantee; this is the explicit, observable compensation.
+// release (failure path only): restore the captured "before" so a failed apply
+// never leaves a half-applied document. Insert mode reverts the document
+// pointer + content and deletes the version row; overwrite mode restores the
+// working version's prior content + label and the document content. Best-effort
+// — the outer tx rollback is the hard guarantee; this is the explicit,
+// observable compensation.
 const rollbackApply = (
   documentId: string,
   acquired: AcquiredVersion,
 ): Effect.Effect<void, never, DbService> =>
   Effect.gen(function* () {
     const { db } = yield* DbService;
+    if (acquired.mode === "overwrite") {
+      yield* Effect.ignore(
+        dbStep(
+          () =>
+            db
+              .update(documentVersions)
+              .set({
+                content: acquired.previousContent,
+                label: acquired.previousLabel,
+                updatedAt: new Date(),
+              })
+              .where(eq(documentVersions.id, acquired.versionId)),
+          "rollbackApply.restoreWorkingVersion",
+        ),
+      );
+      yield* Effect.ignore(
+        dbStep(
+          () =>
+            db
+              .update(documents)
+              .set({
+                content: acquired.previousContent,
+                updatedAt: new Date(),
+              })
+              .where(eq(documents.id, documentId)),
+          "rollbackApply.revertDocumentContent",
+        ),
+      );
+      return;
+    }
     yield* Effect.ignore(
       dbStep(
         () =>
@@ -214,17 +379,19 @@ export const applyVersionLiveEffect = (
   createdBy: string,
   content: string,
   label: string,
+  options: VersionWriteOptions = { cesareSessionId: null, intent: "overwrite" },
 ): Effect.Effect<CreatedDraft, CesareError, DbService> =>
   Effect.acquireUseRelease(
-    acquireVersion(documentId, createdBy, content, label),
+    acquireVersion(documentId, createdBy, content, label, options),
     (acquired) =>
-      applyLive(documentId, acquired, content).pipe(
+      applyLive(documentId, acquired, content, label).pipe(
         Effect.map(
           (): CreatedDraft => ({
             versionId: acquired.versionId,
             previousVersionId: acquired.previousVersionId,
             documentType,
             label,
+            writeMode: acquired.mode,
             // Word-level diff (previous active content → new content) for the
             // inline "Mostra modifiche" coloured rendering. On a first write the
             // prior content is empty, so we diff `"" → content` to render the
@@ -242,9 +409,11 @@ export const applyVersionLiveEffect = (
   );
 
 /**
- * Auto-creates a version under the hood AND applies it live to the open document
- * (Spec 44 canonical Notion pattern). The version is created BEFORE the apply and
- * the apply rolls back on error — guaranteed by {@link applyVersionLiveEffect}'s
+ * Applies a Cesare edit live to the open document under the Spec 75 turn-group
+ * policy: the first edit of a group auto-creates the working version (the
+ * previous version is the revert checkpoint), subsequent same-group edits
+ * overwrite it in place. The row is prepared BEFORE the apply and the apply
+ * rolls back on error — guaranteed by {@link applyVersionLiveEffect}'s
  * `acquireRelease`.
  *
  * Runs inside `db.transaction` (the real atomicity boundary) and provides the tx
@@ -260,6 +429,7 @@ export const applyVersionLive = (
   createdBy: string,
   content: string,
   label: string,
+  options: VersionWriteOptions = { cesareSessionId: null, intent: "overwrite" },
 ): ResultAsync<CreatedDraft, CesareError> =>
   runInTransaction(db, (tx) =>
     applyVersionLiveEffect(
@@ -268,6 +438,7 @@ export const applyVersionLive = (
       createdBy,
       content,
       label,
+      options,
     ).pipe(Effect.provide(Layer.succeed(DbService, { db: tx }))),
   );
 

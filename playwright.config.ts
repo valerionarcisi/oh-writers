@@ -38,7 +38,10 @@ export default defineConfig({
       name: "chromium",
       // Agentic specs require MOCK_AI=true and live in the mock-ui project; keep
       // them out of the default run so they aren't executed twice.
-      testIgnore: /cesare-agentic-.*\.spec\.ts$/,
+      testIgnore: [
+        /cesare-agentic-.*\.spec\.ts$/,
+        /cesare-versioning-policy\.spec\.ts$/,
+      ],
       // `viewport` override comes AFTER the spread — devices.Desktop Chrome
       // sets it to 1280x720 by default which is too small for the Cesare
       // bottom sheet to fit on screen.
@@ -56,7 +59,10 @@ export default defineConfig({
     },
     {
       name: "mock-ui",
-      testMatch: /cesare-agentic-.*\.spec\.ts$/,
+      testMatch: [
+        /cesare-agentic-.*\.spec\.ts$/,
+        /cesare-versioning-policy\.spec\.ts$/,
+      ],
       dependencies: ["warmup"],
       use: {
         ...devices["Desktop Chrome"],

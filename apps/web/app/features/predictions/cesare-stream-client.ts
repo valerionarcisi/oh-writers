@@ -15,6 +15,9 @@ import type { CesarePage } from "./components/CesareSheet";
 export interface StreamCesareInput {
   readonly projectId: string;
   readonly message: string;
+  /** The Cesare chat session driving this turn (Spec 75 turn-group key).
+   *  Null while the thread is still the synthetic pending session. */
+  readonly sessionId: string | null;
   readonly pageContext: {
     readonly page: CesarePage;
     readonly sceneId: string | null;

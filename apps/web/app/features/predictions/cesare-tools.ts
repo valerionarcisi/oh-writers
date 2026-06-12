@@ -77,10 +77,18 @@ import {
 } from "./cesare-screenplay-tools";
 import {
   CESARE_DOCUMENT_GEN_TOOLS,
+  VERSIONING_PROPERTY,
+  VersioningSchema,
+  buildCesareVersionLabel,
   createDocumentGenTools,
   executeDocumentGenTool,
   isDocumentGenToolName,
+  resolveVersionIntent,
 } from "./cesare-document-tools";
+import {
+  applyVersionLive,
+  type VersionWriteOptions,
+} from "./auto-version.effect";
 import {
   createMockAnthropicClient,
   createMockCesareModel,
@@ -385,6 +393,7 @@ export const CESARE_DOCUMENT_TOOLS = [
     input_schema: {
       type: "object" as const,
       properties: {
+        ...VERSIONING_PROPERTY,
         find: {
           type: "string",
           description:
@@ -408,6 +417,7 @@ export const CESARE_DOCUMENT_TOOLS = [
     input_schema: {
       type: "object" as const,
       properties: {
+        ...VERSIONING_PROPERTY,
         heading: {
           type: "string",
           description:
@@ -427,6 +437,7 @@ export const CESARE_DOCUMENT_TOOLS = [
     input_schema: {
       type: "object" as const,
       properties: {
+        ...VERSIONING_PROPERTY,
         heading: {
           type: "string",
           description: "Titolo della sezione da comprimere.",
@@ -448,105 +459,127 @@ export const createDocumentTools = (
   db: Db,
   docContext: DocumentContext,
   userIdFallback: string | null = null,
-) => ({
-  apply_text_edit: tool({
-    description:
-      "Sostituisce una stringa esatta nel documento attivo (soggetto / sinossi / scaletta / trattamento). " +
-      "Usa questo tool quando l'utente chiede una modifica testuale puntuale, come 'cambia X in Y' o 'riscrivi questa frase'. " +
-      "La stringa `find` deve essere un sottoesempio testuale ESATTO del documento, copia-incollalo letteralmente. " +
-      "Se `find` non viene trovato, l'edit fallisce: non inventare il testo originale.",
-    inputSchema: z.object({
-      find: z
-        .string()
-        .describe(
-          "Sottostringa esatta da cercare nel documento. Deve corrispondere carattere per carattere.",
-        ),
-      replace: z.string().describe("Nuovo testo che sostituirà `find`."),
+  cesareSessionId: string | null = null,
+) => {
+  const versionOptionsFrom = (versioning: unknown): VersionWriteOptions => ({
+    cesareSessionId,
+    intent: resolveVersionIntent(versioning),
+  });
+  return {
+    apply_text_edit: tool({
+      description:
+        "Sostituisce una stringa esatta nel documento attivo (soggetto / sinossi / scaletta / trattamento). " +
+        "Usa questo tool quando l'utente chiede una modifica testuale puntuale, come 'cambia X in Y' o 'riscrivi questa frase'. " +
+        "La stringa `find` deve essere un sottoesempio testuale ESATTO del documento, copia-incollalo letteralmente. " +
+        "Se `find` non viene trovato, l'edit fallisce: non inventare il testo originale.",
+      inputSchema: z.object({
+        find: z
+          .string()
+          .describe(
+            "Sottostringa esatta da cercare nel documento. Deve corrispondere carattere per carattere.",
+          ),
+        replace: z.string().describe("Nuovo testo che sostituirà `find`."),
+        versioning: VersioningSchema,
+      }),
+      execute: async (input, _opts) => {
+        const typed = input as ApplyTextEditInput;
+        const result = await executeApplyTextEdit(
+          typed,
+          db,
+          docContext,
+          userIdFallback,
+          versionOptionsFrom(typed.versioning),
+        );
+        if (result.isErr()) return { error: result.error.message };
+        return result.value;
+      },
     }),
-    execute: async (input, _opts) => {
-      const result = await executeApplyTextEdit(
-        input as ApplyTextEditInput,
-        db,
-        docContext,
-        userIdFallback,
-      );
-      if (result.isErr()) return { error: result.error.message };
-      return result.value;
-    },
-  }),
-  expand_section: tool({
-    description:
-      "Trova la sezione del documento sotto un certo heading e la espande in 2-3 paragrafi più ricchi, " +
-      "preservando voce narrativa, tono e beat principali. L'heading è identificato cercando una riga " +
-      "che inizia con `#`, `##`, `###` o che combacia esattamente col titolo. " +
-      "Usalo quando l'utente chiede 'espandi atto II', 'sviluppa la sezione X' o simili.",
-    inputSchema: z.object({
-      heading: z
-        .string()
-        .describe(
-          "Titolo della sezione da espandere (es. 'Atto II', 'Primo atto', 'Conclusione'). " +
-            "Confronto case-insensitive e tollerante a marker markdown.",
-        ),
-    }),
-    execute: async (rawInput, _opts) => {
-      const input = rawInput as { heading: string };
-      const range = findSection(docContext.content, input.heading);
-      const sectionText = range ? sliceSection(docContext.content, range) : "";
-      const result = await generateAndReplaceSection(
-        db,
-        docContext,
-        input.heading,
-        expandSectionPrompt(
-          docContext.documentType,
-          docContext.content,
-          sectionText,
+    expand_section: tool({
+      description:
+        "Trova la sezione del documento sotto un certo heading e la espande in 2-3 paragrafi più ricchi, " +
+        "preservando voce narrativa, tono e beat principali. L'heading è identificato cercando una riga " +
+        "che inizia con `#`, `##`, `###` o che combacia esattamente col titolo. " +
+        "Usalo quando l'utente chiede 'espandi atto II', 'sviluppa la sezione X' o simili.",
+      inputSchema: z.object({
+        heading: z
+          .string()
+          .describe(
+            "Titolo della sezione da espandere (es. 'Atto II', 'Primo atto', 'Conclusione'). " +
+              "Confronto case-insensitive e tollerante a marker markdown.",
+          ),
+        versioning: VersioningSchema,
+      }),
+      execute: async (rawInput, _opts) => {
+        const input = rawInput as { heading: string; versioning?: unknown };
+        const range = findSection(docContext.content, input.heading);
+        const sectionText = range
+          ? sliceSection(docContext.content, range)
+          : "";
+        const result = await generateAndReplaceSection(
+          db,
+          docContext,
           input.heading,
-        ),
-        800,
-        "espanso",
-        userIdFallback,
-      );
-      if (result.isErr()) return { error: result.error.message };
-      return result.value;
-    },
-  }),
-  compress_section: tool({
-    description:
-      "Trova la sezione del documento sotto un certo heading e la comprime al numero di parole indicato, " +
-      "mantenendo i beat chiave e la voce. Usalo quando l'utente chiede 'accorcia X', 'riassumi questa parte' " +
-      "o quando una sezione è troppo lunga.",
-    inputSchema: z.object({
-      heading: z.string().describe("Titolo della sezione da comprimere."),
-      target_words: z
-        .number()
-        .describe(
-          "Numero di parole target. Tipicamente tra 80 e 300 a seconda del tipo di documento.",
-        ),
+          expandSectionPrompt(
+            docContext.documentType,
+            docContext.content,
+            sectionText,
+            input.heading,
+          ),
+          800,
+          "espanso",
+          userIdFallback,
+          versionOptionsFrom(input.versioning),
+        );
+        if (result.isErr()) return { error: result.error.message };
+        return result.value;
+      },
     }),
-    execute: async (rawInput, _opts) => {
-      const input = rawInput as { heading: string; target_words: number };
-      const range = findSection(docContext.content, input.heading);
-      const sectionText = range ? sliceSection(docContext.content, range) : "";
-      const result = await generateAndReplaceSection(
-        db,
-        docContext,
-        input.heading,
-        compressSectionPrompt(
-          docContext.documentType,
-          docContext.content,
-          sectionText,
+    compress_section: tool({
+      description:
+        "Trova la sezione del documento sotto un certo heading e la comprime al numero di parole indicato, " +
+        "mantenendo i beat chiave e la voce. Usalo quando l'utente chiede 'accorcia X', 'riassumi questa parte' " +
+        "o quando una sezione è troppo lunga.",
+      inputSchema: z.object({
+        heading: z.string().describe("Titolo della sezione da comprimere."),
+        target_words: z
+          .number()
+          .describe(
+            "Numero di parole target. Tipicamente tra 80 e 300 a seconda del tipo di documento.",
+          ),
+        versioning: VersioningSchema,
+      }),
+      execute: async (rawInput, _opts) => {
+        const input = rawInput as {
+          heading: string;
+          target_words: number;
+          versioning?: unknown;
+        };
+        const range = findSection(docContext.content, input.heading);
+        const sectionText = range
+          ? sliceSection(docContext.content, range)
+          : "";
+        const result = await generateAndReplaceSection(
+          db,
+          docContext,
           input.heading,
-          input.target_words,
-        ),
-        600,
-        "compresso",
-        userIdFallback,
-      );
-      if (result.isErr()) return { error: result.error.message };
-      return result.value;
-    },
-  }),
-});
+          compressSectionPrompt(
+            docContext.documentType,
+            docContext.content,
+            sectionText,
+            input.heading,
+            input.target_words,
+          ),
+          600,
+          "compresso",
+          userIdFallback,
+          versionOptionsFrom(input.versioning),
+        );
+        if (result.isErr()) return { error: result.error.message };
+        return result.value;
+      },
+    }),
+  };
+};
 
 export type DocumentTools = ReturnType<typeof createDocumentTools>;
 
@@ -1276,6 +1309,7 @@ export interface DocumentContext {
 interface ApplyTextEditInput {
   find: string;
   replace: string;
+  versioning?: "overwrite" | "new";
 }
 
 interface SectionRange {
@@ -1300,78 +1334,60 @@ export interface AppliedDocumentEdit {
   previousVersionId: string | null;
 }
 
-// Applies new content LIVE to the open document following the canonical Spec 44
-// Agentic Edit Pattern: every Cesare edit auto-creates a NEW non-draft version,
-// repoints documents.current_version_id at it, and mirrors the content onto the
-// document row so the open editor reflects it. The previous active version stays
-// in history so the inline trace can offer "↩ Annulla". We must NOT update the
-// active version row in place — that would erase history and leave nothing to
-// revert to (the iter-1 regression). `createdBy` falls back to the supplied
-// `userIdFallback` when the document row carries no creator.
+// Applies new content LIVE to the open document following the canonical
+// Agentic Edit Pattern under the Spec 75 turn-group policy. Delegates to
+// `applyVersionLive` — the single document write path — so the document-edit
+// tools (apply_text_edit / expand_section / compress_section) share the exact
+// versioning behaviour of the document-gen tools: the first edit of a turn
+// group inserts the working version (the previous version stays as the revert
+// checkpoint), subsequent same-group edits overwrite it in place. This retires
+// the per-turn "Cesare · modifica N" insert that flooded the version list
+// (BUG-N66). `createdBy` falls back to the supplied `userIdFallback` when the
+// document row carries no creator.
 export const persistDocumentContent = (
   db: Db,
   documentId: string,
+  documentType: DocumentType,
   nextContent: string,
   userIdFallback: string | null,
+  options: VersionWriteOptions,
 ): ResultAsync<AppliedDocumentEdit, CesareError> =>
   ResultAsync.fromPromise(
-    db.transaction(async (tx): Promise<AppliedDocumentEdit> => {
-      const [doc] = await tx
-        .select({
-          id: documents.id,
-          currentVersionId: documents.currentVersionId,
-          createdBy: documents.createdBy,
-        })
-        .from(documents)
-        .where(eq(documents.id, documentId))
-        .limit(1);
-      if (!doc) throw new Error(`Document ${documentId} not found`);
-
-      const previousVersionId = doc.currentVersionId ?? null;
-      const creator = doc.createdBy ?? userIdFallback;
-      if (!creator) {
-        throw new Error(
-          "Cannot determine the version author: document has no createdBy and no fallback user.",
-        );
-      }
-
-      const [maxRow] = await tx
-        .select({
-          max: sql<number>`coalesce(max(${documentVersions.number}), 0)`,
-        })
-        .from(documentVersions)
-        .where(eq(documentVersions.documentId, documentId));
-      const nextNum = (maxRow?.max ?? 0) + 1;
-
-      const [inserted] = await tx
-        .insert(documentVersions)
-        .values({
-          documentId,
-          number: nextNum,
-          label: `Cesare · modifica ${nextNum}`,
-          content: nextContent,
-          isDraft: false,
-          createdBy: creator,
-        })
-        .returning({ id: documentVersions.id });
-      if (!inserted) throw new Error("persistDocumentContent returned no rows");
-
-      await tx
-        .update(documents)
-        .set({
-          currentVersionId: inserted.id,
-          content: nextContent,
-          updatedAt: new Date(),
-        })
-        .where(eq(documents.id, doc.id));
-
-      return { versionId: inserted.id, previousVersionId };
-    }),
+    db
+      .select({ createdBy: documents.createdBy })
+      .from(documents)
+      .where(eq(documents.id, documentId))
+      .limit(1)
+      .then((rows) => rows[0] ?? null),
     (e) =>
       new CesareError(
         `persistDocumentContent failed: ${e instanceof Error ? e.message : String(e)}`,
       ),
-  );
+  ).andThen((doc) => {
+    if (!doc) {
+      return errAsync(new CesareError(`Document ${documentId} not found`));
+    }
+    const creator = doc.createdBy ?? userIdFallback;
+    if (!creator) {
+      return errAsync(
+        new CesareError(
+          "Cannot determine the version author: document has no createdBy and no fallback user.",
+        ),
+      );
+    }
+    return applyVersionLive(
+      db,
+      documentId,
+      documentType,
+      creator,
+      nextContent,
+      buildCesareVersionLabel(documentType, null),
+      options,
+    ).map((draft) => ({
+      versionId: draft.versionId,
+      previousVersionId: draft.previousVersionId,
+    }));
+  });
 
 const normalizeHeading = (raw: string): string =>
   raw
@@ -1489,6 +1505,7 @@ const executeApplyTextEdit = (
   db: Db,
   doc: DocumentContext,
   userIdFallback: string | null,
+  options: VersionWriteOptions,
 ): ResultAsync<DocumentEditResult, CesareError> => {
   if (!input.find) {
     return okAsync({ ok: false, reason: "empty find string" });
@@ -1502,23 +1519,28 @@ const executeApplyTextEdit = (
   }
   const previousContent = doc.content;
   const next = previousContent.replace(input.find, input.replace);
-  return persistDocumentContent(db, doc.documentId, next, userIdFallback).map(
-    (applied) => {
-      // Mutate the in-memory copy so subsequent tool calls in the same turn
-      // see the updated content.
-      doc.content = next;
-      return {
-        ok: true,
-        applied_live: true as const,
-        document_type: doc.documentType,
-        version_id: applied.versionId,
-        previous_version_id: applied.previousVersionId,
-        diff_label: docTypeLabel(doc.documentType),
-        diff_segments: buildWordDiffSegments(previousContent, next),
-        toast: `✦ Cesare ha aggiornato il ${docTypeLabel(doc.documentType)}`,
-      };
-    },
-  );
+  return persistDocumentContent(
+    db,
+    doc.documentId,
+    doc.documentType,
+    next,
+    userIdFallback,
+    options,
+  ).map((applied) => {
+    // Mutate the in-memory copy so subsequent tool calls in the same turn
+    // see the updated content.
+    doc.content = next;
+    return {
+      ok: true,
+      applied_live: true as const,
+      document_type: doc.documentType,
+      version_id: applied.versionId,
+      previous_version_id: applied.previousVersionId,
+      diff_label: docTypeLabel(doc.documentType),
+      diff_segments: buildWordDiffSegments(previousContent, next),
+      toast: `✦ Cesare ha aggiornato il ${docTypeLabel(doc.documentType)}`,
+    };
+  });
 };
 
 const EXPAND_SECTION_MODEL = "claude-haiku-4-5";
@@ -1589,6 +1611,7 @@ const generateAndReplaceSection = (
   maxTokens: number,
   toastVerb: string,
   userIdFallback: string | null,
+  options: VersionWriteOptions,
 ): ResultAsync<DocumentEditResult, CesareError> => {
   const range = findSection(doc.content, heading);
   if (!range) {
@@ -1622,8 +1645,10 @@ const generateAndReplaceSection = (
       return persistDocumentContent(
         db,
         doc.documentId,
+        doc.documentType,
         nextContent,
         userIdFallback,
+        options,
       ).map((applied) => {
         doc.content = nextContent;
         return {
@@ -1645,6 +1670,7 @@ export const executeDocumentTool = (
   db: Db,
   docContext: DocumentContext,
   userIdFallback: string | null = null,
+  cesareSessionId: string | null = null,
 ): ResultAsync<ToolResult, CesareError> => {
   const successResult = (id: string, payload: unknown): ToolResult => ({
     type: "tool_result",
@@ -1652,11 +1678,22 @@ export const executeDocumentTool = (
     content: JSON.stringify(payload),
   });
 
+  const versionOptions: VersionWriteOptions = {
+    cesareSessionId,
+    intent: resolveVersionIntent(
+      (block.input as { versioning?: unknown } | null)?.versioning,
+    ),
+  };
+
   if (block.name === "apply_text_edit") {
     const input = block.input as ApplyTextEditInput;
-    return executeApplyTextEdit(input, db, docContext, userIdFallback).map(
-      (res) => successResult(block.id, res),
-    );
+    return executeApplyTextEdit(
+      input,
+      db,
+      docContext,
+      userIdFallback,
+      versionOptions,
+    ).map((res) => successResult(block.id, res));
   }
 
   if (block.name === "expand_section") {
@@ -1676,6 +1713,7 @@ export const executeDocumentTool = (
       800,
       "espanso",
       userIdFallback,
+      versionOptions,
     ).map((res) => successResult(block.id, res));
   }
 
@@ -1697,6 +1735,7 @@ export const executeDocumentTool = (
       600,
       "compresso",
       userIdFallback,
+      versionOptions,
     ).map((res) => successResult(block.id, res));
   }
 
@@ -2444,6 +2483,7 @@ export const runUniversalToolLoop = (
             content: "",
           },
           ctx.userIdFallback,
+          ctx.cesareSessionId,
         );
       }
 
@@ -2454,6 +2494,7 @@ export const runUniversalToolLoop = (
           dbArg,
           projectIdArg,
           ctx.userIdFallback,
+          ctx.cesareSessionId,
         );
       }
 

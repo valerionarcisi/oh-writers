@@ -93,9 +93,16 @@ export function publishLiveEdits(
     // Pre-turn snapshot (Spec 63): prefer the version the open editor reported
     // BEFORE this turn (A); fall back to the marker's previous_version_id (B) when
     // the editor was not open (e.g. edit made from a chat session).
-    const previousVersionId = preTurnVersionByDocType.has(input.documentType)
-      ? (preTurnVersionByDocType.get(input.documentType) ?? null)
-      : input.previousVersionId;
+    // Spec 75 — a null marker means the turn OVERWROTE the working version in
+    // place: there is no per-turn revert target (the pre-turn current version IS
+    // the overwritten row), so the editor-reported snapshot must not resurrect a
+    // dishonest "↩ Annulla". Rollback lives in the Versions SplitDrawer.
+    const previousVersionId =
+      input.previousVersionId === null
+        ? null
+        : preTurnVersionByDocType.has(input.documentType)
+          ? (preTurnVersionByDocType.get(input.documentType) ?? null)
+          : input.previousVersionId;
     const entry: LiveEdit = {
       ...input,
       previousVersionId,

@@ -26,33 +26,34 @@ E2E first; screenshots in a recap; gates green).
 ### BUG-N63 — screenplay PDF export loses dialogue, title page incomplete, scene-heading bold mismatch (2026-06-11, real-use session)
 
 - Severity: ALTO (the export is the deliverable a writer hands out; silent content loss)
-- Status: open
+- Status: fixed (`a587e30f`)
 - Repro: real project "Scienze Naturali - Federico II" → export PDF. Observed: (a) DIALOGUE lines present in the editor are missing from the PDF; (b) the frontespizio carries only the title — author/contact info missing; (c) scene-heading bold in the PDF does not match the editor's settings.
-- Proof: owner screenshots 2026-06-11 (title page bare; p.2 shows sceneggiatura where later dialogue runs are dropped).
-- Notes: three distinct surfaces (doc→PDF serializer dropping dialogue nodes; title-page template fields; heading style mapping) — triage as one export-fidelity front.
+- Proof: `docs/audits/2026-06-12-n63/title-page.png`, `docs/audits/2026-06-12-n63/screenplay-page.png`, `docs/audits/2026-06-12-n63/n63-export-proof.pdf`, and focused tests around `export-pipeline`, `title-page-prepend`, `fountain-canonical`, and `screenplay-export-serializer`.
+- Notes: three distinct surfaces (doc→PDF serializer dropping dialogue nodes; title-page template fields; heading style mapping) are now fixed via the canonical serializer/export pipeline.
 
 ### BUG-N64 — `?vcur=…&versions=…&peek=cesare` combo blanks the whole page (2026-06-11, real-use session)
 
 - Severity: ALTO (page fully broken, only the Versions lane renders; no error fallback)
-- Status: fixed (`dbeffbcb`)
+- Status: fixed (`dbeffbcb` / `579422b9`)
 - Repro: `/projects/:id/soggetto?vcur=<id>&versions=<docId>&peek=cesare` → main lane EMPTY (white), Versions SplitDrawer on the right, no editor, no Cesare lane, no error boundary.
-- Proof: `docs/audits/2026-06-12-n64-n65/versions-peek-failclosed.png`; verified by `tests/versions-peek-combo.spec.ts` against `dbeffbcb`.
+- Proof: `docs/audits/2026-06-12-n64-n65/versions-peek-failclosed.png`; verified by `tests/versions-peek-combo.spec.ts` on the merged epic.
 - Notes: the routed surfaces now fail closed: Versions wins, `peek=cesare` is stripped, and the main lane stays mounted.
 
 ### BUG-N65 — Cesare composer textbox is rigid and uncomfortable for writing (2026-06-11, real-use session)
 
 - Severity: MEDIO (UX, hit on every interaction)
-- Status: fixed (`dbeffbcb`)
+- Status: fixed (`dbeffbcb` / `579422b9`)
 - Repro: the "Chiedi a Cesare…" input is a fixed single-line box; writing multi-sentence prompts (the normal case in a real session) is cramped. Owner: "deve essere più comodo ed elastico".
-- Proof: `docs/audits/2026-06-12-n64-n65/composer-autogrow.png`; unit `packages/ui/src/primitives/ComposerTextarea/ComposerTextarea.test.tsx`; E2E `tests/cesare-composer-autogrow.spec.ts` on `dbeffbcb`.
+- Proof: `docs/audits/2026-06-12-n64-n65/composer-autogrow.png`; unit `packages/ui/src/primitives/ComposerTextarea/ComposerTextarea.test.tsx`; E2E `tests/cesare-composer-autogrow.spec.ts` on the merged epic.
 - Notes: shared `ComposerTextarea` primitive now powers both the floating Cesare drawer and the session page composer, with Shift+Enter newline and a capped auto-grow height.
 
 ### BUG-N66 — Cesare creates a version for EVERY attempt/draft; owner policy: overwrite current unless a new version is asked (2026-06-11, real-use session)
 
 - Severity: ALTO (version list floods — v13/v14/v15 "Cesare · modifica" + 5-6 drafts for one screenplay request; the Versions surface becomes unusable)
+- Status: fixed (`1f173c81`)
 - Repro: iterative Cesare work on soggetto/screenplay → every turn lands a new version; a single "write the screenplay" request produced 5/6 drafts before the right one.
-- OWNER POLICY (decided 2026-06-11, applies to EVERY narrative part): by default Cesare OVERWRITES the current version with surgical edits; a NEW version only when the user explicitly asks — or Cesare may ASK the user ("ne faccio una nuova versione?") when the requested change is large. Reconcile with the auto-version invariant (CLAUDE.md point 3: snapshot-before-apply for revertibility) — e.g. ONE auto-checkpoint per session/turn-group instead of per turn, or collapse consecutive Cesare versions.
-- Needs a spec before implementation (touches auto-version.effect, version naming, and the agentic-edit contract).
+- OWNER POLICY (decided 2026-06-11, applies to EVERY narrative part): by default Cesare OVERWRITES the current version with surgical edits; a NEW version only when the user explicitly asks — or Cesare may ASK the user ("ne faccio una nuova versione?") when the requested change is large. Reconciled with the auto-version invariant (CLAUDE.md point 3) as one working version per turn group with an explicit checkpoint/migrate path.
+- Proof: `tests/cesare-versioning-policy.spec.ts`, `tests/global-setup.ts` migration bootstrap, `packages/db/drizzle/0039_document_versions_cesare_session.sql`, and the merged lane commit `1f173c81`.
 
 ### BUG-N67 — asked Cesare for the SCREENPLAY from the soggetto; it wrote the TREATMENT (2026-06-11, real-use session, real AI)
 
@@ -63,6 +64,7 @@ E2E first; screenshots in a recap; gates green).
 - ROOT CAUSE (two layers, both deterministic): (1) the document-page intent classifier had NO screenplay intent — its schema only offered `write_logline…write_treatment`, so Haiku was forced to bucket the request into the nearest intent (`write_treatment`) and `callCesareV2` then FORCED `propose_treatment_from_narrative` via `tool_choice`; (2) no tool existed to WRITE the screenplay first draft from upstream narrative — only revision tools over an existing Fountain text — so even on `auto` the model had no correct tool to land on.
 - FIX: new tool `propose_screenplay_from_narrative` (cesare-screenplay-tools.ts — Fountain first draft from treatment→scaletta→sinossi→soggetto→logline, creates a DRAFT screenplay version + proposal banner, never touches the live Yjs-backed content); new `write_screenplay` intent + entity-fidelity rule ("il documento NOMINATO vince SEMPRE") in both classifier prompts (deterministic layer extracted to `cesare-intent-rules.ts`, pure + unit-tested); the tool is forcible from document pages (`DOCUMENT_PAGE_CLASSIFIER_TOOLS`) and the screenplay page; tracer map registers it as write/screenplay (plus the previously-unmapped merge_scenes/delete_scene); guidance rows + fidelity rule in document-gen/document-edit/screenplay-edit skills and the V1 prompt builders.
 - Proof (of the fix): real-AI smoke `pnpm cost:smoke:cesare-entity-routing` (transcript `vernissage/n67-entity-routing/smoke-2026-06-11T15-36-16-386Z.md`): the exact bug phrasing classifies `write_screenplay` (0.95) → `propose_screenplay_from_narrative`; treatment control still routes to `propose_treatment_from_narrative`; first-draft generator emits Fountain sluglines. Unit pins: `cesare-intent-rules.test.ts`, `cesare-intent-classifier.test.ts` (BUG-N67 block + R3 rows), `cesare-screenplay-tools.test.ts` (registration).
+- Notes: universal tool routing now prefers `write_screenplay` for screenplay prompts and keeps treatment routing separate.
 
 ### BUG-N68 — breakdown "Per scena" is mis-paginated; spoglio needs a correct AI-free algorithmic basis (2026-06-11, real-use session)
 

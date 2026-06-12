@@ -309,6 +309,13 @@
       "when": 1779000000009,
       "tag": "0038_seed_active_version_yjs_snapshot",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1779000000010,
+      "tag": "0039_document_versions_cesare_session",
+      "breakpoints": true
     }
   ]
 }

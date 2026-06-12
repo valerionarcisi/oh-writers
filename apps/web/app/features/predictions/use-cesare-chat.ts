@@ -191,6 +191,8 @@ const useLocalCesareChat = (
       const streamInput: StreamCesareInput = {
         projectId,
         message: trimmed,
+        // Spec 75 — the turn-group key (null for the synthetic pending session).
+        sessionId: targetSession === "__pending__" ? null : targetSession,
         pageContext: pc,
         conversationHistory: history,
       };
@@ -223,6 +225,7 @@ const useLocalCesareChat = (
           data: {
             projectId: streamInput.projectId,
             message: streamInput.message,
+            sessionId: streamInput.sessionId,
             pageContext: { ...streamInput.pageContext },
             conversationHistory: streamInput.conversationHistory.map((m) => ({
               role: m.role,

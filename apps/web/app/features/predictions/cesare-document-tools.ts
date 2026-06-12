@@ -13,7 +13,46 @@ import { callHaiku, extractText } from "~/features/ai";
 import { repairMojibake } from "@oh-writers/utils";
 import { SONNET_MODEL } from "./cesare-model-router";
 import { CesareError } from "./cesare.errors";
-import { applyVersionLive, type CreatedDraft } from "./auto-version.effect";
+import {
+  applyVersionLive,
+  type CreatedDraft,
+  type VersionIntent,
+  type VersionWriteOptions,
+} from "./auto-version.effect";
+
+// ─── Versioning policy (Spec 75 / BUG-N66) ───────────────────────────────────
+//
+// Every document write tool carries an optional `versioning` parameter. The
+// model sets "new" ONLY when the user explicitly asks for a new version; the
+// default keeps the edit inside the current turn group (overwrite the working
+// version, or start one if the group is broken/stale).
+
+const VERSIONING_DESCRIPTION =
+  "Opzionale. 'overwrite' (default) = aggiorna la versione di lavoro corrente senza crearne una nuova; " +
+  "'new' = crea una NUOVA versione del documento. Usa 'new' SOLO quando l'utente chiede esplicitamente " +
+  "una nuova versione (es. 'fanne una nuova versione', 'crea una v2').";
+
+export const VERSIONING_PROPERTY = {
+  versioning: {
+    type: "string" as const,
+    enum: ["overwrite", "new"],
+    description: VERSIONING_DESCRIPTION,
+  },
+};
+
+export const VersioningSchema = z
+  .enum(["overwrite", "new"])
+  .optional()
+  .describe(VERSIONING_DESCRIPTION);
+
+/**
+ * Maps the model-supplied `versioning` tool param to a {@link VersionIntent}.
+ * Anything that is not the literal "new" (absent, "overwrite", junk) falls back
+ * to the default overwrite policy — the server never invents a new version the
+ * user did not ask for. Pure — pinned by Vitest.
+ */
+export const resolveVersionIntent = (versioning: unknown): VersionIntent =>
+  versioning === "new" ? "new" : "overwrite";
 
 // ─── Tool definitions ─────────────────────────────────────────────────────────
 
@@ -29,6 +68,7 @@ export const CESARE_DOCUMENT_GEN_TOOLS = [
     input_schema: {
       type: "object" as const,
       properties: {
+        ...VERSIONING_PROPERTY,
         instruction: {
           type: "string",
           description:
@@ -49,6 +89,7 @@ export const CESARE_DOCUMENT_GEN_TOOLS = [
     input_schema: {
       type: "object" as const,
       properties: {
+        ...VERSIONING_PROPERTY,
         instruction: {
           type: "string",
           description:
@@ -73,6 +114,7 @@ export const CESARE_DOCUMENT_GEN_TOOLS = [
     input_schema: {
       type: "object" as const,
       properties: {
+        ...VERSIONING_PROPERTY,
         instruction: {
           type: "string",
           description:
@@ -90,6 +132,7 @@ export const CESARE_DOCUMENT_GEN_TOOLS = [
     input_schema: {
       type: "object" as const,
       properties: {
+        ...VERSIONING_PROPERTY,
         instruction: {
           type: "string",
           description:
@@ -113,6 +156,7 @@ export const CESARE_DOCUMENT_GEN_TOOLS = [
     input_schema: {
       type: "object" as const,
       properties: {
+        ...VERSIONING_PROPERTY,
         target_scene_count: {
           type: "integer",
           description:
@@ -131,6 +175,7 @@ export const CESARE_DOCUMENT_GEN_TOOLS = [
     input_schema: {
       type: "object" as const,
       properties: {
+        ...VERSIONING_PROPERTY,
         instruction: {
           type: "string",
           description:
@@ -176,21 +221,22 @@ const docTypeLabel = (type: DocumentType): string => {
 };
 
 /**
- * Auto-generates a label for a propose tool result when the caller didn't
- * provide one. Combines a verb with the document type so the version list
- * stays readable ("draft Cesare · sinossi").
+ * Builds the label for the Cesare working version (Spec 75 naming): "Cesare ·
+ * sinossi" or "Cesare · soggetto (più asciutto)". Refreshed on every overwrite
+ * turn so the label always describes the latest edit. Replaces the per-turn
+ * "draft Cesare · …" and "Cesare · modifica N" labels.
  */
-export const buildDraftLabel = (
+export const buildCesareVersionLabel = (
   docType: DocumentType,
   hint: string | null = null,
 ): string => {
   const label = docTypeLabel(docType);
   const trimmedHint = (hint ?? "").trim();
   if (trimmedHint.length === 0) {
-    return `draft Cesare · ${label}`;
+    return `Cesare · ${label}`;
   }
   const safe = trimmedHint.replace(/\s+/g, " ").slice(0, 40);
-  return `draft Cesare · ${label} (${safe})`;
+  return `Cesare · ${label} (${safe})`;
 };
 
 interface ParsedScalettaScene {
@@ -712,13 +758,23 @@ interface ProposeInput {
   label?: string;
   target_scene_count?: number;
   mode?: "auto" | "write" | "edit";
+  versioning?: "overwrite" | "new";
 }
+
+const versionOptionsFor = (
+  input: ProposeInput,
+  cesareSessionId: string | null,
+): VersionWriteOptions => ({
+  cesareSessionId,
+  intent: resolveVersionIntent(input.versioning),
+});
 
 const handleProposeLogline = (
   input: ProposeInput,
   db: Db,
   projectId: string,
   userIdFallback: string | null,
+  cesareSessionId: string | null,
 ): ResultAsync<CreatedDraft, CesareError> =>
   loadScreenplayContent(db, projectId).andThen((screenplay) => {
     if (screenplay.trim().length === 0) {
@@ -755,7 +811,11 @@ const handleProposeLogline = (
               DocumentTypes.LOGLINE,
               creator,
               logline,
-              buildDraftLabel(DocumentTypes.LOGLINE, input.instruction ?? null),
+              buildCesareVersionLabel(
+                DocumentTypes.LOGLINE,
+                input.instruction ?? null,
+              ),
+              versionOptionsFor(input, cesareSessionId),
             );
           },
         ),
@@ -774,6 +834,7 @@ const handleWriteLogline = (
   db: Db,
   projectId: string,
   userIdFallback: string | null,
+  cesareSessionId: string | null,
 ): ResultAsync<CreatedDraft, CesareError> => {
   const instruction = (input.instruction ?? "").trim();
   if (instruction.length === 0) {
@@ -831,7 +892,8 @@ const handleWriteLogline = (
             DocumentTypes.LOGLINE,
             creator,
             logline,
-            buildDraftLabel(DocumentTypes.LOGLINE, instruction),
+            buildCesareVersionLabel(DocumentTypes.LOGLINE, instruction),
+            versionOptionsFor(input, cesareSessionId),
           );
         });
     },
@@ -843,6 +905,7 @@ const handleProposeSynopsis = (
   db: Db,
   projectId: string,
   userIdFallback: string | null,
+  cesareSessionId: string | null,
 ): ResultAsync<CreatedDraft, CesareError> =>
   loadUpstreamNarrative(db, projectId, DocumentTypes.SYNOPSIS).andThen(
     (upstream) => {
@@ -885,10 +948,11 @@ const handleProposeSynopsis = (
                 DocumentTypes.SYNOPSIS,
                 creator,
                 synopsis,
-                buildDraftLabel(
+                buildCesareVersionLabel(
                   DocumentTypes.SYNOPSIS,
                   input.instruction ?? null,
                 ),
+                versionOptionsFor(input, cesareSessionId),
               );
             },
           ),
@@ -901,6 +965,7 @@ const handleProposeSoggettoV2 = (
   db: Db,
   projectId: string,
   userIdFallback: string | null,
+  cesareSessionId: string | null,
 ): ResultAsync<CreatedDraft, CesareError> => {
   if (!input.instruction || !input.label) {
     return errAsync(
@@ -910,7 +975,14 @@ const handleProposeSoggettoV2 = (
     );
   }
   const instruction = input.instruction;
-  const label = input.label;
+  const versionOptions = versionOptionsFor(input, cesareSessionId);
+  // Spec 75 naming: the model-supplied label belongs only to an explicitly
+  // requested NEW version. Default turns use the canonical Cesare working-row
+  // label and refresh its instruction hint on every overwrite.
+  const label =
+    versionOptions.intent === "new"
+      ? input.label
+      : buildCesareVersionLabel(DocumentTypes.SOGGETTO, instruction);
   return ResultAsync.combine([
     loadDocumentForType(db, projectId, DocumentTypes.SOGGETTO),
     loadUpstreamNarrative(db, projectId, DocumentTypes.SOGGETTO),
@@ -981,6 +1053,7 @@ ${doc.content.slice(0, 18_000)}
           creator,
           next,
           label.slice(0, 80),
+          versionOptions,
         );
       });
   });
@@ -991,6 +1064,7 @@ const handleProposeScalettaFromSoggetto = (
   db: Db,
   projectId: string,
   userIdFallback: string | null,
+  cesareSessionId: string | null,
 ): ResultAsync<CreatedDraft, CesareError> =>
   loadDocumentForType(db, projectId, DocumentTypes.SOGGETTO).andThen((doc) => {
     if (!doc || doc.content.trim().length === 0) {
@@ -1034,7 +1108,8 @@ const handleProposeScalettaFromSoggetto = (
               DocumentTypes.OUTLINE,
               creator,
               content,
-              buildDraftLabel(DocumentTypes.OUTLINE, "da soggetto"),
+              buildCesareVersionLabel(DocumentTypes.OUTLINE, "da soggetto"),
+              versionOptionsFor(input, cesareSessionId),
             );
           },
         ),
@@ -1055,6 +1130,7 @@ const handleProposeTreatment = (
   db: Db,
   projectId: string,
   userIdFallback: string | null,
+  cesareSessionId: string | null,
 ): ResultAsync<CreatedDraft, CesareError> =>
   ResultAsync.combine([
     loadDocumentForType(db, projectId, DocumentTypes.TREATMENT),
@@ -1110,7 +1186,11 @@ const handleProposeTreatment = (
           DocumentTypes.TREATMENT,
           creator,
           treatment,
-          buildDraftLabel(DocumentTypes.TREATMENT, input.instruction ?? null),
+          buildCesareVersionLabel(
+            DocumentTypes.TREATMENT,
+            input.instruction ?? null,
+          ),
+          versionOptionsFor(input, cesareSessionId),
         );
       });
   });
@@ -1130,6 +1210,10 @@ const draftPayload = (draft: CreatedDraft) => ({
   document_type: draft.documentType,
   label: draft.label,
   applied_live: true as const,
+  // Spec 75 — whether this turn created a new version row (first edit of the
+  // turn group, or an explicit user request) or overwrote the group's working
+  // version in place, so the model can phrase the outcome honestly.
+  created_new_version: draft.writeMode === "insert",
   // Word-level diff segments so the marker emitter (cesare-tools.ts) can ship
   // the `ohw:live-diff-b64` marker and the client renders the coloured inline
   // diff for "Mostra modifiche" on document-gen edits (Spec 47b FIX 4).
@@ -1143,27 +1227,44 @@ export const executeDocumentGenTool = (
   db: Db,
   projectId: string,
   userIdFallback: string | null,
+  cesareSessionId: string | null = null,
 ): ResultAsync<ToolResult, CesareError> => {
   const input = block.input as ProposeInput;
   if (block.name === "propose_logline_from_screenplay") {
-    return handleProposeLogline(input, db, projectId, userIdFallback).map(
-      (draft) => successResult(block.id, draftPayload(draft)),
-    );
+    return handleProposeLogline(
+      input,
+      db,
+      projectId,
+      userIdFallback,
+      cesareSessionId,
+    ).map((draft) => successResult(block.id, draftPayload(draft)));
   }
   if (block.name === "write_logline") {
-    return handleWriteLogline(input, db, projectId, userIdFallback).map(
-      (draft) => successResult(block.id, draftPayload(draft)),
-    );
+    return handleWriteLogline(
+      input,
+      db,
+      projectId,
+      userIdFallback,
+      cesareSessionId,
+    ).map((draft) => successResult(block.id, draftPayload(draft)));
   }
   if (block.name === "propose_synopsis_from_screenplay") {
-    return handleProposeSynopsis(input, db, projectId, userIdFallback).map(
-      (draft) => successResult(block.id, draftPayload(draft)),
-    );
+    return handleProposeSynopsis(
+      input,
+      db,
+      projectId,
+      userIdFallback,
+      cesareSessionId,
+    ).map((draft) => successResult(block.id, draftPayload(draft)));
   }
   if (block.name === "propose_soggetto_v2") {
-    return handleProposeSoggettoV2(input, db, projectId, userIdFallback).map(
-      (draft) => successResult(block.id, draftPayload(draft)),
-    );
+    return handleProposeSoggettoV2(
+      input,
+      db,
+      projectId,
+      userIdFallback,
+      cesareSessionId,
+    ).map((draft) => successResult(block.id, draftPayload(draft)));
   }
   if (block.name === "propose_scaletta_from_soggetto") {
     return handleProposeScalettaFromSoggetto(
@@ -1171,12 +1272,17 @@ export const executeDocumentGenTool = (
       db,
       projectId,
       userIdFallback,
+      cesareSessionId,
     ).map((draft) => successResult(block.id, draftPayload(draft)));
   }
   if (block.name === "propose_treatment_from_narrative") {
-    return handleProposeTreatment(input, db, projectId, userIdFallback).map(
-      (draft) => successResult(block.id, draftPayload(draft)),
-    );
+    return handleProposeTreatment(
+      input,
+      db,
+      projectId,
+      userIdFallback,
+      cesareSessionId,
+    ).map((draft) => successResult(block.id, draftPayload(draft)));
   }
   return okAsync(
     successResult(block.id, {
@@ -1205,6 +1311,7 @@ export const createDocumentGenTools = (
   db: Db,
   projectId: string,
   userIdFallback: string | null,
+  cesareSessionId: string | null = null,
 ) => ({
   propose_logline_from_screenplay: tool({
     description:
@@ -1213,6 +1320,7 @@ export const createDocumentGenTools = (
       "L'utente può ripristinare la versione precedente dal pannello Versioni. Usa SOLO quando l'utente chiede di derivare la logline DALLA sceneggiatura. " +
       "Per scrivere da un'istruzione libera o modificare l'esistente usa write_logline.",
     inputSchema: z.object({
+      versioning: VersioningSchema,
       instruction: z
         .string()
         .optional()
@@ -1226,6 +1334,7 @@ export const createDocumentGenTools = (
         db,
         projectId,
         userIdFallback,
+        cesareSessionId,
       );
       if (result.isErr()) return { error: result.error.message };
       return draftPayload(result.value);
@@ -1237,6 +1346,7 @@ export const createDocumentGenTools = (
       "senza bisogno della sceneggiatura. Applica live al documento e crea automaticamente una versione (ripristinabile dal pannello Versioni). " +
       "Usa quando l'utente chiede di SCRIVERE una logline da una premessa o di MODIFICARE quella esistente. Disponibile da qualunque pagina.",
     inputSchema: z.object({
+      versioning: VersioningSchema,
       instruction: z
         .string()
         .describe(
@@ -1255,6 +1365,7 @@ export const createDocumentGenTools = (
         db,
         projectId,
         userIdFallback,
+        cesareSessionId,
       );
       if (result.isErr()) return { error: result.error.message };
       return draftPayload(result.value);
@@ -1266,6 +1377,7 @@ export const createDocumentGenTools = (
       "progetto. Applica live la nuova sinossi al documento e crea automaticamente una versione. Usa SEMPRE questo tool quando " +
       "l'utente chiede 'scrivimi la sinossi' o 'genera la sinossi'.",
     inputSchema: z.object({
+      versioning: VersioningSchema,
       instruction: z
         .string()
         .optional()
@@ -1279,6 +1391,7 @@ export const createDocumentGenTools = (
         db,
         projectId,
         userIdFallback,
+        cesareSessionId,
       );
       if (result.isErr()) return { error: result.error.message };
       return draftPayload(result.value);
@@ -1290,6 +1403,7 @@ export const createDocumentGenTools = (
       "fornita. Usa quando l'utente vuole una variante del soggetto (es. 'più asciutto', " +
       "'più tematico', 'fammi un v2 con focus su X').",
     inputSchema: z.object({
+      versioning: VersioningSchema,
       instruction: z
         .string()
         .describe(
@@ -1307,6 +1421,7 @@ export const createDocumentGenTools = (
         db,
         projectId,
         userIdFallback,
+        cesareSessionId,
       );
       if (result.isErr()) return { error: result.error.message };
       return draftPayload(result.value);
@@ -1318,6 +1433,7 @@ export const createDocumentGenTools = (
       "Applica live la nuova scaletta al documento e crea automaticamente una versione. Usa quando l'utente chiede 'dato il " +
       "soggetto fammi la scaletta' o simile.",
     inputSchema: z.object({
+      versioning: VersioningSchema,
       target_scene_count: z
         .number()
         .int()
@@ -1330,6 +1446,7 @@ export const createDocumentGenTools = (
         db,
         projectId,
         userIdFallback,
+        cesareSessionId,
       );
       if (result.isErr()) return { error: result.error.message };
       return draftPayload(result.value);
@@ -1341,6 +1458,7 @@ export const createDocumentGenTools = (
       "Applica live il nuovo trattamento al documento e crea automaticamente una versione. Usa quando l'utente chiede " +
       "'scrivi il trattamento' o 'genera il trattamento dalla scaletta'. Se il trattamento esiste già lo riscrive seguendo l'istruzione.",
     inputSchema: z.object({
+      versioning: VersioningSchema,
       instruction: z
         .string()
         .optional()
@@ -1354,6 +1472,7 @@ export const createDocumentGenTools = (
         db,
         projectId,
         userIdFallback,
+        cesareSessionId,
       );
       if (result.isErr()) return { error: result.error.message };
       return draftPayload(result.value);

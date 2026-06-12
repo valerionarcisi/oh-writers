@@ -220,6 +220,10 @@ export function CesareChatStoreProvider({ children }: { children: ReactNode }) {
       const streamInput: StreamCesareInput = {
         projectId,
         message: trimmed,
+        // Spec 75 — the turn-group key: the server collapses consecutive edits
+        // from the same session onto one working version. The synthetic
+        // pending session has no server row, so it sends null (insert-per-edit).
+        sessionId: targetSession === PENDING_SESSION ? null : targetSession,
         pageContext: pc,
         conversationHistory: history,
       };
@@ -292,6 +296,7 @@ export function CesareChatStoreProvider({ children }: { children: ReactNode }) {
           data: {
             projectId: streamInput.projectId,
             message: streamInput.message,
+            sessionId: streamInput.sessionId,
             pageContext: { ...streamInput.pageContext },
             conversationHistory: streamInput.conversationHistory.map((m) => ({
               role: m.role,

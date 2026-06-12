@@ -28,9 +28,11 @@ Item format: `[id] short title — link (spec NN / audit A-0x / learning)`
 
 ### Filed 2026-06-11 (real-use session #2 — Valerio + collega, progetto reale) — TOP PRIORITY
 
--A. ~~**[BUG-N67] Cesare scrive il TRATTAMENTO quando gli chiedi la SCENEGGIATURA**~~ — ✅ fixed (lane A, `fix/n67-cesare-entity-routing`): `write_screenplay` intent + entity-fidelity rule nel classifier, nuovo tool `propose_screenplay_from_narrative` (prima stesura Fountain dal materiale a monte, DRAFT version); proof = real-AI smoke `pnpm cost:smoke:cesare-entity-routing` (transcript in `vernissage/n67-entity-routing/`). `docs/BUGS.md`.
--B. **[BUG-N66] Versioning Cesare: una versione per OGNI tentativo** — policy owner: default sovrascrive la corrente, nuova versione solo su richiesta esplicita (o Cesare chiede). Vale per tutte le parti narrative. Serve spec (tocca auto-version invariant). `docs/BUGS.md`.
--C. **[BUG-N63] Export PDF sceneggiatura: dialoghi persi + frontespizio incompleto + bold scene heading** — fedeltà export, tre superfici in un fronte. `docs/BUGS.md`.
+-A. ~~**[BUG-N67] Cesare scrive il TRATTAMENTO quando gli chiedi la SCENEGGIATURA**~~ — ✅ fixed (`fix/n67-cesare-entity-routing`), real-AI smoke green. `docs/BUGS.md`.
+-B. ~~**[BUG-N66] Versioning Cesare: una versione per OGNI tentativo**~~ — ✅ fixed (`1f173c81`), one working version per turn group + new E2E. `docs/BUGS.md`.
+-C. ~~**[BUG-N63] Export PDF sceneggiatura: dialoghi persi + frontespizio incompleto + bold scene heading**~~ — ✅ fixed (`a587e30f`), export fidelity proof in `docs/audits/2026-06-12-n63/`. `docs/BUGS.md`.
+-D. ~~**[BUG-N64] `?versions=…&peek=cesare` spacca la pagina**~~ — ✅ fixed (`579422b9`), fail-closed arbitration green. `docs/BUGS.md`.
+-E. ~~**[BUG-N65] Composer Cesare rigido**~~ — ✅ fixed (`579422b9`), shared auto-grow composer + E2E green. `docs/BUGS.md`.
 -F. **[BUG-N68] Breakdown "Per scena" spaginato + spoglio algoritmico** — audit codice breakdown, fix scoping/layout, spec per spoglio corretto SENZA AI (deterministico). `docs/BUGS.md`.
 
 ## NEXT (prioritised — narrative walk topics, then the rest)
@@ -114,6 +116,13 @@ versions-peek-combo.spec.ts`, `tests/cesare-composer-autogrow.spec.ts`, unit
   `docs/audits/2026-06-12-n64-n65/versions-peek-failclosed.png`.
 - [Spec 66] Versions master→detail unificato + `[● Versioni]` chip in TopBar + per-page
   action cluster — merged via the stabilization batch above. Assorbe N-34/N-35/N-36.
+
+- [Wave 2 2026-06-12] BUG-N67 + BUG-N66 + BUG-N63 integrated, N64/N65 verified live —
+  `fix/n67-cesare-entity-routing`, `fix/n66-cesare-versioning-policy`,
+  `fix/n63-pdf-export-fidelity-c2` all landed in `epic/stabilization-wave-2`. Proof set:
+  real-AI smoke for N67, `tests/cesare-versioning-policy.spec.ts` + `tests/global-setup.ts`
+  migration bootstrap for N66, and export screenshots/PDF for N63. N64/N65 were merged
+  and live-audited on 2026-06-12.
 
 - [Spec 59] App recap HTML — `docs/recap/2026-06-05-app-recap.html` (self-contained, base64 screenshots): 13-slide showcase tour (login→dashboard→overview→narrativa→sceneggiatura→breakdown→budget→schedule→locations→Cesare→settings) + 8-strip Narrative-Walk changelog (technical voice, separated). On-brand palette/fonts. Generator: `docs/recap/build-recap.mjs`. Live captures on the dev stack (reseeded) at 1440px.
 - [Spec 55a / A5 / N-18+N-19] Screenplay borderless page + TopBar action menu (`31c0c87`).

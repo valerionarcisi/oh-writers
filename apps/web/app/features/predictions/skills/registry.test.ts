@@ -24,6 +24,7 @@ const makeCtx = (
   activeSceneId: null,
   activeDayNumber: null,
   requirementId: null,
+  cesareSessionId: null,
   ...overrides,
 });
 
