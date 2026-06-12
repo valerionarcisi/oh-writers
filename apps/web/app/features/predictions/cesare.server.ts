@@ -3,8 +3,9 @@ import { z } from "zod";
 import { eq, and, isNull, count, gte, lte, inArray } from "drizzle-orm";
 import { logger } from "~/server/logger";
 import { aiTelemetry } from "~/server/langfuse-config";
-import { ResultAsync } from "neverthrow";
+import { ResultAsync, okAsync } from "neverthrow";
 import {
+  cesareSessions,
   screenplays,
   scenes,
   breakdownElements,
@@ -63,6 +64,7 @@ import type { SkillBuildContext } from "./skills/types";
 import { buildGlobalContext, assembleSystemPromptV2 } from "./context";
 import { buildLocalContext } from "./context/local-context.server";
 import { loadHistoryContextSummary } from "./messages/cesare-history.server";
+import { ownsSession } from "./sessions/sessions.server";
 import type { CesareStreamEvent } from "./cesare-stream-events";
 
 // ─── System prompt blocks ─────────────────────────────────────────────────────
@@ -129,6 +131,12 @@ const CesareInputSchema = z.object({
   projectId: z.string().uuid(),
   message: z.string().min(1).max(2000),
   pageContext: PageContextSchema,
+  // Spec 75 — the Cesare chat session driving this turn. The document write
+  // tools use it as the turn-group key (consecutive edits from the same session
+  // overwrite the working version instead of inserting one per turn). Optional
+  // and nullable: a caller without a session falls back to the pre-N66
+  // insert-per-edit behaviour, never less safe.
+  sessionId: z.string().uuid().nullable().optional(),
   // Keep only the most recent 20 turns instead of REJECTING longer histories.
   // Since spec 51 persists messages, a long session legitimately accumulates
   // >20 turns; a hard `.max(20)` made every request from a long thread fail Zod
@@ -914,19 +922,24 @@ const assembleContext = (
                         // / outline / treatment). This defines the race out of
                         // existence: text tools like expand_section always see
                         // the open document, never an empty context.
-                        const activeDocument: ActiveDocumentRow | null = (() => {
-                          const byId = activeDocId
-                            ? projectDocuments.find((d) => d.id === activeDocId)
-                            : undefined;
-                          const byPage =
-                            byId ??
-                            (isDocumentPage(pageContext.page)
+                        const activeDocument: ActiveDocumentRow | null =
+                          (() => {
+                            const byId = activeDocId
                               ? projectDocuments.find(
-                                  (d) => d.type === pageContext.page,
+                                  (d) => d.id === activeDocId,
                                 )
-                              : undefined);
-                          return byPage ? { ...byPage, isActive: true } : null;
-                        })();
+                              : undefined;
+                            const byPage =
+                              byId ??
+                              (isDocumentPage(pageContext.page)
+                                ? projectDocuments.find(
+                                    (d) => d.type === pageContext.page,
+                                  )
+                                : undefined);
+                            return byPage
+                              ? { ...byPage, isActive: true }
+                              : null;
+                          })();
                         // Load bible lazily — never block on errors (return null on failure)
                         return loadFilmBible(db, projectId)
                           .map((bible) => ({
@@ -1902,6 +1915,9 @@ const callCesareUniversal = (
             activeSceneId: ctx.activeSceneId,
             activeDayNumber: ctx.activeDayNumber,
             userIdFallback: ctx.userIdFallback,
+            // Legacy path (pre-spec-39) — no chat session threading here, so
+            // every document edit inserts a version (Spec 75 fallback).
+            cesareSessionId: null,
           },
           model,
           forcedFirstTool,
@@ -1919,6 +1935,9 @@ const callCesareUniversal = (
       activeSceneId: ctx.activeSceneId,
       activeDayNumber: ctx.activeDayNumber,
       userIdFallback: ctx.userIdFallback,
+      // Legacy path (pre-spec-39) — no chat session threading here, so every
+      // document edit inserts a version (Spec 75 fallback).
+      cesareSessionId: null,
     },
     model,
   );
@@ -2093,6 +2112,36 @@ const callCesareV2 = (
 
 // ─── V2 handler — stratified context (spec 39) ────────────────────────────────
 
+// Spec 75 — resolve the turn-group session key. The client-supplied session id
+// is trusted only after an ownership check (same user + same project), so a
+// forged id can never stamp document versions or join another session's turn
+// group. Fail-safe: any miss/error degrades to null, which falls back to the
+// pre-N66 insert-per-edit behaviour — never less safe.
+const resolveTurnSessionId = (
+  db: Db,
+  sessionId: string | null,
+  projectId: string,
+  userId: string,
+): ResultAsync<string | null, never> => {
+  if (!sessionId) return okAsync(null);
+  return ResultAsync.fromPromise(
+    db
+      .select({
+        userId: cesareSessions.userId,
+        projectId: cesareSessions.projectId,
+      })
+      .from(cesareSessions)
+      .where(eq(cesareSessions.id, sessionId))
+      .limit(1)
+      .then((rows) => rows[0] ?? null),
+    () => null,
+  )
+    .orElse(() => okAsync(null))
+    .map((row) =>
+      row && ownsSession(row, { userId, projectId }) ? sessionId : null,
+    );
+};
+
 const handleAskCesareV2 = (
   data: CesareInput,
   db: Db,
@@ -2127,128 +2176,144 @@ const handleAskCesareV2 = (
     );
   }
 
-  // Step 1: build global context (60s memo cache)
-  return buildGlobalContext(db, data.projectId)
-    .mapErr(
-      (e) =>
-        new CesareError(
-          `buildGlobalContext failed: ${"message" in e ? e.message : String(e)}`,
-        ),
-    )
-    .andThen((globalCtx) => {
-      const page = data.pageContext.page as import("./skills/types").PageType;
+  // Step 0 (Spec 75): resolve the turn-group session key (ownership-checked,
+  // fail-safe to null) before any context assembly.
+  return resolveTurnSessionId(
+    db,
+    data.sessionId ?? null,
+    data.projectId,
+    access.user.id,
+  ).andThen((cesareSessionId) =>
+    // Step 1: build global context (60s memo cache)
+    buildGlobalContext(db, data.projectId)
+      .mapErr(
+        (e) =>
+          new CesareError(
+            `buildGlobalContext failed: ${"message" in e ? e.message : String(e)}`,
+          ),
+      )
+      .andThen((globalCtx) => {
+        const page = data.pageContext.page as import("./skills/types").PageType;
 
-      // Step 2: preliminary skill build context (no docCtx yet)
-      const prelimBuildCtx: SkillBuildContext = {
-        bible: globalCtx.bible,
-        activeSceneId: data.pageContext.sceneId ?? null,
-        activeDayNumber: data.pageContext.shootingDayNumber ?? null,
-        requirementId: data.pageContext.requirementId ?? null,
-      };
+        // Step 2: preliminary skill build context (no docCtx yet)
+        const prelimBuildCtx: SkillBuildContext = {
+          bible: globalCtx.bible,
+          activeSceneId: data.pageContext.sceneId ?? null,
+          activeDayNumber: data.pageContext.shootingDayNumber ?? null,
+          requirementId: data.pageContext.requirementId ?? null,
+          cesareSessionId,
+        };
 
-      // Step 3: preliminary registry. `selectForPage` now returns the FULL
-      // universal skill superset (spec 47b) so any tool is dispatchable from any
-      // page; the page only orders which guidance leads. `userIdFallback` lets
-      // the always-available document-gen skill attribute auto-created versions.
-      const prelimRegistry = buildSkillRegistry(
-        prelimBuildCtx,
-        {},
-        access.user.id,
-      );
-      const prelimSkills = prelimRegistry.selectForPage(page, null);
+        // Step 3: preliminary registry. `selectForPage` now returns the FULL
+        // universal skill superset (spec 47b) so any tool is dispatchable from any
+        // page; the page only orders which guidance leads. `userIdFallback` lets
+        // the always-available document-gen skill attribute auto-created versions.
+        const prelimRegistry = buildSkillRegistry(
+          prelimBuildCtx,
+          {},
+          access.user.id,
+        );
+        const prelimSkills = prelimRegistry.selectForPage(page, null);
 
-      // Step 4: lean local context. We scope DB loading to the PAGE-PRIMARY
-      // skills (not the universal set) so round-trips stay proportional to the
-      // page. Cross-domain write tools (e.g. propose_soggetto_v2) resolve their
-      // own target data inside the executor, so they need no pre-loaded context.
-      const contextSkills = prelimRegistry.primarySkillsForPage(page);
-      const pageCtx = {
-        sceneId: data.pageContext.sceneId ?? null,
-        sceneNumber: data.pageContext.sceneNumber ?? null,
-        requirementId: data.pageContext.requirementId ?? null,
-        documentId: data.pageContext.documentId ?? null,
-        shootingDayId: data.pageContext.shootingDayId ?? null,
-        shootingDayNumber: data.pageContext.shootingDayNumber ?? null,
-      };
+        // Step 4: lean local context. We scope DB loading to the PAGE-PRIMARY
+        // skills (not the universal set) so round-trips stay proportional to the
+        // page. Cross-domain write tools (e.g. propose_soggetto_v2) resolve their
+        // own target data inside the executor, so they need no pre-loaded context.
+        const contextSkills = prelimRegistry.primarySkillsForPage(page);
+        const pageCtx = {
+          sceneId: data.pageContext.sceneId ?? null,
+          sceneNumber: data.pageContext.sceneNumber ?? null,
+          requirementId: data.pageContext.requirementId ?? null,
+          documentId: data.pageContext.documentId ?? null,
+          shootingDayId: data.pageContext.shootingDayId ?? null,
+          shootingDayNumber: data.pageContext.shootingDayNumber ?? null,
+        };
 
-      return buildLocalContext(db, data.projectId, pageCtx, contextSkills, page)
-        .mapErr(
-          (e) =>
-            new CesareError(
-              `buildLocalContext failed: ${"message" in e ? e.message : String(e)}`,
-            ),
+        return buildLocalContext(
+          db,
+          data.projectId,
+          pageCtx,
+          contextSkills,
+          page,
         )
-        .andThen((localCtx) => {
-          // Step 5: for document pages, inject live document into document-edit skill
-          let finalSkills = prelimSkills;
-          let finalRegistry = prelimRegistry;
+          .mapErr(
+            (e) =>
+              new CesareError(
+                `buildLocalContext failed: ${"message" in e ? e.message : String(e)}`,
+              ),
+          )
+          .andThen((localCtx) => {
+            // Step 5: for document pages, inject live document into document-edit skill
+            let finalSkills = prelimSkills;
+            let finalRegistry = prelimRegistry;
 
-          if (
-            isDocumentPage(data.pageContext.page) &&
-            localCtx.activeDocument
-          ) {
-            const docCtx: DocumentContext = {
-              documentId: localCtx.activeDocument.id,
-              documentType: localCtx.activeDocument.type as DocumentType,
-              content: localCtx.activeDocument.content,
-            };
-            const docEditSkill = buildDocumentEditSkill(
-              prelimBuildCtx,
-              docCtx,
-              access.user.id,
-            );
-            finalRegistry = buildSkillRegistry(
-              prelimBuildCtx,
-              { "document-edit": docEditSkill },
-              access.user.id,
-            );
-            finalSkills = finalRegistry.selectForPage(page, null);
-          }
-
-          // Step 6: load the bounded "what we changed before" history (Spec 51,
-          // DERIVED). It degrades to null on any failure, so it never breaks a
-          // turn; assemble the stratified system prompt with it appended.
-          return loadHistoryContextSummary(db, data.projectId).andThen(
-            (historyContext) => {
-              const systemPrompt = assembleSystemPromptV2(
-                globalCtx,
-                finalSkills,
-                localCtx,
-                historyContext,
+            if (
+              isDocumentPage(data.pageContext.page) &&
+              localCtx.activeDocument
+            ) {
+              const docCtx: DocumentContext = {
+                documentId: localCtx.activeDocument.id,
+                documentType: localCtx.activeDocument.type as DocumentType,
+                content: localCtx.activeDocument.content,
+              };
+              const docEditSkill = buildDocumentEditSkill(
+                prelimBuildCtx,
+                docCtx,
+                access.user.id,
               );
+              finalRegistry = buildSkillRegistry(
+                prelimBuildCtx,
+                { "document-edit": docEditSkill },
+                access.user.id,
+              );
+              finalSkills = finalRegistry.selectForPage(page, null);
+            }
 
-              const tools = finalRegistry.allTools(finalSkills);
-              const executor = finalRegistry.combinedExecutor(finalSkills);
-
-              // Step 7: invoke the unified tool loop
-              const startMs = Date.now();
-              return callCesareV2(
-                systemPrompt,
-                data.conversationHistory,
-                data.message,
-                db,
-                data.projectId,
-                access,
-                executor,
-                tools,
-                model,
-                data.pageContext.page,
-                onStreamEvent,
-                abortSignal,
-              ).map((reply) => {
-                emitCesareMetricEvent(
-                  data.pageContext.page,
-                  data.projectId,
-                  model,
-                  Date.now() - startMs,
-                  reply,
+            // Step 6: load the bounded "what we changed before" history (Spec 51,
+            // DERIVED). It degrades to null on any failure, so it never breaks a
+            // turn; assemble the stratified system prompt with it appended.
+            return loadHistoryContextSummary(db, data.projectId).andThen(
+              (historyContext) => {
+                const systemPrompt = assembleSystemPromptV2(
+                  globalCtx,
+                  finalSkills,
+                  localCtx,
+                  historyContext,
                 );
-                return reply;
-              });
-            },
-          );
-        });
-    });
+
+                const tools = finalRegistry.allTools(finalSkills);
+                const executor = finalRegistry.combinedExecutor(finalSkills);
+
+                // Step 7: invoke the unified tool loop
+                const startMs = Date.now();
+                return callCesareV2(
+                  systemPrompt,
+                  data.conversationHistory,
+                  data.message,
+                  db,
+                  data.projectId,
+                  access,
+                  executor,
+                  tools,
+                  model,
+                  data.pageContext.page,
+                  onStreamEvent,
+                  abortSignal,
+                ).map((reply) => {
+                  emitCesareMetricEvent(
+                    data.pageContext.page,
+                    data.projectId,
+                    model,
+                    Date.now() - startMs,
+                    reply,
+                  );
+                  return reply;
+                });
+              },
+            );
+          });
+      }),
+  );
 };
 
 // ─── Metric events ────────────────────────────────────────────────────────────

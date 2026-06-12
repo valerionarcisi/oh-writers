@@ -3,51 +3,85 @@ import { DocumentTypes, type DocumentType } from "@oh-writers/domain";
 import { documents, screenplays } from "@oh-writers/db/schema";
 import type { Db } from "~/server/db";
 import {
-  buildDraftLabel,
+  buildCesareVersionLabel,
   executeDocumentGenTool,
   formatUpstreamSource,
   isDocumentGenToolName,
   parseScalettaList,
   resolveLoglineMode,
+  resolveVersionIntent,
   scalettaToOutlineContent,
   sanitizeLogline,
 } from "./cesare-document-tools";
 
-describe("buildDraftLabel", () => {
+// [OHW-075] Spec 75 naming — the Cesare working-version label, refreshed on
+// every overwrite turn. Replaces the per-turn "draft Cesare · …" labels.
+describe("buildCesareVersionLabel", () => {
   it("returns the default label when no hint is given", () => {
-    expect(buildDraftLabel(DocumentTypes.LOGLINE)).toBe(
-      "draft Cesare · logline",
+    expect(buildCesareVersionLabel(DocumentTypes.LOGLINE)).toBe(
+      "Cesare · logline",
     );
   });
 
   it("includes a trimmed hint inside parentheses", () => {
     expect(
-      buildDraftLabel(DocumentTypes.SOGGETTO, "  più asciutto e tematico  "),
-    ).toBe("draft Cesare · soggetto (più asciutto e tematico)");
+      buildCesareVersionLabel(
+        DocumentTypes.SOGGETTO,
+        "  più asciutto e tematico  ",
+      ),
+    ).toBe("Cesare · soggetto (più asciutto e tematico)");
   });
 
   it("collapses whitespace runs inside the hint", () => {
     expect(
-      buildDraftLabel(DocumentTypes.SYNOPSIS, "focus\n\nsu\tpersonaggio"),
-    ).toBe("draft Cesare · sinossi (focus su personaggio)");
+      buildCesareVersionLabel(
+        DocumentTypes.SYNOPSIS,
+        "focus\n\nsu\tpersonaggio",
+      ),
+    ).toBe("Cesare · sinossi (focus su personaggio)");
   });
 
   it("truncates a long hint to ~40 chars", () => {
     const longHint = "x".repeat(120);
-    const result = buildDraftLabel(DocumentTypes.OUTLINE, longHint);
+    const result = buildCesareVersionLabel(DocumentTypes.OUTLINE, longHint);
     expect(result.length).toBeLessThanOrEqual(
-      "draft Cesare · scaletta (".length + 40 + 1,
+      "Cesare · scaletta (".length + 40 + 1,
     );
-    expect(result.startsWith("draft Cesare · scaletta (")).toBe(true);
+    expect(result.startsWith("Cesare · scaletta (")).toBe(true);
   });
 
   it("falls back to default label for an empty / whitespace hint", () => {
-    expect(buildDraftLabel(DocumentTypes.TREATMENT, "   ")).toBe(
-      "draft Cesare · trattamento",
+    expect(buildCesareVersionLabel(DocumentTypes.TREATMENT, "   ")).toBe(
+      "Cesare · trattamento",
     );
-    expect(buildDraftLabel(DocumentTypes.TREATMENT, null)).toBe(
-      "draft Cesare · trattamento",
+    expect(buildCesareVersionLabel(DocumentTypes.TREATMENT, null)).toBe(
+      "Cesare · trattamento",
     );
+  });
+});
+
+// [OHW-075] The `versioning` tool param → VersionIntent mapping. Anything that
+// is not the literal "new" must fall back to overwrite — the server never
+// invents a new version the user did not ask for.
+describe("resolveVersionIntent", () => {
+  it("maps an absent param to overwrite (default policy)", () => {
+    expect(resolveVersionIntent(undefined)).toBe("overwrite");
+  });
+
+  it("maps an explicit 'overwrite' to overwrite", () => {
+    expect(resolveVersionIntent("overwrite")).toBe("overwrite");
+  });
+
+  it("maps 'new' to new (explicit user request)", () => {
+    expect(resolveVersionIntent("new")).toBe("new");
+  });
+
+  it("maps junk values to overwrite, never to new", () => {
+    expect(resolveVersionIntent("NEW")).toBe("overwrite");
+    expect(resolveVersionIntent("nuova")).toBe("overwrite");
+    expect(resolveVersionIntent(1)).toBe("overwrite");
+    expect(resolveVersionIntent(null)).toBe("overwrite");
+    expect(resolveVersionIntent({ versioning: "new" })).toBe("overwrite");
   });
 });
 

@@ -6,6 +6,7 @@ import {
 } from "../cesare-document-tools";
 import { tryExecuteReadTool } from "../cesare-read-tools";
 import type { DocumentContext } from "../cesare-tools";
+import { VERSIONING_POLICY_GUIDANCE } from "./document-gen.skill";
 import type { Skill, SkillBuildContext } from "./types";
 
 export type { DocumentContext };
@@ -34,7 +35,7 @@ STRUMENTI DISPONIBILI SU QUESTO ${label.toUpperCase()}:
 Quando l'utente chiede una modifica concreta (riscrivi, cambia, espandi, accorcia, sostituisci) USA SEMPRE il tool appropriato — non limitarti a suggerire il testo nel chat. Conferma in italiano cosa hai fatto dopo ogni edit.
 
 GENERAZIONE DOCUMENTI (applica LIVE al documento):
-Per richieste che generano un documento intero (logline, sinossi, soggetto v2, scaletta, trattamento) USA I TOOLS dedicati. Ogni tool APPLICA DIRETTAMENTE il nuovo contenuto al documento aperto (si aggiorna live nell'editor) e crea automaticamente una nuova versione sotto il cofano. L'utente può ripristinare la versione precedente dal pannello Versioni. NON esiste più un banner di draft da promuovere o scartare.
+Per richieste che generano un documento intero (logline, sinossi, soggetto v2, scaletta, trattamento) USA I TOOLS dedicati. Ogni tool APPLICA DIRETTAMENTE il nuovo contenuto al documento aperto (si aggiorna live nell'editor) sulla versione di lavoro corrente. L'utente può ripristinare la versione precedente dal pannello Versioni. NON esiste più un banner di draft da promuovere o scartare.
 
 WORKFLOW:
 - "scrivimi una logline su [premessa]" / "rendi la logline più corta/tesa" / "cambia il protagonista della logline" → write_logline({ instruction, mode? }) (scrive o modifica da istruzione libera, senza sceneggiatura)
@@ -54,7 +55,8 @@ WORKFLOW:
 [propose_logline_from_screenplay({ instruction: "più commerciale" })]
 "Ho aggiornato la logline: l'ho applicata direttamente al documento. Puoi ripristinare la versione precedente dal pannello Versioni."
 
-REGOLA FORTE: se il documento attivo è VUOTO o l'utente chiede "scrivi/genera/crea il [documento]", DEVI chiamare il tool propose_*. Mai scrivere il documento intero nel chat. Sei attualmente sul documento ${label}. Tutti i tool di generazione sono comunque disponibili: se l'utente chiede un documento diverso, eseguilo lo stesso e conferma che l'hai aggiornato live (l'utente può aprire quella pagina per vederlo).`;
+REGOLA FORTE: se il documento attivo è VUOTO o l'utente chiede "scrivi/genera/crea il [documento]", DEVI chiamare il tool propose_*. Mai scrivere il documento intero nel chat. Sei attualmente sul documento ${label}. Tutti i tool di generazione sono comunque disponibili: se l'utente chiede un documento diverso, eseguilo lo stesso e conferma che l'hai aggiornato live (l'utente può aprire quella pagina per vederlo).
+${VERSIONING_POLICY_GUIDANCE}`;
 };
 
 // ─── Skill factory ────────────────────────────────────────────────────────────
@@ -78,9 +80,21 @@ export const buildDocumentEditSkill = (
     const readResult = tryExecuteReadTool(block, db, projectId);
     if (readResult) return readResult;
     if (isDocumentGenToolName(block.name)) {
-      return executeDocumentGenTool(block, db, projectId, userIdFallback);
+      return executeDocumentGenTool(
+        block,
+        db,
+        projectId,
+        userIdFallback,
+        ctx.cesareSessionId,
+      );
     }
-    return executeDocumentTool(block, db, docCtx, userIdFallback);
+    return executeDocumentTool(
+      block,
+      db,
+      docCtx,
+      userIdFallback,
+      ctx.cesareSessionId,
+    );
   },
   requiredData: ["documents", "scene-summaries"],
 });

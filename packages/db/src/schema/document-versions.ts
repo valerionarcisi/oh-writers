@@ -10,6 +10,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { users } from "./users";
 import { documents } from "./documents";
+import { cesareSessions } from "./cesare-sessions";
 
 export const documentVersions = pgTable(
   "document_versions",
@@ -24,6 +25,14 @@ export const documentVersions = pgTable(
     draftColor: text("draft_color"),
     draftDate: date("draft_date"),
     isDraft: boolean("is_draft").notNull().default(false),
+    // Spec 75 (BUG-N66) — non-null marks this row as the Cesare working version
+    // of that chat session's turn group: consecutive Cesare edits from the same
+    // session overwrite it in place instead of inserting a new version. Cleared
+    // when the user claims the version (rename / meta update).
+    cesareSessionId: uuid("cesare_session_id").references(
+      () => cesareSessions.id,
+      { onDelete: "set null" },
+    ),
     createdBy: uuid("created_by")
       .notNull()
       .references(() => users.id),

@@ -461,6 +461,33 @@ export const MOCK_SCENARIOS: ReadonlyArray<MockScenario> = [
     ],
   },
 
+  // Spec 75 — an explicit user request for a NEW soggetto version. Keep this
+  // before the generic soggetto matcher so the mock proves the server honours
+  // `versioning: "new"` instead of relying on model interpretation.
+  {
+    match:
+      /nuova versione del soggetto|nuova versione (più|piu) .*soggetto|soggetto.*nuova versione/i,
+    turns: [
+      {
+        tool_uses: [
+          {
+            name: "propose_soggetto_v2",
+            input: {
+              instruction: "più cupo",
+              label: "v2 più cupa",
+              versioning: "new",
+            },
+          },
+        ],
+        stop_reason: "tool_use",
+      },
+      {
+        text: "Ho creato una nuova versione più cupa del soggetto e l'ho applicata al documento.",
+        stop_reason: "end_turn",
+      },
+    ],
+  },
+
   // Documents — propose_soggetto_v2 (OHW-577 + R3).
   // Write-from-zero, derive-from-logline, and edit phrasings for the soggetto.
   // The cross-entity "aggiorna/allinea soggetto e sinossi" scenario below uses

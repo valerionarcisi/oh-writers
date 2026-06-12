@@ -1,17 +1,23 @@
 import { describe, it, expect } from "vitest";
+import { documents, documentVersions } from "@oh-writers/db/schema";
+import { DocumentTypes } from "@oh-writers/domain";
 import type { Db } from "~/server/db";
 import { persistDocumentContent } from "./cesare-tools";
 
 // ─── In-memory fake DB ─────────────────────────────────────────────────────────
-// persistDocumentContent must follow the canonical Spec 44 Agentic Edit Pattern:
-// it inserts a NEW non-draft document_versions row and repoints
-// documents.current_version_id at it (never updates the active row in place).
+// [OHW-075] persistDocumentContent is the document-edit tools' write path
+// (apply_text_edit / expand_section / compress_section). Since Spec 75 it
+// delegates to `applyVersionLive` — the single document write path — so the
+// turn-group policy applies: with no session every edit INSERTS a version (the
+// pre-N66 behaviour, never less safe); with a session the working version is
+// overwritten in place. The retired per-turn "Cesare · modifica N" insert must
+// never come back.
 //
 // There is no PGlite / real-DB harness in this repo, so we model just enough of
-// the Drizzle fluent surface that persistDocumentContent exercises: a single
-// transaction running select (doc row), select (max version number), insert
-// (new version) and update (document). The fake records every write so the test
-// can assert the contract on real production code, not on a mock of it.
+// the Drizzle fluent surface, dispatched by TABLE identity, that the delegated
+// applyVersionLive exercises: selects on documents + document_versions, insert
+// returning, updates on both tables, all inside `db.transaction`. The fake
+// records every write so the test asserts the contract on production code.
 
 interface VersionRow {
   id: string;
@@ -20,6 +26,8 @@ interface VersionRow {
   label: string;
   content: string;
   isDraft: boolean;
+  cesareSessionId: string | null;
+  updatedAt: Date;
   createdBy: string;
 }
 
@@ -35,110 +43,115 @@ interface FakeState {
   versions: VersionRow[];
   insertedVersions: VersionRow[];
   documentUpdates: Partial<DocumentRow>[];
-  versionUpdates: { id: string; set: Record<string, unknown> }[];
+  versionUpdates: Record<string, unknown>[];
   idSeq: number;
 }
 
 const buildFakeDb = (state: FakeState): Db => {
-  const makeTx = () => {
-    const selectBuilder = (columns: Record<string, unknown>) => {
-      const wantsMax = "max" in columns;
-      const chain = {
-        from: () => chain,
-        where: () => chain,
-        limit: () => chain,
-        then: (
-          resolve: (rows: Record<string, unknown>[]) => unknown,
-        ): unknown => {
-          if (wantsMax) {
-            const max = state.versions.reduce(
-              (acc, v) => Math.max(acc, v.number),
-              0,
-            );
-            return resolve([{ max }]);
-          }
-          return resolve([
+  const currentVersion = (): VersionRow | null =>
+    state.versions.find((v) => v.id === state.document.currentVersionId) ??
+    null;
+
+  const select = (columns: Record<string, unknown>) => ({
+    from: (table: unknown) => {
+      const resolveRows = (): unknown[] => {
+        if (table === documents) {
+          return [
             {
               id: state.document.id,
               currentVersionId: state.document.currentVersionId,
               createdBy: state.document.createdBy,
+              content: state.document.content,
             },
-          ]);
-        },
+          ];
+        }
+        if ("max" in columns) {
+          return [
+            { max: state.versions.reduce((m, v) => Math.max(m, v.number), 0) },
+          ];
+        }
+        if ("cesareSessionId" in columns) {
+          const current = currentVersion();
+          return current ? [current] : [];
+        }
+        // existing-version contents (insert-path duplicate guard)
+        return state.versions.map((v) => ({ content: v.content }));
       };
-      // Support both `await chain` and `const [x] = await chain`.
-      return chain as unknown as PromiseLike<Record<string, unknown>[]> & {
-        from: () => typeof chain;
-        where: () => typeof chain;
-        limit: () => typeof chain;
+      const whereResult = {
+        then: (resolve: (rows: unknown[]) => unknown): unknown =>
+          resolve(resolveRows()),
+        limit: () => Promise.resolve(resolveRows()),
       };
-    };
+      return { where: () => whereResult };
+    },
+  });
 
-    const insertBuilder = () => {
-      let pending: Record<string, unknown> | null = null;
-      const chain = {
-        values: (v: Record<string, unknown>) => {
-          pending = v;
-          return chain;
-        },
-        returning: () => ({
-          then: (resolve: (rows: { id: string }[]) => unknown): unknown => {
-            const id = `v-${++state.idSeq}`;
-            const row: VersionRow = {
-              id,
-              documentId: pending!["documentId"] as string,
-              number: pending!["number"] as number,
-              label: pending!["label"] as string,
-              content: pending!["content"] as string,
-              isDraft: pending!["isDraft"] as boolean,
-              createdBy: pending!["createdBy"] as string,
-            };
-            state.versions.push(row);
-            state.insertedVersions.push(row);
-            return resolve([{ id }]);
-          },
-        }),
-      };
-      return chain;
-    };
+  const insert = () => ({
+    values: (v: Record<string, unknown>) => ({
+      returning: () => {
+        const id = `v-${++state.idSeq}`;
+        const row: VersionRow = {
+          id,
+          documentId: v["documentId"] as string,
+          number: v["number"] as number,
+          label: v["label"] as string,
+          content: v["content"] as string,
+          isDraft: v["isDraft"] as boolean,
+          cesareSessionId: (v["cesareSessionId"] as string | null) ?? null,
+          updatedAt: new Date(),
+          createdBy: v["createdBy"] as string,
+        };
+        state.versions.push(row);
+        state.insertedVersions.push(row);
+        return Promise.resolve([{ id }]);
+      },
+    }),
+  });
 
-    const updateBuilder = () => {
-      let pending: Record<string, unknown> = {};
-      const chain = {
-        set: (v: Record<string, unknown>) => {
-          pending = v;
-          return chain;
-        },
-        where: () => ({
-          then: (resolve: (r: unknown) => unknown): unknown => {
-            // persistDocumentContent only updates the documents table.
-            state.documentUpdates.push(pending as Partial<DocumentRow>);
-            state.document = {
-              ...state.document,
-              ...(pending as Partial<DocumentRow>),
-            };
-            return resolve(undefined);
-          },
-        }),
-      };
-      return chain;
-    };
+  const update = (table: unknown) => ({
+    set: (values: Record<string, unknown>) => ({
+      where: () => {
+        if (table === documentVersions) {
+          state.versionUpdates.push(values);
+          const current = currentVersion();
+          if (current) {
+            if (typeof values["content"] === "string") {
+              current.content = values["content"];
+            }
+            if (typeof values["label"] === "string") {
+              current.label = values["label"];
+            }
+          }
+        } else {
+          state.documentUpdates.push(values as Partial<DocumentRow>);
+          state.document = {
+            ...state.document,
+            ...(values as Partial<DocumentRow>),
+          };
+        }
+        return Promise.resolve();
+      },
+    }),
+  });
 
-    return {
-      select: (columns: Record<string, unknown>) => selectBuilder(columns),
-      insert: () => insertBuilder(),
-      update: () => updateBuilder(),
-    };
-  };
-
-  return {
+  const db = {
+    select,
+    insert,
+    update,
+    delete: () => ({ where: () => Promise.resolve() }),
     transaction: async <T>(cb: (tx: unknown) => Promise<T>): Promise<T> =>
-      cb(makeTx()),
+      cb(db),
   } as unknown as Db;
+
+  return db;
 };
 
-describe("persistDocumentContent (Spec 44 Agentic Edit Pattern)", () => {
-  const baseState = (): FakeState => ({
+const SESSION_A = "00000000-0000-4000-a000-0000000000aa";
+
+describe("persistDocumentContent (Spec 75 turn-group policy)", () => {
+  const baseState = (
+    versionOverrides: Partial<VersionRow> = {},
+  ): FakeState => ({
     document: {
       id: "doc-1",
       currentVersionId: "v-baseline",
@@ -153,7 +166,10 @@ describe("persistDocumentContent (Spec 44 Agentic Edit Pattern)", () => {
         label: "baseline",
         content: "Milano, fine anni Novanta. Marta…",
         isDraft: false,
+        cesareSessionId: null,
+        updatedAt: new Date(),
         createdBy: "user-1",
+        ...versionOverrides,
       },
     ],
     insertedVersions: [],
@@ -162,21 +178,24 @@ describe("persistDocumentContent (Spec 44 Agentic Edit Pattern)", () => {
     idSeq: 1,
   });
 
-  it("creates a NEW non-draft version and repoints current_version_id", async () => {
+  const NO_SESSION = { cesareSessionId: null, intent: "overwrite" } as const;
+
+  it("with no session: creates a NEW non-draft version and repoints current_version_id (pre-N66 fallback)", async () => {
     const state = baseState();
     const db = buildFakeDb(state);
 
     const result = await persistDocumentContent(
       db,
       "doc-1",
+      DocumentTypes.SOGGETTO,
       "Un soggetto completamente nuovo generato da Cesare.",
       null,
+      NO_SESSION,
     );
 
     expect(result.isOk()).toBe(true);
     const applied = result._unsafeUnwrap();
 
-    // 1. A brand-new version row was inserted (not an in-place update).
     expect(state.insertedVersions).toHaveLength(1);
     const inserted = state.insertedVersions[0]!;
     expect(inserted.isDraft).toBe(false);
@@ -184,17 +203,63 @@ describe("persistDocumentContent (Spec 44 Agentic Edit Pattern)", () => {
     expect(inserted.content).toBe(
       "Un soggetto completamente nuovo generato da Cesare.",
     );
+    // The retired per-turn label must never come back.
+    expect(inserted.label).not.toMatch(/modifica \d/);
+    expect(inserted.label).toBe("Cesare · soggetto");
 
-    // 2. documents.current_version_id now points at the new version + content.
     const docUpdate = state.documentUpdates.at(-1)!;
     expect(docUpdate["currentVersionId"]).toBe(inserted.id);
     expect(docUpdate["content"]).toBe(
       "Un soggetto completamente nuovo generato da Cesare.",
     );
 
-    // 3. The applied result is NON-NULL and carries the IDs the marker needs.
     expect(applied.versionId).toBe(inserted.id);
     expect(applied.previousVersionId).toBe("v-baseline");
+  });
+
+  it("same session + fresh working version: OVERWRITES it in place — no new version row", async () => {
+    const state = baseState({ cesareSessionId: SESSION_A });
+    const db = buildFakeDb(state);
+
+    const result = await persistDocumentContent(
+      db,
+      "doc-1",
+      DocumentTypes.SOGGETTO,
+      "Il soggetto rivisto, ancora nello stesso gruppo di lavoro.",
+      null,
+      { cesareSessionId: SESSION_A, intent: "overwrite" },
+    );
+
+    expect(result.isOk()).toBe(true);
+    const applied = result._unsafeUnwrap();
+
+    // No insert — the working version was rewritten in place.
+    expect(state.insertedVersions).toHaveLength(0);
+    expect(state.versionUpdates).toHaveLength(1);
+    expect(state.versionUpdates[0]!["content"]).toBe(
+      "Il soggetto rivisto, ancora nello stesso gruppo di lavoro.",
+    );
+    expect(applied.versionId).toBe("v-baseline");
+    // Overwrite turns carry no per-turn revert target (Spec 75).
+    expect(applied.previousVersionId).toBe(null);
+  });
+
+  it("explicit intent 'new' with the same session: inserts a new version anyway", async () => {
+    const state = baseState({ cesareSessionId: SESSION_A });
+    const db = buildFakeDb(state);
+
+    const result = await persistDocumentContent(
+      db,
+      "doc-1",
+      DocumentTypes.SOGGETTO,
+      "Una nuova versione chiesta esplicitamente dall'utente.",
+      null,
+      { cesareSessionId: SESSION_A, intent: "new" },
+    );
+
+    expect(result.isOk()).toBe(true);
+    expect(state.insertedVersions).toHaveLength(1);
+    expect(state.insertedVersions[0]!.cesareSessionId).toBe(SESSION_A);
   });
 
   it("falls back to userIdFallback when the document has no createdBy", async () => {
@@ -205,8 +270,10 @@ describe("persistDocumentContent (Spec 44 Agentic Edit Pattern)", () => {
     const result = await persistDocumentContent(
       db,
       "doc-1",
+      DocumentTypes.SOGGETTO,
       "Nuovo contenuto.",
       "fallback-user",
+      NO_SESSION,
     );
 
     expect(result.isOk()).toBe(true);
@@ -221,8 +288,10 @@ describe("persistDocumentContent (Spec 44 Agentic Edit Pattern)", () => {
     const result = await persistDocumentContent(
       db,
       "doc-1",
+      DocumentTypes.SOGGETTO,
       "Nuovo contenuto.",
       null,
+      NO_SESSION,
     );
 
     expect(result.isErr()).toBe(true);

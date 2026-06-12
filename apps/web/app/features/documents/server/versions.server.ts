@@ -332,7 +332,15 @@ export const renameVersion = createServerFn({ method: "POST" })
             ResultAsync.fromPromise(
               db
                 .update(documentVersions)
-                .set({ label: data.label, updatedAt: new Date() })
+                // Renaming is the user claiming the version: clearing the
+                // session stamp ends the Cesare turn group (Spec 75), so the
+                // next Cesare edit starts a fresh working version instead of
+                // overwriting a row the user now owns.
+                .set({
+                  label: data.label,
+                  cesareSessionId: null,
+                  updatedAt: new Date(),
+                })
                 .where(eq(documentVersions.id, version.id))
                 .returning()
                 .then((rows) => rows[0] ?? null),
@@ -382,11 +390,25 @@ export const switchToVersion = createServerFn({ method: "POST" })
           .andThen(({ version, doc }) =>
             ResultAsync.fromPromise(
               db
+                .update(documentVersions)
+                // Activating a version is the user claiming it as the current
+                // baseline. Clear a stale Cesare session stamp first so even an
+                // older working row from the same session starts a new group on
+                // the next edit (Spec 75 group-ending contract).
+                .set({ cesareSessionId: null, updatedAt: new Date() })
+                .where(eq(documentVersions.id, version.id))
+                .then(() => ({ version, doc })),
+              (e) => new DbError("versions.switch", e),
+            ),
+          )
+          .andThen(({ version, doc }) =>
+            ResultAsync.fromPromise(
+              db
                 .update(documents)
                 .set({ currentVersionId: version.id })
                 .where(eq(documents.id, doc.id))
                 .then(() => version),
-              (e) => new DbError("versions.switch", e),
+              (e) => new DbError("versions.switch.update-current", e),
             ),
           ),
       );
@@ -516,7 +538,10 @@ export const updateVersionMeta = createServerFn({ method: "POST" })
             ResultAsync.fromPromise(
               db
                 .update(documentVersions)
-                .set({ ...patch, updatedAt: new Date() })
+                // Setting colour/date meta is the user claiming the version —
+                // clearing the session stamp ends the Cesare turn group
+                // (Spec 75), same as renaming.
+                .set({ ...patch, cesareSessionId: null, updatedAt: new Date() })
                 .where(eq(documentVersions.id, version.id))
                 .returning()
                 .then((rows) => rows[0] ?? null),

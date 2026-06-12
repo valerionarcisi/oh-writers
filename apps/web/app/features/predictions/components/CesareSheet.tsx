@@ -101,6 +101,7 @@ export type AskCesareFn = (params: {
   data: {
     projectId: string;
     message: string;
+    sessionId?: string | null;
     pageContext: {
       page: CesarePage;
       sceneId: string | null;
@@ -515,18 +516,37 @@ export function CesareSheet({
     [page, splitDrawerCtx],
   );
 
+  const sendInActiveSession = useCallback(
+    async (text: string) => {
+      if (activeSessionId) {
+        await chat.send(text, activeSessionId);
+        return;
+      }
+
+      // Spec 75 — the first drawer turn must already carry a real session id,
+      // otherwise consecutive edits fall back to insert-per-turn and recreate
+      // the version flood. Create/select the session before sending, exactly as
+      // seeded prompts and explicit "new chat" already do.
+      const session = await createSession.mutateAsync(undefined);
+      setActiveSessionId(session.id);
+      chat.selectSession(session.id);
+      await chat.send(text, session.id);
+    },
+    [activeSessionId, chat, createSession],
+  );
+
   const handleSubmit = useCallback(() => {
     if (isLoading) return;
     const text = input;
     setInput("");
-    void chat.send(text);
-  }, [input, isLoading, chat]);
+    void sendInActiveSession(text);
+  }, [input, isLoading, sendInActiveSession]);
 
   const handleQuickPrompt = useCallback(
     (prompt: string) => {
-      void chat.send(prompt);
+      void sendInActiveSession(prompt);
     },
-    [chat],
+    [sendInActiveSession],
   );
 
   // ── Next-step suggestion (Spec 50) ───────────────────────────────────────

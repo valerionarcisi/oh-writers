@@ -45,6 +45,11 @@ export interface UniversalToolContext {
   /** Fallback user id passed to document-generation tools so AI drafts get
    *  attributed even when there's no session user (rare). */
   readonly userIdFallback: string | null;
+  /** The Cesare chat session driving this turn (Spec 75). Document write tools
+   *  use it as the turn-group key: consecutive edits from the same session
+   *  overwrite the working version instead of inserting a new one. Null when
+   *  the caller has no session — every edit then inserts a version. */
+  readonly cesareSessionId: string | null;
 }
 
 // A null DocumentContext means document-edit tools won't have a target.
@@ -85,10 +90,15 @@ export const createUniversalCesareTools = (
     ...createScreenplayTools(db, ctx.projectId),
 
     // Document text edits on the active document (apply_text_edit, …)
-    ...createDocumentTools(db, docCtx, ctx.userIdFallback),
+    ...createDocumentTools(db, docCtx, ctx.userIdFallback, ctx.cesareSessionId),
 
     // Document generation (logline/synopsis/scaletta/treatment proposers)
-    ...createDocumentGenTools(db, ctx.projectId, ctx.userIdFallback),
+    ...createDocumentGenTools(
+      db,
+      ctx.projectId,
+      ctx.userIdFallback,
+      ctx.cesareSessionId,
+    ),
 
     // Breakdown tools (add_element, link_element_to_scene, …)
     ...createBreakdownTools(db, ctx.projectId),

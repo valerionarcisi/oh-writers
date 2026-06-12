@@ -17,6 +17,14 @@ const TEST_DB_URL =
   "postgresql://oh-writers:oh-writers@localhost:5432/oh-writers_test";
 
 export default async function globalSetup() {
+  execSync("pnpm db:migrate", {
+    cwd: root,
+    stdio: "inherit",
+    env: {
+      ...process.env,
+      DATABASE_URL: TEST_DB_URL,
+    },
+  });
   execSync("pnpm --filter @oh-writers/db seed:reset", {
     cwd: root,
     stdio: "inherit",
