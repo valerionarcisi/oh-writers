@@ -9,6 +9,14 @@ Format: `### YYYY-MM-DD — short title` · **What went wrong** · **Why** · **
 
 ---
 
+### 2026-06-12 — Final Chromium gate was gated by bootstrap/origin, not by the wave-2 fix set
+
+**What went wrong** — I burned time on the final Chromium gate before separating three different failure modes: vinxi refusing to start on a random port in this sandbox, Better Auth rejecting a non-trusted origin, and the remaining breakdown/auto-spoglio baseline red that is outside the Cesare wave.
+
+**Why** — The web dev server asks `get-port-please` for an ephemeral HMR port, which can fail under sandbox constraints; Better Auth only trusts `localhost:3000-3005` in this repo, so `localhost:3062` is invalid even when the server starts. That made the gate look like a product regression when it was partly a launch/origin problem.
+
+**Rule going forward** — For local Playwright gates, start the web server on a trusted origin port (`localhost:3002` here) and keep `WEB_PORT` / `BASE_URL` / `BETTER_AUTH_URL` aligned. If vinxi dies before the app boots, treat it as environment/bootstrap first and only then evaluate the product gate.
+
 ### 2026-06-03 — Audit fleet stalled: subagents can't run background servers
 
 **What went wrong** — Spawned 5 worktree auditors each told to start its own dev
