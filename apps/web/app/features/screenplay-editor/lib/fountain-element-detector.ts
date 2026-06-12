@@ -57,8 +57,17 @@ export const detectElement = (
   //    because DIALOGUE_INDENT starts with CHARACTER_INDENT
   if (line.startsWith(DIALOGUE_INDENT)) return "dialogue";
 
-  // 4a. Character — indented cue
-  if (line.startsWith(CHARACTER_INDENT)) return "character";
+  // 4a. Character — indented cue, but only when it actually reads like a
+  //    cue (ALL CAPS). AI- and import-produced Fountain often indents the
+  //    spoken line at the same indent as the cue; classifying mixed-case
+  //    indented text as "character" destroys the dialogue block on the
+  //    save round-trip and in the PDF export (BUG-N63). Mixed-case at cue
+  //    indent is speech, never a speaker name. An empty indented line stays
+  //    "character" (the writer is about to type a cue).
+  if (line.startsWith(CHARACTER_INDENT)) {
+    if (trimmed.length === 0) return "character";
+    return isUppercaseCue(trimmed) ? "character" : "dialogue";
+  }
 
   // 4b. Character — plain-Fountain cue: ALL CAPS at column 0, preceded by blank
   if (isPlainFountainCue(line, trimmed, prevLine)) return "character";
@@ -69,6 +78,15 @@ export const detectElement = (
   // 6. Action — default
   return "action";
 };
+
+// True when the line is entirely uppercase and contains at least one letter —
+// the minimal "reads like a speaker name" check for the indented-cue path.
+// Intentionally looser than isPlainFountainCue (no punctuation/length
+// rejection) so indented cues like "DOTT. ROSSI (V.O.)" keep working: the
+// old rule accepted every indented line, so this only ever reclassifies
+// mixed-case lines (speech) — never fewer cues than before.
+const isUppercaseCue = (trimmed: string): boolean =>
+  trimmed === trimmed.toUpperCase() && /\p{L}/u.test(trimmed);
 
 // Permissive plain-Fountain cue detector.
 //
