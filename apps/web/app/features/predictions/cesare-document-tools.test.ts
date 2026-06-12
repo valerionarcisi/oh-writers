@@ -464,3 +464,38 @@ describe("executeDocumentGenTool — propose_treatment_from_narrative (F-A2)", (
     expect(result._unsafeUnwrapErr().message).toMatch(/materiale|trattamento/i);
   });
 });
+
+describe("executeDocumentGenTool — propose_soggetto_v2", () => {
+  beforeEach(() => {
+    process.env["MOCK_AI"] = "true";
+  });
+  afterEach(() => {
+    delete process.env["MOCK_AI"];
+  });
+
+  it("rewrites a seeded soggetto and inserts a Cesare version", async () => {
+    const seed =
+      "Milano, fine anni Novanta. Marta, trentacinque anni, traduttrice freelance, vive sola in un bilocale che le sta troppo stretto.";
+    const db = makeTreatmentMockDb({
+      contentByType: { soggetto: seed },
+      screenplay: "",
+    }) as unknown as Db;
+    const result = await executeDocumentGenTool(
+      {
+        type: "tool_use",
+        id: "dbg-1",
+        name: "propose_soggetto_v2",
+        input: {
+          instruction: "più asciutto e tematico",
+          label: "v2 asciutto",
+        },
+      } as const,
+      db,
+      "00000000-0000-4000-a000-000000000011",
+      "00000000-0000-4000-a000-000000000001",
+    );
+    expect(result.isOk(), result.isErr() ? result.error.message : "").toBe(
+      true,
+    );
+  });
+});
