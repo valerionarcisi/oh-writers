@@ -14,7 +14,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
 import { useRouter } from "@tanstack/react-router";
-import { Skeleton } from "@oh-writers/ui";
+import { Skeleton, ComposerTextarea } from "@oh-writers/ui";
 import { useButton } from "react-aria";
 import {
   useCesareSessionFocus,
@@ -368,7 +368,6 @@ function SessionComposer({
 }) {
   const { t } = useTranslation();
   const sendRef = useRef<HTMLButtonElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { buttonProps } = useButton(
     {
       onPress: onSubmit,
@@ -378,33 +377,17 @@ function SessionComposer({
     sendRef,
   );
 
-  // Auto-grow the textarea with its content (slim → grows a little), capped so a
-  // long draft scrolls inside rather than pushing the thread off-screen.
-  useEffect(() => {
-    const el = textareaRef.current;
-    if (!el) return;
-    el.style.height = "auto";
-    el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
-  }, [value]);
-
   return (
     <div className={styles.composer} data-testid="session-composer">
-      <textarea
-        ref={textareaRef}
+      <ComposerTextarea
         className={styles.composerInput}
         value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onKeyDown={(e) => {
-          if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-            e.preventDefault();
-            onSubmit();
-          }
-        }}
+        onChange={onChange}
+        onSubmit={onSubmit}
         placeholder={t("cesare.session.composerPlaceholder")}
-        disabled={isThinking}
-        rows={1}
-        aria-label={t("cesare.session.composerAria")}
-        data-testid="cesare-composer-input"
+        isDisabled={isThinking}
+        ariaLabel={t("cesare.session.composerAria")}
+        testId="cesare-composer-input"
       />
       <div className={styles.composerToolbar}>
         <button

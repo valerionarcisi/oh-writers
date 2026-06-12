@@ -164,27 +164,17 @@
   align-items: center;
 }
 
+/* Surface-specific typography/layout only — sizing (1 row → ~8 rows cap,
+   internal scroll) is owned by the shared ComposerTextarea primitive. */
 .composerInput {
   flex: 1 1 auto;
   min-inline-size: 0;
-  resize: none;
-  border: none;
-  background: transparent;
   color: var(--ds-text);
-  font: inherit;
   font-size: 0.9375rem;
-  line-height: 1.5;
   padding: var(--ds-space-1) var(--ds-space-2);
-  /* One line tall; JS auto-grows up to ~160px then scrolls internally. */
-  max-block-size: 160px;
-  overflow-y: auto;
 
   &:focus-visible {
     outline: none;
-  }
-
-  &::placeholder {
-    color: var(--ds-text-faint);
   }
 }
 
