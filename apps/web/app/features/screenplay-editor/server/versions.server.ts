@@ -426,7 +426,7 @@ export const createBlankVersion = createServerFn({ method: "POST" })
 //     are cleared so the editor reseeds from `fountainToDoc(content)` on the
 //     `key={currentVersionId}` remount, with no stale pmDoc or CRDT to fight.
 
-interface ImportAsActiveVersionParams {
+export interface ImportAsActiveVersionParams {
   screenplayId: string;
   label: string;
   content: string;

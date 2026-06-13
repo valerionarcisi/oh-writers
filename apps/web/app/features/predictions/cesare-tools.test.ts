@@ -94,6 +94,26 @@ describe("extractSideChannelMarkers — honest success for write tools", () => {
     );
     expect(markers).toEqual([]);
   });
+
+  it("emits a doc-applied marker for the screenplay generator (BUG-N67)", () => {
+    // generate_screenplay_from_narrative applies the first draft LIVE as the
+    // active screenplay version, so it MUST emit the doc-applied marker the
+    // honest card + "Vai alla Sceneggiatura" navigation read.
+    const markers = markersFor(
+      "generate_screenplay_from_narrative",
+      JSON.stringify({
+        ok: true,
+        applied_live: true,
+        document_type: "screenplay",
+        version_id: "spv-1",
+        previous_version_id: null,
+      }),
+    );
+    expect(markers).toHaveLength(1);
+    expect(markers[0]).toContain("ohw:doc-applied");
+    expect(markers[0]).toContain('"document_type":"screenplay"');
+    expect(markers[0]).toContain('"version_id":"spv-1"');
+  });
 });
 
 describe("parseHeading", () => {

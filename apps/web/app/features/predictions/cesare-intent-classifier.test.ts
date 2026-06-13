@@ -28,6 +28,7 @@ const DOC_TOOLS = new Set([
   "propose_synopsis_from_screenplay",
   "propose_scaletta_from_soggetto",
   "propose_treatment_from_narrative",
+  "generate_screenplay_from_narrative",
 ]);
 
 const SCREENPLAY_TOOLS = new Set([
@@ -122,6 +123,21 @@ describe("classifyIntent — document generation intents (Bug #4)", () => {
     });
     expect(result._unsafeUnwrap().suggestedTool).toBe(
       "propose_treatment_from_narrative",
+    );
+  });
+
+  it("maps a screenplay-from-narrative request to generate_screenplay_from_narrative (BUG-N67)", async () => {
+    callHaikuMock.mockReturnValue(
+      okAsync(haikuJson('{"type":"write_screenplay","confidence":0.96}')),
+    );
+    const result = await classifyIntent({
+      userMessage:
+        "partendo dal soggetto attivo scrivimi la prima stesura della sceneggiatura",
+      page: "soggetto",
+      availableTools: DOC_TOOLS,
+    });
+    expect(result._unsafeUnwrap().suggestedTool).toBe(
+      "generate_screenplay_from_narrative",
     );
   });
 

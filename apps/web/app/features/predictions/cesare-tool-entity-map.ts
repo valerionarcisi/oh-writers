@@ -68,6 +68,7 @@ const TOOL_ENTITY_MAP: Readonly<Record<string, ToolEntityMapping>> = {
   propose_soggetto_v2: { access: "write", domain: "soggetto" },
   propose_scaletta_from_soggetto: { access: "write", domain: "outline" },
   propose_treatment_from_narrative: { access: "write", domain: "treatment" },
+  generate_screenplay_from_narrative: { access: "write", domain: "screenplay" },
   apply_text_edit: { access: "write", domain: "soggetto" },
   expand_section: { access: "write", domain: "soggetto" },
   compress_section: { access: "write", domain: "soggetto" },

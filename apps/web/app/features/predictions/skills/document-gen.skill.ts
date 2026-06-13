@@ -26,7 +26,8 @@ Puoi generare o riscrivere un documento narrativo del progetto da qualunque pagi
 - "scrivimi la sinossi" / "genera la sinossi" → propose_synopsis_from_screenplay({ instruction? })
 - "fammi un v2 del soggetto più [X]" / "riscrivi il soggetto" → propose_soggetto_v2({ instruction, label })
 - "dato il soggetto fammi la scaletta" → propose_scaletta_from_soggetto({ target_scene_count? })
-- "scrivi il trattamento" / "genera il trattamento dalla scaletta" → propose_treatment_from_narrative({ instruction? })
+- "scrivi il trattamento" / "genera il trattamento dalla scaletta" → propose_treatment_from_narrative({ instruction? }) (SOLO il trattamento, MAI la sceneggiatura)
+- "scrivi la sceneggiatura" / "scrivimi la prima stesura della sceneggiatura" / "partendo dal soggetto fammi la sceneggiatura" → generate_screenplay_from_narrative({ instruction?, target_page_count? }) (se l'utente nomina la SCENEGGIATURA usa QUESTO, non propose_treatment_from_narrative)
 Non scrivere mai il documento intero nel chat: usa SEMPRE il tool, anche se sei su un'altra pagina (es. stai sulla Sceneggiatura e l'utente chiede il Soggetto). Conferma in italiano che l'hai aggiornato live.`;
 
 // requiredData: [] — these tools read what they need (screenplay / soggetto)

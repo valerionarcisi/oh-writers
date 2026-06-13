@@ -2635,6 +2635,7 @@ export const extractSideChannelMarkers = (
     toolName === "propose_soggetto_v2" ||
     toolName === "propose_scaletta_from_soggetto" ||
     toolName === "propose_treatment_from_narrative" ||
+    toolName === "generate_screenplay_from_narrative" ||
     toolName === "apply_text_edit" ||
     toolName === "expand_section" ||
     toolName === "compress_section"

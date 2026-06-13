@@ -42,6 +42,10 @@ export type IntentType =
   | "write_synopsis"
   | "write_outline"
   | "write_treatment"
+  // Screenplay-from-narrative (Spec 75 / BUG-N67): write the FIRST DRAFT of the
+  // screenplay from the upstream narrative chain. Distinct from macro_rewrite,
+  // which revises an EXISTING screenplay.
+  | "write_screenplay"
   // Generic
   | "question"
   | "comment";
@@ -81,6 +85,7 @@ const TOOL_BY_INTENT: Partial<Record<IntentType, string>> = {
   write_synopsis: "propose_synopsis_from_screenplay",
   write_outline: "propose_scaletta_from_soggetto",
   write_treatment: "propose_treatment_from_narrative",
+  write_screenplay: "generate_screenplay_from_narrative",
 };
 
 // Shared catalogue of the many Italian ways a writer phrases a WRITE / DERIVE /
@@ -92,7 +97,8 @@ const DOCUMENT_INTENT_DEFINITIONS = `- write_logline: scrivere, generare o modif
 - write_soggetto: scrivere, generare, derivare o modificare il SOGGETTO. Frasi: "scrivimi/scrivi/buttami giù/fammi/abbozza/metti giù/dammi/sviluppa/genera/crea il soggetto", "fammi un v2 del soggetto", derivazioni: "genera il soggetto dalla logline", "dato lo spunto fammi il soggetto", modifiche: "rendi il soggetto più asciutto/corto/teso", "riscrivi il soggetto", "espandi il soggetto".
 - write_synopsis: scrivere, generare, derivare o RIASSUMERE la SINOSSI. Frasi: "scrivimi/scrivi/fammi/dammi/genera/buttami giù/abbozza la sinossi", derivazioni: "genera la sinossi dal soggetto", "dato il soggetto fammi la sinossi", riassunti: "fai un riassunto di cosa abbiamo scritto", "riassumi la storia", modifiche: "rendi la sinossi più commovente/asciutta", "accorcia la sinossi".
 - write_outline: scrivere, generare o derivare la SCALETTA (lista di scene/sequenze). Frasi: "fammi/scrivimi/dammi/genera/buttami giù/abbozza la scaletta", derivazioni: "genera la scaletta dal soggetto", "dato il soggetto fammi la scaletta", "dividi la storia in scene", "dammi la lista delle scene", modifiche: "espandi l'atto II della scaletta", "accorcia la scaletta".
-- write_treatment: scrivere, generare o derivare il TRATTAMENTO dal materiale a monte (scaletta, sinossi, soggetto). Frasi: "scrivi/scrivimi/fammi/dammi/genera/buttami giù/abbozza il trattamento", derivazioni: "genera il trattamento dalla scaletta", "trattamento a partire dalla scaletta/dal soggetto", modifiche: "espandi l'Atto II del trattamento", "rendi il trattamento più dettagliato".`;
+- write_treatment: scrivere, generare o derivare il TRATTAMENTO dal materiale a monte (scaletta, sinossi, soggetto). Frasi: "scrivi/scrivimi/fammi/dammi/genera/buttami giù/abbozza il trattamento", derivazioni: "genera il trattamento dalla scaletta", "trattamento a partire dalla scaletta/dal soggetto", modifiche: "espandi l'Atto II del trattamento", "rendi il trattamento più dettagliato". ATTENZIONE: vale SOLO per il TRATTAMENTO, MAI per la sceneggiatura.
+- write_screenplay: scrivere la PRIMA STESURA della SCENEGGIATURA derivandola dal materiale narrativo a monte (soggetto, sinossi, scaletta, trattamento). Frasi: "scrivi/scrivimi/fammi/dammi/genera/buttami giù/abbozza la sceneggiatura", "scrivimi la prima stesura della sceneggiatura", derivazioni: "partendo dal soggetto fammi la sceneggiatura", "dal soggetto/dalla scaletta scrivimi la sceneggiatura", "scrivimi il film in sceneggiatura". NON è un trattamento: se l'utente nomina la SCENEGGIATURA (o "il film in formato sceneggiatura"), è write_screenplay, mai write_treatment.`;
 
 const DOCUMENT_INTENT_EXAMPLES = `"scrivimi una logline su un detective che non dorme" → {"type":"write_logline","confidence":0.95}
 "buttami giù una logline" → {"type":"write_logline","confidence":0.9}
@@ -113,13 +119,17 @@ const DOCUMENT_INTENT_EXAMPLES = `"scrivimi una logline su un detective che non 
 "espandi l'atto II" → {"type":"write_outline","confidence":0.7}
 "scrivi il trattamento" → {"type":"write_treatment","confidence":0.92}
 "genera il trattamento dalla scaletta" → {"type":"write_treatment","confidence":0.95}
-"buttami giù il trattamento" → {"type":"write_treatment","confidence":0.88}`;
+"buttami giù il trattamento" → {"type":"write_treatment","confidence":0.88}
+"scrivimi la sceneggiatura" → {"type":"write_screenplay","confidence":0.92}
+"partendo dal soggetto attivo scrivimi la prima stesura della sceneggiatura" → {"type":"write_screenplay","confidence":0.96}
+"dal soggetto fammi la sceneggiatura" → {"type":"write_screenplay","confidence":0.94}
+"scrivi la prima stesura della sceneggiatura" → {"type":"write_screenplay","confidence":0.95}`;
 
 const SCREENPLAY_SYSTEM_PROMPT = `Sei un classificatore d'intento per Oh Writers. L'utente sta dialogando con Cesare (AI dramaturg). La pagina di contesto è "screenplay", ma in una SESSIONE Cesare questa è anche la pagina di default: l'utente può chiederti di scrivere QUALSIASI documento narrativo (logline, soggetto, sinossi, scaletta, trattamento) oltre a mutare la sceneggiatura. Devi capire SE l'utente sta chiedendo un'azione (mutazione sceneggiatura O scrittura/derivazione/modifica di un documento) e DI CHE TIPO.
 
 Output: SOLO un oggetto JSON, niente prosa attorno. Schema:
 {
-  "type": "macro_rewrite" | "micro_edit" | "rewrite_one_scene" | "merge_scenes" | "delete_scene" | "rename" | "write_logline" | "write_soggetto" | "write_synopsis" | "write_outline" | "write_treatment" | "question" | "comment",
+  "type": "macro_rewrite" | "micro_edit" | "rewrite_one_scene" | "merge_scenes" | "delete_scene" | "rename" | "write_logline" | "write_soggetto" | "write_synopsis" | "write_outline" | "write_treatment" | "write_screenplay" | "question" | "comment",
   "confidence": <number tra 0 e 1>
 }
 
@@ -142,6 +152,11 @@ Definizioni dei type — SCENEGGIATURA:
     "rendi più asciutta questa battuta".
 - rename: rinomina di personaggio o location attraverso tutta la sceneggiatura.
     "rinomina Marco in Luca", "chiama la location Bar invece di Pizzeria".
+
+DISTINZIONE CRITICA — write_screenplay vs macro_rewrite:
+- write_screenplay = SCRIVERE la PRIMA STESURA della sceneggiatura partendo dal materiale narrativo (soggetto/sinossi/scaletta/trattamento), quando la sceneggiatura ancora NON esiste o l'utente chiede esplicitamente di scriverla "partendo dal soggetto/dalla scaletta". → "scrivimi la sceneggiatura", "dal soggetto fammi la sceneggiatura".
+- macro_rewrite = RISCRIVERE/trasformare una sceneggiatura GIÀ esistente. → "fai una v2", "traduci tutto in inglese", "tutto in una stanza".
+Se l'utente dice "scrivi/scrivimi/genera la sceneggiatura" (NON "riscrivi", NON "v2"), è write_screenplay.
 
 Definizioni dei type — DOCUMENTI NARRATIVI (valgono anche da questa pagina):
 ${DOCUMENT_INTENT_DEFINITIONS}
@@ -182,7 +197,7 @@ const DOCUMENT_SYSTEM_PROMPT = `Sei un classificatore d'intento per Oh Writers. 
 
 Output: SOLO un oggetto JSON, niente prosa attorno. Schema:
 {
-  "type": "write_logline" | "write_soggetto" | "write_synopsis" | "write_outline" | "write_treatment" | "question" | "comment",
+  "type": "write_logline" | "write_soggetto" | "write_synopsis" | "write_outline" | "write_treatment" | "write_screenplay" | "question" | "comment",
   "confidence": <number tra 0 e 1>
 }
 
@@ -241,6 +256,7 @@ const parseJsonResponse = (text: string): IntentResult | null => {
       "write_synopsis",
       "write_outline",
       "write_treatment",
+      "write_screenplay",
       "question",
       "comment",
     ];

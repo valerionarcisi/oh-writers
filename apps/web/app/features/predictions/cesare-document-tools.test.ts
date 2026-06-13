@@ -222,6 +222,12 @@ describe("isDocumentGenToolName", () => {
     );
   });
 
+  it("recognises generate_screenplay_from_narrative (Spec 75 / BUG-N67)", () => {
+    expect(isDocumentGenToolName("generate_screenplay_from_narrative")).toBe(
+      true,
+    );
+  });
+
   it("rejects unknown tool names", () => {
     expect(isDocumentGenToolName("rewrite_scene")).toBe(false);
     expect(isDocumentGenToolName("")).toBe(false);
@@ -428,5 +434,109 @@ describe("executeDocumentGenTool — propose_treatment_from_narrative (F-A2)", (
     // the honest card never claims a change happened.
     expect(result.isErr()).toBe(true);
     expect(result._unsafeUnwrapErr().message).toMatch(/materiale|trattamento/i);
+  });
+});
+
+// ─── generate_screenplay_from_narrative (Spec 75 / BUG-N67) ───────────────────
+//
+// The bug: asked for the SCREENPLAY from the soggetto, Cesare wrote the
+// Trattamento because no screenplay-from-narrative generator existed. The new
+// tool reads the upstream narrative and, when there is genuinely nothing to build
+// from, fails LOUDLY (never silently no-ops or writes the wrong entity). The
+// happy path applies the generated Fountain as the active screenplay version via
+// `importAsActiveVersionTx` and is covered by the real-AI smoke [OHW-N67] (the
+// import-as-active path is a heavy DB surface unit-tested in its own suite).
+
+const makeScreenplayGenMockDb = (narrative: {
+  soggetto?: string;
+  synopsis?: string;
+  outline?: string;
+  treatment?: string;
+  logline?: string;
+}): Db => {
+  let pendingDocType: DocumentType | null = null;
+  const select = (columns: Record<string, unknown>) => ({
+    from: (table: unknown) => {
+      const resolve = (): unknown[] => {
+        if (table === screenplays) {
+          // loadScreenplayRowForProject selects id/currentVersionId/createdBy/content.
+          return [
+            {
+              id: "sp-1",
+              currentVersionId: null,
+              createdBy: "owner-1",
+              content: "",
+            },
+          ];
+        }
+        if (table === documents && pendingDocType) {
+          return [
+            {
+              id: `doc-${pendingDocType}`,
+              content:
+                narrative[pendingDocType as keyof typeof narrative] ?? "",
+              currentVersionId: null,
+              createdBy: "owner-1",
+            },
+          ];
+        }
+        if ("max" in columns) return [{ max: 0 }];
+        return [];
+      };
+      const whereResult = {
+        then: (r: (rows: unknown[]) => void) => r(resolve()),
+        limit: () => Promise.resolve(resolve()),
+      };
+      return {
+        where: (filter: unknown) => {
+          const text = String(
+            (filter as { queryChunks?: unknown[] })?.queryChunks ?? filter,
+          );
+          pendingDocType =
+            (
+              [
+                "logline",
+                "soggetto",
+                "synopsis",
+                "outline",
+                "treatment",
+              ] as DocumentType[]
+            ).find((t) => text.includes(t)) ?? pendingDocType;
+          return whereResult;
+        },
+        limit: () => whereResult,
+      };
+    },
+  });
+  return { select } as unknown as Db;
+};
+
+const spGenBlock = (input: Record<string, unknown> = {}) => ({
+  type: "tool_use" as const,
+  id: "tu-sp",
+  name: "generate_screenplay_from_narrative",
+  input,
+});
+
+describe("executeDocumentGenTool — generate_screenplay_from_narrative (BUG-N67)", () => {
+  beforeEach(() => {
+    process.env["MOCK_AI"] = "true";
+  });
+  afterEach(() => {
+    delete process.env["MOCK_AI"];
+  });
+
+  it("fails loudly (no wrong-entity write) when there is no upstream narrative", async () => {
+    const db = makeScreenplayGenMockDb({});
+    const result = await executeDocumentGenTool(
+      spGenBlock(),
+      db,
+      "project-1",
+      "owner-1",
+    );
+    expect(result.isErr()).toBe(true);
+    expect(result._unsafeUnwrapErr().message).toMatch(
+      /materiale|sceneggiatura/i,
+    );
   });
 });

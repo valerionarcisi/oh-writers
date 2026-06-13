@@ -10,10 +10,11 @@ import {
 import { DocumentTypes, type DocumentType } from "@oh-writers/domain";
 import type { Db } from "~/server/db";
 import { callHaiku, extractText } from "~/features/ai";
-import { repairMojibake } from "@oh-writers/utils";
+import { repairMojibake, sanitizeAiText } from "@oh-writers/utils";
 import { SONNET_MODEL } from "./cesare-model-router";
 import { CesareError } from "./cesare.errors";
 import { applyVersionLive, type CreatedDraft } from "./auto-version.effect";
+import { importAsActiveVersionTx } from "~/features/screenplay-editor/server/versions.server";
 
 // ─── Tool definitions ─────────────────────────────────────────────────────────
 
@@ -127,7 +128,7 @@ export const CESARE_DOCUMENT_GEN_TOOLS = [
       "Scrive il TRATTAMENTO del film derivandolo dal materiale narrativo a monte (scaletta, " +
       "sinossi, soggetto, logline). Applica live il nuovo trattamento al documento e crea automaticamente " +
       "una versione. Usa quando l'utente chiede 'scrivi il trattamento', 'genera il trattamento dalla scaletta' " +
-      "o simile. Se il trattamento esiste già lo riscrive seguendo l'istruzione.",
+      "o simile. Se il trattamento esiste già lo riscrive seguendo l'istruzione. SOLO per il trattamento, MAI per la sceneggiatura.",
     input_schema: {
       type: "object" as const,
       properties: {
@@ -135,6 +136,31 @@ export const CESARE_DOCUMENT_GEN_TOOLS = [
           type: "string",
           description:
             "Istruzione opzionale per orientare tono/struttura del trattamento (es. 'più dettagliato sull'Atto II', 'tono cupo').",
+        },
+      },
+    },
+  },
+  {
+    name: "generate_screenplay_from_narrative",
+    description:
+      "Scrive la PRIMA STESURA della SCENEGGIATURA (formato Fountain) derivandola dal materiale narrativo a monte " +
+      "(scaletta, trattamento, sinossi, soggetto, logline). La applica LIVE come nuova versione ATTIVA della " +
+      "sceneggiatura (l'editor si aggiorna; la versione precedente resta ripristinabile dal pannello Versioni). " +
+      "Usa quando l'utente chiede 'scrivi la sceneggiatura', 'scrivimi la prima stesura della sceneggiatura', " +
+      "'partendo dal soggetto fammi la sceneggiatura' o simili. NON usare per modificare una sceneggiatura " +
+      "esistente — per riscritture strutturali usa propose_screenplay_revision, per una singola scena rewrite_scene.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        instruction: {
+          type: "string",
+          description:
+            "Istruzione opzionale per orientare tono/struttura della stesura (es. 'taglia i tempi morti', 'dialoghi più asciutti').",
+        },
+        target_page_count: {
+          type: "integer",
+          description:
+            "Numero approssimativo di pagine desiderate (opzionale).",
         },
       },
     },
@@ -511,6 +537,34 @@ const loadUpstreamNarrative = (
   );
 };
 
+// The narrative documents the screenplay is built from, nearest-first. The
+// screenplay is the leaf of the chain (logline → soggetto → sinossi → scaletta →
+// trattamento → SCENEGGIATURA), so its upstream is every preceding narrative
+// document — NOT the screenplay itself (it's empty on a first draft, which is the
+// only case this generator handles).
+const SCREENPLAY_UPSTREAM_TYPES: readonly DocumentType[] = [
+  DocumentTypes.OUTLINE,
+  DocumentTypes.TREATMENT,
+  DocumentTypes.SYNOPSIS,
+  DocumentTypes.SOGGETTO,
+  DocumentTypes.LOGLINE,
+];
+
+const loadUpstreamForScreenplay = (
+  db: Db,
+  projectId: string,
+): ResultAsync<UpstreamSource, CesareError> => {
+  const docLoads = SCREENPLAY_UPSTREAM_TYPES.map((type) =>
+    loadDocumentForType(db, projectId, type).map((doc) => ({
+      label: docTypeLabelUpper(type),
+      content: doc?.content ?? "",
+    })),
+  );
+  return ResultAsync.combine(docLoads).map((parts) =>
+    formatUpstreamSource(parts),
+  );
+};
+
 // ─── Draft insertion ──────────────────────────────────────────────────────────
 //
 // Auto-versioning (create-version-before-apply + rollback-on-error) now lives in
@@ -587,6 +641,24 @@ REGOLE:
 - NIENTE titoli, NIENTE meta-commenti, NIENTE preamboli.
 - Output: SOLO il testo del trattamento.`;
 
+const SCREENPLAY_FROM_NARRATIVE_SYSTEM = `Sei Cesare, sceneggiatore italiano. Stai scrivendo la PRIMA STESURA della SCENEGGIATURA di un film, in formato Fountain, a partire dal materiale narrativo a monte (scaletta, trattamento, sinossi, soggetto, logline).
+
+Output: SOLO il testo Fountain della sceneggiatura, senza meta-commenti, senza intestazioni esterne, senza markdown.
+
+Formato Fountain:
+- Slugline: INT./EXT. LUOGO - MOMENTO (tutto maiuscolo), su una riga.
+- Azione: testo normale, ogni paragrafo su UNA SOLA RIGA, paragrafi separati da una riga vuota.
+- Personaggio: nome tutto maiuscolo, preceduto da una riga vuota.
+- Dialogo: testo normale sotto il nome del personaggio.
+- Parentetica: (testo) su una riga propria tra personaggio e dialogo.
+
+REGOLE:
+- Copri l'intera storia del materiale a monte, scena per scena, nell'ordine narrativo.
+- Scrivi dialoghi reali sotto ogni personaggio — NON limitarti a descrivere l'azione.
+- Ogni paragrafo di azione su UNA SOLA RIGA: NON wrappare a 50/60/80 caratteri, NON spezzare frasi a metà, usa la riga vuota SOLO tra paragrafi narrativi distinti.
+- Mantieni protagonista, antagonista, conflitto e finale coerenti col materiale a monte.
+- Italiano. NIENTE titoli di sezione, NIENTE preamboli, NIENTE commenti.`;
+
 const MOCK_OUTPUTS: Record<string, string> = {
   "cesare.proposeLogline":
     "Un giovane regista torna nel paese d'origine per girare il film che lo ossessiona da anni, ma scopre che il suo passato non vuole essere raccontato.",
@@ -621,6 +693,22 @@ La mattina dopo la troupe arriva in una piazza semivuota. Il paese osserva la ma
 Sul set, Tea — l'attrice scelta per interpretare la madre — non rispetta la battuta. Lo costringe a riscrivere ogni scena prima di girarla. Marco resiste, poi cede: il film che stava immaginando non è quello che la verità gli chiede di girare.
 
 La notte della scena chiave, Marco improvvisa. Davanti alla troupe e a un paese che gli aveva chiesto di tacere, proietta in piazza la versione che Tea gli ha permesso di trovare. All'alba scrive una lettera alla madre.`,
+  "cesare.generateScreenplay": `INT. CASA DI MARCO - NOTTE
+
+Marco rilegge il copione alla luce di una lampada. Sui margini, gli appunti della madre.
+
+      MARCO
+Non sei più qui per dirmi se ho sbagliato tutto.
+
+EXT. FALERONE - PIAZZA - GIORNO
+
+La troupe scarica i furgoni. La piazza è semivuota. Qualche tenda si chiude.
+
+      TEA
+Questo posto non vuole essere filmato.
+
+      MARCO
+Lo so. È esattamente per questo che lo filmo.`,
 };
 
 // Monotonic counter that keeps each MOCK_AI document generation distinct, so the
@@ -679,6 +767,7 @@ interface ProposeInput {
   instruction?: string;
   label?: string;
   target_scene_count?: number;
+  target_page_count?: number;
   mode?: "auto" | "write" | "edit";
 }
 
@@ -1083,6 +1172,115 @@ const handleProposeTreatment = (
       });
   });
 
+// ─── Screenplay generation (from-narrative, first draft) ───────────────────────
+//
+// Spec 75 / BUG-N67. The screenplay is the leaf of the narrative chain but, unlike
+// the upstream documents, it lives in `screenplays`/`screenplay_versions` (Fountain
+// + CRDT), not in `documents`. So we generate Fountain from the upstream narrative
+// and apply it LIVE as the new ACTIVE screenplay version via `importAsActiveVersionTx`
+// (the proven Spec 71/72 path: insert version row, server-seed the CRDT snapshot so
+// the editor renders without a first-client race, repoint current, sync scenes, carry
+// breakdown forward). The prior active version is left intact and restorable.
+
+interface ScreenplayRowForGen {
+  id: string;
+  currentVersionId: string | null;
+  createdBy: string;
+  content: string;
+}
+
+const loadScreenplayRowForProject = (
+  db: Db,
+  projectId: string,
+): ResultAsync<ScreenplayRowForGen | null, CesareError> =>
+  ResultAsync.fromPromise(
+    db
+      .select({
+        id: screenplays.id,
+        currentVersionId: screenplays.currentVersionId,
+        createdBy: screenplays.createdBy,
+        content: screenplays.content,
+      })
+      .from(screenplays)
+      .where(eq(screenplays.projectId, projectId))
+      .limit(1)
+      .then((rows) => rows[0] ?? null),
+    (e) =>
+      new CesareError(
+        `loadScreenplayRowForProject: ${e instanceof Error ? e.message : String(e)}`,
+      ),
+  );
+
+export interface GeneratedScreenplay {
+  versionId: string;
+  previousVersionId: string | null;
+  label: string;
+}
+
+const SCREENPLAY_DRAFT_LABEL = "Prima stesura · Cesare";
+
+const handleGenerateScreenplay = (
+  input: ProposeInput,
+  db: Db,
+  projectId: string,
+): ResultAsync<GeneratedScreenplay, CesareError> =>
+  ResultAsync.combine([
+    loadScreenplayRowForProject(db, projectId),
+    loadUpstreamForScreenplay(db, projectId),
+  ]).andThen(([sp, upstream]) => {
+    if (!sp) {
+      return errAsync(
+        new CesareError("Sceneggiatura non trovata per il progetto."),
+      );
+    }
+    if (upstream.text.length === 0) {
+      return errAsync(
+        new CesareError(
+          "Non c'è ancora materiale da cui scrivere la sceneggiatura: scrivi prima il soggetto, la sinossi, la scaletta o il trattamento.",
+        ),
+      );
+    }
+    const instructionLine = input.instruction
+      ? `Istruzione: ${input.instruction}\n\n`
+      : "";
+    const user = `${instructionLine}Materiale a monte:\n${upstream.text}\n\nScrivi la prima stesura completa della sceneggiatura in formato Fountain.`;
+    return runGeneration(
+      SCREENPLAY_FROM_NARRATIVE_SYSTEM,
+      user,
+      6000,
+      "cesare.generateScreenplay",
+    )
+      .map((s) => sanitizeAiText(s.trim()))
+      .andThen((fountain) => {
+        if (fountain.length === 0) {
+          return errAsync(
+            new CesareError(
+              "Il modello ha restituito una sceneggiatura vuota. Riformula l'istruzione.",
+            ),
+          );
+        }
+        return ResultAsync.fromPromise(
+          db.transaction((tx) =>
+            importAsActiveVersionTx(tx, {
+              screenplayId: sp.id,
+              label: SCREENPLAY_DRAFT_LABEL,
+              content: fountain,
+              prevActiveId: sp.currentVersionId,
+              userId: sp.createdBy,
+            }),
+          ),
+          (e) =>
+            new CesareError(
+              `generate_screenplay_from_narrative apply: ${e instanceof Error ? e.message : String(e)}`,
+            ),
+        ).map((updated) => ({
+          versionId: updated.currentVersionId ?? "",
+          previousVersionId: sp.currentVersionId,
+          label: SCREENPLAY_DRAFT_LABEL,
+        }));
+      });
+  });
+
 // ─── Public executor ──────────────────────────────────────────────────────────
 
 const successResult = (id: string, payload: unknown): ToolResult => ({
@@ -1104,6 +1302,16 @@ const draftPayload = (draft: CreatedDraft) => ({
   diff_segments: draft.diffSegments,
   diff_label: draft.label,
   toast: `✦ Cesare ha aggiornato ${docTypeLabel(draft.documentType)} — il documento è aggiornato. Apri il pannello Versioni per ripristinare la versione precedente.`,
+});
+
+const screenplayGenPayload = (gen: GeneratedScreenplay) => ({
+  ok: true as const,
+  version_id: gen.versionId,
+  previous_version_id: gen.previousVersionId,
+  document_type: "screenplay" as const,
+  label: gen.label,
+  applied_live: true as const,
+  toast: `✦ Cesare ha scritto la prima stesura della Sceneggiatura — è la versione attiva nell'editor. Apri il pannello Versioni per ripristinare la versione precedente.`,
 });
 
 export const executeDocumentGenTool = (
@@ -1146,6 +1354,11 @@ export const executeDocumentGenTool = (
       (draft) => successResult(block.id, draftPayload(draft)),
     );
   }
+  if (block.name === "generate_screenplay_from_narrative") {
+    return handleGenerateScreenplay(input, db, projectId).map((gen) =>
+      successResult(block.id, screenplayGenPayload(gen)),
+    );
+  }
   return okAsync(
     successResult(block.id, {
       ok: false,
@@ -1165,7 +1378,8 @@ export const isDocumentGenToolName = (name: string): boolean =>
   name === "propose_synopsis_from_screenplay" ||
   name === "propose_soggetto_v2" ||
   name === "propose_scaletta_from_soggetto" ||
-  name === "propose_treatment_from_narrative";
+  name === "propose_treatment_from_narrative" ||
+  name === "generate_screenplay_from_narrative";
 
 // ─── Document generation tools factory (AI SDK v5 format) ────────────────────
 
@@ -1325,6 +1539,37 @@ export const createDocumentGenTools = (
       );
       if (result.isErr()) return { error: result.error.message };
       return draftPayload(result.value);
+    },
+  }),
+  generate_screenplay_from_narrative: tool({
+    description:
+      "Scrive la PRIMA STESURA della SCENEGGIATURA (formato Fountain) derivandola dal materiale narrativo a monte " +
+      "(scaletta, trattamento, sinossi, soggetto, logline). La applica LIVE come nuova versione ATTIVA della " +
+      "sceneggiatura (l'editor si aggiorna; la versione precedente resta ripristinabile dal pannello Versioni). " +
+      "Usa quando l'utente chiede 'scrivi la sceneggiatura', 'scrivimi la prima stesura della sceneggiatura', " +
+      "'partendo dal soggetto fammi la sceneggiatura' o simili. NON usare per modificare una sceneggiatura " +
+      "esistente — per riscritture strutturali usa propose_screenplay_revision, per una singola scena rewrite_scene.",
+    inputSchema: z.object({
+      instruction: z
+        .string()
+        .optional()
+        .describe(
+          "Istruzione opzionale per orientare tono/struttura della stesura (es. 'taglia i tempi morti', 'dialoghi più asciutti').",
+        ),
+      target_page_count: z
+        .number()
+        .int()
+        .optional()
+        .describe("Numero approssimativo di pagine desiderate (opzionale)."),
+    }),
+    execute: async (input, _opts) => {
+      const result = await handleGenerateScreenplay(
+        input as ProposeInput,
+        db,
+        projectId,
+      );
+      if (result.isErr()) return { error: result.error.message };
+      return screenplayGenPayload(result.value);
     },
   }),
 });

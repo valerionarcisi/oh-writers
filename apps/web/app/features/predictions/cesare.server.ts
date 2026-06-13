@@ -914,19 +914,24 @@ const assembleContext = (
                         // / outline / treatment). This defines the race out of
                         // existence: text tools like expand_section always see
                         // the open document, never an empty context.
-                        const activeDocument: ActiveDocumentRow | null = (() => {
-                          const byId = activeDocId
-                            ? projectDocuments.find((d) => d.id === activeDocId)
-                            : undefined;
-                          const byPage =
-                            byId ??
-                            (isDocumentPage(pageContext.page)
+                        const activeDocument: ActiveDocumentRow | null =
+                          (() => {
+                            const byId = activeDocId
                               ? projectDocuments.find(
-                                  (d) => d.type === pageContext.page,
+                                  (d) => d.id === activeDocId,
                                 )
-                              : undefined);
-                          return byPage ? { ...byPage, isActive: true } : null;
-                        })();
+                              : undefined;
+                            const byPage =
+                              byId ??
+                              (isDocumentPage(pageContext.page)
+                                ? projectDocuments.find(
+                                    (d) => d.type === pageContext.page,
+                                  )
+                                : undefined);
+                            return byPage
+                              ? { ...byPage, isActive: true }
+                              : null;
+                          })();
                         // Load bible lazily — never block on errors (return null on failure)
                         return loadFilmBible(db, projectId)
                           .map((bible) => ({
@@ -1136,7 +1141,8 @@ WORKFLOW:
 - "scrivimi la sinossi" / "genera la sinossi" → propose_synopsis_from_screenplay({ instruction? })
 - "fammi un v2 del soggetto più [X]" / "riscrivi il soggetto in modo [X]" → propose_soggetto_v2({ instruction: "...", label: "v2 [hint]" })
 - "dato il soggetto fammi la scaletta" / "genera la scaletta dal soggetto" → propose_scaletta_from_soggetto({ target_scene_count? })
-- "scrivi il trattamento" / "genera il trattamento dalla scaletta" → propose_treatment_from_narrative({ instruction? })
+- "scrivi il trattamento" / "genera il trattamento dalla scaletta" → propose_treatment_from_narrative({ instruction? }) — SOLO per il trattamento, MAI per la sceneggiatura.
+- "scrivi la sceneggiatura" / "scrivimi la prima stesura della sceneggiatura" / "partendo dal soggetto fammi la sceneggiatura" → generate_screenplay_from_narrative({ instruction?, target_page_count? }). ATTENZIONE: se l'utente nomina la SCENEGGIATURA usa QUESTO tool, NON propose_treatment_from_narrative. Vale per la prima stesura (sceneggiatura ancora vuota); per riscrivere una sceneggiatura esistente usa invece propose_screenplay_revision.
 
 ❌ SBAGLIATO:
 "Ora ti scrivo la logline: …"
@@ -1678,6 +1684,7 @@ const DOCUMENT_GEN_TOOLS = new Set<string>([
   "propose_synopsis_from_screenplay",
   "propose_scaletta_from_soggetto",
   "propose_treatment_from_narrative",
+  "generate_screenplay_from_narrative",
 ]);
 
 // The screenplay page is ALSO the page a Cesare SESSION resolves to by default

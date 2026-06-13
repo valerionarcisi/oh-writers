@@ -28,7 +28,7 @@ Item format: `[id] short title — link (spec NN / audit A-0x / learning)`
 
 ### Filed 2026-06-11 (real-use session #2 — Valerio + collega, progetto reale) — TOP PRIORITY
 
--A. **[BUG-N67] Cesare scrive il TRATTAMENTO quando gli chiedi la SCENEGGIATURA** — entity routing dei tool universali, bug con AI reale, fix + real-AI smoke obbligatorio. `docs/BUGS.md`.
+-A. ~~**[BUG-N67] Cesare scrive il TRATTAMENTO quando gli chiedi la SCENEGGIATURA**~~ — ✅ **DONE** (Spec 75, branch `fix/n67-cesare-entity-routing`). Root cause: mancava un generatore "sceneggiatura dal narrativo" (esistevano solo tool di edit-scena); il modello ripiegava su `propose_treatment_from_narrative`. Fix: nuovo tool `generate_screenplay_from_narrative` (applica live come versione attiva via `importAsActiveVersionTx`) + intent `write_screenplay`. Verificato con real-AI smoke [OHW-N67] + live end-to-end (sceneggiatura scritta, trattamento intatto). `docs/BUGS.md`.
 -B. **[BUG-N66] Versioning Cesare: una versione per OGNI tentativo** — policy owner: default sovrascrive la corrente, nuova versione solo su richiesta esplicita (o Cesare chiede). Vale per tutte le parti narrative. Serve spec (tocca auto-version invariant). `docs/BUGS.md`.
 -C. **[BUG-N63] Export PDF sceneggiatura: dialoghi persi + frontespizio incompleto + bold scene heading** — fedeltà export, tre superfici in un fronte. `docs/BUGS.md`.
 -D. **[BUG-N64] `?versions=…&peek=cesare` spacca la pagina** — contesa fra surface routate, deve fallire chiuso. `docs/BUGS.md`.
