@@ -108,8 +108,15 @@ describe("screenplay PDF — no blank leading page (BUG-N63e)", () => {
     async () => {
       const withCover = prependTitlePageToFountain(SAMPLE_FOUNTAIN, {
         title: "My Film",
-        author: "Valerio",
-        draftDate: "2026-06-13",
+        titlePage: {
+          author: "Valerio",
+          basedOn: null,
+          contact: null,
+          draftDate: "2026-06-13",
+          draftColor: null,
+          wgaRegistration: null,
+          notes: null,
+        },
       });
       const result = buildExportPipeline("standard", {
         fountain: withCover,
