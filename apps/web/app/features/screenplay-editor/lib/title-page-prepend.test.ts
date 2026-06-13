@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
   titlePageToFountainKeys,
+  titlePageDocToFountainKeys,
+  titlePageDocHasContent,
   prependTitlePageToFountain,
 } from "./title-page-prepend";
 import { EMPTY_TITLE_PAGE } from "~/features/projects/title-page.schema";
@@ -64,5 +66,96 @@ describe("prependTitlePageToFountain", () => {
       titlePage: EMPTY_TITLE_PAGE,
     });
     expect(out).toBe("Title: T\n\nINT. CASA - GIORNO\n\nAzione.");
+  });
+});
+
+// BUG-N63 (WYSIWYG): the export must reproduce the AUTHORED title-page editor
+// (`titlePageDoc`), not the scalar TitlePage fields — which are often all null
+// while the doc the writer sees is full. Real shape from the dev DB.
+describe("titlePageDocToFountainKeys (WYSIWYG cover)", () => {
+  const realDoc = {
+    type: "doc",
+    content: [
+      {
+        type: "title",
+        content: [{ type: "text", text: "Scienze Naturali -  Federico II" }],
+      },
+      {
+        type: "centerBlock",
+        content: [
+          {
+            type: "para",
+            content: [{ type: "text", text: "Valerio Narcisi " }],
+          },
+          { type: "para", content: [{ type: "text", text: "e " }] },
+          {
+            type: "para",
+            content: [{ type: "text", text: "Giordano Viozzi" }],
+          },
+        ],
+      },
+      {
+        type: "footerLeft",
+        content: [
+          { type: "para", content: [{ type: "text", text: "2026-06-11" }] },
+        ],
+      },
+      { type: "footerCenter", content: [{ type: "para" }] },
+      {
+        type: "footerRight",
+        content: [
+          { type: "para", content: [{ type: "text", text: "valerio@x.it" }] },
+        ],
+      },
+    ],
+  };
+
+  it("serializes title + credit lines + footers from the doc", () => {
+    const lines = titlePageDocToFountainKeys(realDoc, "Fallback");
+    const block = lines.join("\n");
+    expect(block).toContain("Title: Scienze Naturali -  Federico II");
+    expect(block).toContain("Credit: Valerio Narcisi");
+    expect(block).toContain("Giordano Viozzi");
+    expect(block).toContain("Draft date: 2026-06-11");
+    expect(block).toContain("Contact: valerio@x.it");
+    // empty footerCenter → no Notes key
+    expect(block).not.toContain("Notes:");
+  });
+
+  it("falls back to the project title when the doc title region is empty", () => {
+    const lines = titlePageDocToFountainKeys(
+      { type: "doc", content: [{ type: "title", content: [] }] },
+      "Il Titolo",
+    );
+    expect(lines[0]).toBe("Title: Il Titolo");
+  });
+
+  it("titlePageDocHasContent: true for an authored doc, false for an empty one", () => {
+    expect(titlePageDocHasContent(realDoc)).toBe(true);
+    expect(
+      titlePageDocHasContent({
+        type: "doc",
+        content: [
+          { type: "title", content: [] },
+          { type: "centerBlock", content: [{ type: "para" }] },
+          { type: "footerLeft", content: [{ type: "para" }] },
+          { type: "footerCenter", content: [{ type: "para" }] },
+          { type: "footerRight", content: [{ type: "para" }] },
+        ],
+      }),
+    ).toBe(false);
+    expect(titlePageDocHasContent(null)).toBe(false);
+  });
+
+  it("prependTitlePageToFountain prefers the doc over the scalar fields", () => {
+    const out = prependTitlePageToFountain("INT. X - DAY\n\nA.", {
+      title: "Fallback",
+      titlePage: { ...EMPTY_TITLE_PAGE, author: "Scalar Author" },
+      titlePageDoc: realDoc,
+    });
+    // The authored doc wins: its title + credit, not the scalar author.
+    expect(out).toContain("Title: Scienze Naturali -  Federico II");
+    expect(out).toContain("Valerio Narcisi");
+    expect(out).not.toContain("Scalar Author");
   });
 });
