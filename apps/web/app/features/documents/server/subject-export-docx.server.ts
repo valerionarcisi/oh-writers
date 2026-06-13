@@ -81,7 +81,15 @@ export const parseSoggettoMarkdown = (content: string): ParsedBlock[] => {
 interface ProjectForDocx {
   readonly title: string;
   readonly ownerName: string | null;
+  // Canonical title-page fields (BUG-N63b) — the cover declares the AUTHORED
+  // author / based-on / draft date, not just the account name.
+  readonly titlePageAuthor: string | null;
+  readonly basedOn: string | null;
+  readonly draftDate: string | null;
 }
+
+const nonEmpty = (value: string | null | undefined): value is string =>
+  typeof value === "string" && value.trim().length > 0;
 
 export const buildSoggettoDocxSections = (
   parsed: ParsedBlock[],
@@ -99,12 +107,43 @@ export const buildSoggettoDocxSections = (
       children: [new TextRun({ text: "Soggetto", italics: true, size: 28 })],
     }),
   ];
-  if (project.ownerName && project.ownerName.trim().length > 0) {
+  if (nonEmpty(project.basedOn)) {
+    titlePage.push(
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 400 },
+        children: [
+          new TextRun({
+            text: `Tratto da ${project.basedOn.trim()}`,
+            italics: true,
+            size: 22,
+          }),
+        ],
+      }),
+    );
+  }
+  // Author: prefer the AUTHORED title-page author; fall back to the account
+  // owner's name only when no author was declared.
+  const author = nonEmpty(project.titlePageAuthor)
+    ? project.titlePageAuthor.trim()
+    : nonEmpty(project.ownerName)
+      ? project.ownerName.trim()
+      : null;
+  if (author) {
+    titlePage.push(
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { after: nonEmpty(project.draftDate) ? 200 : 1200 },
+        children: [new TextRun({ text: `Scritto da ${author}`, size: 24 })],
+      }),
+    );
+  }
+  if (nonEmpty(project.draftDate)) {
     titlePage.push(
       new Paragraph({
         alignment: AlignmentType.CENTER,
         spacing: { after: 1200 },
-        children: [new TextRun({ text: project.ownerName, size: 24 })],
+        children: [new TextRun({ text: project.draftDate.trim(), size: 20 })],
       }),
     );
   }
@@ -131,6 +170,9 @@ interface LoadedProject {
   readonly teamId: string | null;
   readonly ownerId: string | null;
   readonly ownerName: string | null;
+  readonly titlePageAuthor: string | null;
+  readonly basedOn: string | null;
+  readonly draftDate: string | null;
   readonly isArchived: boolean;
 }
 
@@ -163,6 +205,9 @@ const requireDocxExportAccess = (
             teamId: project.teamId,
             ownerId: project.ownerId,
             ownerName,
+            titlePageAuthor: project.titlePageAuthor,
+            basedOn: project.titlePageBasedOn,
+            draftDate: project.titlePageDraftDate,
             isArchived: project.isArchived,
           } satisfies LoadedProject;
         })(),
@@ -234,6 +279,9 @@ export const exportSubjectDocx = createServerFn({ method: "POST" })
           const sections = buildSoggettoDocxSections(parsed, {
             title: project.title,
             ownerName: project.ownerName,
+            titlePageAuthor: project.titlePageAuthor,
+            basedOn: project.basedOn,
+            draftDate: project.draftDate,
           });
           const doc = new Document({
             sections: [{ properties: {}, children: sections }],

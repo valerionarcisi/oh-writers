@@ -8,6 +8,37 @@ export interface PdfRow {
   scenes: number[];
 }
 
+/** A category group header line + its element lines, ready to print. */
+export interface BreakdownPdfGroup {
+  readonly header: string;
+  readonly elements: readonly string[];
+}
+
+/**
+ * Pure text-shaping for the breakdown PDF, split from pdfkit I/O so it is
+ * unit-testable. Uses the IT category label (the product is IT-localised) and
+ * emits EVERY scene an element appears in — no truncation (BUG-N63d).
+ */
+export const breakdownPdfGroups = (rows: PdfRow[]): BreakdownPdfGroup[] => {
+  const byCat = new Map<BreakdownCategory, PdfRow[]>();
+  for (const r of rows) {
+    const list = byCat.get(r.category) ?? [];
+    list.push(r);
+    byCat.set(r.category, list);
+  }
+  const groups: BreakdownPdfGroup[] = [];
+  for (const [cat, items] of byCat) {
+    groups.push({
+      header: `${CATEGORY_META[cat].labelIt} (${items.length})`,
+      elements: items.map(
+        (it) =>
+          `  • ${it.name}  ×${it.totalQuantity}  → scene ${it.scenes.join(", ")}`,
+      ),
+    });
+  }
+  return groups;
+};
+
 export const buildBreakdownPdf = (
   projectTitle: string,
   rows: PdfRow[],
@@ -25,25 +56,11 @@ export const buildBreakdownPdf = (
       .text(`${projectTitle} — Breakdown`, { align: "center" });
     doc.moveDown();
 
-    const byCat = new Map<BreakdownCategory, PdfRow[]>();
-    for (const r of rows) {
-      const list = byCat.get(r.category) ?? [];
-      list.push(r);
-      byCat.set(r.category, list);
-    }
-
-    for (const [cat, items] of byCat) {
-      doc
-        .font("Courier-Bold")
-        .fontSize(11)
-        .text(`${CATEGORY_META[cat].labelEn} (${items.length})`);
+    for (const group of breakdownPdfGroups(rows)) {
+      doc.font("Courier-Bold").fontSize(11).text(group.header);
       doc.font("Courier").fontSize(9);
-      for (const it of items) {
-        const scenes =
-          it.scenes.length > 6
-            ? `${it.scenes.slice(0, 6).join(", ")}…`
-            : it.scenes.join(", ");
-        doc.text(`  • ${it.name}  ×${it.totalQuantity}  → scenes ${scenes}`);
+      for (const line of group.elements) {
+        doc.text(line);
       }
       doc.moveDown(0.5);
     }

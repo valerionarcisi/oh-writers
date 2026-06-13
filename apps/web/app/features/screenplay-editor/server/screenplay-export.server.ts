@@ -18,6 +18,7 @@ import {
 import { requireUser } from "~/server/context";
 import { getDb } from "~/server/db";
 import { getMembership } from "~/server/permissions";
+import type { DraftColor } from "~/features/projects/title-page.schema";
 import {
   ScreenplayNotFoundError,
   ProjectNotFoundError,
@@ -131,12 +132,20 @@ export const exportScreenplayPdf = createServerFn({ method: "POST" })
 
       // Cover page is prepended BEFORE the format pipeline so Sides can
       // strip it back out (sides shouldn't carry a cover page even if the
-      // user toggles it on by mistake).
+      // user toggles it on by mistake). The cover uses the project's CANONICAL
+      // title page (all 7 fields), not an ad-hoc subset (BUG-N63b).
       const fountainWithCover = data.includeCoverPage
         ? prependTitlePageToFountain(fountain, {
             title: project.title,
-            author: project.titlePageAuthor,
-            draftDate: project.titlePageDraftDate,
+            titlePage: {
+              author: project.titlePageAuthor,
+              basedOn: project.titlePageBasedOn,
+              contact: project.titlePageContact,
+              draftDate: project.titlePageDraftDate,
+              draftColor: project.titlePageDraftColor as DraftColor | null,
+              wgaRegistration: project.titlePageWgaRegistration,
+              notes: project.titlePageNotes,
+            },
           })
         : fountain;
 

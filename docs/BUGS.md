@@ -26,10 +26,25 @@ E2E first; screenshots in a recap; gates green).
 ### BUG-N63 — screenplay PDF export loses dialogue, title page incomplete, scene-heading bold mismatch (2026-06-11, real-use session)
 
 - Severity: ALTO (the export is the deliverable a writer hands out; silent content loss)
-- Status: open
+- Status: partially fixed — **(b) + (d) shipped** (branch `fix/n63-export-fidelity` / `d9f9cc6a`); **(a) dialogue loss + (c) heading bold remain OPEN**, not reproducible on current data, need the owner's original PDF or a fresh repro.
 - Repro: real project "Scienze Naturali - Federico II" → export PDF. Observed: (a) DIALOGUE lines present in the editor are missing from the PDF; (b) the frontespizio carries only the title — author/contact info missing; (c) scene-heading bold in the PDF does not match the editor's settings.
 - Proof: owner screenshots 2026-06-11 (title page bare; p.2 shows sceneggiatura where later dialogue runs are dropped).
 - Notes: three distinct surfaces (doc→PDF serializer dropping dialogue nodes; title-page template fields; heading style mapping) — triage as one export-fidelity front.
+
+#### Export audit (2026-06-13) — all active export surfaces
+
+Driven on real data: dumped "Scienze Naturali - Federico II" active version, rendered through the REAL screenplay export pipeline (awc.js), extracted PDF text with pdf-parse, and diffed every source line against the PDF.
+
+- **(a) dialogue loss — NOT reproducible on current data.** Every non-blank source line (incl. all dialogue, e.g. "Luca, ascolta · Non interrompermi") survives into the PDF text; the only diff was one long action line wrapped across PDF lines (a substring artifact, not loss). The first "missing" signal was a false negative from substring-matching a FlateDecode-compressed PDF stream. The screenplay content has changed since the 2026-06-11 repro (now ~32 lines / 3208 chars, likely Cesare-regenerated), so the originally-problematic content no longer exists. **Need the owner's original PDF or a fresh repro to chase (a).** Suspected mechanism if it recurs: a CHARACTER cue followed by a BLANK line before its dialogue (Fountain spec requires cue immediately followed by dialogue) — the current stored content does NOT exhibit this, and afterwriting rendered cue+dialogue correctly anyway in the test.
+- **(b) title page incomplete — REAL, deterministic, and BROADER than screenplay.** The canonical title page is the project's 7 fields (`titlePageAuthor/basedOn/contact/draftDate/draftColor/wgaRegistration/notes`) + the rich `titlePageDoc`. TWO exports rebuild the cover from a thin ad-hoc subset and drop the rest:
+  - Screenplay PDF (`title-page-prepend.ts` + `screenplay-export.server.ts`): emits ONLY `Title/Credit/Author/Draft date` → contact, basedOn, wgaRegistration, notes are silently dropped; `titlePageDoc` ignored.
+  - Soggetto DOCX (`subject-export-docx.server.ts` `buildSoggettoDocxSections`): cover = title + "Soggetto" + `users.name` (NOT `titlePageAuthor`) → all title-page fields dropped, author uses the account name instead of the declared author.
+    Fix = a single shared title-page→export mapping that reads the canonical model, used by both. (SIAE cover is its own structured form — full fidelity, not affected.)
+- **(c) bold scene-heading — not verifiable without the owner's original PDF** (print-profile bold vs editor display). No current repro.
+- **(d) NEW — breakdown PDF truncates the scene list per element to 6 + "…"** (`breakdown/lib/export-pdf.ts:44`): an element appearing in >6 scenes loses the rest in the handed-out PDF (real fidelity gap for production). Same file emits **English category labels (`labelEn`) in an IT product** — an i18n leak in the export.
+- Custom PDF builders (budget/schedule/shooting-plan, pdfkit) paginate correctly with `addPage` — no truncation. CSV exports (breakdown/budget/schedule/locations/shooting-plan) are full-fidelity by construction.
+
+Decision pending (owner): fix (b) [+ (d)] now as the deterministic export-fidelity slice; keep (a)/(c) open as "needs original repro".
 
 ### BUG-N64 — `?vcur=…&versions=…&peek=cesare` combo blanks the whole page (2026-06-11, real-use session)
 

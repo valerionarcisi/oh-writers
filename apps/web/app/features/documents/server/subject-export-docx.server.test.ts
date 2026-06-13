@@ -49,22 +49,60 @@ describe("parseSoggettoMarkdown", () => {
 });
 
 describe("buildSoggettoDocxSections", () => {
-  it("returns only title-page paragraphs when parsed is empty and no owner", () => {
-    const sections = buildSoggettoDocxSections([], {
-      title: "My Movie",
-      ownerName: null,
-    });
+  const project = (
+    over: Partial<Parameters<typeof buildSoggettoDocxSections>[1]> = {},
+  ) => ({
+    title: "My Movie",
+    ownerName: null,
+    titlePageAuthor: null,
+    basedOn: null,
+    draftDate: null,
+    ...over,
+  });
+
+  it("returns only title-page paragraphs when parsed is empty and no author", () => {
+    const sections = buildSoggettoDocxSections([], project());
     // title + subtitle only (no author paragraph)
     expect(sections.length).toBe(2);
     expect(sections.every((s) => s instanceof Paragraph)).toBe(true);
   });
 
-  it("includes owner paragraph when ownerName is present", () => {
-    const sections = buildSoggettoDocxSections([], {
-      title: "My Movie",
-      ownerName: "Valerio Narcisi",
-    });
+  it("includes an author paragraph when ownerName is present (fallback)", () => {
+    const sections = buildSoggettoDocxSections(
+      [],
+      project({ ownerName: "Valerio Narcisi" }),
+    );
     expect(sections.length).toBe(3);
+    expect(JSON.stringify(sections)).toContain("Scritto da Valerio Narcisi");
+  });
+
+  it("prefers the declared title-page author over the account owner name (BUG-N63b)", () => {
+    const sections = buildSoggettoDocxSections(
+      [],
+      project({
+        ownerName: "Account Name",
+        titlePageAuthor: "Declared Author",
+      }),
+    );
+    const json = JSON.stringify(sections);
+    expect(json).toContain("Scritto da Declared Author");
+    expect(json).not.toContain("Account Name");
+  });
+
+  it("adds a 'Tratto da' line and a draft date when present (BUG-N63b)", () => {
+    const sections = buildSoggettoDocxSections(
+      [],
+      project({
+        titlePageAuthor: "A",
+        basedOn: "un romanzo di X",
+        draftDate: "2026-06-13",
+      }),
+    );
+    const json = JSON.stringify(sections);
+    expect(json).toContain("Tratto da un romanzo di X");
+    expect(json).toContain("2026-06-13");
+    // title + subtitle + basedOn + author + draftDate
+    expect(sections.length).toBe(5);
   });
 
   it("maps heading blocks to HEADING_2 Paragraphs", () => {
@@ -73,7 +111,7 @@ describe("buildSoggettoDocxSections", () => {
         { kind: "heading", level: 2, text: "Premessa" },
         { kind: "paragraph", text: "Body." },
       ],
-      { title: "X", ownerName: null },
+      project({ title: "X" }),
     );
     // title page (2) + heading (1) + paragraph (1) = 4
     expect(sections.length).toBe(4);
