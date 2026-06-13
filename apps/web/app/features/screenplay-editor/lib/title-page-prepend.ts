@@ -154,8 +154,10 @@ export const titlePageDocToFountainKeys = (
     (doc.content ?? []).find((r) => r.type === name) as PMTextNode | undefined;
   const lines: string[] = [];
 
+  // Title — emboldened so the PDF matches the editor, which shows it bold
+  // (BUG-N63). afterwriting renders **…** in a title-page value as bold.
   const title = titleText(byType("title")) || fallbackTitle.trim();
-  lines.push(`Title: ${escapeFountainValue(title)}`);
+  lines.push(`Title: **${escapeFountainValue(title)}**`);
 
   // centerBlock = credit lines (e.g. "Valerio Narcisi" / "e" / "Giordano Viozzi").
   // afterwriting renders a multi-line Credit key when given a `\n`-joined value.
@@ -164,17 +166,25 @@ export const titlePageDocToFountainKeys = (
     lines.push(`Credit: ${credit.map(escapeFountainValue).join("\n   ")}`);
   }
 
-  const draftDate = regionText(byType("footerLeft"));
-  if (draftDate.length > 0) {
-    lines.push(`Draft date: ${draftDate.map(escapeFountainValue).join(" ")}`);
+  // Footer mapping (BUG-N63): the editor lays the footer out in THREE columns
+  // (left · center · right), but afterwriting's title page only has a bottom-LEFT
+  // group (Notes, Copyright) and a bottom-RIGHT group (Draft date, Contact) —
+  // there is no native bottom-center. Verified positionally (left x≈94, right
+  // x≈360). So we map: editor footerLeft → LEFT (Notes); editor footerRight →
+  // RIGHT (Draft date); editor footerCenter, having no native home, is appended
+  // to the LEFT group via Copyright (it sits under Notes, bottom-left) — the
+  // closest faithful placement without re-writing afterwriting's renderer.
+  const footerLeft = regionText(byType("footerLeft"));
+  if (footerLeft.length > 0) {
+    lines.push(`Notes: ${footerLeft.map(escapeFountainValue).join(" ")}`);
   }
-  const notes = regionText(byType("footerCenter"));
-  if (notes.length > 0) {
-    lines.push(`Notes: ${notes.map(escapeFountainValue).join(" ")}`);
+  const footerCenter = regionText(byType("footerCenter"));
+  if (footerCenter.length > 0) {
+    lines.push(`Copyright: ${footerCenter.map(escapeFountainValue).join(" ")}`);
   }
-  const contact = regionText(byType("footerRight"));
-  if (contact.length > 0) {
-    lines.push(`Contact: ${contact.map(escapeFountainValue).join(" ")}`);
+  const footerRight = regionText(byType("footerRight"));
+  if (footerRight.length > 0) {
+    lines.push(`Draft date: ${footerRight.map(escapeFountainValue).join(" ")}`);
   }
   return lines;
 };
