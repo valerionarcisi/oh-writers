@@ -24,6 +24,31 @@ describe("toPreview", () => {
     expect(out.length).toBe(220);
     expect(out.endsWith("…")).toBe(true);
   });
+
+  it("strips ProseMirror HTML — never shows raw tags", () => {
+    expect(toPreview("<p>Marco telefona Luca, sono le tre.</p>")).toBe(
+      "Marco telefona Luca, sono le tre.",
+    );
+  });
+
+  it("skips a fenced fountain title page and shows the first prose", () => {
+    const raw = [
+      "```fountain",
+      'Title: "Non lo so."',
+      "Credit: Written by",
+      "Author: Cesare",
+      "Draft date: 2024",
+      "Contact: —",
+      "====",
+      "",
+      "Marco entra in cucina.",
+      "```",
+    ].join("\n");
+    const out = toPreview(raw);
+    expect(out).toBe("Marco entra in cucina.");
+    expect(out).not.toContain("```");
+    expect(out).not.toContain("Title:");
+  });
 });
 
 describe("countWords", () => {
@@ -35,6 +60,11 @@ describe("countWords", () => {
   it("counts whitespace-separated words", () => {
     expect(countWords("uno due tre")).toBe(3);
     expect(countWords("  uno   due\ntre ")).toBe(3);
+  });
+
+  it("counts only real prose, not HTML tags or title-page metadata", () => {
+    expect(countWords("<p>uno due tre</p>")).toBe(3);
+    expect(countWords("Title: X\nAuthor: Y\n===\n\nuno due")).toBe(2);
   });
 });
 
