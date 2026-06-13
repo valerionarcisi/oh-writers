@@ -157,6 +157,7 @@ export const exportScreenplayPdf = createServerFn({ method: "POST" })
       const pipelineResult = buildExportPipeline(data.format, {
         fountain: fountainWithCover,
         sceneSelection: data.sceneNumbers,
+        includeCoverPage: data.includeCoverPage,
       });
 
       const buffer = await buildScreenplayPdf(pipelineResult.fountain, {
