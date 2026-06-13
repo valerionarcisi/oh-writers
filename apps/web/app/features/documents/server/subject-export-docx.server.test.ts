@@ -214,10 +214,13 @@ describe("buildSoggettoDocxSections", () => {
     // title page (2) + paragraph (1)
     const body = sections[2];
     const json = JSON.stringify(body);
-    // The docx runProperties serialize bold/italics/underline elements when set.
-    expect(json).toContain('"bold"');
-    expect(json).toContain('"italics"');
-    expect(json).toContain('"underline"');
+    // docx serializes a mark that is ON as an EMPTY element (e.g.
+    // `"w:b","root":[]`); a mark explicitly OFF carries `{"val":false}`. So the
+    // signature of an ON bold/italic run is the empty `w:b`/`w:i` element, and
+    // underline ON is `w:u … "value":"single"`.
+    expect(json).toContain('"rootKey":"w:b","root":[]'); // a bold-ON run exists
+    expect(json).toContain('"rootKey":"w:i","root":[]'); // an italic-ON run exists
+    expect(json).toContain('"value":"single"'); // underline ON
     expect(json).toContain("strong");
     expect(json).toContain("italic");
     expect(json).toContain("under");
@@ -229,9 +232,10 @@ describe("buildSoggettoDocxSections", () => {
       project({ title: "X" }),
     );
     const json = JSON.stringify(sections[2]);
-    expect(json).not.toContain('"bold"');
-    expect(json).not.toContain('"italics"');
-    expect(json).not.toContain('"underline"');
+    // A plain run never turns a mark ON: no empty w:b/w:i element, no underline.
+    expect(json).not.toContain('"rootKey":"w:b","root":[]');
+    expect(json).not.toContain('"rootKey":"w:i","root":[]');
+    expect(json).not.toContain('"value":"single"');
   });
 
   it("renders nested bold+italic as one run with both flags", () => {
@@ -245,8 +249,9 @@ describe("buildSoggettoDocxSections", () => {
       project({ title: "X" }),
     );
     const json = JSON.stringify(sections[2]);
-    expect(json).toContain('"bold"');
-    expect(json).toContain('"italics"');
+    // One run carries BOTH bold and italic ON (both empty elements present).
+    expect(json).toContain('"rootKey":"w:b","root":[]');
+    expect(json).toContain('"rootKey":"w:i","root":[]');
     expect(json).toContain("both");
   });
 });
