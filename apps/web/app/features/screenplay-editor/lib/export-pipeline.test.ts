@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { buildExportPipeline, buildFountainFilename } from "./export-pipeline.js";
+import {
+  buildExportPipeline,
+  buildFountainFilename,
+} from "./export-pipeline.js";
 
 const FOUNTAIN = `Title: Test\n\nINT. UNO - GIORNO\n\nx\n\nEXT. DUE - SERA\n\ny\n\nINT. TRE - NOTTE\n\nz\n`;
 
@@ -9,6 +12,37 @@ describe("buildExportPipeline", () => {
     expect(r.fountain).toBe(FOUNTAIN);
     expect(r.invocation.cliSettings).toContain("scenes_numbers=both");
     expect(r.invocation.profileOverrides).toEqual({});
+  });
+
+  it("suppresses the title page when no cover is requested (BUG-N63e)", () => {
+    const r = buildExportPipeline("standard", {
+      fountain: FOUNTAIN,
+      includeCoverPage: false,
+    });
+    expect(r.invocation.cliSettings).toContain("print_title_page=false");
+  });
+
+  it("defaults to no title page when includeCoverPage is omitted", () => {
+    const r = buildExportPipeline("standard", { fountain: FOUNTAIN });
+    expect(r.invocation.cliSettings).toContain("print_title_page=false");
+  });
+
+  it("enables the title page only when a cover is requested", () => {
+    const r = buildExportPipeline("standard", {
+      fountain: FOUNTAIN,
+      includeCoverPage: true,
+    });
+    expect(r.invocation.cliSettings).toContain("print_title_page=true");
+  });
+
+  it("forces the title page off for sides even if a cover is requested", () => {
+    const r = buildExportPipeline("sides", {
+      fountain: FOUNTAIN,
+      sceneSelection: ["1"],
+      includeCoverPage: true,
+    });
+    expect(r.invocation.cliSettings).toContain("print_title_page=false");
+    expect(r.invocation.cliSettings).not.toContain("print_title_page=true");
   });
 
   it("sides slices the fountain to the chosen scenes", () => {
@@ -60,7 +94,9 @@ describe("buildExportPipeline", () => {
 describe("buildFountainFilename", () => {
   it("slugifies project and screenplay titles into a .fountain filename", () => {
     const name = buildFountainFilename("Il Grande Film", "Versione Definitiva");
-    expect(name).toMatch(/^il-grande-film-versione-definitiva-\d{4}-\d{2}-\d{2}\.fountain$/);
+    expect(name).toMatch(
+      /^il-grande-film-versione-definitiva-\d{4}-\d{2}-\d{2}\.fountain$/,
+    );
   });
 
   it("handles special characters and spaces safely", () => {

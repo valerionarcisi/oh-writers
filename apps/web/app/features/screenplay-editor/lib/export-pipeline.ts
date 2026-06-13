@@ -46,6 +46,15 @@ export interface AwcInvocation {
 export interface PipelineInput {
   readonly fountain: string;
   readonly sceneSelection?: readonly string[];
+  /**
+   * Whether a Fountain title-page block was prepended to `fountain` by the
+   * caller. Drives afterwriting's `print_title_page` setting: afterwriting
+   * defaults it to `true`, which always reserves the (PDFKit auto-created)
+   * first page for the cover and pushes the script to page 2 — producing a
+   * BLANK leading page whenever no cover content exists. WYSIWYG export must
+   * mirror the editor, so when no cover is requested we force it off.
+   */
+  readonly includeCoverPage?: boolean;
 }
 
 export interface PipelineResult {
@@ -146,29 +155,65 @@ export const buildFountainFilename = (
 ): string =>
   `${slugify(projectTitle)}-${slugify(screenplayTitle)}-${todayIso()}.fountain`;
 
+/**
+ * afterwriting defaults `print_title_page` to `true`, which always paints a
+ * (possibly empty) cover on PDFKit's auto-created first page and then calls
+ * `addPage()` for the script — yielding a BLANK leading page whenever the
+ * Fountain carries no title-page tokens. We therefore set the flag explicitly
+ * on every invocation: `true` only when a cover block was actually prepended.
+ */
+const withTitlePageSetting = (
+  invocation: AwcInvocation,
+  includeCoverPage: boolean,
+): AwcInvocation => ({
+  ...invocation,
+  cliSettings: [
+    ...invocation.cliSettings,
+    `print_title_page=${includeCoverPage}`,
+  ],
+});
+
 export const buildExportPipeline = (
   format: ExportFormat,
   input: PipelineInput,
 ): PipelineResult => {
+  const includeCoverPage = input.includeCoverPage ?? false;
   switch (format) {
     case "standard":
-      return { fountain: input.fountain, invocation: STANDARD_INVOCATION };
+      return {
+        fountain: input.fountain,
+        invocation: withTitlePageSetting(STANDARD_INVOCATION, includeCoverPage),
+      };
     case "sides": {
       const selection = input.sceneSelection ?? [];
       const sliced = extractScenesFromFountain(input.fountain, selection);
-      return { fountain: sliced, invocation: SIDES_INVOCATION };
+      // Sides never carry a cover page (the server strips it), so the title
+      // page is always suppressed regardless of the caller's toggle.
+      return {
+        fountain: sliced,
+        invocation: withTitlePageSetting(SIDES_INVOCATION, false),
+      };
     }
     case "ad_copy":
-      return { fountain: input.fountain, invocation: AD_COPY_INVOCATION };
+      return {
+        fountain: input.fountain,
+        invocation: withTitlePageSetting(AD_COPY_INVOCATION, includeCoverPage),
+      };
     case "reading_copy":
       return {
         fountain: input.fountain,
-        invocation: READING_COPY_INVOCATION,
+        invocation: withTitlePageSetting(
+          READING_COPY_INVOCATION,
+          includeCoverPage,
+        ),
       };
     case "one_scene_per_page":
       return {
         fountain: input.fountain,
-        invocation: ONE_SCENE_PER_PAGE_INVOCATION,
+        invocation: withTitlePageSetting(
+          ONE_SCENE_PER_PAGE_INVOCATION,
+          includeCoverPage,
+        ),
       };
   }
 };
