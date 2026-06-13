@@ -265,4 +265,50 @@ test.describe("[OHW-049] Versions SplitDrawer (routed)", () => {
       )
       .toBe("");
   });
+
+  test("[BUG-N64] `?versions=…&peek=cesare` fails closed: Versions wins, main lane survives", async ({
+    authenticatedPage: page,
+  }) => {
+    // Two routed surfaces claiming the single 3rd grid track squeezed the main
+    // lane to zero — a blank white page with no error boundary. The shell now
+    // resolves to AT MOST ONE auxiliary lane (precedence: Versions > Cesare
+    // peek > preview). Versions wins; the Cesare peek is suppressed; the host
+    // page keeps a real main track.
+    await page.goto(SOGGETTO_PATH);
+    await expect(page.getByTestId("soggetto-page")).toBeVisible({
+      timeout: 15_000,
+    });
+    const documentId = await openVersionsViaUi(page);
+
+    await page.goto(`${SOGGETTO_PATH}?versions=${documentId}&peek=cesare`);
+    await expect(page.getByTestId("soggetto-page")).toBeVisible({
+      timeout: 15_000,
+    });
+
+    // Versions wins.
+    await expect(page.getByTestId("versions-split-lane")).toBeVisible({
+      timeout: 5_000,
+    });
+    await expect
+      .poll(() =>
+        page.evaluate(() => document.body.dataset.versionsSplit ?? ""),
+      )
+      .toBe("open");
+    // The Cesare peek is fully suppressed — no lane, no body flag.
+    await expect(page.getByTestId("cesare-peek-lane")).toHaveCount(0);
+    await expect
+      .poll(() => page.evaluate(() => document.body.dataset.cesareSplit ?? ""))
+      .toBe("");
+
+    // The main lane is NOT squeezed to zero: the grid keeps a real middle track.
+    const mainTrackWidth = await page.evaluate(() => {
+      const shell = document.querySelector('[class*="shell"]');
+      if (!shell) return null;
+      const cols = getComputedStyle(shell).gridTemplateColumns.split(" ");
+      // [rail, main, auxLane] — the middle track is the host page.
+      return cols.length >= 2 ? parseFloat(cols[1] ?? "0") : null;
+    });
+    expect(mainTrackWidth).not.toBeNull();
+    expect(mainTrackWidth!).toBeGreaterThan(200);
+  });
 });

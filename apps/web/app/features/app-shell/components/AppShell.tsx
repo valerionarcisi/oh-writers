@@ -431,32 +431,10 @@ function AppShellInner({
   // the shell grid to add the peek lane column and the main lane reflows. The
   // floating Cesare sheet is unmounted while the lane is open so the chat never
   // duplicates.
-  const isCesareSplitActive = isCesarePeek(peek, projectId ?? null);
-
-  // When the split lane opens, collapse the rail ONCE to give the lane room.
-  // We only act on the false→true edge so the user can re-open the rail
-  // manually (hamburger) and it stays open while the split is still active.
-  const wasSplitActiveRef = useRef(false);
-  useEffect(() => {
-    if (isCesareSplitActive && !wasSplitActiveRef.current) {
-      setShellState("collapsed");
-    }
-    wasSplitActiveRef.current = isCesareSplitActive;
-  }, [isCesareSplitActive]);
-
-  useEffect(() => {
-    if (typeof document === "undefined") return;
-    if (isCesareSplitActive) {
-      document.body.setAttribute("data-cesare-split", "open");
-    } else {
-      document.body.removeAttribute("data-cesare-split");
-    }
-    return () => {
-      if (typeof document !== "undefined") {
-        document.body.removeAttribute("data-cesare-split");
-      }
-    };
-  }, [isCesareSplitActive]);
+  // Raw per-surface activations. Resolved into a MUTUALLY EXCLUSIVE set below
+  // (BUG-N64): two routed surfaces sharing the single 3rd grid track squeeze the
+  // main lane to nothing (white page). At most one auxiliary lane is ever live.
+  const isCesareSplitActiveRaw = isCesarePeek(peek, projectId ?? null);
 
   // Versions SplitDrawer (Spec 49). The raw `?versions` param is validated to a
   // UUID (fail closed); a malformed / foreign id renders the host alone. When
@@ -473,6 +451,8 @@ function AppShellInner({
   const versionsPeek = versionsPeekResult.isOk()
     ? versionsPeekResult.value
     : null;
+  // Versions is the highest-precedence auxiliary lane (BUG-N64): when present it
+  // wins the single 3rd grid track, so its raw activation IS its resolved one.
   const isVersionsSplitActive =
     versionsPeek !== null && versionsPeek.state === "split";
   // Master→detail width: the LIST is a narrow rail; opening a version's DETAIL
@@ -518,8 +498,49 @@ function AppShellInner({
   // content open in the `open` state, grow the third grid track so the page
   // compresses beside it. `full` escalates to its own overlay route, so no track
   // is reserved then.
-  const isPreviewSplitActive =
+  const isPreviewSplitActiveRaw =
     splitDrawer.payload !== null && splitDrawer.state === "open";
+
+  // ── Single auxiliary-lane resolver (BUG-N64, fail-closed) ─────────────────
+  // The shell grid has exactly ONE auxiliary (3rd) track. Two routed surfaces
+  // claiming it at once (e.g. `?versions=…&peek=cesare`) render two lanes for a
+  // single slot and squeeze the main lane to zero — a blank page with no error
+  // boundary. Resolve to AT MOST ONE active lane with a deterministic
+  // precedence: Versions (the most explicit, destructive-adjacent surface the
+  // user routed to) > Cesare peek > the shell preview drawer. The losers are
+  // suppressed entirely (no body attr, no lane render), so the host page always
+  // keeps its track. The mutually-exclusive booleans below are the ONLY ones
+  // used by the body-attr effects and the lane JSX. `isVersionsSplitActive`
+  // (highest precedence, defined above) needs no gating.
+  const isCesareSplitActive = isCesareSplitActiveRaw && !isVersionsSplitActive;
+  const isPreviewSplitActive =
+    isPreviewSplitActiveRaw && !isVersionsSplitActive && !isCesareSplitActive;
+
+  // When the Cesare split lane opens, collapse the rail ONCE to give it room.
+  // We only act on the false→true edge so the user can re-open the rail
+  // manually (hamburger) and it stays open while the split is still active.
+  const wasSplitActiveRef = useRef(false);
+  useEffect(() => {
+    if (isCesareSplitActive && !wasSplitActiveRef.current) {
+      setShellState("collapsed");
+    }
+    wasSplitActiveRef.current = isCesareSplitActive;
+  }, [isCesareSplitActive]);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    if (isCesareSplitActive) {
+      document.body.setAttribute("data-cesare-split", "open");
+    } else {
+      document.body.removeAttribute("data-cesare-split");
+    }
+    return () => {
+      if (typeof document !== "undefined") {
+        document.body.removeAttribute("data-cesare-split");
+      }
+    };
+  }, [isCesareSplitActive]);
+
   useEffect(() => {
     if (typeof document === "undefined") return;
     if (isPreviewSplitActive) {
