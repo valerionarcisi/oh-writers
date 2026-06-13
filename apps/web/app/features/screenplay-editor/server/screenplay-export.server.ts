@@ -111,7 +111,7 @@ export const exportScreenplayPdf = createServerFn({ method: "POST" })
 
       // Resolve the active version's content (Spec 06b parity); fall back to
       // the screenplay row's mirrored text if no current version pointer.
-      let fountain = screenplay.content;
+      let rawFountain = screenplay.content;
       if (screenplay.currentVersionId) {
         const versionResult = await ResultAsync.fromPromise(
           db.query.screenplayVersions
@@ -122,7 +122,7 @@ export const exportScreenplayPdf = createServerFn({ method: "POST" })
           (e) => new DbError("exportScreenplayPdf.version", e),
         );
         if (versionResult.isErr()) return toShape(err(versionResult.error));
-        if (versionResult.value) fountain = versionResult.value.content;
+        if (versionResult.value) rawFountain = versionResult.value.content;
       }
 
       const { buildScreenplayPdf, buildScreenplayFilename } =
@@ -130,6 +130,15 @@ export const exportScreenplayPdf = createServerFn({ method: "POST" })
       const { prependTitlePageToFountain } =
         await import("../lib/title-page-prepend");
       const { buildExportPipeline } = await import("../lib/export-pipeline");
+      const { normalizeFountainForExport } =
+        await import("../lib/normalize-fountain");
+
+      // BUG-N63: stored Fountain can carry mis-indented speech (dialogue at the
+      // 6-space cue indent or flush-left), which afterwriting renders as ACTION
+      // at the left margin instead of DIALOGUE. Round-trip through the editor's
+      // parser/serializer to re-emit every element at its canonical indent
+      // before the renderer (or the Sides slicer) sees it.
+      const fountain = normalizeFountainForExport(rawFountain);
 
       // Cover page is prepended BEFORE the format pipeline so Sides can
       // strip it back out (sides shouldn't carry a cover page even if the
