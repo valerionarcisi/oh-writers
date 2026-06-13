@@ -33,7 +33,7 @@ Item format: `[id] short title — link (spec NN / audit A-0x / learning)`
 -C. **[BUG-N63] Export PDF sceneggiatura: dialoghi persi + frontespizio incompleto + bold scene heading** — fedeltà export. **PARZIALE** (`fix/n63-export-fidelity`): audit di TUTTE le superfici export + fix **(b)** frontespizio completo (sceneggiatura PDF + soggetto DOCX, mapping title-page condiviso) e **(d)** breakdown PDF (tutte le scene, label IT). **(a)** dialoghi persi e **(c)** bold heading APERTI — non riproducibili sui dati attuali (screenplay rigenerato dal 2026-06-11), serve il PDF originale dell'owner. `docs/BUGS.md`.
 -D. **[BUG-N64] `?versions=…&peek=cesare` spacca la pagina** — contesa fra surface routate, deve fallire chiuso. `docs/BUGS.md`.
 -E. **[BUG-N65] Composer Cesare rigido** — textarea auto-grow nel drawer e nella session page. `docs/BUGS.md`.
--F. **[BUG-N68] Breakdown "Per scena" spaginato + spoglio algoritmico** — audit codice breakdown, fix scoping/layout, spec per spoglio corretto SENZA AI (deterministico). `docs/BUGS.md`.
+-F. **[BUG-N68] Breakdown "Per scena" spaginato + spoglio algoritmico** — Part B FATTA (branch `fix/n68b-deterministic-spoglio`): verificato live che la base spoglio senza-AI è GIÀ CORRETTA (scene parse IT, cast collassa V.O., recap scene-scoped) + golden fixture che la blocca. Part A (decisione UX "spaginato") + audit completo su `spec/n68-spoglio-audit` (spec 77). `docs/BUGS.md`.
 
 ## NEXT (prioritised — narrative walk topics, then the rest)
 

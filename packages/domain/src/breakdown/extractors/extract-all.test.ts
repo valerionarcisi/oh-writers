@@ -43,6 +43,51 @@ Filì venni!
     expect(extractAll({ heading: "", body: "" })).toEqual([]);
   });
 
+  // BUG-N68 golden fixture: locks the verified-correct deterministic output for
+  // a real Italian opening scene whose CHARACTER cue carries a "(V.O.)"
+  // extension AND is separated from its dialogue by a BLANK line (the exact
+  // shape of the "Scienze Naturali - Federico II" SC.1 that read as "spaginato"
+  // in the UI). The extraction itself was confirmed correct against the live DB
+  // (cast=Marco only, location parsed, V.O. as sound, telefono/microfono props);
+  // this test prevents a future extractor tweak from silently regressing it.
+  describe("BUG-N68 — real IT scene (cue + blank + dialogue, V.O.)", () => {
+    const heading = "EXT. MURETTO SOTTO CASA DI MARCO - NOTTE";
+    const body = `Marco seduto sul muretto di un edificio residenziale napoletano. Intorno, silenzio della periferia notturna. Telefono davanti a sé, schermo illuminato sul viso. Parla piano al microfono.
+
+      MARCO (V.O.)
+
+      Luca, ascolta. Non interrompermi.
+`;
+
+    it("extracts exactly ONE cast member, collapsing the (V.O.) extension", () => {
+      const items = extractAll({ heading, body });
+      const cast = items.filter((i) => i.category === "cast");
+      expect(cast).toHaveLength(1);
+      expect(cast[0]?.name).toBe("Marco");
+      // The blank line between cue and dialogue must NOT split the cue off.
+      expect(cast[0]?.quantity).toBe(1);
+    });
+
+    it("parses the INT/EXT + location from the heading", () => {
+      const items = extractAll({ heading, body });
+      const loc = items.find((i) => i.category === "locations");
+      expect(loc?.name).toBe("Muretto Sotto Casa Di Marco");
+    });
+
+    it("detects (V.O.) as Voice Over under sound", () => {
+      const items = extractAll({ heading, body });
+      expect(
+        items.find((i) => i.category === "sound" && i.name === "Voice Over"),
+      ).toBeDefined();
+    });
+
+    it("is deterministic: identical input → identical output across runs", () => {
+      const a = extractAll({ heading, body });
+      const b = extractAll({ heading, body });
+      expect(a).toEqual(b);
+    });
+  });
+
   describe("English screenplay coverage", () => {
     // Documents what the IT-tuned extractors actually do on English text.
     // Cast (CAPS cues) and Locations (INT./EXT. sluglines) are
