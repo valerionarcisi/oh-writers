@@ -49,8 +49,12 @@ Decision pending (owner): fix (b) [+ (d)] now as the deterministic export-fideli
 ### BUG-N64 — `?vcur=…&versions=…&peek=cesare` combo blanks the whole page (2026-06-11, real-use session)
 
 - Severity: ALTO (page fully broken, only the Versions lane renders; no error fallback)
+- Status: fixed (branch `fix/n64-route-combo-failclosed`, NOT merged — owner reviews Monday)
 - Repro: `/projects/:id/soggetto?vcur=<id>&versions=<docId>&peek=cesare` → main lane EMPTY (white), Versions SplitDrawer on the right, no editor, no Cesare lane, no error boundary.
 - Proof: owner screenshot 2026-06-11. Likely the two routed surfaces (versions lane + cesare peek) contend for the split slot and the host lane unmounts; should be fail-closed (one surface wins) per Spec 46/49.
+- Root cause (code-traced): the shell grid has exactly ONE auxiliary (3rd) track, but `AppShell` computed `isCesareSplitActive`, `isVersionsSplitActive`, `isPreviewSplitActive` independently — each setting its own `body[data-*-split]` attr + rendering its own lane. With `?versions` AND `?peek=cesare` both set, TWO lanes rendered into the single 3rd slot and the main (middle) track collapsed to ~0 → blank white page, no error boundary (nothing threw).
+- Fix: a single fail-closed resolver in `AppShell` — at most ONE auxiliary lane is active, deterministic precedence Versions > Cesare peek > preview drawer. The raw activations (`*Raw`) feed the resolved mutually-exclusive booleans that the body-attr effects + lane JSX consume; the losers render nothing and set no body attr, so the host page always keeps a real middle track.
+- Verified: live (chrome-devtools) on the combo URL → grid `240px 540px 420px` (rail · main 540 · versions 420), Cesare lane absent, soggetto prose renders; cesare-only + versions-only still work alone. E2E `tests/versions-splitdrawer.spec.ts` [BUG-N64] (versions wins, cesare suppressed, main track >200px).
 
 ### BUG-N65 — Cesare composer textbox is rigid and uncomfortable for writing (2026-06-11, real-use session)
 
