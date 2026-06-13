@@ -113,13 +113,15 @@ describe("titlePageDocToFountainKeys (WYSIWYG cover)", () => {
   it("serializes title + credit lines + footers from the doc", () => {
     const lines = titlePageDocToFountainKeys(realDoc, "Fallback");
     const block = lines.join("\n");
-    expect(block).toContain("Title: Scienze Naturali -  Federico II");
+    // Title emboldened to match the editor (BUG-N63).
+    expect(block).toContain("Title: **Scienze Naturali -  Federico II**");
     expect(block).toContain("Credit: Valerio Narcisi");
     expect(block).toContain("Giordano Viozzi");
-    expect(block).toContain("Draft date: 2026-06-11");
-    expect(block).toContain("Contact: valerio@x.it");
-    // empty footerCenter → no Notes key
-    expect(block).not.toContain("Notes:");
+    // Footer mapping: editor footerLeft → afterwriting bottom-left (Notes);
+    // footerRight → bottom-right (Draft date). footerCenter empty → no Copyright.
+    expect(block).toContain("Notes: 2026-06-11");
+    expect(block).toContain("Draft date: valerio@x.it");
+    expect(block).not.toContain("Copyright:");
   });
 
   it("falls back to the project title when the doc title region is empty", () => {
@@ -127,7 +129,44 @@ describe("titlePageDocToFountainKeys (WYSIWYG cover)", () => {
       { type: "doc", content: [{ type: "title", content: [] }] },
       "Il Titolo",
     );
-    expect(lines[0]).toBe("Title: Il Titolo");
+    expect(lines[0]).toBe("Title: **Il Titolo**");
+  });
+
+  it("maps footerCenter to the bottom-left Copyright slot (no native center)", () => {
+    const lines = titlePageDocToFountainKeys(
+      {
+        type: "doc",
+        content: [
+          { type: "title", content: [{ type: "text", text: "T" }] },
+          {
+            type: "footerLeft",
+            content: [
+              { type: "para", content: [{ type: "text", text: "01/05/2025" }] },
+            ],
+          },
+          {
+            type: "footerCenter",
+            content: [
+              {
+                type: "para",
+                content: [{ type: "text", text: "documento riservato" }],
+              },
+            ],
+          },
+          {
+            type: "footerRight",
+            content: [
+              { type: "para", content: [{ type: "text", text: "tel.333" }] },
+            ],
+          },
+        ],
+      },
+      "Fallback",
+    );
+    const block = lines.join("\n");
+    expect(block).toContain("Notes: 01/05/2025");
+    expect(block).toContain("Copyright: documento riservato");
+    expect(block).toContain("Draft date: tel.333");
   });
 
   it("titlePageDocHasContent: true for an authored doc, false for an empty one", () => {
@@ -154,7 +193,7 @@ describe("titlePageDocToFountainKeys (WYSIWYG cover)", () => {
       titlePageDoc: realDoc,
     });
     // The authored doc wins: its title + credit, not the scalar author.
-    expect(out).toContain("Title: Scienze Naturali -  Federico II");
+    expect(out).toContain("Title: **Scienze Naturali -  Federico II**");
     expect(out).toContain("Valerio Narcisi");
     expect(out).not.toContain("Scalar Author");
   });

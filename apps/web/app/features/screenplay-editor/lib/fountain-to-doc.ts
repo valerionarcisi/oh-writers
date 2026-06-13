@@ -80,21 +80,54 @@ export const fountainToDoc = (text: string): Node => {
     const line = lines[i] as string;
     const prev = i > 0 ? (lines[i - 1] as string) : null;
 
-    // Blank lines end a dialogue block — what follows is no longer dialogue.
+    // Blank lines normally end a dialogue block. EXCEPTION: AI-generated /
+    // hand-typed Fountain often puts a blank line between a CHARACTER cue and
+    // its speech (e.g. "MARCO (V.O.)" ⏎ "" ⏎ "      Luca, ascolta."). If we
+    // closed the block on that blank, the indented speech below would be read
+    // as a fresh character cue and render UPPERCASE (the "dialogue shows in
+    // caps" bug). So when we're in a dialogue block and the NEXT non-blank line
+    // is indented (cue/dialogue indent), keep the block open across the blank.
     if (line.trim() === "") {
-      inDialogueBlock = false;
+      if (inDialogueBlock) {
+        const nextNonBlank = lines.slice(i + 1).find((l) => l.trim() !== "");
+        const nextIsIndentedSpeech =
+          nextNonBlank !== undefined &&
+          (nextNonBlank.startsWith(CHARACTER_INDENT) ||
+            nextNonBlank.startsWith(DIALOGUE_INDENT));
+        if (!nextIsIndentedSpeech) inDialogueBlock = false;
+      }
       continue;
     }
 
     let type: ElementType = detectElement(line, prev);
 
-    // Context-aware reclassification for PDF-imported Fountain:
-    // after a character cue (or parenthetical inside a dialogue block),
-    // unindented lines that would otherwise fall to "action" are dialogue.
-    if (inDialogueBlock && type === "action") {
+    // Context-aware reclassification inside a dialogue block. After a character
+    // cue (or a parenthetical that keeps the block open), the following lines
+    // are the speech — even when they don't carry the 10-space DIALOGUE_INDENT.
+    // Two real cases this repairs:
+    //   - PDF imports strip indentation, so dialogue arrives flush-left and
+    //     `detectElement` would call it "action".
+    //   - AI-generated / hand-typed Fountain that puts the dialogue at the
+    //     6-space CHARACTER_INDENT (aligned under the cue) instead of 10 — so
+    //     `detectElement` mis-reads it as a SECOND character cue, and the editor
+    //     then renders the speech UPPERCASE (the "dialogue shows in caps" bug).
+    // A genuinely new cue mid-block IS possible (a reply from another speaker:
+    // "LUCA (V.O.)"). We keep it as character when the line is cue-SHAPED — all
+    // letters uppercase (ignoring a trailing "(V.O.)"-style extension). A speech
+    // line is mixed-case, so it converts to dialogue. Parentheticals stay.
+    if (inDialogueBlock && (type === "action" || type === "character")) {
       const trimmed = line.trim();
+      const withoutExtension = trimmed.replace(/\s*\([^)]*\)\s*$/, "").trim();
+      const looksLikeCue =
+        withoutExtension.length > 0 &&
+        withoutExtension.length <= 38 &&
+        withoutExtension === withoutExtension.toUpperCase() &&
+        /[A-ZÀ-Ý]/.test(withoutExtension);
       if (trimmed.startsWith("(") && trimmed.endsWith(")")) {
         type = "parenthetical";
+      } else if (type === "character" && looksLikeCue) {
+        // a real consecutive cue — leave it as character
+        type = "character";
       } else {
         type = "dialogue";
       }
