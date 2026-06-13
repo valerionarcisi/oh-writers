@@ -43,7 +43,9 @@
   outline: none;
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  grid-template-rows: auto 1fr auto;
+  /* row 1 title · row 2 credits · row 3 footer top (left/right) · row 4 footer
+     bottom-left (the ex-center, stacked under left) — matches the export. */
+  grid-template-rows: auto 1fr auto auto;
   block-size: 100%;
   inline-size: 100%;
 }
@@ -78,8 +80,6 @@
 .editor :global(.tp-footer-left),
 .editor :global(.tp-footer-center),
 .editor :global(.tp-footer-right) {
-  grid-row: 3;
-  align-self: end;
   cursor: text;
 
   & p {
@@ -88,21 +88,34 @@
   }
 }
 
+/* Footer mirrors the PDF export (afterwriting), which has only a bottom-LEFT
+ * and a bottom-RIGHT group — no native bottom-center. So the editor lays the
+ * footer out the same way (WYSIWYG): footerLeft + footerCenter stack in the
+ * bottom-LEFT column, footerRight sits bottom-RIGHT. The `footerCenter` node is
+ * kept (existing docs may hold content) but rendered left-aligned in the left
+ * column, exactly where the export places it (Copyright, bottom-left). */
 .editor :global(.tp-footer-left) {
-  grid-column: 1;
+  grid-column: 1 / 3;
+  grid-row: 3;
   text-align: start;
   margin-inline-start: -1in;
+  align-self: end;
 }
 
 .editor :global(.tp-footer-center) {
-  grid-column: 2;
-  text-align: center;
+  grid-column: 1 / 3;
+  grid-row: 4;
+  text-align: start;
+  margin-inline-start: -1in;
+  align-self: start;
 }
 
 .editor :global(.tp-footer-right) {
   grid-column: 3;
+  grid-row: 3 / 5;
   text-align: end;
   margin-inline-end: -0.5in;
+  align-self: end;
 }
 
 /* Empty paragraphs render <br> with zero hit-area; force a min target. */
