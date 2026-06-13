@@ -156,13 +156,21 @@ export const buildFountainFilename = (
   `${slugify(projectTitle)}-${slugify(screenplayTitle)}-${todayIso()}.fountain`;
 
 /**
- * afterwriting defaults `print_title_page` to `true`, which always paints a
- * (possibly empty) cover on PDFKit's auto-created first page and then calls
- * `addPage()` for the script — yielding a BLANK leading page whenever the
- * Fountain carries no title-page tokens. We therefore set the flag explicitly
- * on every invocation: `true` only when a cover block was actually prepended.
+ * Common afterwriting settings applied to EVERY export, so the PDF matches the
+ * editor (WYSIWYG):
+ *
+ * - `print_title_page`: afterwriting defaults it to `true`, which always paints
+ *   a (possibly empty) cover on PDFKit's auto-created first page and then calls
+ *   `addPage()` for the script — a BLANK leading page when the Fountain carries
+ *   no title-page tokens. We set it explicitly: `true` only when a cover was
+ *   actually prepended (BUG-N63e).
+ * - `embolden_scene_headers`: the screenplay editor renders scene headings in
+ *   BOLD (`.pm-heading { font-weight: 700 }`). afterwriting leaves them regular
+ *   unless this flag is set, so the exported PDF lost the bold the writer sees.
+ *   Force it on so the cover-to-body formatting matches the editor (BUG-N63,
+ *   WYSIWYG).
  */
-const withTitlePageSetting = (
+const withSharedSettings = (
   invocation: AwcInvocation,
   includeCoverPage: boolean,
 ): AwcInvocation => ({
@@ -170,6 +178,7 @@ const withTitlePageSetting = (
   cliSettings: [
     ...invocation.cliSettings,
     `print_title_page=${includeCoverPage}`,
+    "embolden_scene_headers=true",
   ],
 });
 
@@ -182,7 +191,7 @@ export const buildExportPipeline = (
     case "standard":
       return {
         fountain: input.fountain,
-        invocation: withTitlePageSetting(STANDARD_INVOCATION, includeCoverPage),
+        invocation: withSharedSettings(STANDARD_INVOCATION, includeCoverPage),
       };
     case "sides": {
       const selection = input.sceneSelection ?? [];
@@ -191,18 +200,18 @@ export const buildExportPipeline = (
       // page is always suppressed regardless of the caller's toggle.
       return {
         fountain: sliced,
-        invocation: withTitlePageSetting(SIDES_INVOCATION, false),
+        invocation: withSharedSettings(SIDES_INVOCATION, false),
       };
     }
     case "ad_copy":
       return {
         fountain: input.fountain,
-        invocation: withTitlePageSetting(AD_COPY_INVOCATION, includeCoverPage),
+        invocation: withSharedSettings(AD_COPY_INVOCATION, includeCoverPage),
       };
     case "reading_copy":
       return {
         fountain: input.fountain,
-        invocation: withTitlePageSetting(
+        invocation: withSharedSettings(
           READING_COPY_INVOCATION,
           includeCoverPage,
         ),
@@ -210,7 +219,7 @@ export const buildExportPipeline = (
     case "one_scene_per_page":
       return {
         fountain: input.fountain,
-        invocation: withTitlePageSetting(
+        invocation: withSharedSettings(
           ONE_SCENE_PER_PAGE_INVOCATION,
           includeCoverPage,
         ),

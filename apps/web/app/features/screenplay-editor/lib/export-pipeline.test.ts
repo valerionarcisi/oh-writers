@@ -35,6 +35,22 @@ describe("buildExportPipeline", () => {
     expect(r.invocation.cliSettings).toContain("print_title_page=true");
   });
 
+  it("emboldens scene headers on every format to match the editor (BUG-N63 WYSIWYG)", () => {
+    for (const format of [
+      "standard",
+      "sides",
+      "ad_copy",
+      "reading_copy",
+      "one_scene_per_page",
+    ] as const) {
+      const r = buildExportPipeline(format, {
+        fountain: FOUNTAIN,
+        sceneSelection: ["1"],
+      });
+      expect(r.invocation.cliSettings).toContain("embolden_scene_headers=true");
+    }
+  });
+
   it("forces the title page off for sides even if a cover is requested", () => {
     const r = buildExportPipeline("sides", {
       fountain: FOUNTAIN,
