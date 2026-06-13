@@ -84,7 +84,8 @@ Decision pending (owner): fix (b) [+ (d)] now as the deterministic export-fideli
 ### BUG-N68 — breakdown "Per scena" is mis-paginated; spoglio needs a correct AI-free algorithmic basis (2026-06-11, real-use session)
 
 - Severity: MEDIO (core production surface; wrong scoping/layout on a real project)
-- Status: open (lane E — audit + fix, wave 2)
+- Status: Part B verified + locked (branch `fix/n68b-deterministic-spoglio`); Part A (UX) + the full audit narrative live on `spec/n68-spoglio-audit` (spec 77). NB: both branches edit this N68 entry — reconcile on merge.
+- Part B result (verified live against "Scienze Naturali" SC.1): the deterministic AI-free basis is ALREADY CORRECT — scene records parse INT/EXT·location·day-night for IT headings; `extractAll(SC.1)` → cast=Marco only (the `(V.O.)` extension collapses; the blank line between cue and dialogue does not split the cue), location parsed, V.O.→sound, telefono/microfono→props; the recap counts are scene-scoped. No extraction fix was needed. Added a golden-fixture regression to `packages/domain/.../extract-all.test.ts` ([BUG-N68], 4 cases incl. determinism) that LOCKS this verified output. The "spaginato" is purely Part A (the continuous ScriptReader UX — owner decision).
 - Repro: real project "Scienze Naturali - Federico II" → `/breakdown`, "Per scena" tab: the header says SC. 1 (€3360/giornata, Cast 1 · Location 1 · Oggetti 3 · Suono 2) but the sheet below renders the WHOLE screenplay (scenes 1..N) in one continuous run, with element underlines spanning scenes that are not SC. 1. Owner: "lo spoglio sembra spaginato".
 - Proof: owner screenshot 2026-06-11.
 - Owner ask: audit the breakdown code, improve it, fix the bugs found, AND determine what a CORRECT spoglio requires with NO AI — purely algorithmic/deterministic extraction from the screenplay structure (scene scoping, headings → INT/EXT·location·day/night, character cues → cast, counts). Analysis spec + concrete fixes.
