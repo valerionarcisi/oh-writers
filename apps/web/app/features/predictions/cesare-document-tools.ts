@@ -15,6 +15,8 @@ import { SONNET_MODEL } from "./cesare-model-router";
 import { CesareError } from "./cesare.errors";
 import { applyVersionLive, type CreatedDraft } from "./auto-version.effect";
 import { importAsActiveVersionTx } from "~/features/screenplay-editor/server/versions.server";
+import { fountainToDoc } from "~/features/screenplay-editor/lib/fountain-to-doc";
+import { docToFountain } from "~/features/screenplay-editor/lib/doc-to-fountain";
 
 // ─── Tool definitions ─────────────────────────────────────────────────────────
 
@@ -645,12 +647,27 @@ const SCREENPLAY_FROM_NARRATIVE_SYSTEM = `Sei Cesare, sceneggiatore italiano. St
 
 Output: SOLO il testo Fountain della sceneggiatura, senza meta-commenti, senza intestazioni esterne, senza markdown.
 
-Formato Fountain:
-- Slugline: INT./EXT. LUOGO - MOMENTO (tutto maiuscolo), su una riga.
-- Azione: testo normale, ogni paragrafo su UNA SOLA RIGA, paragrafi separati da una riga vuota.
-- Personaggio: nome tutto maiuscolo, preceduto da una riga vuota.
-- Dialogo: testo normale sotto il nome del personaggio.
-- Parentetica: (testo) su una riga propria tra personaggio e dialogo.
+Formato Fountain (rispetta ESATTAMENTE la struttura — ogni elemento è una riga separata):
+- SLUGLINE (scena): "INT." o "EXT." (o "INT./EXT.") + LUOGO + " - " + MOMENTO, TUTTO MAIUSCOLO, a inizio riga. Es: "INT. CUCINA - NOTTE".
+- AZIONE: prosa normale (maiuscole/minuscole NORMALI), a inizio riga, un paragrafo per riga, separati da una riga vuota.
+- PERSONAGGIO (cue): SOLO il nome, TUTTO MAIUSCOLO, su una riga propria, preceduto da una riga vuota. Es: "MARCO" oppure "MARCO (V.O.)". È solo il nome di chi parla — MAI la battuta.
+- DIALOGO: la battuta del personaggio, in maiuscole/minuscole NORMALI (NON tutto maiuscolo), sulla riga SUBITO DOPO il nome del personaggio. Es: dopo "MARCO" la riga "Luca, ascolta. Non interrompermi."
+- PARENTETICA: "(testo)" su una riga propria tra personaggio e dialogo.
+- TRANSIZIONE: a inizio riga, TUTTO MAIUSCOLO, che termina con "TO:" oppure le forme note "FADE IN:", "FADE OUT.", "FADE TO BLACK.", "DISSOLVENZA.", "STACCO.". Es: "FADE TO BLACK." è una TRANSIZIONE, non azione.
+
+DISTINZIONE CRITICA (sbagliarla rovina la sceneggiatura):
+- Il PERSONAGGIO è SOLO il nome in maiuscolo; la sua battuta (DIALOGO) va sulla riga successiva in minuscolo. NON scrivere la battuta in maiuscolo e NON metterla sulla stessa riga del nome.
+- "FADE TO BLACK." / "DISSOLVENZA." / "STACCO." sono TRANSIZIONI (riga a sé, maiuscolo), NON azione.
+
+Esempio corretto:
+INT. CASA DI MARCO - NOTTE
+
+Marco rilegge il copione alla luce di una lampada.
+
+MARCO (V.O.)
+Non sei più qui per dirmi se ho sbagliato tutto.
+
+FADE TO BLACK.
 
 REGOLE:
 - Copri l'intera storia del materiale a monte, scena per scena, nell'ordine narrativo.
@@ -698,17 +715,19 @@ La notte della scena chiave, Marco improvvisa. Davanti alla troupe e a un paese 
 Marco rilegge il copione alla luce di una lampada. Sui margini, gli appunti della madre.
 
       MARCO
-Non sei più qui per dirmi se ho sbagliato tutto.
+          Non sei più qui per dirmi se ho sbagliato tutto.
 
 EXT. FALERONE - PIAZZA - GIORNO
 
 La troupe scarica i furgoni. La piazza è semivuota. Qualche tenda si chiude.
 
       TEA
-Questo posto non vuole essere filmato.
+          Questo posto non vuole essere filmato.
 
       MARCO
-Lo so. È esattamente per questo che lo filmo.`,
+          Lo so. È esattamente per questo che lo filmo.
+
+FADE TO BLACK.`,
 };
 
 // Monotonic counter that keeps each MOCK_AI document generation distinct, so the
@@ -1251,14 +1270,27 @@ const handleGenerateScreenplay = (
       "cesare.generateScreenplay",
     )
       .map((s) => sanitizeAiText(s.trim()))
-      .andThen((fountain) => {
-        if (fountain.length === 0) {
+      .andThen((raw) => {
+        if (raw.length === 0) {
           return errAsync(
             new CesareError(
               "Il modello ha restituito una sceneggiatura vuota. Riformula l'istruzione.",
             ),
           );
         }
+        // NORMALISE to the editor's canonical Fountain dialect (BUG-N63 root
+        // cause): the model is unreliable about element FORMATTING — it wrote
+        // dialogue at the character indent (→ rendered UPPERCASE as a cue) and
+        // transitions as plain action. Round-tripping through the editor's own
+        // parser+serializer (`fountainToDoc` → `docToFountain`) re-derives every
+        // element from its shape and re-emits it with the exact indents the
+        // editor expects (scene/action/character=6sp/dialogue=10sp/parenthetical/
+        // transition right-aligned). So however the model spaced things, the
+        // saved screenplay is always correctly typed — Cesare effectively uses
+        // every screenplay element correctly. Falls back to the raw text if the
+        // round-trip somehow yields nothing.
+        const normalised = docToFountain(fountainToDoc(raw)).trim();
+        const fountain = normalised.length > 0 ? normalised : raw;
         return ResultAsync.fromPromise(
           db.transaction((tx) =>
             importAsActiveVersionTx(tx, {
