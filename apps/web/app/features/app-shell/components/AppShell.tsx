@@ -889,6 +889,24 @@ function AppShellInner({
   const openPalette = useCallback(() => setPaletteOpen(true), []);
   const closePalette = useCallback(() => setPaletteOpen(false), []);
 
+  // BUG (N64 family) — the bell notifications open in the shell's preview
+  // SplitDrawer, which shares the single auxiliary (3rd) grid track with the
+  // Cesare peek and the Versions lane. The lane resolver gives Cesare peek a
+  // HIGHER precedence than the preview drawer, so clicking the bell while
+  // `?peek=cesare` is open would suppress the notifications entirely (the panel
+  // mounts with no track behind the Cesare column) — the click produced nothing
+  // visible. An explicit user action (opening notifications) must win the lane:
+  // we cede the track by closing the Cesare peek (clearing `?peek`) BEFORE
+  // opening the bell drawer, so the two never coexist in the third track and the
+  // notifications are always visible (the N64 invariant: at most one auxiliary
+  // lane is live).
+  const handleBell = useCallback(() => {
+    if (isCesareSplitActive) {
+      onClosePeek?.();
+    }
+    openBellDrawer();
+  }, [isCesareSplitActive, onClosePeek, openBellDrawer]);
+
   const openCesare = useCallback(
     (opts?: OpenCesareOptions) => {
       setCesareRequirementId(opts?.requirementId ?? null);
@@ -1132,7 +1150,7 @@ function AppShellInner({
 
   const topBarAccount = useMemo<TopBarAccountActions>(
     () => ({
-      onBell: openBellDrawer,
+      onBell: handleBell,
       onAvatar: handleUserSettings,
       onGear: handleProjectSettings,
       hasUnreadNotifications: hasUnseen,
@@ -1149,7 +1167,7 @@ function AppShellInner({
         : {}),
     }),
     [
-      openBellDrawer,
+      handleBell,
       handleUserSettings,
       handleProjectSettings,
       hasUnseen,

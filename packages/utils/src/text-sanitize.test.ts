@@ -3,6 +3,7 @@ import {
   repairMojibake,
   reflowFountainParagraphs,
   sanitizeAiText,
+  toPlainText,
 } from "./text-sanitize";
 
 // Mimic the production decoder bug: take UTF-8 bytes of the input string,
@@ -246,5 +247,79 @@ describe("sanitizeAiText", () => {
     const once = sanitizeAiText(input);
     const twice = sanitizeAiText(once);
     expect(twice).toBe(once);
+  });
+});
+
+describe("toPlainText", () => {
+  it("returns empty string for empty input", () => {
+    expect(toPlainText("")).toBe("");
+    expect(toPlainText("   ")).toBe("");
+  });
+
+  it("leaves plain prose untouched (modulo whitespace)", () => {
+    expect(toPlainText("Marco telefona a Luca. Sono le tre.")).toBe(
+      "Marco telefona a Luca. Sono le tre.",
+    );
+  });
+
+  it("strips ProseMirror HTML tags and decodes entities", () => {
+    const html =
+      "<p>Marco telefona Luca, sono le<br>tre del mattino.</p><p>Luca &amp; Anna dormono.</p>";
+    expect(toPlainText(html)).toBe(
+      "Marco telefona Luca, sono le tre del mattino. Luca & Anna dormono.",
+    );
+  });
+
+  it("strips a fenced fountain block with a title page and shows the first prose", () => {
+    const raw = [
+      "```fountain",
+      'Title: "Non lo so."',
+      "Credit: Written by",
+      "Author: Cesare",
+      "Draft date: 2024",
+      "Contact: —",
+      "====",
+      "",
+      "INT. CUCINA - NOTTE",
+      "",
+      "Marco entra in cucina e accende la luce.",
+      "```",
+    ].join("\n");
+    expect(toPlainText(raw)).toBe(
+      "INT. CUCINA - NOTTE Marco entra in cucina e accende la luce.",
+    );
+  });
+
+  it("skips a bare fountain title page (no fence)", () => {
+    const raw = [
+      "Title: Il Soggetto",
+      "Author: Cesare",
+      "===",
+      "",
+      "La storia comincia in un bar di periferia.",
+    ].join("\n");
+    expect(toPlainText(raw)).toBe("La storia comincia in un bar di periferia.");
+  });
+
+  it("strips markdown headings, bullets, and inline emphasis", () => {
+    const raw = [
+      "## Atto primo",
+      "",
+      "- Un **uomo** entra in scena.",
+      "- Parla *piano* con `nessuno`.",
+    ].join("\n");
+    expect(toPlainText(raw)).toBe(
+      "Atto primo Un uomo entra in scena. Parla piano con nessuno.",
+    );
+  });
+
+  it("does not treat a colon mid-sentence as a title-page key", () => {
+    const raw = "Lei dice: smettila di mentire.";
+    expect(toPlainText(raw)).toBe("Lei dice: smettila di mentire.");
+  });
+
+  it("keeps prose that merely contains an = sign", () => {
+    const raw = "Il bilancio = entrate meno uscite, sempre.";
+    expect(toPlainText(raw)).toBe("Il bilancio = entrate meno uscite, sempre.");
   });
 });

@@ -19,6 +19,7 @@ import { requireUser } from "~/server/context";
 import { getDb } from "~/server/db";
 import { getMembership } from "~/server/permissions";
 import type { DraftColor } from "~/features/projects/title-page.schema";
+import type { TitlePageDocLike } from "../lib/title-page-prepend";
 import {
   ScreenplayNotFoundError,
   ProjectNotFoundError,
@@ -132,11 +133,15 @@ export const exportScreenplayPdf = createServerFn({ method: "POST" })
 
       // Cover page is prepended BEFORE the format pipeline so Sides can
       // strip it back out (sides shouldn't carry a cover page even if the
-      // user toggles it on by mistake). The cover uses the project's CANONICAL
-      // title page (all 7 fields), not an ad-hoc subset (BUG-N63b).
+      // user toggles it on by mistake). WYSIWYG (BUG-N63): the cover reproduces
+      // the AUTHORED title-page editor — `titlePageDoc` (the PM doc the writer
+      // edits in /title-page) is the source of truth; the 7 scalar fields are the
+      // fallback when no doc has been authored yet.
       const fountainWithCover = data.includeCoverPage
         ? prependTitlePageToFountain(fountain, {
             title: project.title,
+            titlePageDoc:
+              (project.titlePageDoc as TitlePageDocLike | null) ?? null,
             titlePage: {
               author: project.titlePageAuthor,
               basedOn: project.titlePageBasedOn,
@@ -152,6 +157,7 @@ export const exportScreenplayPdf = createServerFn({ method: "POST" })
       const pipelineResult = buildExportPipeline(data.format, {
         fountain: fountainWithCover,
         sceneSelection: data.sceneNumbers,
+        includeCoverPage: data.includeCoverPage,
       });
 
       const buffer = await buildScreenplayPdf(pipelineResult.fountain, {

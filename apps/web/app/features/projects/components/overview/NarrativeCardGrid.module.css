@@ -66,6 +66,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: var(--ds-space-2);
 }
 
 .eyebrow {
@@ -74,13 +75,19 @@
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--ds-text-mute);
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .status {
+  flex-shrink: 0;
   font-family: var(--ds-font-mono);
   font-size: 10px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  white-space: nowrap;
   padding: 2px 6px;
   border-radius: var(--ds-radius-pill);
 }

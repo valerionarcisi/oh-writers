@@ -282,3 +282,105 @@ const mergeSoftWrappedActionParagraphs = (
 
 export const sanitizeAiText = (input: string): string =>
   reflowFountainParagraphs(repairMojibake(input));
+
+// ── toPlainText: strip markup for human-readable previews ───────────────────
+//
+// Document content is stored in heterogeneous source formats: ProseMirror emits
+// HTML (`<p>…</p>`), Cesare emits markdown/fountain (sometimes wrapped in a
+// ```fountain fenced block with a Title:/Author:/=== title-page header). A card
+// preview must NEVER show that raw source — it shows the first real prose.
+//
+// This is the single owner of "source → readable plain text". Reuse it anywhere
+// a snippet of stored document content is shown to the user.
+
+const stripHtml = (input: string): string => {
+  if (!input.includes("<")) return input;
+  return input
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/?(p|h[1-6]|li|div|blockquote|ul|ol)[^>]*>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">");
+};
+
+const stripInlineMarkdown = (input: string): string =>
+  input
+    .replace(/\*\*(.+?)\*\*/gs, "$1")
+    .replace(/\*(.+?)\*/gs, "$1")
+    .replace(/__(.+?)__/gs, "$1")
+    .replace(/_(.+?)_/gs, "$1")
+    .replace(/~~(.+?)~~/gs, "$1")
+    .replace(/`(.+?)`/gs, "$1");
+
+// Remove markdown code fences (```lang … ```), keeping the inner content. AI
+// often wraps fountain output in a ```fountain block; the fence is noise.
+const stripCodeFences = (input: string): string =>
+  input
+    .replace(/^[ \t]*```[^\n]*\n?/gm, "")
+    .replace(/\n?[ \t]*```[ \t]*$/gm, "");
+
+// A fountain title page is a leading block of `Key: value` lines, optionally
+// closed by a `===` page break. It's metadata, not prose, so the preview skips
+// past it. We only consume it when it's actually at the very top.
+const FOUNTAIN_TITLE_KEY =
+  /^(Title|Credit|Author|Authors|Source|Draft date|Date|Contact|Copyright|Notes|Revision|Format)\s*:/i;
+const PAGE_BREAK_LINE = /^=+\s*$/;
+
+const skipFountainTitlePage = (input: string): string => {
+  const lines = input.split("\n");
+  let index = 0;
+  let sawKey = false;
+  while (index < lines.length) {
+    const line = lines[index]!.trim();
+    if (line.length === 0) {
+      index += 1;
+      continue;
+    }
+    if (PAGE_BREAK_LINE.test(line)) {
+      // A page break only ends the title page if we were inside one.
+      if (!sawKey) break;
+      index += 1;
+      return lines.slice(index).join("\n");
+    }
+    // Continuation of a previous key (indented) stays part of the title page.
+    if (
+      FOUNTAIN_TITLE_KEY.test(line) ||
+      (sawKey && /^\s/.test(lines[index]!))
+    ) {
+      sawKey = true;
+      index += 1;
+      continue;
+    }
+    break;
+  }
+  return sawKey ? lines.slice(index).join("\n") : input;
+};
+
+// Drop markdown/fountain structural prefixes that aren't prose: heading markers
+// (`#`, `##`), blockquote (`>`), list bullets (`-`, `*`, `1.`), synopsis (`=`),
+// section (`#`) — keep the text, drop the marker.
+const stripBlockMarkers = (line: string): string =>
+  line
+    .replace(/^#{1,6}\s+/, "")
+    .replace(/^>\s?/, "")
+    .replace(/^[-*+]\s+/, "")
+    .replace(/^\d+[.)]\s+/, "")
+    .replace(/^=\s+/, "");
+
+export const toPlainText = (raw: string): string => {
+  if (!raw) return "";
+  const defenced = stripCodeFences(raw);
+  const noHtml = stripHtml(defenced);
+  const body = skipFountainTitlePage(noHtml);
+  const text = body
+    .split("\n")
+    .map((line) => stripBlockMarkers(line.trim()))
+    .map((line) => stripInlineMarkdown(line))
+    .filter((line) => line.length > 0 && !PAGE_BREAK_LINE.test(line))
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return text;
+};

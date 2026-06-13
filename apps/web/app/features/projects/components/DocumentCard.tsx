@@ -1,5 +1,6 @@
 import { DOCUMENT_LABELS } from "~/features/documents";
 import type { DocumentType } from "@oh-writers/domain";
+import { toPlainText } from "@oh-writers/utils";
 import { useTranslation } from "~/features/i18n";
 import styles from "./DocumentCard.module.css";
 
@@ -17,8 +18,9 @@ const labelFor = (type: string): string =>
 
 export function DocumentCard({ document, onClick }: DocumentCardProps) {
   const { t } = useTranslation();
-  const hasContent = document.content.length > 0;
-  const preview = document.content.slice(0, 80);
+  const cleanContent = toPlainText(document.content);
+  const hasContent = cleanContent.length > 0;
+  const preview = cleanContent.slice(0, 80);
 
   return (
     <div
@@ -43,7 +45,7 @@ export function DocumentCard({ document, onClick }: DocumentCardProps) {
       {hasContent ? (
         <p className={styles.preview}>
           {preview}
-          {document.content.length > 80 ? "…" : ""}
+          {cleanContent.length > 80 ? "…" : ""}
         </p>
       ) : (
         <p className={styles.empty}>{t("projects.documentCard.notStarted")}</p>
