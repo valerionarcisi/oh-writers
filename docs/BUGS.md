@@ -37,6 +37,14 @@ E2E first; screenshots in a recap; gates green).
 - Repro: `/projects/:id/soggetto?vcur=<id>&versions=<docId>&peek=cesare` → main lane EMPTY (white), Versions SplitDrawer on the right, no editor, no Cesare lane, no error boundary.
 - Proof: owner screenshot 2026-06-11. Likely the two routed surfaces (versions lane + cesare peek) contend for the split slot and the host lane unmounts; should be fail-closed (one surface wins) per Spec 46/49.
 
+### BUG-N69 — bell notifications don't show while Cesare peek is open (2026-06-13, N64 family)
+
+- Severity: MEDIO (an explicit user action produces nothing visible — the bell looks broken)
+- Status: fixed (`fix/notifications-vs-cesare-split`)
+- Repro: `/projects/:id/soggetto?peek=cesare` → click the TopBar bell → nothing visible happens. The notifications/preview SplitDrawer mounts but lands behind the Cesare peek column. In the DOM `body` carried `data-cesare-split="open"` + `data-split-drawer="open"` (+ would-be `data-preview-split`) at once.
+- Proof: `tests/notifications-vs-cesare-split.spec.ts` (red on old code: `?peek` stays `cesare`, notifications never get the lane; green after fix). `pnpm -C apps/web exec tsc --noEmit` = 0.
+- Cause: the BUG-N64 single auxiliary-lane resolver gives the Cesare peek HIGHER precedence than the shell preview/notifications drawer, so opening the bell while `?peek=cesare` is live suppressed the notifications (no 3rd grid track). Fix: opening the bell is an explicit user action that must WIN the lane — `AppShell.handleBell` clears `?peek` (closes the Cesare peek) before opening the bell drawer, so the two never coexist in the third track and the notifications are always visible. Preserves the N64 invariant (at most one auxiliary lane live).
+
 ### BUG-N65 — Cesare composer textbox is rigid and uncomfortable for writing (2026-06-11, real-use session)
 
 - Severity: MEDIO (UX, hit on every interaction)
