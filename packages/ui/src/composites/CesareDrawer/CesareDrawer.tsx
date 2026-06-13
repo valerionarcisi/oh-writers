@@ -429,6 +429,20 @@ export function CesareDrawer({
     setIsAnchorReleased(false);
   }, []);
 
+  // ─── Composer auto-grow (BUG-N65) ─────────────────────────────────────────
+  // The composer starts at one row and grows with its content up to the CSS
+  // cap (max-block-size: 96px); past the cap it scrolls internally instead of
+  // pushing the chat off-screen. Mirrors the SessionConversationPage composer
+  // so writing a multi-sentence prompt is comfortable everywhere.
+  const composerRef = useRef<HTMLTextAreaElement>(null);
+  const composerValue = composer?.value ?? "";
+  useEffect(() => {
+    const el = composerRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 96)}px`;
+  }, [composerValue]);
+
   // ─── Composer handlers ──────────────────────────────────────────────────
   const handleComposerKeyDown = useCallback(
     (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -622,6 +636,7 @@ export function CesareDrawer({
           {composer && (
             <div className={styles.composer}>
               <textarea
+                ref={composerRef}
                 className={styles.composerInput}
                 value={composer.value}
                 onChange={handleComposerChange}
