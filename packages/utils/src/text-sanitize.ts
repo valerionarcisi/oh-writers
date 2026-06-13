@@ -316,7 +316,7 @@ const stripInlineMarkdown = (input: string): string =>
 
 // Remove markdown code fences (```lang … ```), keeping the inner content. AI
 // often wraps fountain output in a ```fountain block; the fence is noise.
-const stripCodeFences = (input: string): string =>
+export const stripCodeFences = (input: string): string =>
   input
     .replace(/^[ \t]*```[^\n]*\n?/gm, "")
     .replace(/\n?[ \t]*```[ \t]*$/gm, "");
@@ -328,7 +328,7 @@ const FOUNTAIN_TITLE_KEY =
   /^(Title|Credit|Author|Authors|Source|Draft date|Date|Contact|Copyright|Notes|Revision|Format)\s*:/i;
 const PAGE_BREAK_LINE = /^=+\s*$/;
 
-const skipFountainTitlePage = (input: string): string => {
+export const skipFountainTitlePage = (input: string): string => {
   const lines = input.split("\n");
   let index = 0;
   let sawKey = false;

@@ -16,22 +16,22 @@ describe("exportSubjectDocx server fn", () => {
   });
 });
 
-describe("parseSoggettoMarkdown", () => {
+describe("parseSoggettoMarkdown — markdown/plain fallback", () => {
   it("returns [] for empty input", () => {
     expect(parseSoggettoMarkdown("")).toEqual([]);
     expect(parseSoggettoMarkdown("   \n\n  ")).toEqual([]);
   });
 
-  it("parses heading + paragraph", () => {
+  it("parses heading + paragraph into single plain runs", () => {
     expect(parseSoggettoMarkdown("## Premessa\n\nBody text.")).toEqual([
-      { kind: "heading", level: 2, text: "Premessa" },
-      { kind: "paragraph", text: "Body text." },
+      { kind: "heading", level: 2, runs: [{ text: "Premessa" }] },
+      { kind: "paragraph", runs: [{ text: "Body text." }] },
     ]);
   });
 
   it("parses a heading without body as a single heading", () => {
     expect(parseSoggettoMarkdown("## Mondo")).toEqual([
-      { kind: "heading", level: 2, text: "Mondo" },
+      { kind: "heading", level: 2, runs: [{ text: "Mondo" }] },
     ]);
   });
 
@@ -40,11 +40,78 @@ describe("parseSoggettoMarkdown", () => {
       "## Personaggi\n\nPrimo paragrafo.\n\nSecondo paragrafo.\n\nTerzo.",
     );
     expect(result).toEqual([
-      { kind: "heading", level: 2, text: "Personaggi" },
-      { kind: "paragraph", text: "Primo paragrafo." },
-      { kind: "paragraph", text: "Secondo paragrafo." },
-      { kind: "paragraph", text: "Terzo." },
+      { kind: "heading", level: 2, runs: [{ text: "Personaggi" }] },
+      { kind: "paragraph", runs: [{ text: "Primo paragrafo." }] },
+      { kind: "paragraph", runs: [{ text: "Secondo paragrafo." }] },
+      { kind: "paragraph", runs: [{ text: "Terzo." }] },
     ]);
+  });
+
+  it("skips a fountain title page in markdown fallback", () => {
+    const result = parseSoggettoMarkdown(
+      "Title: My Movie\nAuthor: X\n===\n\nReal prose here.",
+    );
+    expect(result).toEqual([
+      { kind: "paragraph", runs: [{ text: "Real prose here." }] },
+    ]);
+  });
+});
+
+describe("parseSoggettoMarkdown — ProseMirror HTML (WYSIWYG marks)", () => {
+  it("preserves bold and italic inside a paragraph", () => {
+    const result = parseSoggettoMarkdown(
+      "<p>testo <strong>grassetto</strong> e <em>corsivo</em></p>",
+    );
+    expect(result).toEqual([
+      {
+        kind: "paragraph",
+        runs: [
+          { text: "testo " },
+          { text: "grassetto", bold: true },
+          { text: " e " },
+          { text: "corsivo", italics: true },
+        ],
+      },
+    ]);
+  });
+
+  it("merges nested strong+em into a single bold+italic run", () => {
+    const result = parseSoggettoMarkdown("<p><strong><em>x</em></strong></p>");
+    expect(result).toEqual([
+      { kind: "paragraph", runs: [{ text: "x", bold: true, italics: true }] },
+    ]);
+  });
+
+  it("treats <b>/<i>/<u> aliases as bold/italic/underline", () => {
+    const result = parseSoggettoMarkdown("<p><b>a</b><i>b</i><u>c</u></p>");
+    expect(result).toEqual([
+      {
+        kind: "paragraph",
+        runs: [
+          { text: "a", bold: true },
+          { text: "b", italics: true },
+          { text: "c", underline: true },
+        ],
+      },
+    ]);
+  });
+
+  it("maps <h2>/<h3> to heading blocks and <p> to paragraphs", () => {
+    const result = parseSoggettoMarkdown(
+      "<h2>Premessa</h2><p>Body <strong>bold</strong>.</p>",
+    );
+    expect(result).toEqual([
+      { kind: "heading", level: 2, runs: [{ text: "Premessa" }] },
+      {
+        kind: "paragraph",
+        runs: [{ text: "Body " }, { text: "bold", bold: true }, { text: "." }],
+      },
+    ]);
+  });
+
+  it("decodes entities and drops empty blocks", () => {
+    const result = parseSoggettoMarkdown("<p>A &amp; B</p><p></p><p>   </p>");
+    expect(result).toEqual([{ kind: "paragraph", runs: [{ text: "A & B" }] }]);
   });
 });
 
@@ -108,8 +175,8 @@ describe("buildSoggettoDocxSections", () => {
   it("maps heading blocks to HEADING_2 Paragraphs", () => {
     const sections = buildSoggettoDocxSections(
       [
-        { kind: "heading", level: 2, text: "Premessa" },
-        { kind: "paragraph", text: "Body." },
+        { kind: "heading", level: 2, runs: [{ text: "Premessa" }] },
+        { kind: "paragraph", runs: [{ text: "Body." }] },
       ],
       project({ title: "X" }),
     );
@@ -125,6 +192,62 @@ describe("buildSoggettoDocxSections", () => {
     expect(HeadingLevel.HEADING_2).toBe("Heading2");
     expect(headingJson).toContain("Heading2");
     expect(bodyJson).not.toContain("Heading2");
+  });
+
+  it("emits a bold TextRun for a bold run (WYSIWYG, BUG-N63)", () => {
+    const sections = buildSoggettoDocxSections(
+      [
+        {
+          kind: "paragraph",
+          runs: [
+            { text: "plain " },
+            { text: "strong", bold: true },
+            { text: " mid " },
+            { text: "italic", italics: true },
+            { text: " " },
+            { text: "under", underline: true },
+          ],
+        },
+      ],
+      project({ title: "X" }),
+    );
+    // title page (2) + paragraph (1)
+    const body = sections[2];
+    const json = JSON.stringify(body);
+    // The docx runProperties serialize bold/italics/underline elements when set.
+    expect(json).toContain('"bold"');
+    expect(json).toContain('"italics"');
+    expect(json).toContain('"underline"');
+    expect(json).toContain("strong");
+    expect(json).toContain("italic");
+    expect(json).toContain("under");
+  });
+
+  it("does not mark a plain paragraph as bold/italic/underline", () => {
+    const sections = buildSoggettoDocxSections(
+      [{ kind: "paragraph", runs: [{ text: "just text" }] }],
+      project({ title: "X" }),
+    );
+    const json = JSON.stringify(sections[2]);
+    expect(json).not.toContain('"bold"');
+    expect(json).not.toContain('"italics"');
+    expect(json).not.toContain('"underline"');
+  });
+
+  it("renders nested bold+italic as one run with both flags", () => {
+    const sections = buildSoggettoDocxSections(
+      [
+        {
+          kind: "paragraph",
+          runs: [{ text: "both", bold: true, italics: true }],
+        },
+      ],
+      project({ title: "X" }),
+    );
+    const json = JSON.stringify(sections[2]);
+    expect(json).toContain('"bold"');
+    expect(json).toContain('"italics"');
+    expect(json).toContain("both");
   });
 });
 
