@@ -180,4 +180,39 @@ test.describe("[cesare-agentic-chat-ux] Cesare chat UX (N-06/07/09/26)", () => {
     // The tracer invariant still holds — the writing step is present.
     expect(loglineWrites.length).toBeGreaterThanOrEqual(1);
   });
+
+  test("[N-65] the floating composer auto-grows with its content, capped", async ({
+    authenticatedPage: page,
+  }) => {
+    test.setTimeout(60_000);
+    await page.goto(SOGGETTO_PATH);
+    await page.waitForLoadState("networkidle");
+    await openCesareSheet(page);
+
+    const composer = page.getByLabel("Composer Cesare");
+    await expect(composer).toBeVisible({ timeout: 10_000 });
+
+    // One short line: the composer is slim (a single row).
+    await composer.fill("una riga");
+    const oneLine = await composer.evaluate(
+      (el) => (el as HTMLTextAreaElement).offsetHeight,
+    );
+
+    // A long multi-line draft: the composer grows…
+    await composer.fill(
+      Array.from(
+        { length: 6 },
+        (_, i) =>
+          `Riga ${i + 1} di un prompt lungo e articolato che descrive una richiesta complessa a Cesare`,
+      ).join("\n"),
+    );
+    const manyLines = await composer.evaluate(
+      (el) => (el as HTMLTextAreaElement).offsetHeight,
+    );
+
+    // …grows beyond the single-row height, and never past the 96px cap (then it
+    // scrolls internally instead of pushing the chat off-screen) — BUG-N65.
+    expect(manyLines).toBeGreaterThan(oneLine);
+    expect(manyLines).toBeLessThanOrEqual(96);
+  });
 });

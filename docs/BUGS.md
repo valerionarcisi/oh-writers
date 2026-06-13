@@ -55,8 +55,10 @@ Decision pending (owner): fix (b) [+ (d)] now as the deterministic export-fideli
 ### BUG-N65 — Cesare composer textbox is rigid and uncomfortable for writing (2026-06-11, real-use session)
 
 - Severity: MEDIO (UX, hit on every interaction)
+- Status: fixed (branch `fix/n65-composer-autogrow`, NOT merged — owner reviews Monday)
 - Repro: the "Chiedi a Cesare…" input is a fixed single-line box; writing multi-sentence prompts (the normal case in a real session) is cramped. Owner: "deve essere più comodo ed elastico".
 - Fix direction: auto-growing textarea (min 1 row → grows with content up to a cap, Shift+Enter newline), in both the floating drawer and the session page composer.
+- Fix: the auto-grow pattern already existed on `SessionConversationPage` (the in-session composer); it was MISSING on the `CesareDrawer` composer (floating + split surface, `packages/ui`) and on the `NewSessionLandingPage` composer. Added the same effect to both: on each value change, `height='auto'` then `height=min(scrollHeight, cap)` — cap 96px in the drawer (matching its `max-block-size`), 40vh on the landing. Shift+Enter newline + Enter-sends were already in place. Verified live via chrome-devtools: drawer composer 20px (1 line) → 96px (6 lines, then scrolls internally). E2E `tests/cesare-agentic-chat-ux.spec.ts` [N-65] (offsetHeight grows then caps ≤96).
 
 ### BUG-N66 — Cesare creates a version for EVERY attempt/draft; owner policy: overwrite current unless a new version is asked (2026-06-11, real-use session)
 

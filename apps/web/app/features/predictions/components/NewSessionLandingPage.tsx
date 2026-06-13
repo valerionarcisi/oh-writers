@@ -69,6 +69,16 @@ export function NewSessionLandingPage({ projectId }: { projectId: string }) {
     inputRef.current?.focus();
   }, []);
 
+  // Auto-grow the landing composer with its content up to the CSS cap (40vh),
+  // then scroll internally — writing a multi-sentence first prompt is
+  // comfortable (BUG-N65). Mirrors the SessionConversationPage composer.
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, window.innerHeight * 0.4)}px`;
+  }, [input]);
+
   // Start the session from a given text: create the row, push the first message
   // through the shared store, then route to the conversation. The conversation
   // page reads the SAME store thread, so the message + its streamed trace are
