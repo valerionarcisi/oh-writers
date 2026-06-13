@@ -232,4 +232,58 @@ describe("fountainToDoc", () => {
       expect(locks).toEqual([true, true, true]);
     });
   });
+
+  // BUG-N63 (dialogue shows in caps): AI-generated / hand-typed Fountain puts a
+  // blank line between a CHARACTER cue and its speech, and indents the speech at
+  // the 6-space CHARACTER_INDENT instead of 10. Without the dialogue-block
+  // carry-over the speech parsed as a SECOND character cue → editor rendered it
+  // UPPERCASE. The speech must be `dialogue`; a real consecutive cue stays
+  // `character`.
+  describe("BUG-N63 — cue + blank + 6-space speech", () => {
+    const CHAR = "      "; // CHARACTER_INDENT
+    const typeOf = (doc: Node, text: string): string | null => {
+      let t: string | null = null;
+      doc.descendants((n) => {
+        if (
+          (n.type.name === "character" || n.type.name === "dialogue") &&
+          (n.textContent || "").includes(text)
+        )
+          t = n.type.name;
+        return true;
+      });
+      return t;
+    };
+
+    it("classifies a 6-space speech after a cue+blank as dialogue, not character", () => {
+      const text = [
+        "INT. CASA - NOTTE",
+        "",
+        `${CHAR}MARCO (V.O.)`,
+        "",
+        `${CHAR}Luca, ascolta. Non interrompermi.`,
+      ].join("\n");
+      const doc = fountainToDoc(text);
+      expect(typeOf(doc, "MARCO")).toBe("character");
+      expect(typeOf(doc, "Luca, ascolta")).toBe("dialogue");
+    });
+
+    it("keeps a genuine consecutive uppercase cue as character (reply)", () => {
+      const text = [
+        "INT. CASA - NOTTE",
+        "",
+        `${CHAR}MARCO (V.O.)`,
+        "",
+        `${CHAR}Non lo so.`,
+        "",
+        `${CHAR}LUCA (V.O.)`,
+        "",
+        `${CHAR}E tu?`,
+      ].join("\n");
+      const doc = fountainToDoc(text);
+      expect(typeOf(doc, "MARCO")).toBe("character");
+      expect(typeOf(doc, "Non lo so")).toBe("dialogue");
+      expect(typeOf(doc, "LUCA")).toBe("character");
+      expect(typeOf(doc, "E tu")).toBe("dialogue");
+    });
+  });
 });
