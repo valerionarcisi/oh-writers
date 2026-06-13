@@ -9,6 +9,7 @@ import {
   TeamRoles,
   type TeamRole,
   translate,
+  extractCast,
   type Locale,
   type TranslationKey,
 } from "@oh-writers/domain";
@@ -18,8 +19,8 @@ import {
   projects,
   documents,
   screenplays,
+  screenplayVersions,
   scenes,
-  characters,
   budgets,
   budgetLines,
   schedules,
@@ -331,6 +332,11 @@ const loadSceneAggregate = (
   );
 };
 
+// The `characters` table is never populated (no writer inserts into it) and
+// `scenes.character_names` is empty too, so the old `count(*) from characters`
+// always returned 0 — a dead KPI. Count DISTINCT characters by extracting the
+// CHARACTER cues from the active version's Fountain with the SAME deterministic
+// extractor the breakdown uses (`extractCast`). This is the live, correct source.
 const loadCharacterCount = (
   db: Db,
   screenplayId: string | null,
@@ -339,11 +345,30 @@ const loadCharacterCount = (
     return ResultAsync.fromSafePromise(Promise.resolve(0));
   }
   return ResultAsync.fromPromise(
-    db
-      .select({ value: sql<number>`count(*)::int` })
-      .from(characters)
-      .where(eq(characters.screenplayId, screenplayId))
-      .then((rows) => rows[0]?.value ?? 0),
+    (async (): Promise<number> => {
+      const [sp] = await db
+        .select({
+          content: screenplays.content,
+          currentVersionId: screenplays.currentVersionId,
+        })
+        .from(screenplays)
+        .where(eq(screenplays.id, screenplayId))
+        .limit(1);
+      if (!sp) return 0;
+      let fountain = sp.content;
+      if (sp.currentVersionId) {
+        const [v] = await db
+          .select({ content: screenplayVersions.content })
+          .from(screenplayVersions)
+          .where(eq(screenplayVersions.id, sp.currentVersionId))
+          .limit(1);
+        if (v?.content) fountain = v.content;
+      }
+      if (!fountain || fountain.trim().length === 0) return 0;
+      // extractCast scans the whole body for CHARACTER cues and returns one item
+      // per distinct (canonical) name — exactly the cast count we want.
+      return extractCast(fountain).length;
+    })(),
     (e) => new DbError("projectOverview.characters", e),
   );
 };
