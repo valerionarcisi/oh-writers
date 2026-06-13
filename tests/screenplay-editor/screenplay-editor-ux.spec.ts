@@ -231,7 +231,7 @@ test.describe("Cmd+Number shortcuts — Spec 05e", () => {
 
     // Start from action, convert via shortcut
     expect(await focusedBlockType(page)).toBe("action");
-    await page.keyboard.press("Meta+1");
+    await page.keyboard.press("ControlOrMeta+1");
     await page.waitForTimeout(100);
 
     // Scene heading: cursor lands in prefix or title slot
@@ -246,7 +246,7 @@ test.describe("Cmd+Number shortcuts — Spec 05e", () => {
     await goToNewLine(page);
 
     expect(await focusedBlockType(page)).toBe("action");
-    await page.keyboard.press("Meta+3");
+    await page.keyboard.press("ControlOrMeta+3");
     await page.waitForTimeout(100);
 
     expect(await focusedBlockType(page)).toBe("character");
@@ -259,7 +259,7 @@ test.describe("Cmd+Number shortcuts — Spec 05e", () => {
     await goToNewLine(page);
 
     expect(await focusedBlockType(page)).toBe("action");
-    await page.keyboard.press("Meta+4");
+    await page.keyboard.press("ControlOrMeta+4");
     await page.waitForTimeout(100);
 
     expect(await focusedBlockType(page)).toBe("dialogue");
@@ -272,7 +272,7 @@ test.describe("Cmd+Number shortcuts — Spec 05e", () => {
     await goToNewLine(page);
 
     expect(await focusedBlockType(page)).toBe("action");
-    await page.keyboard.press("Meta+6");
+    await page.keyboard.press("ControlOrMeta+6");
     await page.waitForTimeout(100);
 
     expect(await focusedBlockType(page)).toBe("transition");

@@ -189,3 +189,98 @@ test.describe("Screenplay Export — Spec 05j", () => {
     );
   });
 });
+
+// ─── BUG-N63: WYSIWYG export fidelity (today's fixes, E2E) ─────────────────────
+// Exercise the FULL export server fn (real DB) so the formatting fixes are
+// locked end-to-end, not just at the unit layer.
+test.describe("Screenplay Export — WYSIWYG formatting (BUG-N63)", () => {
+  // Per-item x-position + fontName of the first page. The x lets us tell
+  // dialogue (indented) from action (flush-left); the fontName lets us tell a
+  // bold run (a distinct font face) from the regular body, reliably — the PDF
+  // compresses the font NAME into a stream, so a raw-buffer substring check is
+  // not reliable, but pdf.js resolves the per-item fontName for us.
+  const firstPageItems = async (
+    buffer: Buffer,
+  ): Promise<Array<{ x: number; str: string; font: string }>> => {
+    const items: Array<{ x: number; str: string; font: string }> = [];
+    await pdfParse(buffer, {
+      max: 1,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      pagerender: async (pageData: any) => {
+        const tc = await pageData.getTextContent();
+        for (const it of tc.items) {
+          if (it.str && it.str.trim()) {
+            items.push({
+              x: Math.round(it.transform[4]),
+              str: it.str.trim(),
+              font: String(it.fontName ?? ""),
+            });
+          }
+        }
+        return "";
+      },
+    });
+    return items;
+  };
+  const firstPagePositions = firstPageItems;
+
+  test("[OHW-N63a] no cover → page 1 starts with content, not a blank page", async ({
+    authenticatedPage: page,
+    testProjectId,
+  }) => {
+    await page.goto(SCREENPLAY_PATH(testProjectId));
+    await waitForEditor(page);
+    const { response, popup } = await openScreenplayExportAndGenerate(page);
+    if (!popup.isClosed()) await popup.close();
+    const body = await response.json();
+    const buffer = Buffer.from(body.result.value.pdfBase64, "base64");
+    const items = await firstPagePositions(buffer);
+    expect(items.length).toBeGreaterThan(0);
+    expect(items.some((i) => /INT\.|EXT\./.test(i.str))).toBe(true);
+  });
+
+  test("[OHW-N63c] scene headings render bold (Courier-Bold embedded)", async ({
+    authenticatedPage: page,
+    testProjectId,
+  }) => {
+    await page.goto(SCREENPLAY_PATH(testProjectId));
+    await waitForEditor(page);
+    const { response, popup } = await openScreenplayExportAndGenerate(page);
+    if (!popup.isClosed()) await popup.close();
+    const body = await response.json();
+    const buffer = Buffer.from(body.result.value.pdfBase64, "base64");
+    const items = await firstPageItems(buffer);
+    // afterwriting emboldens scene headings by switching to a distinct (bold)
+    // font face. So a slugline ("INT./EXT. …") must render in a DIFFERENT font
+    // from the regular body/action text — proving the bold was applied.
+    // Slugline forms: "INT.", "EXT.", "INT/EXT.", "EST." (number may precede).
+    const sluglineRe = /(INT|EXT|EST|INT\/EXT|I\/E)[.\s/]/i;
+    const heading = items.find((i) => sluglineRe.test(i.str));
+    const bodyLine = items.find(
+      (i) => !sluglineRe.test(i.str) && i.str.length > 15,
+    );
+    expect(heading, "a scene heading is present").toBeTruthy();
+    expect(bodyLine, "a body/action line is present").toBeTruthy();
+    expect(heading!.font).not.toBe(bodyLine!.font);
+  });
+
+  test("[OHW-N63d] dialogue is indented, not flush-left action", async ({
+    authenticatedPage: page,
+    testProjectId,
+  }) => {
+    await page.goto(SCREENPLAY_PATH(testProjectId));
+    await waitForEditor(page);
+    const { response, popup } = await openScreenplayExportAndGenerate(page);
+    if (!popup.isClosed()) await popup.close();
+    const body = await response.json();
+    const buffer = Buffer.from(body.result.value.pdfBase64, "base64");
+    const items = await firstPagePositions(buffer);
+    const actionMargin = Math.min(...items.map((i) => i.x));
+    // A "(V.O.)" character cue must be indented well right of the action margin.
+    const cue = items.find((i) => /\(.*V\.?O\.?\)/i.test(i.str));
+    if (cue) expect(cue.x).toBeGreaterThan(actionMargin + 40);
+    // The page has at least one indented (dialogue/cue) line — the dialogue
+    // block did not flatten to the action margin.
+    expect(items.some((i) => i.x > actionMargin + 40)).toBe(true);
+  });
+});

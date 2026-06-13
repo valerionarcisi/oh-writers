@@ -246,7 +246,7 @@ test.describe("[Spec 41] Cesare Inline Edits", () => {
     await authenticatedPage.locator(".ProseMirror").click();
 
     // Cmd+Z should reject the pending edit.
-    await authenticatedPage.keyboard.press("Meta+z");
+    await authenticatedPage.keyboard.press("ControlOrMeta+z");
 
     // Decoration is gone.
     await expect(

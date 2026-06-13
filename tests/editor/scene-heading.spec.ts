@@ -219,7 +219,7 @@ test.describe("Structured Scene Heading [OHW-09x]", () => {
     expect(actionsAfter).toBeGreaterThan(actionsBefore);
 
     // Undo
-    await page.keyboard.press("Meta+z");
+    await page.keyboard.press("ControlOrMeta+z");
   });
 
   // ─── OHW-095 ────────────────────────────────────────────────────────────────
@@ -252,8 +252,8 @@ test.describe("Structured Scene Heading [OHW-09x]", () => {
     expect(await focusedSlot(page)).toContain("pm-heading-prefix");
 
     // Undo both actions (Enter + Alt+S)
-    await page.keyboard.press("Meta+z");
-    await page.keyboard.press("Meta+z");
+    await page.keyboard.press("ControlOrMeta+z");
+    await page.keyboard.press("ControlOrMeta+z");
   });
 
   // ─── OHW-096 ────────────────────────────────────────────────────────────────
@@ -286,7 +286,7 @@ test.describe("Structured Scene Heading [OHW-09x]", () => {
 
     // Dismiss and undo
     await page.keyboard.press("Escape");
-    await page.keyboard.press("Meta+z");
-    await page.keyboard.press("Meta+z");
+    await page.keyboard.press("ControlOrMeta+z");
+    await page.keyboard.press("ControlOrMeta+z");
   });
 });
