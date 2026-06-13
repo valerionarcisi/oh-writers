@@ -40,12 +40,63 @@ A UI fix is not done until:
    for every UI fix (it is the gap that let regressions slip before). Write the
    assertion against the measurable property, not a pixel snapshot where possible
    (e.g. assert the element is the last rail child / is hit-testable / has the right
-   computed border), so it is robust. Prefer writing it test-first
-   (`superpowers:test-driven-development`).
+   computed border), so it is robust.
 4. **typecheck** is enforced by the pre-commit hook; never bypass with `--no-verify`.
 
 Only skip the E2E test with an explicit, written reason in the commit/PR (e.g. the
 surface has no testable handle yet) — never silently.
+
+## 2a. The design gate — two passes, two tools, in order
+
+§1 and §2 are **two distinct passes with two distinct tools**, run in this order.
+Do not collapse them and do not swap the order.
+
+- **Pass 1 — DIAGNOSE, with `chrome-devtools` MCP.** The fast inner loop. Real Chrome,
+  live DOM eval. Use it for every geometry / hit-test / computed-style probe in §1
+  (`getBoundingClientRect`, `elementFromPoint`, `getComputedStyle`, transform-ancestor
+  check) and for the human-facing screenshot. It is exploratory and throwaway — nothing
+  here is committed. Loop here as many times as needed:
+  `measure → fail → fix → re-measure` until the numbers say the design is right.
+- **Pass 2 — LOCK, with `playwright`.** Run ONCE, only after Pass 1 is green. Write the
+  E2E regression test (§2.3) on the **measurable property the chrome-devtools pass
+  surfaced**, make it pass, keep it in CI forever. This is a vise, not a scalpel.
+
+**Why two passes, not one.** chrome-devtools is a scalpel for diagnosis (fast,
+interactive, no boilerplate) but wrong for CI (not repeatable, not committed).
+Playwright is a vise for prevention (permanent, multi-browser, CI) but clumsy for live
+exploration. Using only Playwright = you guess more during diagnosis. Using only
+chrome-devtools = no regression guard, the bug returns. The split is the point.
+
+**Order matters — do NOT test-first for visual/geometry fixes.** For pure logic,
+`superpowers:test-driven-development` (test-first) still applies. For a visual or
+interaction fix you cannot write the right assertion before measuring live — you do
+not yet know the element must be `last-child`, or that the hit-test must land at
+`(x, y)`. So: chrome-devtools first surfaces the number, **then** the test is written
+against that number. The E2E test does not _discover_ the bug; it _freezes_ the fix
+after chrome-devtools found it.
+
+**Mandatory red-on-old check.** Before committing the fix, confirm the new E2E test is
+**red on the old behaviour and green on the new** (stash the fix, run the test, see it
+fail; restore, see it pass). A test that passes on both states guards nothing — this is
+the exact gap that let regressions slip before. Costs ~30s.
+
+### The loop, precise
+
+```
+develop
+  → chrome-devtools (measure live)   ┐ inner loop, throwaway
+  → fail? → fix → re-measure ────────┘ repeat until the numbers are right
+  → ok  → screenshot (recap)
+  → write E2E (playwright) → verify RED on old → apply fix → verify GREEN on new
+  → typecheck / lint / DS-consistency CI green
+  → GATE PASS → commit
+```
+
+A UI change clears the design gate iff: (1) root cause found by live measure, not
+source-reading; (2) post-fix re-measure proves the numbers changed; (3) screenshot in
+the recap; (4) Playwright regression test, red-on-old/green-on-new; (5) typecheck +
+lint + DS-consistency CI green. (1)+(2) are the chrome-devtools pass; (3)+(4)+(5) are
+the playwright/CI pass.
 
 ## 3. Audits — adversarial gate, no false positives
 
