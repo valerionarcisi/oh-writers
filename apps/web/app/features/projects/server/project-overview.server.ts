@@ -12,7 +12,7 @@ import {
   type Locale,
   type TranslationKey,
 } from "@oh-writers/domain";
-import { toShape } from "@oh-writers/utils";
+import { toShape, toPlainText } from "@oh-writers/utils";
 import type { ResultShape } from "@oh-writers/utils";
 import {
   projects,
@@ -158,16 +158,19 @@ export type ProjectOverviewError =
 
 const PREVIEW_LIMIT = 220;
 
+// The stored content may be HTML (ProseMirror), markdown, or fountain wrapped
+// in a code fence with a title-page header. The preview must show readable
+// prose, never raw source, so we strip markup before truncating.
 export const toPreview = (raw: string): string => {
-  const trimmed = raw.trim();
-  if (trimmed.length <= PREVIEW_LIMIT) return trimmed;
-  return `${trimmed.slice(0, PREVIEW_LIMIT - 1)}…`;
+  const clean = toPlainText(raw);
+  if (clean.length <= PREVIEW_LIMIT) return clean;
+  return `${clean.slice(0, PREVIEW_LIMIT - 1)}…`;
 };
 
 export const countWords = (raw: string): number => {
-  const trimmed = raw.trim();
-  if (trimmed.length === 0) return 0;
-  return trimmed.split(/\s+/u).length;
+  const clean = toPlainText(raw);
+  if (clean.length === 0) return 0;
+  return clean.split(/\s+/u).length;
 };
 
 export const daysSince = (iso: string, now: Date = new Date()): number => {
