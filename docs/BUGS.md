@@ -56,6 +56,14 @@ Decision pending (owner): fix (b) [+ (d)] now as the deterministic export-fideli
 - Fix: a single fail-closed resolver in `AppShell` — at most ONE auxiliary lane is active, deterministic precedence Versions > Cesare peek > preview drawer. The raw activations (`*Raw`) feed the resolved mutually-exclusive booleans that the body-attr effects + lane JSX consume; the losers render nothing and set no body attr, so the host page always keeps a real middle track.
 - Verified: live (chrome-devtools) on the combo URL → grid `240px 540px 420px` (rail · main 540 · versions 420), Cesare lane absent, soggetto prose renders; cesare-only + versions-only still work alone. E2E `tests/versions-splitdrawer.spec.ts` [BUG-N64] (versions wins, cesare suppressed, main track >200px).
 
+### BUG-N69 — bell notifications don't show while Cesare peek is open (2026-06-13, N64 family)
+
+- Severity: MEDIO (an explicit user action produces nothing visible — the bell looks broken)
+- Status: fixed (`fix/notifications-vs-cesare-split`)
+- Repro: `/projects/:id/soggetto?peek=cesare` → click the TopBar bell → nothing visible happens. The notifications/preview SplitDrawer mounts but lands behind the Cesare peek column. In the DOM `body` carried `data-cesare-split="open"` + `data-split-drawer="open"` (+ would-be `data-preview-split`) at once.
+- Proof: `tests/notifications-vs-cesare-split.spec.ts` (red on old code: `?peek` stays `cesare`, notifications never get the lane; green after fix). `pnpm -C apps/web exec tsc --noEmit` = 0.
+- Cause: the BUG-N64 single auxiliary-lane resolver gives the Cesare peek HIGHER precedence than the shell preview/notifications drawer, so opening the bell while `?peek=cesare` is live suppressed the notifications (no 3rd grid track). Fix: opening the bell is an explicit user action that must WIN the lane — `AppShell.handleBell` clears `?peek` (closes the Cesare peek) before opening the bell drawer, so the two never coexist in the third track and the notifications are always visible. Preserves the N64 invariant (at most one auxiliary lane live).
+
 ### BUG-N65 — Cesare composer textbox is rigid and uncomfortable for writing (2026-06-11, real-use session)
 
 - Severity: MEDIO (UX, hit on every interaction)
