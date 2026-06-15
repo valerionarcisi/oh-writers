@@ -202,14 +202,31 @@
   justify-content: center;
 }
 
-/* Element highlight applied to spans inside ScriptReader */
+/* TopBar right slot: the re-spoglio CTA sits next to the ⋯ actions menu. */
+.topbarActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Element highlight applied to spans inside ScriptReader.
+ *
+ * The screenplay text is set in Courier at line-height 1.0 (tight, page-faithful
+ * pagination). A `border-block-end` is drawn at the inline box edge, which with
+ * no leading overflows the line and collides with the row below — the underline
+ * looked detached / aligned to the wrong line. `text-decoration: underline` is
+ * anchored to the glyph baseline instead, so it hugs the word and never bleeds
+ * into the next line regardless of line-height. */
 .screenplay :global([data-element-id]) {
   background: color-mix(
     in oklch,
     var(--cat-color, var(--ds-text-3)) 14%,
     transparent
   );
-  border-block-end: 1.5px solid var(--cat-color, var(--ds-text-3));
+  text-decoration: underline;
+  text-decoration-color: var(--cat-color, var(--ds-text-3));
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 2px;
   padding-inline: 2px;
   border-radius: 2px;
   cursor: pointer;
@@ -226,13 +243,15 @@
 
 .screenplay :global([data-element-id][data-stale="true"]) {
   background: transparent;
-  border-block-end-style: dashed;
+  text-decoration-style: dashed;
   color: var(--cat-color, var(--ds-text-3));
 }
 
 .screenplay :global([data-ghost="true"]) {
   background: transparent;
-  border-block-end: 1.5px dashed var(--ds-leaf-500, currentColor);
+  text-decoration: underline dashed var(--ds-leaf-500, currentColor);
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 2px;
   color: var(--ds-leaf-500, currentColor);
   padding-inline: 2px;
   cursor: pointer;
@@ -283,7 +302,7 @@
 .screenplay[data-show-photography="false"] :global([data-cat="vfx"]),
 .screenplay[data-show-sound="false"] :global([data-cat="sound"]) {
   background: transparent;
-  border-block-end-color: transparent;
+  text-decoration: none;
 }
 
 /* Right panel */

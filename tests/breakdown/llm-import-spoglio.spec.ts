@@ -32,23 +32,29 @@ test.describe("[Spec 10g] Breakdown — LLM-at-import", () => {
   }) => {
     const page = authenticatedPage;
     await navigateToBreakdown(page, TEAM_PROJECT_ID);
-    // v3: the re-spoglio entry point is the FloatingDock primary action button.
-    const trigger = page.getByRole("button", { name: "Ri-spogliare con AI" });
+    // The re-spoglio entry point is the TopBar primary CTA beside the ⋯ menu
+    // (BUG-N68 follow-up: moved off the bottom-left FloatingDock).
+    const trigger = page.getByTestId("breakdown-respoglio-cta");
     await expect(trigger).toBeVisible();
     await expect(trigger).toBeEnabled();
   });
 
   // SKIPPED (removed UI, not a testid rename): v3 replaced the `ai-respoglio`
   // dropdown (trigger → `ai-respoglio-menu` → `ai-respoglio-full`) with a single
-  // FloatingDock primary action. There is no menu to open, so this scenario no
-  // longer exists.
+  // primary action. There is no menu to open, so this scenario no longer exists.
   test.skip("[OHW-330-ui-menu] dropdown opens and exposes the full re-run option", () => {});
 
-  // SKIPPED (changed contract, not a testid rename): the v3 FloatingDock
-  // "Ri-spogliare con AI" action is rendered unconditionally (not gated on
-  // canEdit), so a viewer DOES see it — the old "viewer never sees the AI
-  // dropdown" contract no longer holds. Server-side enforcement still applies.
-  test.skip("[OHW-330-permissions] viewer never sees the AI dropdown", () => {});
+  // The re-spoglio CTA mutates the breakdown, so it is gated on canEdit — a
+  // viewer never sees it (BUG-N68 follow-up restored this contract when the CTA
+  // moved from the always-on FloatingDock to a TopBar button). Server-side
+  // enforcement still applies on top.
+  test("[OHW-330-permissions] viewer never sees the re-spoglio CTA", async ({
+    authenticatedViewerPage,
+  }) => {
+    const page = authenticatedViewerPage;
+    await navigateToBreakdown(page, TEAM_PROJECT_ID);
+    await expect(page.getByTestId("breakdown-respoglio-cta")).toHaveCount(0);
+  });
 
   test("[OHW-330-banner] LLM banner stays hidden when the feature flag is off", async ({
     authenticatedPage,

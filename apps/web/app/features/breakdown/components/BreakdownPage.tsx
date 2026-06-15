@@ -9,7 +9,7 @@ import {
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
 import {
-  FloatingDock,
+  Button,
   Popover,
   SegmentedControl,
   Skeleton,
@@ -229,16 +229,6 @@ function BreakdownPageContent({ projectId }: Props) {
     "breakdown",
     contextActionHandlers,
   );
-  const breakdownActionsMenu = useMemo(
-    () => (
-      <ActionsMenu
-        data-testid="breakdown-actions-menu"
-        items={contextActionItems}
-      />
-    ),
-    [contextActionItems],
-  );
-  useTopBarSlotPublisher("actions", breakdownActionsMenu);
   const [indiceQuery, setIndiceQuery] = useState("");
   const indiceSearchRef = useRef<HTMLInputElement>(null);
   const indiceWrapRef = useRef<HTMLDivElement>(null);
@@ -263,6 +253,39 @@ function BreakdownPageContent({ projectId }: Props) {
       if (ok) fullSpoglio.mutate({ force: true });
     });
   };
+
+  // TopBar right slot: the "Ri-spogliare con AI" primary action sits next to the
+  // `⋯` actions menu (editors only — the re-spoglio mutates the breakdown). This
+  // replaces the bottom-left FloatingDock pill so the page's primary CTA lives
+  // with the rest of the TopBar actions, beside the `⋯` menu.
+  const breakdownActions = useMemo(
+    () => (
+      <div className={styles.topbarActions}>
+        {canEdit && (
+          <Button
+            variant="secondary"
+            size="sm"
+            onPress={handleRespoglio}
+            disabled={fullSpoglio.isPending}
+            data-testid="breakdown-respoglio-cta"
+          >
+            <span aria-hidden="true">✦ </span>
+            {t("breakdown.respoglioWithAi")}
+          </Button>
+        )}
+        <ActionsMenu
+          data-testid="breakdown-actions-menu"
+          items={contextActionItems}
+        />
+      </div>
+    ),
+    // handleRespoglio is recreated each render but closes only over stable refs;
+    // depending on the pending flag + canEdit keeps the disabled state correct.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [canEdit, fullSpoglio.isPending, contextActionItems, t],
+  );
+  useTopBarSlotPublisher("actions", breakdownActions);
+
   const autoSpoglioStartedRef = useRef(false);
   useEffect(() => {
     if (import.meta.env.MOCK_AI) return;
@@ -1165,20 +1188,9 @@ function BreakdownPageContent({ projectId }: Props) {
         </div>
       )}
 
-      {/* ─── PAGE-SCOPED CTAs (bottom-left) ───
-       * Spec 44 TKT-LEAD-01: the BottomDock owns the bottom-right corner
-       * + the universal ✦ Cesare button. The per-page FloatingDock anchors
-       * bottom-LEFT (default) and no longer renders its own Cesare pill —
-       * one Cesare surface, one command centre. */}
-      {/* Export moved to the TopBar `⋯` menu (Spec 67) — the dock keeps only the
-          page's primary CTA (re-spoglio). */}
-      <FloatingDock
-        primaryAction={{
-          label: t("breakdown.respoglioWithAi"),
-          hotkey: "⌘R",
-          onClick: handleRespoglio,
-        }}
-      />
+      {/* The page's primary CTA (Ri-spogliare con AI) + Export live in the
+          TopBar right slot beside the `⋯` menu — see `breakdownActions` above.
+          The bottom-right corner is owned by the shell BottomDock (Cesare). */}
 
       <ExportBreakdownModal
         projectId={projectId}

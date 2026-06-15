@@ -73,4 +73,33 @@ test.describe("[BUG-N68] breakdown Per scena — scene-scope toggle", () => {
     const newHeading = await reader.locator(".pm-heading").first().innerText();
     expect(newHeading).not.toBe(firstHeading);
   });
+
+  test("[OHW-N68c] element underlines render via text-decoration, not a box border", async ({
+    authenticatedPage: page,
+  }) => {
+    await navigateToBreakdown(page, TEAM_PROJECT_ID);
+
+    // The screenplay is set at line-height 1.0 (tight pagination). A bottom
+    // border on the highlight overflowed the line and collided with the row
+    // below — the underline looked misaligned. The fix anchors the underline to
+    // the glyph baseline via text-decoration, with no box border.
+    const el = page
+      .getByTestId("breakdown-screenplay")
+      .locator("[data-element-id]")
+      .first();
+    await expect(el).toBeVisible();
+
+    const style = await el.evaluate((node) => {
+      const cs = getComputedStyle(node);
+      return {
+        decorationLine: cs.textDecorationLine,
+        decorationColor: cs.textDecorationColor,
+      };
+    });
+    // The element name is underlined via text-decoration (baseline-anchored)…
+    expect(style.decorationLine).toContain("underline");
+    // …in the category colour, not the default text colour — i.e. it is the
+    // breakdown highlight underline, not an incidental link/heading underline.
+    expect(style.decorationColor).not.toBe("rgb(0, 0, 0)");
+  });
 });
