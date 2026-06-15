@@ -31,6 +31,7 @@ import {
   BREAKDOWN_CATEGORIES,
   CATEGORY_META,
   ContextActionIds,
+  extractScenesFromFountain,
   type BreakdownCategory,
   type TranslationKey,
 } from "@oh-writers/domain";
@@ -74,6 +75,7 @@ type UnderlineKey =
   | "sound";
 
 type ViewTab = "per-scene" | "per-project" | "matrice";
+type SceneScope = "single" | "full";
 
 type CtxMode = "main" | "rename" | "category";
 
@@ -207,6 +209,10 @@ function BreakdownPageContent({ projectId }: Props) {
   );
 
   const [viewTab, setViewTab] = useState<ViewTab>("per-scene");
+  // BUG-N68 Part A — the "Per scena" reader defaults to the SINGLE active scene
+  // (header and body now agree). "Copione intero" reverts to the continuous
+  // whole-script run for users who want to scroll the full breakdown.
+  const [sceneScope, setSceneScope] = useState<SceneScope>("single");
   const [exportOpen, setExportOpen] = useState(false);
   const [indiceOpen, setIndiceOpen] = useState(false);
   const indiceTriggerRef = useRef<HTMLButtonElement>(null);
@@ -325,11 +331,38 @@ function BreakdownPageContent({ projectId }: Props) {
 
   const scriptReaderRef = useRef<ScriptReaderHandle>(null);
 
+  // BUG-N68 Part A — reader inputs scoped by `sceneScope`. In "single" mode the
+  // body must match the scene-scoped header: slice the Fountain to the active
+  // scene only (reusing the Sides extractor) and narrow `scenes` to that one
+  // scene so PM scene-index resolution stays in range. Highlight `elements` are
+  // passed through unchanged: the highlight plugin decorates by matching element
+  // NAMES against the rendered text, so slicing the content already scopes the
+  // underlines to the visible scene — no separate element filter is needed (and
+  // a name shared with the active scene must not be dropped). "full" mode passes
+  // the whole script through (legacy continuous view).
+  const fullVersionContent = ctx.versionContent ?? "";
+  const { readerContent, readerScenes } = useMemo(() => {
+    if (sceneScope === "full" || !activeScene) {
+      return { readerContent: fullVersionContent, readerScenes: scenes };
+    }
+    return {
+      readerContent: extractScenesFromFountain(fullVersionContent, [
+        activeScene.fountainNumber,
+      ]),
+      readerScenes: [activeScene],
+    };
+  }, [sceneScope, activeScene, fullVersionContent, scenes]);
+
   const handleSceneSelect = (sceneId: string) => {
     setActiveSceneId(sceneId);
     setIndiceOpen(false);
-    const idx = scenes.findIndex((s) => s.id === sceneId);
-    if (idx >= 0) scriptReaderRef.current?.scrollToScene(idx + 1);
+    // In "single" scope the reader re-slices to the chosen scene (driven by
+    // activeSceneId), so there is nothing to scroll to. Only the "full"
+    // continuous reader needs the scroll-to-scene.
+    if (sceneScope === "full") {
+      const idx = scenes.findIndex((s) => s.id === sceneId);
+      if (idx >= 0) scriptReaderRef.current?.scrollToScene(idx + 1);
+    }
   };
 
   // ─── Hover tooltip on underlined elements ───────────────────────────────
@@ -684,6 +717,15 @@ function BreakdownPageContent({ projectId }: Props) {
           <ViewbarSep />
           {viewTab === "per-scene" && (
             <div className={styles.viewbarCenter}>
+              <SegmentedControl
+                options={[
+                  { id: "single", label: t("breakdown.scope.single") },
+                  { id: "full", label: t("breakdown.scope.full") },
+                ]}
+                activeId={sceneScope}
+                onSelect={(id) => setSceneScope(id as SceneScope)}
+                ariaLabel={t("breakdown.scope.aria")}
+              />
               <div className={styles.indiceWrap} ref={underlineWrapRef}>
                 <button
                   ref={underlineTriggerRef}
@@ -750,10 +792,14 @@ function BreakdownPageContent({ projectId }: Props) {
           {/* "Per scena" is the default V2 view; tabs are visual but the
               first is active. Other views fall back to v1 by route. */}
           <div className={styles.viewbarRight}>
-            {/* TODO(audit-2026-05-15): restore Indice popover once scene-click
-                anchor logic scrolls to the correct breakdown scene block.
-                The popover items have no working onClick handler today. */}
-            {false && (
+            {/* The Indice popover is the scene switcher. In "single" scope
+                selecting a scene re-slices the reader to it (handleSceneSelect
+                sets activeSceneId → the scope memo re-slices) — no scroll anchor
+                needed, so it is enabled here. In "full" scope it stays hidden:
+                its click would need to scroll to the right block, which the
+                anchor logic does not yet do (TODO audit-2026-05-15). Without
+                this, single scope would have no way to leave scene 1. */}
+            {sceneScope === "single" && (
               <div className={styles.indiceWrap} ref={indiceWrapRef}>
                 <button
                   ref={indiceTriggerRef}
@@ -926,8 +972,8 @@ function BreakdownPageContent({ projectId }: Props) {
                   ref={scriptReaderRef}
                   projectId={projectId}
                   versionId={versionId}
-                  versionContent={ctx.versionContent}
-                  scenes={scenes}
+                  versionContent={readerContent}
+                  scenes={readerScenes}
                   elements={elementsForHighlight}
                   suggestions={suggestions}
                   canEdit={canEdit}

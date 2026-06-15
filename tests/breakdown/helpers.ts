@@ -53,11 +53,24 @@ export const navigateToBreakdown = async (page: Page, projectId: string) => {
  * Focus a scene in the v3 breakdown reader.
  *
  * v3 dropped the standalone SceneTOC sidebar (`scene-toc-item-*` is orphaned);
- * scene navigation is now driven by clicking a heading inside the screenplay
+ * scene navigation is driven by clicking a heading inside the screenplay
  * reader, which the ScriptReader resolves to the active scene. Headings carry
  * the `scene-N-heading` testid via the scene-testid PM decoration.
+ *
+ * BUG-N68 Part A made "Scena singola" the default scope, so the reader renders
+ * only the active scene and heading-click navigation has no other heading to
+ * jump to. Heading-click navigation is a "Copione intero" affordance, so this
+ * helper first switches to the full-script scope before clicking the target
+ * heading (idempotent — a no-op once already in full scope).
  */
 export const openSceneInBreakdown = async (page: Page, sceneNumber: number) => {
+  const fullScope = page.getByTestId("segmented-full");
+  if ((await fullScope.count()) > 0 && !(await fullScope.isChecked())) {
+    await expect(async () => {
+      await fullScope.click();
+      await expect(fullScope).toBeChecked({ timeout: 1_000 });
+    }).toPass({ timeout: 15_000 });
+  }
   const heading = page.getByTestId(`scene-${sceneNumber}-heading`);
   await expect(heading).toBeVisible();
   await heading.click();
