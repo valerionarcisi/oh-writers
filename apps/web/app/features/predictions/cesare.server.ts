@@ -1551,13 +1551,17 @@ const buildSystemPrompt = (
     },
     {
       type: "text",
+      // No cache breakpoint here: this block varies by page, active scene and
+      // active shooting day, so it churns turn-to-turn and would mostly miss.
+      // Anthropic caps a request at 4 cache breakpoints; that budget is better
+      // spent on the static tool array (see withCachedTools in cesare-tools.ts),
+      // so this slot is intentionally left uncached.
       text: buildToolGuidanceBlock(
         ctx,
         page,
         activeShootingDayNumber,
         activeSceneId,
       ),
-      cache_control: { type: "ephemeral" },
     },
     {
       type: "text",

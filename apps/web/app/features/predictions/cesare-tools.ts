@@ -2952,6 +2952,82 @@ const toSystemMessages = (
   }));
 };
 
+// The Anthropic ephemeral prompt-cache breakpoint.
+//
+// Anthropic caps a request at 4 cache breakpoints (a 5th+ is silently IGNORED,
+// not rejected). The four system blocks that carry the cheapest, most static
+// prefix already claim that budget in `cesare.server.ts` (ROLE, bible,
+// production-context) plus this tool breakpoint — `buildToolGuidanceBlock` was
+// deliberately UN-cached there to free a slot for the tool array, which is the
+// single largest static payload and is re-sent on every one of the loop's
+// 5 steps. Do NOT add a fifth breakpoint (e.g. on message history): it would be
+// dropped on the floor while still appearing to "work" in isolation.
+const EPHEMERAL_CACHE = {
+  anthropic: { cacheControl: { type: "ephemeral" as const } },
+} as const;
+
+// Mark the LAST tool with the cache breakpoint. Anthropic caches the entire
+// tool array up to (and including) the breakpoint, so a single mark on the
+// final entry caches every tool definition. Order is preserved (cache requires
+// a byte-identical prefix). The `anthropic` provider sub-object is deep-merged,
+// not replaced, so a future tool-specific anthropic hint on the last tool is
+// preserved. This also wraps the mock-model tools when MOCK_AI=true, which is
+// harmless: the mock model ignores providerOptions (no real API, no cache).
+export const withCachedTools = (
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  sdkTools: Record<string, Tool<any, any>>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): Record<string, Tool<any, any>> => {
+  const names = Object.keys(sdkTools);
+  if (names.length === 0) return sdkTools;
+  const lastName = names[names.length - 1]!;
+  const lastTool = sdkTools[lastName]!;
+  const prior = (lastTool as { providerOptions?: Record<string, unknown> })
+    .providerOptions;
+  const priorAnthropic = (prior?.["anthropic"] ?? {}) as Record<
+    string,
+    unknown
+  >;
+  return {
+    ...sdkTools,
+    [lastName]: {
+      ...lastTool,
+      providerOptions: {
+        ...prior,
+        anthropic: { ...priorAnthropic, ...EPHEMERAL_CACHE.anthropic },
+      },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as Tool<any, any>,
+  };
+};
+
+// Surface cache effectiveness as a structured log so a silent cache miss (a
+// reordered prefix, a per-turn timestamp leaking into the cached blocks) is
+// observable instead of invisibly billing full price. `cachedInputTokens` is
+// the SDK's normalised read-hit count; the raw Anthropic write count lives in
+// providerMetadata. The cost-smoke test asserts a hit on the warm second turn.
+const logCacheUsage = (
+  result: Awaited<ReturnType<typeof generateText>>,
+  model: string,
+  projectId: string,
+): void => {
+  const usage = result.usage;
+  const anthropicMeta = result.providerMetadata?.["anthropic"] as
+    | { cacheCreationInputTokens?: number }
+    | undefined;
+  logger.info(
+    {
+      model,
+      projectId,
+      inputTokens: usage.inputTokens ?? null,
+      outputTokens: usage.outputTokens ?? null,
+      cacheReadTokens: usage.cachedInputTokens ?? 0,
+      cacheWriteTokens: anthropicMeta?.cacheCreationInputTokens ?? 0,
+    },
+    "cesare.tool_loop.cache_usage",
+  );
+};
+
 // ─── Production tool loop (AI SDK generateText) ───────────────────────────────
 //
 // Modelled as an `Effect` over a SINGLE `generateText` call. There is no manual
@@ -2985,7 +3061,7 @@ const runProductionToolLoopEffect = (
         // Cast needed: ToolSet constrains Tool<any,any> to Tool<never,never> union;
         // the runtime values are correct Tool instances, the variance is nominal.
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        tools: args.sdkTools as any,
+        tools: withCachedTools(args.sdkTools) as any,
         toolChoice: args.forcedFirstTool
           ? { type: "tool" as const, toolName: args.forcedFirstTool }
           : "auto",
@@ -3031,6 +3107,8 @@ const runProductionToolLoopEffect = (
           }
         },
       });
+
+      logCacheUsage(result, args.model, args.projectId);
 
       // Collect final text if not already captured in onStepFinish
       if (result.text.trim() && !textAccumulator.includes(result.text.trim())) {
