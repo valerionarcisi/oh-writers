@@ -66,6 +66,7 @@ export const buildDocumentEditSkill = (
   ctx: SkillBuildContext,
   docCtx: DocumentContext,
   userIdFallback: string | null = null,
+  sessionId: string | null = null,
 ): Skill => ({
   id: "document-edit",
   // Read tools are provided by the companion read-document skill in PAGE_SKILL_MAP.
@@ -78,7 +79,13 @@ export const buildDocumentEditSkill = (
     const readResult = tryExecuteReadTool(block, db, projectId);
     if (readResult) return readResult;
     if (isDocumentGenToolName(block.name)) {
-      return executeDocumentGenTool(block, db, projectId, userIdFallback);
+      return executeDocumentGenTool(
+        block,
+        db,
+        projectId,
+        userIdFallback,
+        sessionId,
+      );
     }
     return executeDocumentTool(block, db, docCtx, userIdFallback);
   },

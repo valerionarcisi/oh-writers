@@ -220,6 +220,9 @@ export function CesareChatStoreProvider({ children }: { children: ReactNode }) {
       const streamInput: StreamCesareInput = {
         projectId,
         message: trimmed,
+        // BUG-N66 — tell the server which session this turn belongs to so its
+        // small edits collapse into one working version instead of flooding.
+        sessionId: targetSession,
         pageContext: pc,
         conversationHistory: history,
       };

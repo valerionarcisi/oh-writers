@@ -36,13 +36,20 @@ Non scrivere mai il documento intero nel chat: usa SEMPRE il tool, anche se sei 
 export const buildDocumentGenSkill = (
   _ctx: SkillBuildContext,
   userIdFallback: string | null = null,
+  sessionId: string | null = null,
 ): Skill => ({
   id: "document-gen",
   tools: [...CESARE_DOCUMENT_GEN_TOOLS] as Skill["tools"],
   guidanceBlock: buildDocumentGenGuidance(),
   executor: (block, db, projectId): ReturnType<Skill["executor"]> => {
     if (isDocumentGenToolName(block.name)) {
-      return executeDocumentGenTool(block, db, projectId, userIdFallback);
+      return executeDocumentGenTool(
+        block,
+        db,
+        projectId,
+        userIdFallback,
+        sessionId,
+      );
     }
     const errorResult: ToolResult = {
       type: "tool_result",

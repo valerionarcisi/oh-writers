@@ -37,6 +37,7 @@ describe("createUniversalCesareTools", () => {
     activeSceneId: null,
     activeDayNumber: null,
     userIdFallback: null,
+    sessionId: null,
   });
   const toolNames = new Set(Object.keys(tools));
 

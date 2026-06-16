@@ -13,7 +13,21 @@ import { callHaiku, extractText } from "~/features/ai";
 import { repairMojibake, sanitizeAiText } from "@oh-writers/utils";
 import { SONNET_MODEL } from "./cesare-model-router";
 import { CesareError } from "./cesare.errors";
-import { applyVersionLive, type CreatedDraft } from "./auto-version.effect";
+import {
+  applyVersionLive,
+  type CreatedDraft,
+  type CommitOptions,
+} from "./auto-version.effect";
+
+// BUG-N66 / Spec 76 — the commit policy for a Cesare document edit. Slice 1:
+// `userRequestedNewVersion` and `largeEditConfirmed` are not wired yet (the
+// streamed ask-card is Slice 2), so a large edit degrades to a mint inside the
+// resolver. A non-null sessionId activates overwrite-into-one-working-row.
+const commitOptions = (sessionId: string | null): CommitOptions => ({
+  sessionId,
+  userRequestedNewVersion: false,
+  largeEditConfirmed: false,
+});
 import {
   importAsActiveVersionTx,
   fountainToDoc,
@@ -797,6 +811,7 @@ const handleProposeLogline = (
   db: Db,
   projectId: string,
   userIdFallback: string | null,
+  sessionId: string | null = null,
 ): ResultAsync<CreatedDraft, CesareError> =>
   loadScreenplayContent(db, projectId).andThen((screenplay) => {
     if (screenplay.trim().length === 0) {
@@ -834,6 +849,7 @@ const handleProposeLogline = (
               creator,
               logline,
               buildDraftLabel(DocumentTypes.LOGLINE, input.instruction ?? null),
+              commitOptions(sessionId),
             );
           },
         ),
@@ -852,6 +868,7 @@ const handleWriteLogline = (
   db: Db,
   projectId: string,
   userIdFallback: string | null,
+  sessionId: string | null = null,
 ): ResultAsync<CreatedDraft, CesareError> => {
   const instruction = (input.instruction ?? "").trim();
   if (instruction.length === 0) {
@@ -910,6 +927,7 @@ const handleWriteLogline = (
             creator,
             logline,
             buildDraftLabel(DocumentTypes.LOGLINE, instruction),
+            commitOptions(sessionId),
           );
         });
     },
@@ -921,6 +939,7 @@ const handleProposeSynopsis = (
   db: Db,
   projectId: string,
   userIdFallback: string | null,
+  sessionId: string | null = null,
 ): ResultAsync<CreatedDraft, CesareError> =>
   loadUpstreamNarrative(db, projectId, DocumentTypes.SYNOPSIS).andThen(
     (upstream) => {
@@ -967,6 +986,7 @@ const handleProposeSynopsis = (
                   DocumentTypes.SYNOPSIS,
                   input.instruction ?? null,
                 ),
+                commitOptions(sessionId),
               );
             },
           ),
@@ -979,6 +999,7 @@ const handleProposeSoggettoV2 = (
   db: Db,
   projectId: string,
   userIdFallback: string | null,
+  sessionId: string | null = null,
 ): ResultAsync<CreatedDraft, CesareError> => {
   if (!input.instruction || !input.label) {
     return errAsync(
@@ -1059,6 +1080,7 @@ ${doc.content.slice(0, 18_000)}
           creator,
           next,
           label.slice(0, 80),
+          commitOptions(sessionId),
         );
       });
   });
@@ -1069,6 +1091,7 @@ const handleProposeScalettaFromSoggetto = (
   db: Db,
   projectId: string,
   userIdFallback: string | null,
+  sessionId: string | null = null,
 ): ResultAsync<CreatedDraft, CesareError> =>
   loadDocumentForType(db, projectId, DocumentTypes.SOGGETTO).andThen((doc) => {
     if (!doc || doc.content.trim().length === 0) {
@@ -1113,6 +1136,7 @@ const handleProposeScalettaFromSoggetto = (
               creator,
               content,
               buildDraftLabel(DocumentTypes.OUTLINE, "da soggetto"),
+              commitOptions(sessionId),
             );
           },
         ),
@@ -1133,6 +1157,7 @@ const handleProposeTreatment = (
   db: Db,
   projectId: string,
   userIdFallback: string | null,
+  sessionId: string | null = null,
 ): ResultAsync<CreatedDraft, CesareError> =>
   ResultAsync.combine([
     loadDocumentForType(db, projectId, DocumentTypes.TREATMENT),
@@ -1189,6 +1214,7 @@ const handleProposeTreatment = (
           creator,
           treatment,
           buildDraftLabel(DocumentTypes.TREATMENT, input.instruction ?? null),
+          commitOptions(sessionId),
         );
       });
   });
@@ -1353,27 +1379,44 @@ export const executeDocumentGenTool = (
   db: Db,
   projectId: string,
   userIdFallback: string | null,
+  sessionId: string | null = null,
 ): ResultAsync<ToolResult, CesareError> => {
   const input = block.input as ProposeInput;
   if (block.name === "propose_logline_from_screenplay") {
-    return handleProposeLogline(input, db, projectId, userIdFallback).map(
-      (draft) => successResult(block.id, draftPayload(draft)),
-    );
+    return handleProposeLogline(
+      input,
+      db,
+      projectId,
+      userIdFallback,
+      sessionId,
+    ).map((draft) => successResult(block.id, draftPayload(draft)));
   }
   if (block.name === "write_logline") {
-    return handleWriteLogline(input, db, projectId, userIdFallback).map(
-      (draft) => successResult(block.id, draftPayload(draft)),
-    );
+    return handleWriteLogline(
+      input,
+      db,
+      projectId,
+      userIdFallback,
+      sessionId,
+    ).map((draft) => successResult(block.id, draftPayload(draft)));
   }
   if (block.name === "propose_synopsis_from_screenplay") {
-    return handleProposeSynopsis(input, db, projectId, userIdFallback).map(
-      (draft) => successResult(block.id, draftPayload(draft)),
-    );
+    return handleProposeSynopsis(
+      input,
+      db,
+      projectId,
+      userIdFallback,
+      sessionId,
+    ).map((draft) => successResult(block.id, draftPayload(draft)));
   }
   if (block.name === "propose_soggetto_v2") {
-    return handleProposeSoggettoV2(input, db, projectId, userIdFallback).map(
-      (draft) => successResult(block.id, draftPayload(draft)),
-    );
+    return handleProposeSoggettoV2(
+      input,
+      db,
+      projectId,
+      userIdFallback,
+      sessionId,
+    ).map((draft) => successResult(block.id, draftPayload(draft)));
   }
   if (block.name === "propose_scaletta_from_soggetto") {
     return handleProposeScalettaFromSoggetto(
@@ -1381,12 +1424,17 @@ export const executeDocumentGenTool = (
       db,
       projectId,
       userIdFallback,
+      sessionId,
     ).map((draft) => successResult(block.id, draftPayload(draft)));
   }
   if (block.name === "propose_treatment_from_narrative") {
-    return handleProposeTreatment(input, db, projectId, userIdFallback).map(
-      (draft) => successResult(block.id, draftPayload(draft)),
-    );
+    return handleProposeTreatment(
+      input,
+      db,
+      projectId,
+      userIdFallback,
+      sessionId,
+    ).map((draft) => successResult(block.id, draftPayload(draft)));
   }
   if (block.name === "generate_screenplay_from_narrative") {
     return handleGenerateScreenplay(input, db, projectId).map((gen) =>
@@ -1421,6 +1469,7 @@ export const createDocumentGenTools = (
   db: Db,
   projectId: string,
   userIdFallback: string | null,
+  sessionId: string | null = null,
 ) => ({
   propose_logline_from_screenplay: tool({
     description:
@@ -1442,6 +1491,7 @@ export const createDocumentGenTools = (
         db,
         projectId,
         userIdFallback,
+        sessionId,
       );
       if (result.isErr()) return { error: result.error.message };
       return draftPayload(result.value);
@@ -1471,6 +1521,7 @@ export const createDocumentGenTools = (
         db,
         projectId,
         userIdFallback,
+        sessionId,
       );
       if (result.isErr()) return { error: result.error.message };
       return draftPayload(result.value);
@@ -1495,6 +1546,7 @@ export const createDocumentGenTools = (
         db,
         projectId,
         userIdFallback,
+        sessionId,
       );
       if (result.isErr()) return { error: result.error.message };
       return draftPayload(result.value);
@@ -1523,6 +1575,7 @@ export const createDocumentGenTools = (
         db,
         projectId,
         userIdFallback,
+        sessionId,
       );
       if (result.isErr()) return { error: result.error.message };
       return draftPayload(result.value);
@@ -1546,6 +1599,7 @@ export const createDocumentGenTools = (
         db,
         projectId,
         userIdFallback,
+        sessionId,
       );
       if (result.isErr()) return { error: result.error.message };
       return draftPayload(result.value);
@@ -1570,6 +1624,7 @@ export const createDocumentGenTools = (
         db,
         projectId,
         userIdFallback,
+        sessionId,
       );
       if (result.isErr()) return { error: result.error.message };
       return draftPayload(result.value);

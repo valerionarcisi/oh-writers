@@ -2454,6 +2454,7 @@ export const runUniversalToolLoop = (
           dbArg,
           projectIdArg,
           ctx.userIdFallback,
+          ctx.sessionId,
         );
       }
 

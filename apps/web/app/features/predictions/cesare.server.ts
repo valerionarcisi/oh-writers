@@ -129,6 +129,11 @@ const CesareInputSchema = z.object({
   projectId: z.string().uuid(),
   message: z.string().min(1).max(2000),
   pageContext: PageContextSchema,
+  // The Cesare session this turn belongs to (Spec 76 / BUG-N66). Threads down to
+  // the version commit so a session's small edits collapse into one working row
+  // instead of flooding the Versions list. Optional: older clients / the
+  // non-routed chat omit it and fall back to the legacy mint-per-turn behaviour.
+  sessionId: z.string().uuid().nullish(),
   // Keep only the most recent 20 turns instead of REJECTING longer histories.
   // Since spec 51 persists messages, a long session legitimately accumulates
   // >20 turns; a hard `.max(20)` made every request from a long thread fail Zod
@@ -1879,6 +1884,7 @@ const callCesareUniversal = (
     activeDayNumber: number | null;
     userIdFallback: string | null;
     page: string;
+    sessionId: string | null;
   },
   model: string,
 ): ResultAsync<string, CesareError> => {
@@ -1913,6 +1919,7 @@ const callCesareUniversal = (
             activeSceneId: ctx.activeSceneId,
             activeDayNumber: ctx.activeDayNumber,
             userIdFallback: ctx.userIdFallback,
+            sessionId: ctx.sessionId,
           },
           model,
           forcedFirstTool,
@@ -1930,6 +1937,7 @@ const callCesareUniversal = (
       activeSceneId: ctx.activeSceneId,
       activeDayNumber: ctx.activeDayNumber,
       userIdFallback: ctx.userIdFallback,
+      sessionId: ctx.sessionId,
     },
     model,
   );
@@ -2033,6 +2041,7 @@ const handleAskCesare = (
           activeDayNumber: data.pageContext.shootingDayNumber ?? null,
           userIdFallback: access.user.id,
           page: data.pageContext.page,
+          sessionId: data.sessionId ?? null,
         },
         model,
       );
@@ -2165,6 +2174,7 @@ const handleAskCesareV2 = (
         prelimBuildCtx,
         {},
         access.user.id,
+        data.sessionId ?? null,
       );
       const prelimSkills = prelimRegistry.selectForPage(page, null);
 
@@ -2207,11 +2217,13 @@ const handleAskCesareV2 = (
               prelimBuildCtx,
               docCtx,
               access.user.id,
+              data.sessionId ?? null,
             );
             finalRegistry = buildSkillRegistry(
               prelimBuildCtx,
               { "document-edit": docEditSkill },
               access.user.id,
+              data.sessionId ?? null,
             );
             finalSkills = finalRegistry.selectForPage(page, null);
           }

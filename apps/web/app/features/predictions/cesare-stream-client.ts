@@ -15,6 +15,9 @@ import type { CesarePage } from "./components/CesareSheet";
 export interface StreamCesareInput {
   readonly projectId: string;
   readonly message: string;
+  /** The Cesare session this turn belongs to (Spec 76 / BUG-N66). Lets the
+   *  server collapse a session's small edits into one working version. */
+  readonly sessionId?: string | null;
   readonly pageContext: {
     readonly page: CesarePage;
     readonly sceneId: string | null;
