@@ -13,7 +13,7 @@
  * title/author/draftDate, silently dropping contact / based-on / WGA / notes
  * from the handed-out PDF (BUG-N63b).
  */
-import type { TitlePage } from "~/features/projects/title-page.schema";
+import type { TitlePage } from "~/features/projects";
 
 export interface TitlePageExportFields {
   /** The screenplay/project title shown as the Fountain `Title:` key. */

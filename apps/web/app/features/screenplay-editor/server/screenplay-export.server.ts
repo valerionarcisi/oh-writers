@@ -18,7 +18,7 @@ import {
 import { requireUser } from "~/server/context";
 import { getDb } from "~/server/db";
 import { getMembership } from "~/server/permissions";
-import type { DraftColor } from "~/features/projects/title-page.schema";
+import type { DraftColor } from "~/features/projects";
 import type { TitlePageDocLike } from "../lib/title-page-prepend";
 import {
   ScreenplayNotFoundError,

@@ -35,7 +35,10 @@ export {
   versionsQueryOptions,
   versionQueryOptions,
 } from "./hooks/useVersions";
-export { ensureFirstVersion } from "./server/versions.server";
+export {
+  ensureFirstVersion,
+  importAsActiveVersionTx,
+} from "./server/versions.server";
 
 // Server
 export {
@@ -86,4 +89,5 @@ export type { ImportPdfError } from "./pdf-import.errors";
 // Lib — PDF import
 export { fountainFromPdf } from "./lib/fountain-from-pdf";
 export { fountainToDoc } from "./lib/fountain-to-doc";
+export { docToFountain } from "./lib/doc-to-fountain";
 export { schema as screenplaySchema } from "./lib/schema";

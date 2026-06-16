@@ -14,9 +14,11 @@ import { repairMojibake, sanitizeAiText } from "@oh-writers/utils";
 import { SONNET_MODEL } from "./cesare-model-router";
 import { CesareError } from "./cesare.errors";
 import { applyVersionLive, type CreatedDraft } from "./auto-version.effect";
-import { importAsActiveVersionTx } from "~/features/screenplay-editor/server/versions.server";
-import { fountainToDoc } from "~/features/screenplay-editor/lib/fountain-to-doc";
-import { docToFountain } from "~/features/screenplay-editor/lib/doc-to-fountain";
+import {
+  importAsActiveVersionTx,
+  fountainToDoc,
+  docToFountain,
+} from "~/features/screenplay-editor";
 
 // ─── Tool definitions ─────────────────────────────────────────────────────────
 

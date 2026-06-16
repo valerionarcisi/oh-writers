@@ -5,7 +5,7 @@ import {
   titlePageDocHasContent,
   prependTitlePageToFountain,
 } from "./title-page-prepend";
-import { EMPTY_TITLE_PAGE } from "~/features/projects/title-page.schema";
+import { EMPTY_TITLE_PAGE } from "~/features/projects";
 
 describe("titlePageToFountainKeys (BUG-N63b — full title page)", () => {
   it("emits all canonical fields, not just title/author/date", () => {
