@@ -77,7 +77,7 @@ Decision pending (owner): fix (b) [+ (d)] now as the deterministic export-fideli
 - Severity: ALTO (version list floods — v13/v14/v15 "Cesare · modifica" + 5-6 drafts for one screenplay request; the Versions surface becomes unusable)
 - Repro: iterative Cesare work on soggetto/screenplay → every turn lands a new version; a single "write the screenplay" request produced 5/6 drafts before the right one.
 - OWNER POLICY (decided 2026-06-11, applies to EVERY narrative part): by default Cesare OVERWRITES the current version with surgical edits; a NEW version only when the user explicitly asks — or Cesare may ASK the user ("ne faccio una nuova versione?") when the requested change is large. Reconcile with the auto-version invariant (CLAUDE.md point 3: snapshot-before-apply for revertibility) — e.g. ONE auto-checkpoint per session/turn-group instead of per turn, or collapse consecutive Cesare versions.
-- Needs a spec before implementation (touches auto-version.effect, version naming, and the agentic-edit contract).
+- Status: spec written — **[Spec 76](specs/76-cesare-version-checkpoints.md)** (owner chose the full model: `document_versions.kind` column + per-session checkpoint, default OVERWRITE the active version on small edits, MINT on large/explicit, large-edit ASK streamed as `ask_new_version` with [Sovrascrivi]/[Nuova versione]). Both INSERT seams (`applyVersionLive` + `persistDocumentContent`) converge on one `commitCesareEdit` module. Scope: narrative `document_versions` only; screenplay `screenplay_versions` checkpointing is a follow-up. Implementation next.
 
 ### BUG-N67 — asked Cesare for the SCREENPLAY from the soggetto; it wrote the TREATMENT (2026-06-11, real-use session, real AI)
 
