@@ -188,11 +188,62 @@ confirmed — but verify the contract, don't assume it from domicile.
 
 ---
 
+## How to decide if Mistral is right (rubric)
+
+The paper "−80%" is **not** a decision number — it is Mistral *Small* vs Haiku on
+raw per-token list price. The real answer needs three measurements, on our own
+prompts, at the tier we'd actually deploy. Decide per call category, not globally.
+
+### 1. Cost — measure, don't quote the headline
+- Quality-sensitive generation would run on **Mistral Large 3** (−50% input /
+  −70% output vs Haiku), not Small — so the realistic gap is smaller than −80%.
+- We **lose Anthropic prompt caching** (−90% on cached input). On Cesare, the
+  cached film-bible prefix makes Haiku's *effective* input far below list, which
+  narrows the gap further.
+- ✅ **Go signal**: measured cost on real-shaped context (cache included on the
+  Anthropic side) is materially lower — target **≥ 30% saving on the moved
+  category** to be worth the migration + maintenance cost. Below that, the EU/
+  privacy argument has to carry the decision on its own.
+
+### 2. Quality — read the outputs, blind
+Benchmarks don't transfer to "good Italian screenwriting prose". The compare
+script now emits **side-by-side outputs** for the same prompt and includes two
+realistic quality tasks (scene summary + logline polish). Method:
+- Read Claude vs Mistral answers to the identical prompt; ideally hide which is
+  which. Score on: correct Italian, caught the subtext, right length/format, no
+  hallucinated content.
+- Do it at the **tier you'll deploy** (judging Large when you'll ship Small
+  overstates quality).
+- Optional scale-up: an LLM-as-judge pass (have Claude grade both answers) to
+  rank many samples fast — useful, but spot-check by hand for judge bias.
+- ✅ **Go signal**: Mistral is "indistinguishable or better" on the blind read
+  for that task category. ❌ **No-go**: it drops the subtext, drifts to English,
+  or needs a longer prompt to match — the prompt-engineering tax erodes the saving.
+
+### 3. Tool reliability — the gate for Cesare's mutation tier
+The function-calling probe reports ✅/❌ per provider. For the mutation tier this
+is the **hard gate**, not a tie-breaker: a malformed/hallucinated tool call is a
+*wrong edit to the user's document*.
+- ✅ **Go signal**: tool-call success is on par with Claude across repeated runs
+  on our real tool schemas. Anything below that → keep the mutation tier on Claude.
+
+### Decision, per category
+| Category | Cost gate | Quality gate | Tool gate | Default |
+|---|---|---|---|---|
+| One-shot helpers (#2,#6–#12) | ≥30% saving | blind read OK | n/a | **Move to Mistral** if gates pass |
+| Cesare read/question tier | ≥30% saving | blind read OK | probe OK | Pilot after helpers |
+| Cesare mutation tier (#1,#3,#4) | secondary | blind read OK | **on par required** | **Stay on Claude** until proven |
+
 ## Getting real numbers
 
 `scripts/cost-smoke-provider-compare.ts` (run: `pnpm cost:smoke:provider-compare`)
-runs the same Cesare scenarios against **Anthropic and Mistral side by side** and
-emits a Markdown report with per-turn tokens, cost, and a function-calling probe.
+runs the same scenarios against **Anthropic and Mistral side by side** and emits
+a Markdown report with, for each prompt:
+- per-turn **tokens + cost** (cost gate, §1),
+- **side-by-side outputs** so you can blind-read quality (quality gate, §2) —
+  includes two realistic tasks (scene summary + logline polish),
+- a **function-calling probe** (✅/❌) (tool gate, §3).
+
 It reuses the production `routeModel` so it can't drift from live routing, pins
 the pricing table above as its single source of truth, and **skips any provider
 whose API key is absent** (set `ANTHROPIC_API_KEY` and/or `MISTRAL_API_KEY`). It

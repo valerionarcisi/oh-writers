@@ -148,6 +148,16 @@ interface Scenario {
   readonly toolProbe?: boolean;
 }
 
+// A short Italian scene, inlined so the quality task is self-contained and
+// every provider sees the identical input. Mirrors the scene-summary helper.
+const SAMPLE_SCENE =
+  "INT. APPARTAMENTO - NOTTE\n\n" +
+  "MARTA (40) fissa la valigia aperta sul letto. Non la riempie. " +
+  "LUCA (45) entra, si ferma sulla soglia.\n\n" +
+  "LUCA\nQuindi è deciso.\n\n" +
+  "MARTA\nNon avrei mai dovuto tornare.\n\n" +
+  "Marta chiude la valigia, vuota. Esce senza guardarlo.";
+
 const SCENARIOS: ReadonlyArray<Scenario> = [
   {
     id: "chat-only",
@@ -167,6 +177,28 @@ const SCENARIOS: ReadonlyArray<Scenario> = [
     page: "screenplay",
     turns: ["Che dice il protagonista nella scena 1?"],
     toolProbe: true,
+  },
+  // ── Quality tasks ─────────────────────────────────────────────────────────
+  // Realistic one-shot jobs (the calls the audit proposes to move to Mistral).
+  // Judge the side-by-side OUTPUT in the report, not just the token count:
+  // these decide whether Mistral's Italian quality is acceptable for the task.
+  {
+    id: "quality-scene-summary",
+    label: "Quality: 1-line scene summary in Italian (mirrors #6)",
+    page: "screenplay",
+    turns: [
+      `Riassumi questa scena in una sola frase, in italiano, ` +
+        `cogliendo il sottotesto:\n\n${SAMPLE_SCENE}`,
+    ],
+  },
+  {
+    id: "quality-logline-polish",
+    label: "Quality: logline polish in Italian (mirrors #9)",
+    page: "soggetto",
+    turns: [
+      "Migliora questa logline mantenendola in una frase, in italiano: " +
+        "«Una donna torna nella città natale e decide di andarsene di nuovo.»",
+    ],
   },
 ];
 
@@ -337,6 +369,7 @@ interface TurnReport {
   readonly usage: Usage;
   readonly costUsd: number;
   readonly toolCallOk: boolean | null;
+  readonly text: string;
 }
 
 const runScenarioForProvider = async (
@@ -371,6 +404,7 @@ const runScenarioForProvider = async (
         usage: outcome.usage,
         costUsd: costFor(model.pricing, outcome.usage),
         toolCallOk: outcome.toolCallOk,
+        text: outcome.text,
       });
     } catch (e) {
       process.stderr.write(
@@ -388,6 +422,7 @@ const runScenarioForProvider = async (
         usage: ZERO_USAGE,
         costUsd: 0,
         toolCallOk: scenario.toolProbe === true ? false : null,
+        text: "(call failed)",
       });
     }
   }
@@ -460,6 +495,32 @@ const reportToMarkdown = (
     );
   }
   lines.push("");
+
+  // Side-by-side outputs — the part you actually read to judge QUALITY. Cost is
+  // necessary but not sufficient: a cheaper model that writes worse Italian or
+  // misses the subtext is not a saving. Group by (scenario, turn) so each
+  // provider's answer to the identical prompt sits next to the others.
+  lines.push("## Side-by-side outputs (judge quality here)");
+  lines.push("");
+  const seen = new Set<string>();
+  for (const r of rows) {
+    const key = `${r.scenarioId}#${r.turnIndex}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const peers = rows.filter(
+      (x) => x.scenarioId === r.scenarioId && x.turnIndex === r.turnIndex,
+    );
+    lines.push(`### ${r.scenarioId} — turn ${r.turnIndex}`);
+    lines.push("");
+    lines.push(`**Prompt**: ${r.userMessage.replace(/\n+/g, " ⏎ ")}`);
+    lines.push("");
+    for (const p of peers) {
+      lines.push(`**${p.provider} / ${p.model.label}** ${fmtTool(p.toolCallOk)}`);
+      lines.push("");
+      lines.push("> " + (p.text || "(no text)").replace(/\n/g, "\n> "));
+      lines.push("");
+    }
+  }
   return lines.join("\n");
 };
 
