@@ -40,6 +40,7 @@
     "cost:smoke:location-rank": "tsx scripts/cost-smoke-location-rank.ts",
     "cost:smoke:scene-summary": "tsx scripts/cost-smoke-scene-summary.ts",
     "cost:smoke:bible": "tsx scripts/cost-smoke-bible.ts",
+    "cost:smoke:provider-compare": "tsx scripts/cost-smoke-provider-compare.ts",
     "prepare": "husky"
   },
   "devDependencies": {
