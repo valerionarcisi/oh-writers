@@ -147,48 +147,41 @@ the director's real versions.
   (BUG-N66 names both; the narrative flood is the worse offender and ships first.)
 - Cross-session checkpoint pruning / retention policy.
 
-## Implementation status (updated 2026-06-19)
+## Implementation status (updated 2026-06-19 — all but E2E done)
 
-The policy core + the overwrite/checkpoint engine + the explicit-intent mint all landed and are
-tested. What remains is the streamed large-edit `ask` (its UI + the tool-layer wiring) and the
-drawer collapse, plus the E2E. Verified against the code, not the plan.
+The whole feature is implemented and unit-tested; only the 3 E2E remain. 44 OHW-N66 unit tests
+green, full web suite 1979 passing (0 failures), typecheck + lint + fleet-check guardrails clean.
 
 **Done**
 
-- `classify-edit-size.ts` (pure) + `resolve-version-action.ts` (pure, returns `overwrite |
-mint | ask`) — both with passing unit tests, tagged `OHW-N66`.
-- The acquireRelease engine in `auto-version.effect.ts`: `CommitOptions` (sessionId,
-  userRequestedNewVersion, largeEditConfirmed), the overwrite-in-place path, and the
-  first-overwrite-of-a-session `checkpoint`. NOTE: the deep module is named `applyVersionLive`
-  (not `commitCesareEdit` as the Design section drafts it) and takes the policy via
-  `CommitOptions`; the seam consolidation is expressed through that shared module + the shared
-  `resolveVersionAction`, not a new function name. Treat the spec's `commitCesareEdit` as the
-  conceptual name for this module.
-- **Engine tests** for the new paths (overwrite-in-place, checkpoint-on-first-overwrite,
-  rollback-restores-working) added to `auto-version.effect.test.ts`, tagged `OHW-N66`.
-- `version-intent.ts` — `userRequestedNewVersion(instruction)` pure phrase matcher (+ test),
-  threaded through `commitOptions` from all six Cesare document call-sites. Precedence rule 1
-  is live: an explicit "nuova versione" instruction forces a mint and skips the ask.
+- `classify-edit-size.ts` (pure, exposes `changedWordRatio`) + `resolve-version-action.ts`
+  (pure, returns `overwrite | mint | ask`, with `largeEditOverwriteConfirmed` for the
+  "Sovrascrivi" choice) — unit-tested, tagged `OHW-N66`.
+- The acquireRelease engine in `auto-version.effect.ts`: `CommitOptions`, the overwrite-in-place
+  path, and the first-overwrite-of-a-session `checkpoint`. The deep module is `applyVersionLive`
+  (the spec's `commitCesareEdit` is the conceptual name). Engine tests cover the new paths.
+- **`commitOrAsk`** (the tool boundary): resolves the action from pure inputs; on a large
+  unconfirmed edit returns an `asked` outcome and writes NOTHING (unit-tested with a Db proxy
+  that throws on any access). The `ask` resolution lives here, NOT in the DB engine — the engine
+  stays apply-only. The 5 iterative document tools commit through it; derive-from-soggetto
+  (scaletta) stays a direct apply (a regeneration is not an iterative edit, so it never asks).
+- **The streamed ask card.** Server emits `ohw:ask-new-version` (parallel to `doc-applied`,
+  guarded so the marker emitter ships no diff/version marker on an ask). Client parses it
+  (`parseAskNewVersionMarker`), renders `[Sovrascrivi] [Nuova versione]` (react-aria `Button`,
+  no native dialog); the choice re-sends an IT confirmation that the intent classifiers map —
+  `userRequestedNewVersion` → mint, `userConfirmedOverwrite` → `largeEditOverwriteConfirmed`
+  → overwrite-in-place (closing the loop: a confirmed-overwrite large edit applies in place
+  instead of re-asking forever).
+- **Drawer collapse.** `kind` + `cesareSessionId` flow through `VersionView`; `collapseVersions`
+  (pure, tested) folds a session's working rows under their checkpoint; `VersionsSplitDrawer`
+  renders the checkpoint with an expandable working history. Orphaned working rows surface
+  standalone. New i18n keys `versions.split.workingCount`/`hideWorking` (EN + IT).
 - `document_versions.kind` (`manual` default) + `cesare_session_id` columns and migration.
 
-**Remaining (a dedicated session — the streamed `ask` is the architecturally heaviest piece;
-it moves the `ask` resolution UP to the tool layer where the step-event sink lives, so the
-pure DB engine stays an apply-only module)**
+**Remaining**
 
-1. **Slice 2 — the `ask`.** Today `acquireVersion` (auto-version.effect.ts, ~line 201, "Slice
-   1" comment) degrades `action === "ask"` to mint. Move the resolve to the tool layer:
-   - `ask_new_version { entity, changedWordRatio }` event in `cesare-stream-events.ts`
-     (discriminatedUnion on `_tag`);
-   - the document tool computes next content, classifies size, and on `ask`+unconfirmed emits
-     `ask_new_version` via the step-event sink (the `(event) => Queue.unsafeOffer` callback
-     threaded through `run.handle` in `cesare-stream.effect.ts`) and applies NOTHING this turn;
-   - chat result-card `[Sovrascrivi] [Nuova versione]` (react-aria buttons, no native dialog);
-     the choice drives the follow-up turn — Sovrascrivi→overwrite, Nuova versione→mint
-     (`largeEditConfirmed`) — edit still applied LIVE per the Agentic Edit Pattern.
-   - pending next-content carried on the Cesare session, not a side draft tray.
-2. **Drawer collapse** — `VersionsSplitDrawer` groups `working` rows under their owning
-   `checkpoint`.
-3. **3 E2E** `OHW-N66` (below) — small-edit-overwrites, large-edit-asks, explicit-skips-ask.
+- **3 E2E** `OHW-N66` (below) — small-edit-overwrites, large-edit-asks, explicit-skips-ask.
+  Not yet written (E2E authored only with the owner's go, per the test policy).
 
 ## Tests
 
