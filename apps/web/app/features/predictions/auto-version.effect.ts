@@ -3,11 +3,12 @@ import { and, desc, eq, sql } from "drizzle-orm";
 import { documents, documentVersions } from "@oh-writers/db/schema";
 import { type DocumentType } from "@oh-writers/domain";
 import { buildWordDiffSegments } from "@oh-writers/utils";
-import { ResultAsync } from "neverthrow";
+import { okAsync, ResultAsync } from "neverthrow";
 import type { Db } from "~/server/db";
 import { DbService, toResultAsync } from "~/server/effect";
 import { CesareError } from "./cesare.errors";
 import { resolveVersionAction } from "./resolve-version-action";
+import { changedWordRatio } from "./classify-edit-size";
 
 // BUG-N66 / Spec 76 — how a Cesare edit is committed to the version history.
 // Omitting `options` (or passing none) preserves the legacy behaviour: always
@@ -456,6 +457,70 @@ export const applyVersionLive = (
       options,
     ).pipe(Effect.provide(Layer.succeed(DbService, { db: tx }))),
   );
+
+// ─── Slice 2 (Spec 76): the large-edit ASK ──────────────────────────────────
+//
+// A large, unconfirmed edit must not silently apply: Cesare asks the writer
+// whether to overwrite the current version or mint a new one. The decision is a
+// pure function of the same inputs the resolver already takes, so it is resolved
+// HERE — at the commit boundary — and surfaced as a distinct outcome rather than
+// a `CreatedDraft`. The DB engine (`applyVersionLive`) stays apply-only: nothing
+// is written on an ask, so the open document is untouched until the writer picks.
+
+/** The turn produced an ASK instead of an applied edit. Carries what the card
+ *  needs: which entity, and how big the change was (for the IT copy). */
+export interface AskedNewVersion {
+  readonly _tag: "asked";
+  readonly documentType: DocumentType;
+  readonly changedWordRatio: number;
+}
+
+/** Either the edit was applied (draft) or Cesare asked (no write happened). */
+export type CommitOutcome = CreatedDraft | AskedNewVersion;
+
+export const isAsked = (o: CommitOutcome): o is AskedNewVersion =>
+  "_tag" in o && o._tag === "asked";
+
+/**
+ * Commit a Cesare edit, OR ask first when the change is large and unconfirmed.
+ * Resolves the action from the same pure inputs as the engine; on `ask` returns
+ * an {@link AskedNewVersion} and writes NOTHING. Otherwise delegates to
+ * {@link applyVersionLive} (overwrite / mint / checkpoint as resolved inside).
+ */
+export const commitOrAsk = (
+  db: Db,
+  documentId: string,
+  documentType: DocumentType,
+  createdBy: string,
+  previousContent: string,
+  content: string,
+  label: string,
+  options: CommitOptions,
+): ResultAsync<CommitOutcome, CesareError> => {
+  const action = resolveVersionAction({
+    previousContent,
+    nextContent: content,
+    userRequestedNewVersion: options.userRequestedNewVersion,
+    largeEditConfirmed: options.largeEditConfirmed,
+  });
+  if (action === "ask") {
+    const asked: AskedNewVersion = {
+      _tag: "asked",
+      documentType,
+      changedWordRatio: changedWordRatio(previousContent, content),
+    };
+    return okAsync(asked);
+  }
+  return applyVersionLive(
+    db,
+    documentId,
+    documentType,
+    createdBy,
+    content,
+    label,
+    options,
+  );
+};
 
 // Carries the Effect's typed `CesareError` (or a defect) through the `throw` that
 // aborts the Postgres transaction, so neither the typed error nor a programming

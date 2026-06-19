@@ -27,6 +27,27 @@ const countWords = (text: string): number =>
  * treats as a mint regardless; we still return "large" here so the size signal
  * is honest on its own (a from-nothing write is the largest possible change).
  */
+/**
+ * The fraction of the document this edit changed: (added + removed words) /
+ * max(prevWords, 1). Exposed so the large-edit ask card can show the writer how
+ * big the change is, computed in ONE place (no drift from `classifyEditSize`).
+ */
+export const changedWordRatio = (
+  previousContent: string,
+  nextContent: string,
+): number => {
+  const segments = buildWordDiffSegments(previousContent, nextContent);
+
+  let changedWords = 0;
+  for (const seg of segments) {
+    if (seg.op === "eq") continue;
+    changedWords += countWords(seg.text);
+  }
+
+  const prevWords = countWords(previousContent);
+  return changedWords / Math.max(prevWords, 1);
+};
+
 export const classifyEditSize = (
   previousContent: string,
   nextContent: string,
