@@ -3122,6 +3122,15 @@ const runProductionToolLoopEffect = (
         );
       }
 
+      // A tool-only turn (the model ran a tool but emitted no closing text) would
+      // otherwise render as a blank reply — the user sees a spinner that resolves
+      // to nothing. When tools ran but there is no text, add an honest one-liner
+      // so the turn always says something. No tools + no text stays empty (the
+      // caller handles that as its own no-op case).
+      if (textAccumulator.length === 0 && toolsExecuted > 0) {
+        textAccumulator.push("Fatto. Trovi le modifiche proposte nell'editor.");
+      }
+
       const marker = `<!--ohw:tools=${toolsExecuted}-->`;
       return `${repairMojibake(textAccumulator.join("\n\n"))}\n${marker}`;
     },
