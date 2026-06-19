@@ -451,10 +451,15 @@ function AppShellInner({
   const versionsPeek = versionsPeekResult.isOk()
     ? versionsPeekResult.value
     : null;
-  // Versions is the highest-precedence auxiliary lane (BUG-N64): when present it
-  // wins the single 3rd grid track, so its raw activation IS its resolved one.
+  // BUG-N64: only ONE auxiliary lane may own the single 3rd grid track. When the
+  // user explicitly promotes Cesare to a split (`?peek=cesare`), Cesare WINS the
+  // track and Versions yields — so Cesare renders as a real lane (with the
+  // ↗/←/✕ controls), not a floating box layered over Versions. Versions is still
+  // the highest-precedence surface against the preview/notifications lane.
   const isVersionsSplitActive =
-    versionsPeek !== null && versionsPeek.state === "split";
+    versionsPeek !== null &&
+    versionsPeek.state === "split" &&
+    !isCesareSplitActiveRaw;
   // Master→detail width: the LIST is a narrow rail; opening a version's DETAIL
   // widens the lane to ~half the page (the read-only preview needs room). The
   // user's drag-resize is kept per-view in `versionsLaneWidth`; the effective
@@ -511,7 +516,8 @@ function AppShellInner({
   // suppressed entirely (no body attr, no lane render), so the host page always
   // keeps its track. The mutually-exclusive booleans below are the ONLY ones
   // used by the body-attr effects and the lane JSX. `isVersionsSplitActive`
-  // (highest precedence, defined above) needs no gating.
+  // (defined above) already yields to an explicit Cesare split, so this `&&` is a
+  // belt-and-suspenders guarantee that the two never render at once.
   const isCesareSplitActive = isCesareSplitActiveRaw && !isVersionsSplitActive;
   const isPreviewSplitActive =
     isPreviewSplitActiveRaw && !isVersionsSplitActive && !isCesareSplitActive;
@@ -1419,8 +1425,10 @@ function AppShellInner({
               for the split state — the main lane reflows narrower beside it. In
               `full` the lane renders its own overlay (the `↗` expanded route),
               so no grid track is reserved. The single source of truth is the
-              `?versions` URL param; the lane's controls dispatch URL navs. */}
-        {versionsPeek !== null && (
+              `?versions` URL param; the lane's controls dispatch URL navs.
+              Yields to an explicit Cesare split (Option B): when Cesare owns the
+              track, Versions does not render. */}
+        {versionsPeek !== null && !isCesareSplitActive && (
           <VersionsSplitLane
             peek={versionsPeek}
             width={effectiveVersionsWidth}

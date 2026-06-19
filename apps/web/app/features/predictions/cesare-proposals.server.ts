@@ -3,6 +3,7 @@ import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { ResultAsync, ok, err, okAsync, errAsync } from "neverthrow";
 import { screenplayVersions, screenplays } from "@oh-writers/db/schema";
+import { yjsSnapshotFromFountain } from "~/features/screenplay-editor/server/yjs-seed.server";
 import { toShape } from "@oh-writers/utils";
 import type { ResultShape } from "@oh-writers/utils";
 import { Effect } from "effect";
@@ -202,11 +203,20 @@ export const promoteDraftToActive = createServerFn({ method: "POST" })
             .update(screenplayVersions)
             .set({ isDraft: false })
             .where(eq(screenplayVersions.id, data.versionId));
+          // Promote = make this draft the ACTIVE version. Same contract as
+          // restoreVersion: reseed the CRDT from the version's Fountain (the
+          // editor is Yjs-backed and reads the live CRDT, not `content`) and set
+          // current_version_id so the "Attuale" badge moves. Without these,
+          // promote updated only `content` → the editor + badge looked unchanged.
+          const snapshot = yjsSnapshotFromFountain(version.content);
           await tx
             .update(screenplays)
             .set({
               content: version.content,
               pageCount: version.pageCount,
+              pmDoc: null,
+              yjsState: snapshot,
+              currentVersionId: version.id,
               updatedAt: new Date(),
               breakdownStale: true,
               locationsStale: true,

@@ -23,6 +23,24 @@ E2E first; screenshots in a recap; gates green).
 
 ## Open
 
+### BUG-N70 — Cesare rename UX: 7 stacked cards, wrong case, blank reply, name change routed to per-occurrence edit (2026-06-19, real-use session, real AI)
+
+- Severity: MEDIO (rename is a common screenplay action; broken UX + partial coverage)
+- Status: fixed (branch `fix/screenplay-rename-ux`)
+- Repro: screenplay → Cesare → "cambia il nome di John in Jack" / "cambia il nome di John nella prima scena".
+- Observed (4 sub-bugs): (1) ~7 identical proposal cards stacked on the first occurrence; (2) ALL-CAPS cue "JOHN" replaced with lowercase "Jack", breaking the screenplay convention; (3) the reply was a mute spinner (no text); (4) "nella prima scena" routed to `propose_screenplay_edit` (per-occurrence find/replace) which picked 3 occurrences by hand and MISSED the dialogue cues — partial coverage.
+- Fixes: dedup identical rename proposals in the bucket (one card); `matchCase` mirrors each occurrence's case (JOHN→JACK, John→Jack); a tool-only turn emits an honest one-liner instead of a blank reply; guidance routes EVERY name change to `propose_rename_entity` (every occurrence, one proposal); proposal widget anchors after the textblock (no mid-line split).
+- Proof: E2E `[OHW-572b]` (mock-ui) + `matchCase` unit test; owner screenshots 2026-06-19.
+
+### BUG-N71 — screenplay version actions broken: Attiva/Promuovi don't update the editor, Apri-diff dead, Cesare-split layers under Versions (2026-06-19, real-use session)
+
+- Severity: ALTO (the whole screenplay versioning flow looked non-functional)
+- Status: fixed (branch `fix/screenplay-versioning-ux`)
+- Repro: screenplay → Versioni → Attiva on a version; or Cesare draft banner → Promuovi a attiva / Apri il diff; or open Versions then promote Cesare to split.
+- Observed: (1) "Attiva" did not change the editor (DB updated `content` + `current_version_id` but left the old Yjs CRDT — the editor reads the CRDT, not `content`); the drawer also didn't close; (2) "Promuovi a attiva" was a no-op (same CRDT bug + never set `current_version_id` + invalidated the stale `["screenplay"]` key instead of `["screenplays", …]`); (3) "Apri il diff" linked to a route that now just redirects to the editor (the diff page was removed in Spec 66); (4) opening Cesare-split while Versions was open made Cesare fall back to the floating box layered over the Versions lane (no ↗/←/✕ controls).
+- Fixes: `restoreVersion` + `promoteDraftToActive` reseed the CRDT from the version's Fountain (clear pmDoc, rebuild yjsState) and set `current_version_id`; the lane closes on Attiva; promote invalidates the real editor + current-version keys; "Apri il diff" opens the unified Versions split lane; Option B precedence — an explicit Cesare split wins the single aux track over Versions (BUG-N64 invariant preserved: one lane, main track survives).
+- Proof: E2E `[OHW-571]` (Apri-diff opens the lane) + `[BUG-N64]` (Option B precedence) green; owner screenshots 2026-06-19. NOTE: Attiva/Promuovi CRDT reseed verified by code + needs a live confirm (editor/Yjs behaviour).
+
 ### BUG-N63 — screenplay PDF export loses dialogue, title page incomplete, scene-heading bold mismatch (2026-06-11, real-use session)
 
 - Severity: ALTO (the export is the deliverable a writer hands out; silent content loss)

@@ -266,14 +266,15 @@ test.describe("[OHW-049] Versions SplitDrawer (routed)", () => {
       .toBe("");
   });
 
-  test("[BUG-N64] `?versions=…&peek=cesare` fails closed: Versions wins, main lane survives", async ({
+  test("[BUG-N64] `?versions=…&peek=cesare` fails closed: ONE lane, main lane survives", async ({
     authenticatedPage: page,
   }) => {
     // Two routed surfaces claiming the single 3rd grid track squeezed the main
-    // lane to zero — a blank white page with no error boundary. The shell now
-    // resolves to AT MOST ONE auxiliary lane (precedence: Versions > Cesare
-    // peek > preview). Versions wins; the Cesare peek is suppressed; the host
-    // page keeps a real main track.
+    // lane to zero — a blank white page. The shell resolves to AT MOST ONE
+    // auxiliary lane. Precedence (Option B): an EXPLICIT Cesare split wins the
+    // track and Versions yields, so Cesare renders as a real lane (with its
+    // ↗/←/✕ controls) instead of a floating box over Versions. The invariant
+    // this guards is unchanged: exactly one aux lane, the main track survives.
     await page.goto(SOGGETTO_PATH);
     await expect(page.getByTestId("soggetto-page")).toBeVisible({
       timeout: 15_000,
@@ -285,19 +286,18 @@ test.describe("[OHW-049] Versions SplitDrawer (routed)", () => {
       timeout: 15_000,
     });
 
-    // Versions wins.
-    await expect(page.getByTestId("versions-split-lane")).toBeVisible({
+    // Cesare wins the track; Versions yields entirely (no lane, no body flag).
+    await expect(page.getByTestId("cesare-peek-lane")).toBeVisible({
       timeout: 5_000,
     });
+    await expect
+      .poll(() => page.evaluate(() => document.body.dataset.cesareSplit ?? ""))
+      .toBe("open");
+    await expect(page.getByTestId("versions-split-lane")).toHaveCount(0);
     await expect
       .poll(() =>
         page.evaluate(() => document.body.dataset.versionsSplit ?? ""),
       )
-      .toBe("open");
-    // The Cesare peek is fully suppressed — no lane, no body flag.
-    await expect(page.getByTestId("cesare-peek-lane")).toHaveCount(0);
-    await expect
-      .poll(() => page.evaluate(() => document.body.dataset.cesareSplit ?? ""))
       .toBe("");
 
     // The main lane is NOT squeezed to zero: the grid keeps a real middle track.
