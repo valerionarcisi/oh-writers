@@ -18,14 +18,18 @@ import {
   type CreatedDraft,
   type CommitOptions,
 } from "./auto-version.effect";
+import { userRequestedNewVersion } from "./version-intent";
 
-// BUG-N66 / Spec 76 — the commit policy for a Cesare document edit. Slice 1:
-// `userRequestedNewVersion` and `largeEditConfirmed` are not wired yet (the
-// streamed ask-card is Slice 2), so a large edit degrades to a mint inside the
-// resolver. A non-null sessionId activates overwrite-into-one-working-row.
-const commitOptions = (sessionId: string | null): CommitOptions => ({
+// BUG-N66 / Spec 76 — the commit policy for a Cesare document edit. A non-null
+// sessionId activates overwrite-into-one-working-row; an explicit "nuova
+// versione" instruction forces a mint (precedence rule 1). `largeEditConfirmed`
+// is set only on the follow-up turn after the streamed ask-card (Slice 2).
+const commitOptions = (
+  sessionId: string | null,
+  instruction: string | null | undefined,
+): CommitOptions => ({
   sessionId,
-  userRequestedNewVersion: false,
+  userRequestedNewVersion: userRequestedNewVersion(instruction),
   largeEditConfirmed: false,
 });
 import {
@@ -849,7 +853,7 @@ const handleProposeLogline = (
               creator,
               logline,
               buildDraftLabel(DocumentTypes.LOGLINE, input.instruction ?? null),
-              commitOptions(sessionId),
+              commitOptions(sessionId, input.instruction),
             );
           },
         ),
@@ -927,7 +931,7 @@ const handleWriteLogline = (
             creator,
             logline,
             buildDraftLabel(DocumentTypes.LOGLINE, instruction),
-            commitOptions(sessionId),
+            commitOptions(sessionId, instruction),
           );
         });
     },
@@ -986,7 +990,7 @@ const handleProposeSynopsis = (
                   DocumentTypes.SYNOPSIS,
                   input.instruction ?? null,
                 ),
-                commitOptions(sessionId),
+                commitOptions(sessionId, input.instruction),
               );
             },
           ),
@@ -1080,7 +1084,7 @@ ${doc.content.slice(0, 18_000)}
           creator,
           next,
           label.slice(0, 80),
-          commitOptions(sessionId),
+          commitOptions(sessionId, instruction),
         );
       });
   });
@@ -1136,7 +1140,9 @@ const handleProposeScalettaFromSoggetto = (
               creator,
               content,
               buildDraftLabel(DocumentTypes.OUTLINE, "da soggetto"),
-              commitOptions(sessionId),
+              // Derived from the soggetto, not a free instruction — never an
+              // explicit "nuova versione" request.
+              commitOptions(sessionId, null),
             );
           },
         ),
@@ -1214,7 +1220,7 @@ const handleProposeTreatment = (
           creator,
           treatment,
           buildDraftLabel(DocumentTypes.TREATMENT, input.instruction ?? null),
-          commitOptions(sessionId),
+          commitOptions(sessionId, input.instruction),
         );
       });
   });
