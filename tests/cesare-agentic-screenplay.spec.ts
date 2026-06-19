@@ -172,4 +172,62 @@ test.describe("[Spec 34] Cesare Agentic — Screenplay", () => {
       )
       .toBe(true);
   });
+
+  // A name change is ONE decision: the model routes to propose_rename_entity (not
+  // a per-occurrence edit), the overlay shows ONE card, the turn replies with
+  // text (never a mute spinner), and accept mirrors each occurrence's case — the
+  // GIULIO cue → LUCIA, the Giulio body mention → Lucia.
+  test("[OHW-572b] a rename shows ONE card, replies, and is case-aware on accept", async ({
+    authenticatedPage,
+  }) => {
+    await authenticatedPage.goto(
+      `${BASE_URL}/projects/${TEAM_PROJECT_ID}/screenplay`,
+    );
+    await authenticatedPage.waitForLoadState("networkidle");
+    await expect(authenticatedPage.getByTestId("prosemirror-view")).toBeVisible(
+      { timeout: 20_000 },
+    );
+
+    const leftoverDiscard = authenticatedPage.getByTestId(
+      "cesare-draft-banner-discard",
+    );
+    if (await leftoverDiscard.isVisible().catch(() => false)) {
+      await leftoverDiscard.click();
+    }
+
+    await openCesareSheet(authenticatedPage);
+    const reply = await sendCesareWithRetry(
+      authenticatedPage,
+      "Rinomina Giulio in Lucia.",
+    );
+    // The turn must SAY something — a tool-only turn no longer renders blank.
+    expect(reply.trim().length).toBeGreaterThan(0);
+
+    // Exactly ONE proposal card for the whole rename (no per-occurrence flood).
+    const cards = authenticatedPage.locator('[data-testid="proposal-accept"]');
+    await expect(cards.first()).toBeVisible({ timeout: 10_000 });
+    await expect(cards).toHaveCount(1);
+
+    await cards.first().click();
+
+    // Case-aware: the uppercase cue becomes LUCIA, the body mention becomes Lucia.
+    await expect
+      .poll(
+        async () => {
+          const fountain = await authenticatedPage.evaluate(
+            () =>
+              (
+                window as unknown as { __ohWritersFountain?: () => string }
+              ).__ohWritersFountain?.() ?? "",
+          );
+          return {
+            // Case-aware: the uppercase cue → LUCIA, a body mention → Lucia.
+            upper: fountain.includes("LUCIA"),
+            title: /\bLucia\b/.test(fountain),
+          };
+        },
+        { timeout: 5_000 },
+      )
+      .toEqual({ upper: true, title: true });
+  });
 });
