@@ -1377,7 +1377,7 @@ ROUTING TOOL — REGOLE DI SCELTA:
 - "unisci scene N e M" / "fondi sc.N-M" / "queste due scene sono una sola" → merge_scenes
 - "elimina/togli sc.N" → delete_scene
 - "riscrivi atto II" / "ambienta tutto in X" / range >1 scena con cambio strutturale → propose_screenplay_revision
-- "rinomina personaggio/location" → propose_rename_entity
+- "rinomina/cambia il nome di un personaggio o una location" (in QUALSIASI forma: "cambia nome di X", "chiamiamolo Y", "X diventa Y", anche se dice "nella scena N") → propose_rename_entity. Un cambio-nome NON è mai un edit puntuale: propose_rename_entity prende OGNI occorrenza (cue, azione, dialogo, parentetica) in una sola proposta, mentre propose_screenplay_edit ne becca solo una e lascia fuori i dialoghi. NON usare MAI propose_screenplay_edit per rinominare un personaggio/location.
 
 REGOLA TASSATIVA: per QUALSIASI richiesta che produca testo nuovo lungo (più di 2-3 righe Fountain), DEVI chiamare un tool propose_/rewrite_/merge_/delete_. Mai scrivere il Fountain risultante nel chat.
 

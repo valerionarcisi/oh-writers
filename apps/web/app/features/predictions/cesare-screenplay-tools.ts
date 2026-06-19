@@ -591,6 +591,22 @@ const executeProposeRenameEntity = (
         ),
       );
     }
+    const kind =
+      input.kind === "character" ? "rename_character" : "rename_location";
+    const bucket = getBucket(sp.id);
+    // A rename is ONE decision over all occurrences. The tool-loop can call this
+    // tool more than once per turn (the model re-proposes), which would stack
+    // identical cards on the same occurrence. Dedup: if an equivalent proposal
+    // already exists this turn, return it instead of adding another.
+    const existing = bucket.edits.find(
+      (e) => e.kind === kind && e.find === input.from && e.replace === input.to,
+    );
+    if (existing) {
+      return okAsync({
+        proposed_edits: [{ id: existing.id }],
+        total_occurrences: occurrences,
+      });
+    }
     // Emit a single proposal whose `find` is the entity name. The client
     // plugin performs the whole-word walk on the PM doc and decorates every
     // match — the user accepts/rejects in bulk per proposal.
@@ -598,14 +614,14 @@ const executeProposeRenameEntity = (
     const proposal: ProposedEdit = {
       id: crypto.randomUUID(),
       screenplayId: sp.id,
-      kind: input.kind === "character" ? "rename_character" : "rename_location",
+      kind,
       sceneNumber: null,
       find: input.from,
       replace: input.to,
       reason,
       createdAt: Date.now(),
     };
-    getBucket(sp.id).edits.push(proposal);
+    bucket.edits.push(proposal);
     return okAsync({
       proposed_edits: [{ id: proposal.id }],
       total_occurrences: occurrences,
