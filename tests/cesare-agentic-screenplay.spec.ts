@@ -106,9 +106,16 @@ test.describe("[Spec 34] Cesare Agentic — Screenplay", () => {
     const banner = authenticatedPage.getByTestId("cesare-draft-banner");
     await expect(banner).toBeVisible({ timeout: 10_000 });
 
+    // "Apri il diff" now opens the unified Versions split lane (Spec 66) instead
+    // of the removed dedicated diff route. Clicking it sets ?versions=&vkind=
+    // and the lane appears.
     const openDiff = authenticatedPage.getByTestId("cesare-draft-banner-open");
     await expect(openDiff).toBeVisible();
-    await expect(openDiff).toHaveAttribute("href", /\/versions\//);
+    await openDiff.click();
+    await expect(
+      authenticatedPage.getByTestId("versions-split-lane"),
+    ).toBeVisible({ timeout: 10_000 });
+    await expect(authenticatedPage).toHaveURL(/vkind=screenplay/);
   });
 
   test("[OHW-572] propose_rename_entity decorates every whole-word match", async ({

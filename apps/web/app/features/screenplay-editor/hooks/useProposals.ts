@@ -54,7 +54,14 @@ export const usePromoteDraftToActive = (screenplayId: string) => {
         queryKey: ["screenplay-proposals", screenplayId],
       });
       void qc.invalidateQueries({ queryKey: ["versions", screenplayId] });
-      void qc.invalidateQueries({ queryKey: ["screenplay"] });
+      // The mounted editor content query is keyed ["screenplays", projectId]
+      // (plural). The old ["screenplay"] key matched nothing, so promote never
+      // refetched the editor — it looked like a no-op. Invalidate the family +
+      // the live current-version pointer so both the editor and the badge update.
+      void qc.invalidateQueries({ queryKey: ["screenplays"] });
+      void qc.invalidateQueries({
+        queryKey: ["screenplay-current-version", screenplayId],
+      });
     },
   });
 };

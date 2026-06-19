@@ -1200,13 +1200,14 @@ export const ScreenplayEditor = forwardRef<
               <span data-testid="cesare-draft-banner-label">
                 {`${t("screenplay.editor.draftBannerPrefix")}${d.label}${t("screenplay.editor.draftBannerSuffix")}`}
               </span>
-              <a
+              <button
+                type="button"
                 className={styles.draftBannerLink}
                 data-testid="cesare-draft-banner-open"
-                href={`/projects/${screenplay.projectId}/screenplay/versions/${d.versionId}`}
+                onClick={toggleVersionsDrawer}
               >
                 {t("screenplay.editor.openDiff")}
-              </a>
+              </button>
               <button
                 type="button"
                 className={styles.draftBannerAccept}
