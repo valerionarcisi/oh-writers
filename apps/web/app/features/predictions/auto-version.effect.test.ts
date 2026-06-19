@@ -15,9 +15,11 @@ import { applyVersionLiveEffect } from "./auto-version.effect";
 // the Effect semantics from Postgres' own transaction rollback.
 
 type Op =
-  | { kind: "insertVersion"; content: string }
+  | { kind: "insertVersion"; content: string; versionKind: string }
   | { kind: "applyUpdate"; versionId: string; content: string }
+  | { kind: "updateWorking"; versionId: string; content: string }
   | { kind: "revertUpdate"; versionId: string | null; content: string }
+  | { kind: "restoreWorking"; versionId: string; content: string }
   | { kind: "deleteVersion"; versionId: string };
 
 interface MockOptions {
@@ -25,21 +27,24 @@ interface MockOptions {
   currentVersionId?: string | null;
   currentContent?: string;
   failApply?: boolean;
+  // OHW-N66: drives the overwrite/checkpoint paths. When set, the doc-version
+  // select filtered by (kind=working, cesareSessionId) returns this working row,
+  // so `acquireVersion` takes the in-place overwrite branch.
+  sessionWorkingRow?: { id: string; content: string } | null;
 }
 
 const makeMockDb = (opts: MockOptions) => {
   const ops: Op[] = [];
   const insertedId = "version-new";
 
-  // select(...) → from(table) → where(...) [→ limit(1)] resolves to an array.
+  // select(...) → from(table) → where(...) [→ orderBy(...)] [→ limit(1)] → array.
   const select = (columns: Record<string, unknown>) => {
     const build = (table: unknown) => {
       const resolveRows = (): unknown[] => {
-        if (table === documentVersions && "content" in columns) {
-          return (opts.existingVersionContents ?? []).map((content) => ({
-            content,
-          }));
-        }
+        // `resolveRows` serves the awaited-`.where()` and `.limit()` chains. The
+        // session-working probe is NOT here — it chains `.orderBy().limit()` and
+        // is served by `sessionWorkingRows` below, so the duplicate-guard select
+        // (also {id, content}, but awaited directly) keeps returning all rows.
         if (table === documents) {
           return [
             {
@@ -51,36 +56,59 @@ const makeMockDb = (opts: MockOptions) => {
         if (table === documentVersions && "max" in columns) {
           return [{ max: (opts.existingVersionContents ?? []).length }];
         }
+        // existing-versions (duplicate guard): {id, content} per existing row.
+        if (table === documentVersions && "content" in columns) {
+          return (opts.existingVersionContents ?? []).map((content, i) => ({
+            id: `existing-${i}`,
+            content,
+          }));
+        }
         return [];
+      };
+      const sessionWorkingRows = (): unknown[] => {
+        const row = opts.sessionWorkingRow;
+        return row ? [{ id: row.id, content: row.content }] : [];
       };
       const whereResult = {
         // maxRow / existing-versions selects await the where() directly…
         then: (resolve: (rows: unknown[]) => void) => resolve(resolveRows()),
         // …docRow selects chain .limit(1) before awaiting.
         limit: () => Promise.resolve(resolveRows()),
+        // …the session-working probe chains orderBy → limit.
+        orderBy: () => ({
+          limit: () => Promise.resolve(sessionWorkingRows()),
+        }),
       };
       return { where: () => whereResult };
     };
     return { from: build };
   };
 
+  const workingId = opts.sessionWorkingRow?.id ?? "version-working";
   const update = (table: unknown) => ({
     set: (values: Record<string, unknown>) => ({
       where: () => {
         if (table === documents) {
           const versionId = values["currentVersionId"] as string | null;
           const content = values["content"] as string;
-          // The apply points at the freshly inserted version; the rollback
-          // points back at the previous one (or null).
-          if (versionId === insertedId) {
+          // The apply points at the target version (minted OR the working row);
+          // the rollback points back at the previous one (or null).
+          const isApply = versionId === insertedId || versionId === workingId;
+          if (isApply) {
+            ops.push({ kind: "applyUpdate", versionId: versionId!, content });
             if (opts.failApply) {
-              ops.push({ kind: "applyUpdate", versionId, content });
               return Promise.reject(new Error("forced apply failure"));
             }
-            ops.push({ kind: "applyUpdate", versionId, content });
           } else {
             ops.push({ kind: "revertUpdate", versionId, content });
           }
+        }
+        if (table === documentVersions) {
+          const content = values["content"] as string;
+          // acquireVersion.updateWorking carries a label; rollback.restoreWorking
+          // does not — that is how the two version-row updates are told apart.
+          const kind = "label" in values ? "updateWorking" : "restoreWorking";
+          ops.push({ kind, versionId: workingId, content });
         }
         return Promise.resolve();
       },
@@ -94,12 +122,21 @@ const makeMockDb = (opts: MockOptions) => {
     },
   });
 
-  // insert records its op so the acquire/use ordering is captured precisely.
+  // insert records its op (with the version `kind`) so the acquire/use ordering
+  // AND the checkpoint-before-working sequence are captured precisely.
   const insert = () => ({
     values: (v: Record<string, unknown>) => ({
       returning: () => {
-        ops.push({ kind: "insertVersion", content: v["content"] as string });
-        return Promise.resolve([{ id: insertedId }]);
+        const versionKind = (v["kind"] as string) ?? "manual";
+        ops.push({
+          kind: "insertVersion",
+          content: v["content"] as string,
+          versionKind,
+        });
+        // A minted checkpoint is a distinct row from the working row that follows.
+        const id =
+          versionKind === "checkpoint" ? "version-checkpoint" : insertedId;
+        return Promise.resolve([{ id }]);
       },
     }),
   });
@@ -119,6 +156,25 @@ const makeMockDb = (opts: MockOptions) => {
 
 const PREV = "Il vecchio soggetto, lungo e prolisso, con molte parole.";
 const NEXT = "Il nuovo soggetto asciutto.";
+
+// A long base + a one-word tweak → classifyEditSize → "small" → overwrite.
+const LONG_BASE =
+  "Marco torna nel paese natale dopo vent'anni di assenza per il funerale del " +
+  "padre con cui non parlava da tempo e ritrova la sorella minore Elena rimasta " +
+  "a occuparsi della vecchia casa di famiglia ormai in rovina tra ricordi e " +
+  "rancori mai sopiti che riaffiorano lentamente giorno dopo giorno.";
+const SMALL_EDIT =
+  "Marco torna nel paese natale dopo vent'anni di assenza per il funerale del " +
+  "padre con cui non parlava da tempo e ritrova la sorella maggiore Elena rimasta " +
+  "a occuparsi della vecchia casa di famiglia ormai in rovina tra ricordi e " +
+  "rancori mai sopiti che riaffiorano lentamente giorno dopo giorno.";
+
+const SESSION = "cesare-session-1";
+const overwriteOpts = {
+  sessionId: SESSION,
+  userRequestedNewVersion: false,
+  largeEditConfirmed: false,
+};
 
 describe("[OHW-048] auto-version acquireRelease — version-before-apply", () => {
   it("inserts the version (acquire) BEFORE applying it to the document (use)", async () => {
@@ -243,6 +299,111 @@ describe("[OHW-048] auto-version acquireRelease — rollback on apply failure", 
     // The revert points the document back at the previous version + content.
     const revert = mock.ops.find((o) => o.kind === "revertUpdate");
     expect(revert).toMatchObject({ versionId: "version-prev", content: PREV });
+  });
+});
+
+describe("[OHW-N66] overwrite — small edit, working row exists", () => {
+  it("updates the working row IN PLACE: no new version row, no checkpoint mint", async () => {
+    const mock = makeMockDb({
+      currentVersionId: "version-working",
+      currentContent: LONG_BASE,
+      sessionWorkingRow: { id: "version-working", content: LONG_BASE },
+    });
+    const exit = await Effect.runPromiseExit(
+      Effect.provide(
+        applyVersionLiveEffect(
+          "doc-1",
+          DocumentTypes.SOGGETTO,
+          "user-1",
+          SMALL_EDIT,
+          "draft Cesare · soggetto",
+          overwriteOpts,
+        ),
+        mock.layer,
+      ),
+    );
+    expect(Exit.isSuccess(exit)).toBe(true);
+    const kinds = mock.ops.map((o) => o.kind);
+    // The flood killer: a small edit overwrites the existing row — no INSERT.
+    expect(kinds).toContain("updateWorking");
+    expect(kinds).not.toContain("insertVersion");
+    if (Exit.isSuccess(exit)) {
+      // The edit still targets the working row (not a freshly minted one).
+      expect(exit.value.versionId).toBe("version-working");
+    }
+  });
+});
+
+describe("[OHW-N66] overwrite — first edit of a session mints a checkpoint", () => {
+  it("snapshots the pre-session content as a `checkpoint`, then seeds a `working` row", async () => {
+    const mock = makeMockDb({
+      currentVersionId: "version-prev",
+      currentContent: LONG_BASE,
+      sessionWorkingRow: null, // no working row yet → first overwrite of the session
+    });
+    const exit = await Effect.runPromiseExit(
+      Effect.provide(
+        applyVersionLiveEffect(
+          "doc-1",
+          DocumentTypes.SOGGETTO,
+          "user-1",
+          SMALL_EDIT,
+          "draft Cesare · soggetto",
+          overwriteOpts,
+        ),
+        mock.layer,
+      ),
+    );
+    expect(Exit.isSuccess(exit)).toBe(true);
+    const inserts = mock.ops.filter(
+      (o) => o.kind === "insertVersion",
+    ) as Array<{
+      versionKind: string;
+      content: string;
+    }>;
+    // Two inserts: the pre-session checkpoint FIRST, then the working seed.
+    expect(inserts.map((i) => i.versionKind)).toEqual([
+      "checkpoint",
+      "working",
+    ]);
+    // The checkpoint captures the pre-session content (what rollback returns to).
+    expect(inserts[0]?.content).toBe(LONG_BASE);
+    expect(inserts[1]?.content).toBe(SMALL_EDIT);
+  });
+});
+
+describe("[OHW-N66] overwrite — rollback restores the working row on failure", () => {
+  it("forced apply failure → release restores the working row's prior content (not delete)", async () => {
+    const mock = makeMockDb({
+      currentVersionId: "version-working",
+      currentContent: LONG_BASE,
+      sessionWorkingRow: { id: "version-working", content: LONG_BASE },
+      failApply: true,
+    });
+    const exit = await Effect.runPromiseExit(
+      Effect.provide(
+        applyVersionLiveEffect(
+          "doc-1",
+          DocumentTypes.SOGGETTO,
+          "user-1",
+          SMALL_EDIT,
+          "draft Cesare · soggetto",
+          overwriteOpts,
+        ),
+        mock.layer,
+      ),
+    );
+    expect(Exit.isFailure(exit)).toBe(true);
+    const kinds = mock.ops.map((o) => o.kind);
+    // On an overwrite, release restores the working row's PRIOR content — it does
+    // NOT delete a row the session still owns.
+    expect(kinds).toContain("restoreWorking");
+    expect(kinds).not.toContain("deleteVersion");
+    const restore = mock.ops.find((o) => o.kind === "restoreWorking");
+    expect(restore).toMatchObject({
+      versionId: "version-working",
+      content: LONG_BASE,
+    });
   });
 });
 

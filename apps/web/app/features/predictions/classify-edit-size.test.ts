@@ -4,7 +4,7 @@ import { classifyEditSize, LARGE_EDIT_WORDS } from "./classify-edit-size";
 const words = (n: number) =>
   Array.from({ length: n }, (_, i) => `w${i}`).join(" ");
 
-describe("classifyEditSize", () => {
+describe("[OHW-N66] classifyEditSize", () => {
   it("a one-word tweak on a long doc is small", () => {
     const base = words(300);
     const next = base.replace("w0", "changed");

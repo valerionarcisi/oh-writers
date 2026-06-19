@@ -14,7 +14,7 @@ const base = (
   ...over,
 });
 
-describe("resolveVersionAction — precedence", () => {
+describe("[OHW-N66] resolveVersionAction — precedence", () => {
   it("user explicitly asked ⇒ mint (even for a small edit)", () => {
     expect(resolveVersionAction(base({ userRequestedNewVersion: true }))).toBe(
       "mint",
