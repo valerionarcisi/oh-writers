@@ -43,6 +43,15 @@
   max-inline-size: 94%;
 }
 
+/* Spec 76 — the large-edit ask card's two choices: [Sovrascrivi] [Nuova
+   versione]. A simple inline row under the ask prose. */
+.askActions {
+  display: flex;
+  gap: var(--ds-space-2);
+  padding-inline: var(--ds-space-3);
+  padding-block-end: var(--ds-space-2);
+}
+
 .bubbleText {
   font-family: var(--ds-font-sans);
   font-size: 0.875rem;

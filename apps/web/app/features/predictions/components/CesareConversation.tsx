@@ -12,6 +12,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type React from "react";
 import {
+  Button,
   ChangeTrace,
   type ChangeUpdate,
   type TraceMarker,
@@ -99,6 +100,38 @@ export function parseDocAppliedMarker(
       documentType: String(parsed["document_type"] ?? ""),
       versionId: parsed["version_id"],
       previousVersionId: typeof previous === "string" ? previous : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Spec 76 Slice 2 — a large unconfirmed edit asked instead of applying. The
+ * marker carries the entity and the change size; the client renders the
+ * [Sovrascrivi] [Nuova versione] card, and the choice re-sends the turn with the
+ * confirmation flag. No version was written, so this is NOT an applied edit.
+ */
+export interface AskNewVersionMarker {
+  readonly documentType: string;
+  readonly changedWordRatio: number;
+  readonly ask: string;
+}
+
+export function parseAskNewVersionMarker(
+  content: string,
+): AskNewVersionMarker | null {
+  const m = content.match(/<!--ohw:ask-new-version:([\s\S]*?)-->/);
+  if (!m || !m[1]) return null;
+  try {
+    const parsed = JSON.parse(m[1]) as Record<string, unknown>;
+    const ask = parsed["ask"];
+    if (typeof ask !== "string") return null;
+    const ratio = parsed["changed_word_ratio"];
+    return {
+      documentType: String(parsed["document_type"] ?? ""),
+      changedWordRatio: typeof ratio === "number" ? ratio : 0,
+      ask,
     };
   } catch {
     return null;
@@ -296,6 +329,7 @@ function stripToolCalls(content: string): string {
     .replace(/<!--ohw:rewrite-scene-b64:[A-Za-z0-9+/=]+-->/g, "")
     .replace(/<!--ohw:doc-applied:[\s\S]*?-->/g, "")
     .replace(/<!--ohw:entity-applied:[\s\S]*?-->/g, "")
+    .replace(/<!--ohw:ask-new-version:[\s\S]*?-->/g, "")
     .replace(/<!--ohw:live-diff-b64:[A-Za-z0-9+/=]+-->/g, "")
     .trim();
 }
@@ -418,6 +452,9 @@ export interface StepBlockMetadata {
   entitiesApplied: ReadonlyArray<EntityAppliedMarker>;
   /** One live-diff per touched document (Spec 47d). Empty when none applied. */
   liveDiffs: ReadonlyArray<LiveDiffMarker>;
+  /** Spec 76 — a large edit asked instead of applying. Non-null ⇒ render the
+   *  [Sovrascrivi] [Nuova versione] card; nothing was written this turn. */
+  askNewVersion: AskNewVersionMarker | null;
 }
 
 export function extractStepBlockMetadata(content: string): StepBlockMetadata {
@@ -428,6 +465,7 @@ export function extractStepBlockMetadata(content: string): StepBlockMetadata {
     docApplied: parseDocAppliedMarker(content),
     entitiesApplied: parseEntityAppliedMarkers(content),
     liveDiffs: parseLiveDiffMarkers(content),
+    askNewVersion: parseAskNewVersionMarker(content),
   };
 }
 
@@ -630,6 +668,13 @@ export interface ConversationHandlers {
   }) => void;
   /** Label for the open-split button (e.g. "Vedi modifica"). */
   openSplitLabel?: string;
+  /** Spec 76 — the large-edit ask card's choice. Re-sends the turn with the
+   *  chosen action: `overwrite` keeps the working version, `mint` makes a new
+   *  one. Omitted ⇒ the card renders the prose only (no buttons). */
+  onChooseVersionAction?: (args: {
+    documentType: string;
+    action: "overwrite" | "mint";
+  }) => void;
 }
 
 // ─── Conversation list ─────────────────────────────────────────────────────
@@ -693,6 +738,7 @@ export function MessageView({
   openEntityLabelFor,
   onOpenSplit,
   openSplitLabel,
+  onChooseVersionAction,
 }: { message: ChatMessage } & ConversationHandlers) {
   const { t } = useTranslation();
   const [isShowingDiff, setShowingDiff] = useState(false);
@@ -736,6 +782,51 @@ export function MessageView({
 
   const metadata = extractStepBlockMetadata(message.content);
   const rendered = renderMarkdown(message.content);
+
+  // Spec 76 — the turn ASKED instead of applying: a large edit, unconfirmed.
+  // Nothing was written; render the prose + the two-choice card. Choosing an
+  // action re-sends the turn with the confirmation flag (overwrite / mint).
+  const ask = metadata.askNewVersion;
+  if (ask) {
+    return (
+      <div
+        className={styles.bubbleAssistant}
+        data-testid="cesare-ask-new-version"
+      >
+        <div className={styles.bubbleMarkdown}>{rendered || ask.ask}</div>
+        {onChooseVersionAction && (
+          <div className={styles.askActions}>
+            <Button
+              variant="secondary"
+              size="sm"
+              data-testid="cesare-ask-overwrite"
+              onPress={() =>
+                onChooseVersionAction({
+                  documentType: ask.documentType,
+                  action: "overwrite",
+                })
+              }
+            >
+              Sovrascrivi
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              data-testid="cesare-ask-mint"
+              onPress={() =>
+                onChooseVersionAction({
+                  documentType: ask.documentType,
+                  action: "mint",
+                })
+              }
+            >
+              Nuova versione
+            </Button>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   // The result card may claim a change ONLY when the turn actually applied an
   // edit (real apply signal: doc-applied / entity-applied / scene rewrite).

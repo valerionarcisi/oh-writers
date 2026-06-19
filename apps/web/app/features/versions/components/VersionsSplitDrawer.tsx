@@ -17,8 +17,9 @@
 // vs. screenplay PM). This keeps the component free of any cross-feature editor
 // import (CLAUDE.md) and reusable for every document type.
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
+import { collapseVersions } from "../collapse-versions";
 import { DRAFT_REVISION_COLORS } from "@oh-writers/domain";
 import type {
   DraftRevisionColor,
@@ -193,11 +194,96 @@ export function VersionsSplitDrawer({
 
   const selected = versions.find((v) => v.id === selectedId) ?? null;
 
+  // Spec 76 — collapse a Cesare session's working rows under their checkpoint so
+  // the list shows one entry per meaningful checkpoint, not a row per AI turn.
+  // Expanding a checkpoint reveals its working history (indented).
+  const collapsed = useMemo(() => collapseVersions(versions), [versions]);
+  const [expandedSessions, setExpandedSessions] = useState<ReadonlySet<string>>(
+    new Set(),
+  );
+  const toggleSession = (sessionId: string) =>
+    setExpandedSessions((prev) => {
+      const next = new Set(prev);
+      if (next.has(sessionId)) next.delete(sessionId);
+      else next.add(sessionId);
+      return next;
+    });
+
   const submitRename = (versionId: string) => {
     const label = renameLabel.trim();
     if (label.length > 0) onRename(versionId, label);
     setRenamingId(null);
     setRenameLabel("");
+  };
+
+  // One list row (the version's dot, label/rename, current badge, timestamp) +
+  // its actions. `isWorking` indents the row when it is nested under a checkpoint.
+  const renderVersionRow = (v: VersionView, isWorking: boolean) => {
+    const isCurrent = v.id === currentVersionId;
+    const isRenaming = renamingId === v.id;
+    return (
+      <>
+        <button
+          type="button"
+          className={[
+            styles.versionRow,
+            isWorking ? styles.versionRowNested : "",
+          ]
+            .filter(Boolean)
+            .join(" ")}
+          onClick={() => setSelectedId(v.id)}
+          data-testid={`versions-split-row-${v.id}`}
+        >
+          <span
+            className={styles.dot}
+            style={
+              v.draftColor
+                ? { background: DRAFT_COLOR_HEX[v.draftColor] }
+                : undefined
+            }
+            data-testid={`version-dot-${v.id}`}
+            aria-hidden
+          />
+          {isRenaming ? (
+            <input
+              className={styles.renameInput}
+              type="text"
+              value={renameLabel}
+              autoFocus
+              maxLength={80}
+              placeholder={t("versions.split.namePlaceholder")}
+              onClick={(e) => e.stopPropagation()}
+              onChange={(e) => setRenameLabel(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") submitRename(v.id);
+                if (e.key === "Escape") {
+                  setRenamingId(null);
+                  setRenameLabel("");
+                }
+              }}
+              data-testid={`version-rename-input-${v.id}`}
+            />
+          ) : (
+            <span className={styles.versionLabel}>{versionTitle(v, t)}</span>
+          )}
+          {isCurrent && (
+            <span
+              className={styles.badgeCurrent}
+              data-testid={`versions-split-current-${v.id}`}
+            >
+              <span className={styles.badgeCheck} aria-hidden>
+                ✓
+              </span>
+              {t("versions.split.badgeCurrent")}
+            </span>
+          )}
+          <span className={styles.versionMeta}>
+            {formatCreatedAt(v.createdAt, locale)}
+          </span>
+        </button>
+        {renderActions(v)}
+      </>
+    );
   };
 
   const renderActions = (v: VersionView) => {
@@ -305,67 +391,40 @@ export function VersionsSplitDrawer({
           )}
           {!isLoading && versions.length > 0 && (
             <ul className={styles.versionList}>
-              {versions.map((v) => {
-                const isCurrent = v.id === currentVersionId;
-                const isRenaming = renamingId === v.id;
+              {collapsed.map((entry) => {
+                const v = entry.anchor;
+                const sessionId = v.cesareSessionId;
+                const hasWorking = entry.working.length > 0;
+                const isExpanded = sessionId
+                  ? expandedSessions.has(sessionId)
+                  : false;
                 return (
                   <li key={v.id} className={styles.versionItem}>
-                    <button
-                      type="button"
-                      className={styles.versionRow}
-                      onClick={() => setSelectedId(v.id)}
-                      data-testid={`versions-split-row-${v.id}`}
-                    >
-                      <span
-                        className={styles.dot}
-                        style={
-                          v.draftColor
-                            ? { background: DRAFT_COLOR_HEX[v.draftColor] }
-                            : undefined
-                        }
-                        data-testid={`version-dot-${v.id}`}
-                        aria-hidden
-                      />
-                      {isRenaming ? (
-                        <input
-                          className={styles.renameInput}
-                          type="text"
-                          value={renameLabel}
-                          autoFocus
-                          maxLength={80}
-                          placeholder={t("versions.split.namePlaceholder")}
-                          onClick={(e) => e.stopPropagation()}
-                          onChange={(e) => setRenameLabel(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") submitRename(v.id);
-                            if (e.key === "Escape") {
-                              setRenamingId(null);
-                              setRenameLabel("");
-                            }
-                          }}
-                          data-testid={`version-rename-input-${v.id}`}
-                        />
-                      ) : (
-                        <span className={styles.versionLabel}>
-                          {versionTitle(v, t)}
-                        </span>
-                      )}
-                      {isCurrent && (
-                        <span
-                          className={styles.badgeCurrent}
-                          data-testid={`versions-split-current-${v.id}`}
-                        >
-                          <span className={styles.badgeCheck} aria-hidden>
-                            ✓
-                          </span>
-                          {t("versions.split.badgeCurrent")}
-                        </span>
-                      )}
-                      <span className={styles.versionMeta}>
-                        {formatCreatedAt(v.createdAt, locale)}
-                      </span>
-                    </button>
-                    {renderActions(v)}
+                    {renderVersionRow(v, false)}
+                    {hasWorking && sessionId && (
+                      <button
+                        type="button"
+                        className={styles.workingToggle}
+                        onClick={() => toggleSession(sessionId)}
+                        data-testid={`versions-split-toggle-${sessionId}`}
+                        aria-expanded={isExpanded}
+                      >
+                        {isExpanded
+                          ? t("versions.split.hideWorking")
+                          : `${entry.working.length} ${t(
+                              "versions.split.workingCount",
+                            )}`}
+                      </button>
+                    )}
+                    {hasWorking && isExpanded && (
+                      <ul className={styles.workingList}>
+                        {entry.working.map((w) => (
+                          <li key={w.id} className={styles.versionItem}>
+                            {renderVersionRow(w, true)}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </li>
                 );
               })}

@@ -53,6 +53,7 @@ type BaseSkills = Record<BaseSkillId, Skill>;
 const buildBaseSkills = (
   ctx: SkillBuildContext,
   userIdFallback: string | null,
+  sessionId: string | null = null,
 ): BaseSkills => ({
   locations: buildLocationsSkill(ctx),
   breakdown: buildBreakdownSkill(ctx),
@@ -60,7 +61,7 @@ const buildBaseSkills = (
   schedule: buildScheduleSkill(ctx),
   "shooting-plan": buildShootingPlanSkill(ctx),
   "screenplay-edit": buildScreenplayEditSkill(ctx),
-  "document-gen": buildDocumentGenSkill(ctx, userIdFallback),
+  "document-gen": buildDocumentGenSkill(ctx, userIdFallback, sessionId),
   "read-scene": buildReadSceneSkill(ctx),
   "read-document": buildReadDocumentSkill(ctx),
 });
@@ -74,8 +75,9 @@ export const buildSkillRegistry = (
   ctx: SkillBuildContext,
   overrides: Partial<Record<SkillId, Skill>> = {},
   userIdFallback: string | null = null,
+  sessionId: string | null = null,
 ): SkillRegistry => {
-  const base = buildBaseSkills(ctx, userIdFallback);
+  const base = buildBaseSkills(ctx, userIdFallback, sessionId);
   const skills: Partial<Record<SkillId, Skill>> = { ...base, ...overrides };
 
   // Order the universal superset so the page-primary skills lead (their

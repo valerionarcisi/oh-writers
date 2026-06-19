@@ -7,6 +7,11 @@ import { ResultAsync, errAsync, okAsync } from "neverthrow";
 import { eq, and, desc, sql, isNull, inArray } from "drizzle-orm";
 import { logger } from "~/server/logger";
 import { aiTelemetry } from "~/server/langfuse-config";
+import { commitOrAsk, isAsked } from "./auto-version.effect";
+import {
+  userRequestedNewVersion,
+  userConfirmedOverwrite,
+} from "./version-intent";
 import {
   locationCandidates,
   locationPhotos,
@@ -448,6 +453,8 @@ export const createDocumentTools = (
   db: Db,
   docContext: DocumentContext,
   userIdFallback: string | null = null,
+  sessionId: string | null = null,
+  userInstruction: string | null = null,
 ) => ({
   apply_text_edit: tool({
     description:
@@ -469,6 +476,8 @@ export const createDocumentTools = (
         db,
         docContext,
         userIdFallback,
+        sessionId,
+        userInstruction,
       );
       if (result.isErr()) return { error: result.error.message };
       return result.value;
@@ -505,6 +514,8 @@ export const createDocumentTools = (
         800,
         "espanso",
         userIdFallback,
+        sessionId,
+        userInstruction,
       );
       if (result.isErr()) return { error: result.error.message };
       return result.value;
@@ -541,6 +552,8 @@ export const createDocumentTools = (
         600,
         "compresso",
         userIdFallback,
+        sessionId,
+        userInstruction,
       );
       if (result.isErr()) return { error: result.error.message };
       return result.value;
@@ -1474,10 +1487,15 @@ interface DocumentEditResult {
   ok: boolean;
   reason?: string;
   toast?: string;
-  applied_live?: true;
+  applied_live?: boolean;
   document_type?: DocumentType;
   version_id?: string;
   previous_version_id?: string | null;
+  /** Spec 76 — set when a large edit asked instead of applying (no version
+   *  written). The client renders the [Sovrascrivi] [Nuova versione] card. */
+  asked_new_version?: true;
+  changed_word_ratio?: number;
+  ask?: string;
   /** Spec 47b FIX 4 — precomputed word-level diff segments (before → after) so
    *  the client can render the inline coloured live diff without a round-trip. */
   diff_label?: string;
@@ -1489,6 +1507,8 @@ const executeApplyTextEdit = (
   db: Db,
   doc: DocumentContext,
   userIdFallback: string | null,
+  sessionId: string | null,
+  userInstruction: string | null,
 ): ResultAsync<DocumentEditResult, CesareError> => {
   if (!input.find) {
     return okAsync({ ok: false, reason: "empty find string" });
@@ -1502,24 +1522,77 @@ const executeApplyTextEdit = (
   }
   const previousContent = doc.content;
   const next = previousContent.replace(input.find, input.replace);
-  return persistDocumentContent(db, doc.documentId, next, userIdFallback).map(
-    (applied) => {
-      // Mutate the in-memory copy so subsequent tool calls in the same turn
-      // see the updated content.
-      doc.content = next;
-      return {
-        ok: true,
-        applied_live: true as const,
-        document_type: doc.documentType,
-        version_id: applied.versionId,
-        previous_version_id: applied.previousVersionId,
-        diff_label: docTypeLabel(doc.documentType),
-        diff_segments: buildWordDiffSegments(previousContent, next),
-        toast: `✦ Cesare ha aggiornato il ${docTypeLabel(doc.documentType)}`,
-      };
-    },
+  // Spec 76 — route the surgical edit through the SAME commit policy as the
+  // generation tools (kills the second seam): a small find/replace overwrites
+  // the working version in place; a large one asks before minting.
+  return commitDocumentEdit(
+    db,
+    doc,
+    previousContent,
+    next,
+    userIdFallback,
+    sessionId,
+    userInstruction,
   );
 };
+
+// Shared commit for the surgical doc-edit tools (apply_text_edit / expand /
+// compress). Runs commitOrAsk and maps the outcome to a DocumentEditResult —
+// either the applied draft (with diff segments) or the large-edit ask payload.
+// `userInstruction` is the user's words this turn (the tool input is a scripted
+// find/replace), so an explicit "nuova versione" / "sovrascrivi" is honoured.
+const commitDocumentEdit = (
+  db: Db,
+  doc: DocumentContext,
+  previousContent: string,
+  next: string,
+  userIdFallback: string | null,
+  sessionId: string | null,
+  userInstruction: string | null,
+): ResultAsync<DocumentEditResult, CesareError> =>
+  commitOrAsk(
+    db,
+    doc.documentId,
+    doc.documentType,
+    userIdFallback ?? "",
+    previousContent,
+    next,
+    `Cesare · ${docTypeLabel(doc.documentType)}`,
+    {
+      sessionId,
+      userRequestedNewVersion: userRequestedNewVersion(userInstruction),
+      largeEditConfirmed: false,
+      largeEditOverwriteConfirmed: userConfirmedOverwrite(userInstruction),
+    },
+  ).map((outcome) => {
+    if (isAsked(outcome)) {
+      return {
+        ok: true,
+        applied_live: false as const,
+        asked_new_version: true as const,
+        document_type: doc.documentType,
+        changed_word_ratio: outcome.changedWordRatio,
+        ask: `Questa è una modifica importante a ${docTypeLabel(
+          doc.documentType,
+        )} (${Math.round(
+          outcome.changedWordRatio * 100,
+        )}% del testo cambia). La applico sulla versione corrente o ne creo una nuova?`,
+      };
+    }
+    // Applied — mutate the in-memory copy so later tool calls in the same turn
+    // see the updated content.
+    doc.content = next;
+    return {
+      ok: true,
+      applied_live: true as const,
+      document_type: doc.documentType,
+      version_id: outcome.versionId,
+      previous_version_id: outcome.previousVersionId,
+      diff_label: docTypeLabel(doc.documentType),
+      diff_segments: buildWordDiffSegments(previousContent, next),
+      toast: `✦ Cesare ha aggiornato il ${docTypeLabel(doc.documentType)}`,
+    };
+  });
 
 const EXPAND_SECTION_MODEL = "claude-haiku-4-5";
 
@@ -1589,6 +1662,8 @@ const generateAndReplaceSection = (
   maxTokens: number,
   toastVerb: string,
   userIdFallback: string | null,
+  sessionId: string | null,
+  userInstruction: string | null,
 ): ResultAsync<DocumentEditResult, CesareError> => {
   const range = findSection(doc.content, heading);
   if (!range) {
@@ -1619,24 +1694,26 @@ const generateAndReplaceSection = (
       }
       const previousContent = doc.content;
       const nextContent = replaceSection(previousContent, range, newText);
-      return persistDocumentContent(
+      // Spec 76 — same commit policy as every other edit (small overwrites, large
+      // asks). A section expand/compress is an iterative edit, not a regeneration.
+      return commitDocumentEdit(
         db,
-        doc.documentId,
+        doc,
+        previousContent,
         nextContent,
         userIdFallback,
-      ).map((applied) => {
-        doc.content = nextContent;
-        return {
-          ok: true,
-          applied_live: true as const,
-          document_type: doc.documentType,
-          version_id: applied.versionId,
-          previous_version_id: applied.previousVersionId,
-          diff_label: range.headingText.replace(/^#+\s*/, "").trim(),
-          diff_segments: buildWordDiffSegments(previousContent, nextContent),
-          toast: `✦ Cesare ha ${toastVerb} "${range.headingText.replace(/^#+\s*/, "").trim()}"`,
-        };
-      });
+        sessionId,
+        userInstruction,
+      ).map((res) =>
+        // Keep the section-specific diff label + toast verb on an applied edit.
+        res.applied_live
+          ? {
+              ...res,
+              diff_label: range.headingText.replace(/^#+\s*/, "").trim(),
+              toast: `✦ Cesare ha ${toastVerb} "${range.headingText.replace(/^#+\s*/, "").trim()}"`,
+            }
+          : res,
+      );
     });
 };
 
@@ -1645,6 +1722,8 @@ export const executeDocumentTool = (
   db: Db,
   docContext: DocumentContext,
   userIdFallback: string | null = null,
+  sessionId: string | null = null,
+  userInstruction: string | null = null,
 ): ResultAsync<ToolResult, CesareError> => {
   const successResult = (id: string, payload: unknown): ToolResult => ({
     type: "tool_result",
@@ -1654,9 +1733,14 @@ export const executeDocumentTool = (
 
   if (block.name === "apply_text_edit") {
     const input = block.input as ApplyTextEditInput;
-    return executeApplyTextEdit(input, db, docContext, userIdFallback).map(
-      (res) => successResult(block.id, res),
-    );
+    return executeApplyTextEdit(
+      input,
+      db,
+      docContext,
+      userIdFallback,
+      sessionId,
+      userInstruction,
+    ).map((res) => successResult(block.id, res));
   }
 
   if (block.name === "expand_section") {
@@ -1676,6 +1760,8 @@ export const executeDocumentTool = (
       800,
       "espanso",
       userIdFallback,
+      sessionId,
+      userInstruction,
     ).map((res) => successResult(block.id, res));
   }
 
@@ -1697,6 +1783,8 @@ export const executeDocumentTool = (
       600,
       "compresso",
       userIdFallback,
+      sessionId,
+      userInstruction,
     ).map((res) => successResult(block.id, res));
   }
 
@@ -2256,6 +2344,7 @@ export const runDocumentToolLoop = (
   model: string,
   docContext: DocumentContext,
   userIdFallback: string | null = null,
+  sessionId: string | null = null,
 ): ResultAsync<string, CesareError> =>
   runGenericToolLoop({
     systemPrompt,
@@ -2264,8 +2353,8 @@ export const runDocumentToolLoop = (
     projectId,
     model,
     sdkTools: {
-      ...createDocumentTools(db, docContext, userIdFallback),
-      ...createDocumentGenTools(db, projectId, userIdFallback),
+      ...createDocumentTools(db, docContext, userIdFallback, sessionId),
+      ...createDocumentGenTools(db, projectId, userIdFallback, sessionId),
       ...createReadTools(db, projectId),
     },
     legacyTools: [
@@ -2284,9 +2373,16 @@ export const runDocumentToolLoop = (
           dbArg,
           projectIdArg,
           userIdFallback,
+          sessionId,
         );
       }
-      return executeDocumentTool(block, dbArg, docContext, userIdFallback);
+      return executeDocumentTool(
+        block,
+        dbArg,
+        docContext,
+        userIdFallback,
+        sessionId,
+      );
     },
   });
 
@@ -2444,6 +2540,7 @@ export const runUniversalToolLoop = (
             content: "",
           },
           ctx.userIdFallback,
+          ctx.sessionId,
         );
       }
 
@@ -2454,6 +2551,7 @@ export const runUniversalToolLoop = (
           dbArg,
           projectIdArg,
           ctx.userIdFallback,
+          ctx.sessionId,
         );
       }
 
@@ -2666,6 +2764,19 @@ export const extractSideChannelMarkers = (
           const b64 = Buffer.from(diffJson, "utf-8").toString("base64");
           accumulator.push(`<!--ohw:live-diff-b64:${b64}-->`);
         }
+      }
+      // Spec 76 Slice 2 — a large unconfirmed edit asked instead of applying.
+      // No version was written; emit the ask marker so the client renders the
+      // [Sovrascrivi] [Nuova versione] card (keyed on document_type so the
+      // re-send targets the same entity).
+      if (payload && payload["asked_new_version"] === true) {
+        accumulator.push(
+          `<!--ohw:ask-new-version:${JSON.stringify({
+            document_type: payload["document_type"],
+            changed_word_ratio: payload["changed_word_ratio"],
+            ask: payload["ask"],
+          })}-->`,
+        );
       }
     } catch {
       // ignore malformed payloads — the marker is best-effort

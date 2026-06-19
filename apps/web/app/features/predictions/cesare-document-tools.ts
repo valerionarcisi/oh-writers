@@ -13,7 +13,35 @@ import { callHaiku, extractText } from "~/features/ai";
 import { repairMojibake, sanitizeAiText } from "@oh-writers/utils";
 import { SONNET_MODEL } from "./cesare-model-router";
 import { CesareError } from "./cesare.errors";
-import { applyVersionLive, type CreatedDraft } from "./auto-version.effect";
+import {
+  applyVersionLive,
+  commitOrAsk,
+  isAsked,
+  type CreatedDraft,
+  type CommitOptions,
+  type CommitOutcome,
+  type AskedNewVersion,
+} from "./auto-version.effect";
+import {
+  userRequestedNewVersion,
+  userConfirmedOverwrite,
+} from "./version-intent";
+
+// BUG-N66 / Spec 76 — the commit policy for a Cesare document edit. A non-null
+// sessionId activates overwrite-into-one-working-row; an explicit "nuova
+// versione" instruction forces a mint (precedence rule 1). `largeEditConfirmed`
+// is set only on the follow-up turn after the streamed ask-card (Slice 2).
+const commitOptions = (
+  sessionId: string | null,
+  instruction: string | null | undefined,
+): CommitOptions => ({
+  sessionId,
+  userRequestedNewVersion: userRequestedNewVersion(instruction),
+  largeEditConfirmed: false,
+  // "Sovrascrivi" on the ask card → apply the large edit in place. Detected from
+  // the re-sent confirmation phrasing, mirroring the new-version intent.
+  largeEditOverwriteConfirmed: userConfirmedOverwrite(instruction),
+});
 import {
   importAsActiveVersionTx,
   fountainToDoc,
@@ -797,7 +825,8 @@ const handleProposeLogline = (
   db: Db,
   projectId: string,
   userIdFallback: string | null,
-): ResultAsync<CreatedDraft, CesareError> =>
+  sessionId: string | null = null,
+): ResultAsync<CommitOutcome, CesareError> =>
   loadScreenplayContent(db, projectId).andThen((screenplay) => {
     if (screenplay.trim().length === 0) {
       return errAsync(
@@ -827,13 +856,15 @@ const handleProposeLogline = (
                 ),
               );
             }
-            return applyVersionLive(
+            return commitOrAsk(
               db,
               doc.id,
               DocumentTypes.LOGLINE,
               creator,
+              doc.content,
               logline,
               buildDraftLabel(DocumentTypes.LOGLINE, input.instruction ?? null),
+              commitOptions(sessionId, input.instruction),
             );
           },
         ),
@@ -852,7 +883,8 @@ const handleWriteLogline = (
   db: Db,
   projectId: string,
   userIdFallback: string | null,
-): ResultAsync<CreatedDraft, CesareError> => {
+  sessionId: string | null = null,
+): ResultAsync<CommitOutcome, CesareError> => {
   const instruction = (input.instruction ?? "").trim();
   if (instruction.length === 0) {
     return errAsync(
@@ -903,13 +935,15 @@ const handleWriteLogline = (
               ),
             );
           }
-          return applyVersionLive(
+          return commitOrAsk(
             db,
             doc.id,
             DocumentTypes.LOGLINE,
             creator,
+            doc.content,
             logline,
             buildDraftLabel(DocumentTypes.LOGLINE, instruction),
+            commitOptions(sessionId, instruction),
           );
         });
     },
@@ -921,7 +955,8 @@ const handleProposeSynopsis = (
   db: Db,
   projectId: string,
   userIdFallback: string | null,
-): ResultAsync<CreatedDraft, CesareError> =>
+  sessionId: string | null = null,
+): ResultAsync<CommitOutcome, CesareError> =>
   loadUpstreamNarrative(db, projectId, DocumentTypes.SYNOPSIS).andThen(
     (upstream) => {
       if (upstream.text.length === 0) {
@@ -957,16 +992,18 @@ const handleProposeSynopsis = (
                   ),
                 );
               }
-              return applyVersionLive(
+              return commitOrAsk(
                 db,
                 doc.id,
                 DocumentTypes.SYNOPSIS,
                 creator,
+                doc.content,
                 synopsis,
                 buildDraftLabel(
                   DocumentTypes.SYNOPSIS,
                   input.instruction ?? null,
                 ),
+                commitOptions(sessionId, input.instruction),
               );
             },
           ),
@@ -979,7 +1016,8 @@ const handleProposeSoggettoV2 = (
   db: Db,
   projectId: string,
   userIdFallback: string | null,
-): ResultAsync<CreatedDraft, CesareError> => {
+  sessionId: string | null = null,
+): ResultAsync<CommitOutcome, CesareError> => {
   if (!input.instruction || !input.label) {
     return errAsync(
       new CesareError(
@@ -1052,13 +1090,15 @@ ${doc.content.slice(0, 18_000)}
             ),
           );
         }
-        return applyVersionLive(
+        return commitOrAsk(
           db,
           doc.id,
           DocumentTypes.SOGGETTO,
           creator,
+          doc.content,
           next,
           label.slice(0, 80),
+          commitOptions(sessionId, instruction),
         );
       });
   });
@@ -1069,6 +1109,7 @@ const handleProposeScalettaFromSoggetto = (
   db: Db,
   projectId: string,
   userIdFallback: string | null,
+  sessionId: string | null = null,
 ): ResultAsync<CreatedDraft, CesareError> =>
   loadDocumentForType(db, projectId, DocumentTypes.SOGGETTO).andThen((doc) => {
     if (!doc || doc.content.trim().length === 0) {
@@ -1106,6 +1147,9 @@ const handleProposeScalettaFromSoggetto = (
                 ),
               );
             }
+            // A derive-from-soggetto regeneration is an explicit generation act,
+            // not an iterative edit, so it applies directly (overwrite/checkpoint
+            // as resolved) and never triggers the large-edit ask.
             return applyVersionLive(
               db,
               outlineDoc.id,
@@ -1113,6 +1157,7 @@ const handleProposeScalettaFromSoggetto = (
               creator,
               content,
               buildDraftLabel(DocumentTypes.OUTLINE, "da soggetto"),
+              commitOptions(sessionId, null),
             );
           },
         ),
@@ -1133,7 +1178,8 @@ const handleProposeTreatment = (
   db: Db,
   projectId: string,
   userIdFallback: string | null,
-): ResultAsync<CreatedDraft, CesareError> =>
+  sessionId: string | null = null,
+): ResultAsync<CommitOutcome, CesareError> =>
   ResultAsync.combine([
     loadDocumentForType(db, projectId, DocumentTypes.TREATMENT),
     loadUpstreamNarrative(db, projectId, DocumentTypes.TREATMENT),
@@ -1182,13 +1228,15 @@ const handleProposeTreatment = (
             ),
           );
         }
-        return applyVersionLive(
+        return commitOrAsk(
           db,
           doc.id,
           DocumentTypes.TREATMENT,
           creator,
+          doc.content,
           treatment,
           buildDraftLabel(DocumentTypes.TREATMENT, input.instruction ?? null),
+          commitOptions(sessionId, input.instruction),
         );
       });
   });
@@ -1338,6 +1386,26 @@ const draftPayload = (draft: CreatedDraft) => ({
   toast: `✦ Cesare ha aggiornato ${docTypeLabel(draft.documentType)} — il documento è aggiornato. Apri il pannello Versioni per ripristinare la versione precedente.`,
 });
 
+// Spec 76 Slice 2 — the tool result for a large-edit ask. No version was
+// written; the client renders the [Sovrascrivi] [Nuova versione] card and the
+// chosen action re-sends the same instruction with the confirmation flag set.
+const askPayload = (asked: AskedNewVersion) => ({
+  ok: true as const,
+  asked_new_version: true as const,
+  document_type: asked.documentType,
+  changed_word_ratio: asked.changedWordRatio,
+  applied_live: false as const,
+  ask: `Questa è una modifica importante a ${docTypeLabel(
+    asked.documentType,
+  )} (${Math.round(
+    asked.changedWordRatio * 100,
+  )}% del testo cambia). La applico sulla versione corrente o ne creo una nuova?`,
+});
+
+// One outcome → one payload: a draft was applied, or Cesare asked first.
+const outcomePayload = (outcome: CommitOutcome) =>
+  isAsked(outcome) ? askPayload(outcome) : draftPayload(outcome);
+
 const screenplayGenPayload = (gen: GeneratedScreenplay) => ({
   ok: true as const,
   version_id: gen.versionId,
@@ -1353,27 +1421,44 @@ export const executeDocumentGenTool = (
   db: Db,
   projectId: string,
   userIdFallback: string | null,
+  sessionId: string | null = null,
 ): ResultAsync<ToolResult, CesareError> => {
   const input = block.input as ProposeInput;
   if (block.name === "propose_logline_from_screenplay") {
-    return handleProposeLogline(input, db, projectId, userIdFallback).map(
-      (draft) => successResult(block.id, draftPayload(draft)),
-    );
+    return handleProposeLogline(
+      input,
+      db,
+      projectId,
+      userIdFallback,
+      sessionId,
+    ).map((outcome) => successResult(block.id, outcomePayload(outcome)));
   }
   if (block.name === "write_logline") {
-    return handleWriteLogline(input, db, projectId, userIdFallback).map(
-      (draft) => successResult(block.id, draftPayload(draft)),
-    );
+    return handleWriteLogline(
+      input,
+      db,
+      projectId,
+      userIdFallback,
+      sessionId,
+    ).map((outcome) => successResult(block.id, outcomePayload(outcome)));
   }
   if (block.name === "propose_synopsis_from_screenplay") {
-    return handleProposeSynopsis(input, db, projectId, userIdFallback).map(
-      (draft) => successResult(block.id, draftPayload(draft)),
-    );
+    return handleProposeSynopsis(
+      input,
+      db,
+      projectId,
+      userIdFallback,
+      sessionId,
+    ).map((outcome) => successResult(block.id, outcomePayload(outcome)));
   }
   if (block.name === "propose_soggetto_v2") {
-    return handleProposeSoggettoV2(input, db, projectId, userIdFallback).map(
-      (draft) => successResult(block.id, draftPayload(draft)),
-    );
+    return handleProposeSoggettoV2(
+      input,
+      db,
+      projectId,
+      userIdFallback,
+      sessionId,
+    ).map((outcome) => successResult(block.id, outcomePayload(outcome)));
   }
   if (block.name === "propose_scaletta_from_soggetto") {
     return handleProposeScalettaFromSoggetto(
@@ -1381,12 +1466,17 @@ export const executeDocumentGenTool = (
       db,
       projectId,
       userIdFallback,
-    ).map((draft) => successResult(block.id, draftPayload(draft)));
+      sessionId,
+    ).map((outcome) => successResult(block.id, outcomePayload(outcome)));
   }
   if (block.name === "propose_treatment_from_narrative") {
-    return handleProposeTreatment(input, db, projectId, userIdFallback).map(
-      (draft) => successResult(block.id, draftPayload(draft)),
-    );
+    return handleProposeTreatment(
+      input,
+      db,
+      projectId,
+      userIdFallback,
+      sessionId,
+    ).map((outcome) => successResult(block.id, outcomePayload(outcome)));
   }
   if (block.name === "generate_screenplay_from_narrative") {
     return handleGenerateScreenplay(input, db, projectId).map((gen) =>
@@ -1421,6 +1511,7 @@ export const createDocumentGenTools = (
   db: Db,
   projectId: string,
   userIdFallback: string | null,
+  sessionId: string | null = null,
 ) => ({
   propose_logline_from_screenplay: tool({
     description:
@@ -1442,9 +1533,10 @@ export const createDocumentGenTools = (
         db,
         projectId,
         userIdFallback,
+        sessionId,
       );
       if (result.isErr()) return { error: result.error.message };
-      return draftPayload(result.value);
+      return outcomePayload(result.value);
     },
   }),
   write_logline: tool({
@@ -1471,9 +1563,10 @@ export const createDocumentGenTools = (
         db,
         projectId,
         userIdFallback,
+        sessionId,
       );
       if (result.isErr()) return { error: result.error.message };
-      return draftPayload(result.value);
+      return outcomePayload(result.value);
     },
   }),
   propose_synopsis_from_screenplay: tool({
@@ -1495,9 +1588,10 @@ export const createDocumentGenTools = (
         db,
         projectId,
         userIdFallback,
+        sessionId,
       );
       if (result.isErr()) return { error: result.error.message };
-      return draftPayload(result.value);
+      return outcomePayload(result.value);
     },
   }),
   propose_soggetto_v2: tool({
@@ -1523,9 +1617,10 @@ export const createDocumentGenTools = (
         db,
         projectId,
         userIdFallback,
+        sessionId,
       );
       if (result.isErr()) return { error: result.error.message };
-      return draftPayload(result.value);
+      return outcomePayload(result.value);
     },
   }),
   propose_scaletta_from_soggetto: tool({
@@ -1546,9 +1641,10 @@ export const createDocumentGenTools = (
         db,
         projectId,
         userIdFallback,
+        sessionId,
       );
       if (result.isErr()) return { error: result.error.message };
-      return draftPayload(result.value);
+      return outcomePayload(result.value);
     },
   }),
   propose_treatment_from_narrative: tool({
@@ -1570,9 +1666,10 @@ export const createDocumentGenTools = (
         db,
         projectId,
         userIdFallback,
+        sessionId,
       );
       if (result.isErr()) return { error: result.error.message };
-      return draftPayload(result.value);
+      return outcomePayload(result.value);
     },
   }),
   generate_screenplay_from_narrative: tool({

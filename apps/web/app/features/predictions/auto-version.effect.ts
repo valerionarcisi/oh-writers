@@ -1,12 +1,37 @@
 import { Cause, Effect, Exit, Layer } from "effect";
-import { eq, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { documents, documentVersions } from "@oh-writers/db/schema";
 import { type DocumentType } from "@oh-writers/domain";
 import { buildWordDiffSegments } from "@oh-writers/utils";
-import { ResultAsync } from "neverthrow";
+import { okAsync, ResultAsync } from "neverthrow";
 import type { Db } from "~/server/db";
 import { DbService, toResultAsync } from "~/server/effect";
 import { CesareError } from "./cesare.errors";
+import { resolveVersionAction } from "./resolve-version-action";
+import { changedWordRatio } from "./classify-edit-size";
+
+// BUG-N66 / Spec 76 — how a Cesare edit is committed to the version history.
+// Omitting `options` (or passing none) preserves the legacy behaviour: always
+// mint a new `manual` version, so every existing caller is untouched until it
+// opts in by passing a `sessionId`.
+export interface CommitOptions {
+  /** The Cesare session this edit belongs to. Required to collapse a session's
+   *  working edits into one row instead of flooding the list. */
+  readonly sessionId: string | null;
+  /** The user explicitly asked for a new version ("fanne una nuova versione"). */
+  readonly userRequestedNewVersion: boolean;
+  /** A prior turn asked and the user chose "Nuova versione"; this is the apply. */
+  readonly largeEditConfirmed: boolean;
+  /** A prior turn asked and the user chose "Sovrascrivi"; apply the large edit in
+   *  place rather than minting. Defaults to false. */
+  readonly largeEditOverwriteConfirmed?: boolean;
+}
+
+const LEGACY_MINT: CommitOptions = {
+  sessionId: null,
+  userRequestedNewVersion: true, // force mint — preserves pre-Spec-76 behaviour
+  largeEditConfirmed: false,
+};
 
 // ─── Auto-versioning as `acquireRelease` (Spec 48 W-E4) ──────────────────────────
 //
@@ -41,12 +66,18 @@ export interface CreatedDraft {
   diffSegments: ReturnType<typeof buildWordDiffSegments>;
 }
 
-// The resource produced by `acquire`: the new version row plus the "before"
-// snapshot needed to (a) build the word diff and (b) compensate on failure.
+// The resource produced by `acquire`: the version row this edit targets plus the
+// "before" snapshot needed to (a) build the word diff and (b) compensate on
+// failure. `wasOverwrite` tells `release` whether to revert an in-place update of
+// an existing working row (true) or delete a freshly-minted row (false).
 interface AcquiredVersion {
   versionId: string;
   previousVersionId: string | null;
   previousContent: string;
+  // For the overwrite path: the content the target row held BEFORE this edit, so
+  // `release` can restore the row itself (not just the document pointer).
+  targetPriorContent: string;
+  wasOverwrite: boolean;
 }
 
 const fail = (cause: string): CesareError => new CesareError(cause);
@@ -64,14 +95,63 @@ const dbStep = <A>(
       fail(e instanceof Error ? e.message : `${context}: ${String(e)}`),
   });
 
-// acquire: create the version BEFORE any apply. Runs the empty-content and
-// duplicate-content guards first (fail fast, identical copy), reads the active
-// version as the "before" snapshot, then inserts the new version row.
+// Insert a fresh numbered version row. Shared by the mint path and by the
+// overwrite path's first-of-session checkpoint + working seeding.
+const insertVersionRow = (
+  documentId: string,
+  createdBy: string,
+  content: string,
+  label: string,
+  kind: "manual" | "checkpoint" | "working",
+  cesareSessionId: string | null,
+): Effect.Effect<string, CesareError, DbService> =>
+  Effect.gen(function* () {
+    const { db } = yield* DbService;
+    const [maxRow] = yield* dbStep(
+      () =>
+        db
+          .select({
+            max: sql<number>`coalesce(max(${documentVersions.number}), 0)`,
+          })
+          .from(documentVersions)
+          .where(eq(documentVersions.documentId, documentId)),
+      "insertVersionRow.maxRow",
+    );
+    const nextNum = (maxRow?.max ?? 0) + 1;
+    const [inserted] = yield* dbStep(
+      () =>
+        db
+          .insert(documentVersions)
+          .values({
+            documentId,
+            number: nextNum,
+            label,
+            content,
+            kind,
+            cesareSessionId,
+            isDraft: false,
+            createdBy,
+          })
+          .returning({ id: documentVersions.id }),
+      "insertVersionRow.insert",
+    );
+    if (!inserted) {
+      return yield* Effect.fail(fail("applyVersionLive returned no rows"));
+    }
+    return inserted.id;
+  });
+
+// acquire: resolve the version action (Spec 76) and create/select the target row
+// BEFORE any apply. Empty-content and duplicate guards run first (fail fast).
+//   mint      → insert a new `manual` row (legacy behaviour).
+//   overwrite → reuse this session's `working` row (in place); if none exists,
+//               first checkpoint the pre-session state, then seed a `working` row.
 const acquireVersion = (
   documentId: string,
   createdBy: string,
   content: string,
   label: string,
+  options: CommitOptions,
 ): Effect.Effect<AcquiredVersion, CesareError, DbService> =>
   Effect.gen(function* () {
     const { db } = yield* DbService;
@@ -81,21 +161,7 @@ const acquireVersion = (
         fail("Il modello ha restituito un contenuto vuoto."),
       );
     }
-    const existing = yield* dbStep(
-      () =>
-        db
-          .select({ content: documentVersions.content })
-          .from(documentVersions)
-          .where(eq(documentVersions.documentId, documentId)),
-      "acquireVersion.existing",
-    );
-    if (existing.some((e) => e.content.trim() === trimmed)) {
-      return yield* Effect.fail(
-        fail(
-          "Il modello ha restituito un testo identico a una versione esistente. Riformula la richiesta con un'istruzione più specifica (tono, struttura, lunghezza).",
-        ),
-      );
-    }
+
     const [docRow] = yield* dbStep(
       () =>
         db
@@ -110,36 +176,140 @@ const acquireVersion = (
     );
     const previousVersionId = docRow?.currentVersionId ?? null;
     const previousContent = docRow?.content ?? "";
-    const [maxRow] = yield* dbStep(
+
+    // Find this session's existing working row (the overwrite target), if any.
+    const sessionId = options.sessionId;
+    const sessionWorking = sessionId
+      ? yield* dbStep(
+          () =>
+            db
+              .select({
+                id: documentVersions.id,
+                content: documentVersions.content,
+              })
+              .from(documentVersions)
+              .where(
+                and(
+                  eq(documentVersions.documentId, documentId),
+                  eq(documentVersions.kind, "working"),
+                  eq(documentVersions.cesareSessionId, sessionId),
+                ),
+              )
+              .orderBy(desc(documentVersions.number))
+              .limit(1),
+          "acquireVersion.sessionWorking",
+        )
+      : [];
+    const workingRow = sessionWorking[0] ?? null;
+
+    // Spec 76: the `ask` is resolved one level up in `commitOrAsk` (the tool
+    // boundary, where the step-event sink lives), so by the time the engine runs
+    // the action is only overwrite or mint. An `ask` reaching here can only mean
+    // a caller bypassed the boundary; treat it as mint (safe — it still versions).
+    const action = resolveVersionAction({
+      previousContent,
+      nextContent: content,
+      userRequestedNewVersion: options.userRequestedNewVersion,
+      largeEditConfirmed: options.largeEditConfirmed,
+      largeEditOverwriteConfirmed: options.largeEditOverwriteConfirmed ?? false,
+    });
+    const wantsOverwrite = action === "overwrite";
+
+    // Duplicate-content guard. Exclude the overwrite target (re-applying the same
+    // text to the row we are about to replace is not a "duplicate version").
+    const existing = yield* dbStep(
       () =>
         db
           .select({
-            max: sql<number>`coalesce(max(${documentVersions.number}), 0)`,
+            id: documentVersions.id,
+            content: documentVersions.content,
           })
           .from(documentVersions)
           .where(eq(documentVersions.documentId, documentId)),
-      "acquireVersion.maxRow",
+      "acquireVersion.existing",
     );
-    const nextNum = (maxRow?.max ?? 0) + 1;
-    const [inserted] = yield* dbStep(
-      () =>
-        db
-          .insert(documentVersions)
-          .values({
-            documentId,
-            number: nextNum,
-            label,
-            content,
-            isDraft: false,
-            createdBy,
-          })
-          .returning({ id: documentVersions.id }),
-      "acquireVersion.insert",
+    const duplicate = existing.some(
+      (e) =>
+        e.content.trim() === trimmed &&
+        !(wantsOverwrite && workingRow && e.id === workingRow.id),
     );
-    if (!inserted) {
-      return yield* Effect.fail(fail("applyVersionLive returned no rows"));
+    if (duplicate) {
+      return yield* Effect.fail(
+        fail(
+          "Il modello ha restituito un testo identico a una versione esistente. Riformula la richiesta con un'istruzione più specifica (tono, struttura, lunghezza).",
+        ),
+      );
     }
-    return { versionId: inserted.id, previousVersionId, previousContent };
+
+    // ── MINT (or ask→mint in Slice 1) ──────────────────────────────────────────
+    if (!wantsOverwrite) {
+      const versionId = yield* insertVersionRow(
+        documentId,
+        createdBy,
+        content,
+        label,
+        "manual",
+        options.sessionId,
+      );
+      return {
+        versionId,
+        previousVersionId,
+        previousContent,
+        targetPriorContent: "",
+        wasOverwrite: false,
+      };
+    }
+
+    // ── OVERWRITE ──────────────────────────────────────────────────────────────
+    if (workingRow) {
+      // Reuse this session's working row: update it in place. No number bump,
+      // no new row — this is what kills the flood.
+      const targetPriorContent = workingRow.content;
+      yield* dbStep(
+        () =>
+          db
+            .update(documentVersions)
+            .set({ content, label, updatedAt: new Date() })
+            .where(eq(documentVersions.id, workingRow.id)),
+        "acquireVersion.updateWorking",
+      );
+      return {
+        versionId: workingRow.id,
+        previousVersionId,
+        previousContent,
+        targetPriorContent,
+        wasOverwrite: true,
+      };
+    }
+
+    // First overwrite of this session: snapshot the pre-session state as a
+    // `checkpoint` (what rollback returns to), then seed a `working` row that
+    // subsequent overwrites collect into.
+    if (previousContent.trim()) {
+      yield* insertVersionRow(
+        documentId,
+        createdBy,
+        previousContent,
+        `${label} · checkpoint`,
+        "checkpoint",
+        options.sessionId,
+      );
+    }
+    const versionId = yield* insertVersionRow(
+      documentId,
+      createdBy,
+      content,
+      label,
+      "working",
+      options.sessionId,
+    );
+    return {
+      versionId,
+      previousVersionId,
+      previousContent,
+      targetPriorContent: "",
+      wasOverwrite: false,
+    };
   });
 
 // use: apply live — point the document at the new version and mirror its content
@@ -189,15 +359,34 @@ const rollbackApply = (
         "rollbackApply.revertDocument",
       ),
     );
-    yield* Effect.ignore(
-      dbStep(
-        () =>
-          db
-            .delete(documentVersions)
-            .where(eq(documentVersions.id, acquired.versionId)),
-        "rollbackApply.deleteVersion",
-      ),
-    );
+    // On a mint, the row was freshly created by this edit — delete it. On an
+    // overwrite, the working row pre-existed this edit — restore its prior
+    // content rather than deleting a row the session still owns.
+    if (acquired.wasOverwrite) {
+      yield* Effect.ignore(
+        dbStep(
+          () =>
+            db
+              .update(documentVersions)
+              .set({
+                content: acquired.targetPriorContent,
+                updatedAt: new Date(),
+              })
+              .where(eq(documentVersions.id, acquired.versionId)),
+          "rollbackApply.restoreWorking",
+        ),
+      );
+    } else {
+      yield* Effect.ignore(
+        dbStep(
+          () =>
+            db
+              .delete(documentVersions)
+              .where(eq(documentVersions.id, acquired.versionId)),
+          "rollbackApply.deleteVersion",
+        ),
+      );
+    }
   });
 
 /**
@@ -214,9 +403,10 @@ export const applyVersionLiveEffect = (
   createdBy: string,
   content: string,
   label: string,
+  options: CommitOptions = LEGACY_MINT,
 ): Effect.Effect<CreatedDraft, CesareError, DbService> =>
   Effect.acquireUseRelease(
-    acquireVersion(documentId, createdBy, content, label),
+    acquireVersion(documentId, createdBy, content, label, options),
     (acquired) =>
       applyLive(documentId, acquired, content).pipe(
         Effect.map(
@@ -260,6 +450,7 @@ export const applyVersionLive = (
   createdBy: string,
   content: string,
   label: string,
+  options: CommitOptions = LEGACY_MINT,
 ): ResultAsync<CreatedDraft, CesareError> =>
   runInTransaction(db, (tx) =>
     applyVersionLiveEffect(
@@ -268,8 +459,74 @@ export const applyVersionLive = (
       createdBy,
       content,
       label,
+      options,
     ).pipe(Effect.provide(Layer.succeed(DbService, { db: tx }))),
   );
+
+// ─── Slice 2 (Spec 76): the large-edit ASK ──────────────────────────────────
+//
+// A large, unconfirmed edit must not silently apply: Cesare asks the writer
+// whether to overwrite the current version or mint a new one. The decision is a
+// pure function of the same inputs the resolver already takes, so it is resolved
+// HERE — at the commit boundary — and surfaced as a distinct outcome rather than
+// a `CreatedDraft`. The DB engine (`applyVersionLive`) stays apply-only: nothing
+// is written on an ask, so the open document is untouched until the writer picks.
+
+/** The turn produced an ASK instead of an applied edit. Carries what the card
+ *  needs: which entity, and how big the change was (for the IT copy). */
+export interface AskedNewVersion {
+  readonly _tag: "asked";
+  readonly documentType: DocumentType;
+  readonly changedWordRatio: number;
+}
+
+/** Either the edit was applied (draft) or Cesare asked (no write happened). */
+export type CommitOutcome = CreatedDraft | AskedNewVersion;
+
+export const isAsked = (o: CommitOutcome): o is AskedNewVersion =>
+  "_tag" in o && o._tag === "asked";
+
+/**
+ * Commit a Cesare edit, OR ask first when the change is large and unconfirmed.
+ * Resolves the action from the same pure inputs as the engine; on `ask` returns
+ * an {@link AskedNewVersion} and writes NOTHING. Otherwise delegates to
+ * {@link applyVersionLive} (overwrite / mint / checkpoint as resolved inside).
+ */
+export const commitOrAsk = (
+  db: Db,
+  documentId: string,
+  documentType: DocumentType,
+  createdBy: string,
+  previousContent: string,
+  content: string,
+  label: string,
+  options: CommitOptions,
+): ResultAsync<CommitOutcome, CesareError> => {
+  const action = resolveVersionAction({
+    previousContent,
+    nextContent: content,
+    userRequestedNewVersion: options.userRequestedNewVersion,
+    largeEditConfirmed: options.largeEditConfirmed,
+    largeEditOverwriteConfirmed: options.largeEditOverwriteConfirmed ?? false,
+  });
+  if (action === "ask") {
+    const asked: AskedNewVersion = {
+      _tag: "asked",
+      documentType,
+      changedWordRatio: changedWordRatio(previousContent, content),
+    };
+    return okAsync(asked);
+  }
+  return applyVersionLive(
+    db,
+    documentId,
+    documentType,
+    createdBy,
+    content,
+    label,
+    options,
+  );
+};
 
 // Carries the Effect's typed `CesareError` (or a defect) through the `throw` that
 // aborts the Postgres transaction, so neither the typed error nor a programming
