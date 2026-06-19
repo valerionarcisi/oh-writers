@@ -94,7 +94,26 @@ const collectTextSegments = (doc: PMNode): TextSegment[] => {
 interface MatchRange {
   readonly from: number;
   readonly to: number;
+  /** The exact matched text (its case), so a rename can mirror it: an ALL-CAPS
+   *  character cue 'JOHN' → 'JACK', a Capitalized 'John' → 'Jack'. */
+  readonly text: string;
 }
+
+// Mirror the case pattern of `sample` onto `replacement`, so a rename keeps the
+// screenplay's casing convention (cues/headings are uppercase). ALL-CAPS sample
+// ⇒ upper; a leading-capital sample ⇒ capitalised; otherwise verbatim.
+export const matchCase = (sample: string, replacement: string): string => {
+  if (sample.length === 0) return replacement;
+  const isAllCaps = sample === sample.toUpperCase() && /[A-Z]/.test(sample);
+  if (isAllCaps) return replacement.toUpperCase();
+  const isCapitalized =
+    sample[0] === sample[0]!.toUpperCase() &&
+    sample.slice(1) === sample.slice(1).toLowerCase();
+  if (isCapitalized) {
+    return replacement.charAt(0).toUpperCase() + replacement.slice(1);
+  }
+  return replacement;
+};
 
 // Map a flat-index range over the concatenated text back into PM positions.
 // Returns null when the flat range straddles a non-text gap (which shouldn't
@@ -103,7 +122,7 @@ const mapFlatRangeToPm = (
   segments: TextSegment[],
   flatStart: number,
   flatEnd: number,
-): MatchRange | null => {
+): { from: number; to: number } | null => {
   let posStart = -1;
   let posEnd = -1;
   let cursor = 0;
@@ -132,7 +151,7 @@ const findAllMatches = (doc: PMNode, proposal: ProposedEdit): MatchRange[] => {
     const idx = fullText.indexOf(proposal.find);
     if (idx < 0) return [];
     const mapped = mapFlatRangeToPm(segments, idx, idx + proposal.find.length);
-    return mapped ? [mapped] : [];
+    return mapped ? [{ ...mapped, text: proposal.find }] : [];
   }
   // rename — whole-word, case-insensitive, all occurrences
   const re = new RegExp(`\\b${escapeRegex(proposal.find)}\\b`, "gi");
@@ -140,7 +159,7 @@ const findAllMatches = (doc: PMNode, proposal: ProposedEdit): MatchRange[] => {
   let m: RegExpExecArray | null;
   while ((m = re.exec(fullText)) !== null) {
     const mapped = mapFlatRangeToPm(segments, m.index, m.index + m[0].length);
-    if (mapped) results.push(mapped);
+    if (mapped) results.push({ ...mapped, text: m[0] });
     // Defensive: avoid pathological infinite loops on zero-width regex.
     if (m.index === re.lastIndex) re.lastIndex += 1;
   }
@@ -226,18 +245,28 @@ const applyProposalToView = (
 ): void => {
   const matches = findAllMatches(view.state.doc, proposal);
   if (matches.length === 0) return;
+  // A rename mirrors each occurrence's case (cues/headings stay uppercase); an
+  // `edit` replaces verbatim with the model's exact text.
+  const replacementFor = (m: MatchRange): string =>
+    proposal.kind === "edit"
+      ? proposal.replace
+      : matchCase(m.text, proposal.replace);
   // Sort descending so earlier replacements don't shift later positions.
   const sorted = [...matches].sort((a, b) => b.from - a.from);
   let tr = view.state.tr;
   for (const m of sorted) {
-    tr = tr.replaceWith(m.from, m.to, view.state.schema.text(proposal.replace));
+    tr = tr.replaceWith(
+      m.from,
+      m.to,
+      view.state.schema.text(replacementFor(m)),
+    );
   }
   // Flash on the first (top-most after sort, last in original order)
   // replacement position so the writer sees something animate.
   const first = matches[0];
   if (first) {
     const mappedFrom = tr.mapping.map(first.from);
-    const mappedTo = mappedFrom + proposal.replace.length;
+    const mappedTo = mappedFrom + replacementFor(first).length;
     tr.setMeta(
       cesareAppliedHighlightKey,
       highlightAppliedRange(mappedFrom, mappedTo),
