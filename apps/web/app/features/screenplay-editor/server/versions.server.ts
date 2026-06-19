@@ -631,11 +631,20 @@ export const restoreVersion = createServerFn({ method: "POST" })
       return toShape(
         await ResultAsync.fromPromise(
           db.transaction(async (tx) => {
+            // Reseed the CRDT from the activated version's content. The editor is
+            // Yjs-backed: it reads the live CRDT, NOT `content`. Updating only
+            // `content` (as before) left the old `yjsState`/`pmDoc` in place, so
+            // the editor kept showing the previous version — "Attiva" looked like
+            // a no-op. Mirror the import flow: clear pmDoc, rebuild yjsState from
+            // the version's Fountain so the room is authoritative on reload.
+            const snapshot = yjsSnapshotFromFountain(version.content);
             const [updated] = await tx
               .update(screenplays)
               .set({
                 content: version.content,
                 pageCount: version.pageCount,
+                pmDoc: null,
+                yjsState: snapshot,
                 // Activating a version makes it the CURRENT one (the chip/badge
                 // + the delete guard read this). Without it "Attiva" only copied
                 // content and left no current pointer, so it looked like a no-op.

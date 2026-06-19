@@ -74,10 +74,13 @@ function NarrativeVersionsContent({
   documentId,
   currentVersionId,
   onDetailChange,
+  onActivated,
 }: {
   documentId: string;
   currentVersionId: string | null;
   onDetailChange: (open: boolean) => void;
+  /** Close the Versions lane once a version is activated. */
+  onActivated: () => void;
 }) {
   const { t } = useTranslation();
   const { data: result, isLoading } = useDocumentVersions(documentId);
@@ -126,7 +129,7 @@ function NarrativeVersionsContent({
       loadError={loadError}
       renderContent={renderContent}
       canEdit
-      onActivate={(id) => activate.mutate(id)}
+      onActivate={(id) => activate.mutate(id, { onSuccess: onActivated })}
       onDuplicate={(id) => duplicate.mutate(id)}
       onRename={(id, label) => rename.mutate({ versionId: id, label })}
       onDelete={(id) => remove.mutate(id)}
@@ -145,10 +148,14 @@ function ScreenplayVersionsContent({
   screenplayId,
   currentVersionId,
   onDetailChange,
+  onActivated,
 }: {
   screenplayId: string;
   currentVersionId: string | null;
   onDetailChange: (open: boolean) => void;
+  /** Close the Versions lane once a version is activated (Spec 66 — Attiva
+   *  brings the writer back to the editor on the now-active version). */
+  onActivated: () => void;
 }) {
   const { t } = useTranslation();
   const { data: result, isLoading } = useScreenplayVersions(screenplayId);
@@ -200,7 +207,9 @@ function ScreenplayVersionsContent({
       loadError={loadError}
       renderContent={renderContent}
       canEdit
-      onActivate={(id) => restore.mutate({ versionId: id })}
+      onActivate={(id) =>
+        restore.mutate({ versionId: id }, { onSuccess: onActivated })
+      }
       onDuplicate={(id) => {
         const v = versions.find((x) => x.id === id);
         duplicate.mutate({
@@ -301,12 +310,14 @@ export function VersionsSplitLane({
               screenplayId={peek.documentId}
               currentVersionId={peek.currentVersionId}
               onDetailChange={setDetailOpen}
+              onActivated={onClose}
             />
           ) : (
             <NarrativeVersionsContent
               documentId={peek.documentId}
               currentVersionId={peek.currentVersionId}
               onDetailChange={setDetailOpen}
+              onActivated={onClose}
             />
           )}
         </SplitDrawer>
