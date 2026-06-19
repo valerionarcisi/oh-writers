@@ -275,6 +275,19 @@ const applyProposalToView = (
   view.dispatch(tr);
 };
 
+// The end position of the textblock that contains `pos`, so a widget anchors
+// AFTER the line (e.g. after "JOHN (35)") instead of splitting it mid-text
+// ("JOHN" │card│ "(35)"). Falls back to `pos` if no block is resolved.
+const blockEndAfter = (doc: PMNode, pos: number): number => {
+  try {
+    const $pos = doc.resolve(Math.min(pos, doc.content.size));
+    const depth = $pos.depth;
+    return $pos.end(depth);
+  } catch {
+    return pos;
+  }
+};
+
 const buildDecorationSet = (
   doc: PMNode,
   proposals: ProposedEdit[],
@@ -294,13 +307,15 @@ const buildDecorationSet = (
         }),
       );
     }
-    // Widget bubble anchored to the first match. The widget renders the
-    // proposed replacement + ✓/✕ buttons.
+    // ONE widget bubble per proposal, anchored at the END of the line holding
+    // the first match — so it never breaks a character cue ("JOHN (35)") or any
+    // other line in two. The inline highlights above already mark every match,
+    // so the writer sees all occurrences while deciding once.
     const first = matches[0]!;
     if (view) {
       decorations.push(
         Decoration.widget(
-          first.to,
+          blockEndAfter(doc, first.to),
           () => buildWidget(proposal, callbacks, view),
           {
             side: 1,
