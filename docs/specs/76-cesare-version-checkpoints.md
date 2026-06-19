@@ -147,15 +147,16 @@ the director's real versions.
   (BUG-N66 names both; the narrative flood is the worse offender and ships first.)
 - Cross-session checkpoint pruning / retention policy.
 
-## Implementation status (verified 2026-06-19)
+## Implementation status (updated 2026-06-19)
 
-The policy core landed; the streamed `ask` (Slice 2), the drawer collapse, and the tests are
-the remaining work. Verified against the code, not the plan.
+The policy core + the overwrite/checkpoint engine + the explicit-intent mint all landed and are
+tested. What remains is the streamed large-edit `ask` (its UI + the tool-layer wiring) and the
+drawer collapse, plus the E2E. Verified against the code, not the plan.
 
 **Done**
 
 - `classify-edit-size.ts` (pure) + `resolve-version-action.ts` (pure, returns `overwrite |
-mint | ask`) — both with passing unit tests.
+mint | ask`) — both with passing unit tests, tagged `OHW-N66`.
 - The acquireRelease engine in `auto-version.effect.ts`: `CommitOptions` (sessionId,
   userRequestedNewVersion, largeEditConfirmed), the overwrite-in-place path, and the
   first-overwrite-of-a-session `checkpoint`. NOTE: the deep module is named `applyVersionLive`
@@ -163,27 +164,31 @@ mint | ask`) — both with passing unit tests.
   `CommitOptions`; the seam consolidation is expressed through that shared module + the shared
   `resolveVersionAction`, not a new function name. Treat the spec's `commitCesareEdit` as the
   conceptual name for this module.
+- **Engine tests** for the new paths (overwrite-in-place, checkpoint-on-first-overwrite,
+  rollback-restores-working) added to `auto-version.effect.test.ts`, tagged `OHW-N66`.
+- `version-intent.ts` — `userRequestedNewVersion(instruction)` pure phrase matcher (+ test),
+  threaded through `commitOptions` from all six Cesare document call-sites. Precedence rule 1
+  is live: an explicit "nuova versione" instruction forces a mint and skips the ask.
 - `document_versions.kind` (`manual` default) + `cesare_session_id` columns and migration.
-- All Cesare narrative call-sites pass `commitOptions(sessionId)` into `applyVersionLive`.
 
-**Remaining (a dedicated session — touches the engine that writes the director's real
-versions, and needs Playwright-live verification)**
+**Remaining (a dedicated session — the streamed `ask` is the architecturally heaviest piece;
+it moves the `ask` resolution UP to the tool layer where the step-event sink lives, so the
+pure DB engine stays an apply-only module)**
 
-1. **Slice 2 — the `ask`.** Today the engine degrades `action === "ask"` to `mint`
-   (auto-version.effect.ts, "Slice 1" comment). Build the real ask:
-   - intent classifier sets `userRequestedNewVersion` on "fanne una nuova versione" / "salva
-     questa versione";
-   - `ask_new_version { entity, changedWordRatio }` event in `cesare-stream-events.ts`;
-   - engine emits it and applies nothing on `ask`;
-   - chat result-card `[Sovrascrivi] [Nuova versione]`, choice drives the follow-up turn
-     (`largeEditConfirmed`), edit still applied LIVE.
+1. **Slice 2 — the `ask`.** Today `acquireVersion` (auto-version.effect.ts, ~line 201, "Slice
+   1" comment) degrades `action === "ask"` to mint. Move the resolve to the tool layer:
+   - `ask_new_version { entity, changedWordRatio }` event in `cesare-stream-events.ts`
+     (discriminatedUnion on `_tag`);
+   - the document tool computes next content, classifies size, and on `ask`+unconfirmed emits
+     `ask_new_version` via the step-event sink (the `(event) => Queue.unsafeOffer` callback
+     threaded through `run.handle` in `cesare-stream.effect.ts`) and applies NOTHING this turn;
+   - chat result-card `[Sovrascrivi] [Nuova versione]` (react-aria buttons, no native dialog);
+     the choice drives the follow-up turn — Sovrascrivi→overwrite, Nuova versione→mint
+     (`largeEditConfirmed`) — edit still applied LIVE per the Agentic Edit Pattern.
+   - pending next-content carried on the Cesare session, not a side draft tray.
 2. **Drawer collapse** — `VersionsSplitDrawer` groups `working` rows under their owning
    `checkpoint`.
-3. **Engine tests — extend** `auto-version.effect.test.ts` to the NEW paths (overwrite updates
-   in place, first-overwrite mints a checkpoint, rollback under overwrite). Current tests cover
-   the legacy mint path only.
-4. **3 E2E** `OHW-N66` (below) + **re-tag** the existing unit tests from their current tags to
-   `OHW-N66` per this spec.
+3. **3 E2E** `OHW-N66` (below) — small-edit-overwrites, large-edit-asks, explicit-skips-ask.
 
 ## Tests
 
