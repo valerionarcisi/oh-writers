@@ -34,6 +34,38 @@
   padding: 0;
 }
 
+/* Spec 76 — a checkpoint's collapsed working rows: a small toggle that reveals
+   the indented working history. */
+.workingToggle {
+  align-self: flex-start;
+  margin-inline-start: var(--space-4);
+  padding: var(--space-1) var(--space-2);
+  background: transparent;
+  border: none;
+  color: var(--ds-text-2);
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.workingToggle:hover {
+  color: var(--ds-text);
+}
+
+.workingList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  margin-inline-start: var(--space-4);
+  border-inline-start: 1px solid var(--ds-line);
+}
+
+.versionRowNested {
+  opacity: 0.85;
+}
+
 .versionItem {
   display: flex;
   flex-direction: column;

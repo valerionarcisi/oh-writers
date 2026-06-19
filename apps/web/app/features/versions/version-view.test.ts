@@ -24,6 +24,9 @@ describe("narrativeToVersionView", () => {
       content: "<p>ciao</p>",
       draftColor: "blue",
       draftDate: "2026-06-06",
+      // Spec 76 — a row without an explicit kind/session is a standalone manual.
+      kind: "manual",
+      cesareSessionId: null,
     });
     expect(view.pageCount).toBeUndefined();
   });

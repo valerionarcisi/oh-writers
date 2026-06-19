@@ -25,6 +25,13 @@ export interface VersionView {
   readonly draftDate: string | null;
   /** Screenplay-only page count; absent for narrative versions. */
   readonly pageCount?: number;
+  /** Spec 76 — the version's role. `checkpoint`/`working` let the list collapse a
+   *  session's working rows under their checkpoint; `manual` is a user-meaningful
+   *  row shown on its own. Screenplay rows are always `manual` (separate store). */
+  readonly kind: "manual" | "checkpoint" | "working";
+  /** Spec 76 — the Cesare session a checkpoint/working row belongs to, so working
+   *  rows group under the right checkpoint. `null` for manual/screenplay rows. */
+  readonly cesareSessionId: string | null;
 }
 
 /** A narrative `document_versions` row, as returned by the canonical versions server. */
@@ -36,6 +43,9 @@ interface NarrativeVersionRow {
   readonly draftColor: string | null;
   readonly draftDate: string | null;
   readonly createdAt: string | Date;
+  // The DB column is plain text; narrowed to the known kinds in the mapper.
+  readonly kind?: string;
+  readonly cesareSessionId?: string | null;
 }
 
 /** A screenplay `screenplay_versions` row (VersionView from screenplay-versions.schema). */
@@ -56,6 +66,11 @@ const toIso = (value: string | Date): string =>
 const asColor = (value: string | null): DraftRevisionColor | null =>
   (value as DraftRevisionColor | null) ?? null;
 
+const asKind = (
+  value: string | undefined,
+): "manual" | "checkpoint" | "working" =>
+  value === "checkpoint" || value === "working" ? value : "manual";
+
 export const narrativeToVersionView = (
   row: NarrativeVersionRow,
 ): VersionView => ({
@@ -66,6 +81,8 @@ export const narrativeToVersionView = (
   content: row.content,
   draftColor: asColor(row.draftColor),
   draftDate: row.draftDate,
+  kind: asKind(row.kind),
+  cesareSessionId: row.cesareSessionId ?? null,
 });
 
 export const screenplayToVersionView = (
@@ -79,4 +96,8 @@ export const screenplayToVersionView = (
   draftColor: asColor(row.draftColor),
   draftDate: row.draftDate,
   pageCount: row.pageCount,
+  // The screenplay has its own version store with no checkpoint model; every row
+  // is a user-meaningful entry shown on its own.
+  kind: "manual",
+  cesareSessionId: null,
 });
