@@ -9,6 +9,10 @@ import { logger } from "~/server/logger";
 import { aiTelemetry } from "~/server/langfuse-config";
 import { commitOrAsk, isAsked } from "./auto-version.effect";
 import {
+  userRequestedNewVersion,
+  userConfirmedOverwrite,
+} from "./version-intent";
+import {
   locationCandidates,
   locationPhotos,
   locationRequirements,
@@ -450,6 +454,7 @@ export const createDocumentTools = (
   docContext: DocumentContext,
   userIdFallback: string | null = null,
   sessionId: string | null = null,
+  userInstruction: string | null = null,
 ) => ({
   apply_text_edit: tool({
     description:
@@ -472,6 +477,7 @@ export const createDocumentTools = (
         docContext,
         userIdFallback,
         sessionId,
+        userInstruction,
       );
       if (result.isErr()) return { error: result.error.message };
       return result.value;
@@ -509,6 +515,7 @@ export const createDocumentTools = (
         "espanso",
         userIdFallback,
         sessionId,
+        userInstruction,
       );
       if (result.isErr()) return { error: result.error.message };
       return result.value;
@@ -546,6 +553,7 @@ export const createDocumentTools = (
         "compresso",
         userIdFallback,
         sessionId,
+        userInstruction,
       );
       if (result.isErr()) return { error: result.error.message };
       return result.value;
@@ -1500,6 +1508,7 @@ const executeApplyTextEdit = (
   doc: DocumentContext,
   userIdFallback: string | null,
   sessionId: string | null,
+  userInstruction: string | null,
 ): ResultAsync<DocumentEditResult, CesareError> => {
   if (!input.find) {
     return okAsync({ ok: false, reason: "empty find string" });
@@ -1523,12 +1532,15 @@ const executeApplyTextEdit = (
     next,
     userIdFallback,
     sessionId,
+    userInstruction,
   );
 };
 
 // Shared commit for the surgical doc-edit tools (apply_text_edit / expand /
 // compress). Runs commitOrAsk and maps the outcome to a DocumentEditResult —
 // either the applied draft (with diff segments) or the large-edit ask payload.
+// `userInstruction` is the user's words this turn (the tool input is a scripted
+// find/replace), so an explicit "nuova versione" / "sovrascrivi" is honoured.
 const commitDocumentEdit = (
   db: Db,
   doc: DocumentContext,
@@ -1536,6 +1548,7 @@ const commitDocumentEdit = (
   next: string,
   userIdFallback: string | null,
   sessionId: string | null,
+  userInstruction: string | null,
 ): ResultAsync<DocumentEditResult, CesareError> =>
   commitOrAsk(
     db,
@@ -1547,9 +1560,9 @@ const commitDocumentEdit = (
     `Cesare · ${docTypeLabel(doc.documentType)}`,
     {
       sessionId,
-      userRequestedNewVersion: false,
+      userRequestedNewVersion: userRequestedNewVersion(userInstruction),
       largeEditConfirmed: false,
-      largeEditOverwriteConfirmed: false,
+      largeEditOverwriteConfirmed: userConfirmedOverwrite(userInstruction),
     },
   ).map((outcome) => {
     if (isAsked(outcome)) {
@@ -1650,6 +1663,7 @@ const generateAndReplaceSection = (
   toastVerb: string,
   userIdFallback: string | null,
   sessionId: string | null,
+  userInstruction: string | null,
 ): ResultAsync<DocumentEditResult, CesareError> => {
   const range = findSection(doc.content, heading);
   if (!range) {
@@ -1689,6 +1703,7 @@ const generateAndReplaceSection = (
         nextContent,
         userIdFallback,
         sessionId,
+        userInstruction,
       ).map((res) =>
         // Keep the section-specific diff label + toast verb on an applied edit.
         res.applied_live
@@ -1708,6 +1723,7 @@ export const executeDocumentTool = (
   docContext: DocumentContext,
   userIdFallback: string | null = null,
   sessionId: string | null = null,
+  userInstruction: string | null = null,
 ): ResultAsync<ToolResult, CesareError> => {
   const successResult = (id: string, payload: unknown): ToolResult => ({
     type: "tool_result",
@@ -1723,6 +1739,7 @@ export const executeDocumentTool = (
       docContext,
       userIdFallback,
       sessionId,
+      userInstruction,
     ).map((res) => successResult(block.id, res));
   }
 
@@ -1744,6 +1761,7 @@ export const executeDocumentTool = (
       "espanso",
       userIdFallback,
       sessionId,
+      userInstruction,
     ).map((res) => successResult(block.id, res));
   }
 
@@ -1766,6 +1784,7 @@ export const executeDocumentTool = (
       "compresso",
       userIdFallback,
       sessionId,
+      userInstruction,
     ).map((res) => successResult(block.id, res));
   }
 

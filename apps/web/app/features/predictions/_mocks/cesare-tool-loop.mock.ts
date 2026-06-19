@@ -99,6 +99,64 @@ export interface MockScenario {
 // ─── Default scenario library (one per feature) ───────────────────────────────
 
 export const MOCK_SCENARIOS: ReadonlyArray<MockScenario> = [
+  // [OHW-N66] Spec 76 — small surgical edit on the soggetto → overwrites the
+  // working version in place (no flood). The E2E seeds a long soggetto whose
+  // text contains "libraio di quartiere"; this swaps two words, a tiny change
+  // well under the large-edit ratio, so commitOrAsk resolves to overwrite.
+  {
+    match: /piccola modifica n66|cambia libraio/i,
+    turns: [
+      {
+        tool_uses: [
+          {
+            name: "apply_text_edit",
+            input: {
+              find: "libraio di quartiere",
+              replace: "libraia di quartiere",
+            },
+          },
+        ],
+        stop_reason: "tool_use",
+      },
+      {
+        text: "Ho aggiornato il soggetto. Il documento è aggiornato.",
+        stop_reason: "end_turn",
+      },
+    ],
+  },
+
+  // [OHW-N66] Spec 76 — large surgical edit on the soggetto → Cesare ASKS
+  // before applying. The replace swaps the entire seeded body for a long new
+  // one, so the changed-word ratio clears the large-edit threshold and
+  // commitOrAsk returns an `asked` outcome (the [Sovrascrivi][Nuova versione]
+  // card). The E2E seeds the soggetto to start with "PRINCIPIO".
+  {
+    match: /grande modifica n66|riscrivi tutto il soggetto n66/i,
+    turns: [
+      {
+        tool_uses: [
+          {
+            name: "apply_text_edit",
+            input: {
+              find: "PRINCIPIO",
+              replace:
+                "Una storia interamente nuova prende forma, con personaggi diversi, " +
+                "un'ambientazione lontana e un conflitto centrale ribaltato rispetto " +
+                "alla versione precedente: ogni paragrafo viene riscritto da capo, il " +
+                "tono cambia radicalmente e la struttura in tre atti viene ridisegnata " +
+                "per dare spazio a una nuova protagonista e al suo arco di trasformazione.",
+            },
+          },
+        ],
+        stop_reason: "tool_use",
+      },
+      {
+        text: "Questa è una modifica importante al soggetto.",
+        stop_reason: "end_turn",
+      },
+    ],
+  },
+
   // Context engineering (spec 38) — verify setting prior injected + no Rome
   {
     match:

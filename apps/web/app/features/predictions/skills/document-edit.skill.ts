@@ -67,6 +67,7 @@ export const buildDocumentEditSkill = (
   docCtx: DocumentContext,
   userIdFallback: string | null = null,
   sessionId: string | null = null,
+  userInstruction: string | null = null,
 ): Skill => ({
   id: "document-edit",
   // Read tools are provided by the companion read-document skill in PAGE_SKILL_MAP.
@@ -87,7 +88,16 @@ export const buildDocumentEditSkill = (
         sessionId,
       );
     }
-    return executeDocumentTool(block, db, docCtx, userIdFallback);
+    // Spec 76 — thread sessionId + the user's words so the surgical edit honours
+    // the checkpoint policy (overwrite/ask) and an explicit "nuova versione".
+    return executeDocumentTool(
+      block,
+      db,
+      docCtx,
+      userIdFallback,
+      sessionId,
+      userInstruction,
+    );
   },
   requiredData: ["documents", "scene-summaries"],
 });

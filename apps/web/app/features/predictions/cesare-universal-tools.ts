@@ -49,6 +49,11 @@ export interface UniversalToolContext {
    *  the document-gen tools so a session's small edits OVERWRITE one working
    *  version instead of minting a row per turn. Null ⇒ legacy mint-per-turn. */
   readonly sessionId: string | null;
+  /** The user's last message this turn (Spec 76). Lets the surgical edit tools
+   *  (apply_text_edit / expand / compress) honour an explicit "nuova versione"
+   *  request even though their tool input is a scripted find/replace, not the
+   *  user's words. Null ⇒ no explicit intent. */
+  readonly userInstruction: string | null;
 }
 
 // A null DocumentContext means document-edit tools won't have a target.
@@ -89,7 +94,13 @@ export const createUniversalCesareTools = (
     ...createScreenplayTools(db, ctx.projectId),
 
     // Document text edits on the active document (apply_text_edit, …)
-    ...createDocumentTools(db, docCtx, ctx.userIdFallback),
+    ...createDocumentTools(
+      db,
+      docCtx,
+      ctx.userIdFallback,
+      ctx.sessionId,
+      ctx.userInstruction,
+    ),
 
     // Document generation (logline/synopsis/scaletta/treatment proposers)
     ...createDocumentGenTools(

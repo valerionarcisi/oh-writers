@@ -1920,6 +1920,7 @@ const callCesareUniversal = (
             activeDayNumber: ctx.activeDayNumber,
             userIdFallback: ctx.userIdFallback,
             sessionId: ctx.sessionId,
+            userInstruction: message,
           },
           model,
           forcedFirstTool,
@@ -1937,6 +1938,7 @@ const callCesareUniversal = (
       activeSceneId: ctx.activeSceneId,
       activeDayNumber: ctx.activeDayNumber,
       userIdFallback: ctx.userIdFallback,
+      userInstruction: message,
       sessionId: ctx.sessionId,
     },
     model,
@@ -2218,6 +2220,7 @@ const handleAskCesareV2 = (
               docCtx,
               access.user.id,
               data.sessionId ?? null,
+              data.message,
             );
             finalRegistry = buildSkillRegistry(
               prelimBuildCtx,
