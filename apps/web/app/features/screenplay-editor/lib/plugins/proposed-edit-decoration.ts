@@ -275,14 +275,24 @@ const applyProposalToView = (
   view.dispatch(tr);
 };
 
-// The end position of the textblock that contains `pos`, so a widget anchors
-// AFTER the line (e.g. after "JOHN (35)") instead of splitting it mid-text
-// ("JOHN" │card│ "(35)"). Falls back to `pos` if no block is resolved.
+// The position just AFTER the textblock that contains `pos`, so a widget anchors
+// at the end of the whole line/paragraph (after "JOHN (35)" or after a dialogue
+// line) instead of splitting it mid-text ("JOHN" │card│ "(35)"). Walks UP to the
+// nearest block-level node (its end), not the deepest inline node. Falls back to
+// `pos` if no block is resolved.
 const blockEndAfter = (doc: PMNode, pos: number): number => {
   try {
     const $pos = doc.resolve(Math.min(pos, doc.content.size));
-    const depth = $pos.depth;
-    return $pos.end(depth);
+    // Climb to the nearest block-level node and anchor JUST AFTER it (a
+    // block-boundary position), so the widget renders on its own line below the
+    // cue/dialogue instead of inline in the middle of it. `after(d)` is the
+    // position after the block node at depth d.
+    for (let d = $pos.depth; d >= 1; d--) {
+      if ($pos.node(d).isTextblock) {
+        return $pos.after(d);
+      }
+    }
+    return $pos.end($pos.depth);
   } catch {
     return pos;
   }
