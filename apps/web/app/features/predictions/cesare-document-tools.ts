@@ -22,7 +22,10 @@ import {
   type CommitOutcome,
   type AskedNewVersion,
 } from "./auto-version.effect";
-import { userRequestedNewVersion } from "./version-intent";
+import {
+  userRequestedNewVersion,
+  userConfirmedOverwrite,
+} from "./version-intent";
 
 // BUG-N66 / Spec 76 — the commit policy for a Cesare document edit. A non-null
 // sessionId activates overwrite-into-one-working-row; an explicit "nuova
@@ -35,6 +38,9 @@ const commitOptions = (
   sessionId,
   userRequestedNewVersion: userRequestedNewVersion(instruction),
   largeEditConfirmed: false,
+  // "Sovrascrivi" on the ask card → apply the large edit in place. Detected from
+  // the re-sent confirmation phrasing, mirroring the new-version intent.
+  largeEditOverwriteConfirmed: userConfirmedOverwrite(instruction),
 });
 import {
   importAsActiveVersionTx,
