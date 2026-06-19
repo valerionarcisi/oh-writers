@@ -3,7 +3,7 @@ import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { ResultAsync, ok, err, okAsync, errAsync } from "neverthrow";
 import { screenplayVersions, screenplays } from "@oh-writers/db/schema";
-import { yjsSnapshotFromFountain } from "~/features/screenplay-editor/server/yjs-seed.server";
+import { yjsSnapshotFromFountain } from "~/features/screenplay-editor";
 import { toShape } from "@oh-writers/utils";
 import type { ResultShape } from "@oh-writers/utils";
 import { Effect } from "effect";

@@ -78,6 +78,10 @@ export type { ElementType } from "./lib/fountain-element-detector";
 // Server — scene sync
 export { syncScenesFromFountain, extractSceneRows } from "./server/scenes-sync";
 
+// Server — Yjs CRDT seeding (used cross-feature to reseed the editor on version
+// activate/promote so the Yjs-backed editor reloads the activated content).
+export { yjsSnapshotFromFountain } from "./server/yjs-seed.server";
+
 // Types
 export type { ScreenplayView } from "./server/screenplay.server";
 export type { SaveScreenplayData } from "./screenplay.schema";
