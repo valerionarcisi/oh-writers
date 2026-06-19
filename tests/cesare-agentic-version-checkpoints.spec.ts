@@ -1,4 +1,4 @@
-// tests/cesare-version-checkpoints.spec.ts
+// tests/cesare-agentic-version-checkpoints.spec.ts
 //
 // [OHW-N66] Spec 76 — Cesare version checkpoints (overwrite-by-default,
 // mint-on-large). Runs in the mock-ui project (MOCK_AI=true) so the edit sizes

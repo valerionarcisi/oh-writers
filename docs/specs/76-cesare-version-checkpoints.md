@@ -147,12 +147,21 @@ the director's real versions.
   (BUG-N66 names both; the narrative flood is the worse offender and ships first.)
 - Cross-session checkpoint pruning / retention policy.
 
-## Implementation status (updated 2026-06-19 — all but E2E done)
+## Implementation status (updated 2026-06-19 — DONE, ready for review)
 
-The whole feature is implemented and unit-tested; only the 3 E2E remain. 44 OHW-N66 unit tests
-green, full web suite 1979 passing (0 failures), typecheck + lint + fleet-check guardrails clean.
+The whole feature is implemented and tested at every layer. 44 OHW-N66 unit tests + 3 OHW-N66
+E2E green, full web suite 1979 passing (0 failures), typecheck + lint + fleet-check clean.
 
 **Done**
+
+- **Both commit seams** route through the one policy: the generation tools (`propose_*`/`write_*`)
+  AND the surgical edits (`apply_text_edit` / `expand_section` / `compress_section`, formerly
+  the unconditional-INSERT `persistDocumentContent`). `userInstruction` + `sessionId` are threaded
+  through both the universal loop and the streaming skill path, so every edit honours the policy
+  and an explicit "nuova versione" — there is no longer a second flooding seam.
+- **3 E2E** `OHW-N66` (`tests/cesare-agentic-version-checkpoints.spec.ts`, mock-ui): small edit
+  collapses under one checkpoint (no flood), large edit renders the card, explicit "nuova
+  versione" skips the ask. All green live.
 
 - `classify-edit-size.ts` (pure, exposes `changedWordRatio`) + `resolve-version-action.ts`
   (pure, returns `overwrite | mint | ask`, with `largeEditOverwriteConfirmed` for the
@@ -180,8 +189,7 @@ green, full web suite 1979 passing (0 failures), typecheck + lint + fleet-check 
 
 **Remaining**
 
-- **3 E2E** `OHW-N66` (below) — small-edit-overwrites, large-edit-asks, explicit-skips-ask.
-  Not yet written (E2E authored only with the owner's go, per the test policy).
+- None — implementation complete. Next: review + regression on an ephemeral/SaaS env, then merge.
 
 ## Tests
 
