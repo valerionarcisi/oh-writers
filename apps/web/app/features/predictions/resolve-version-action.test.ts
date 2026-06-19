@@ -58,6 +58,18 @@ describe("[OHW-N66] resolveVersionAction — precedence", () => {
     ).toBe("ask");
   });
 
+  it("large edit, overwrite-confirmed ⇒ overwrite (Sovrascrivi on the ask card)", () => {
+    expect(
+      resolveVersionAction(
+        base({
+          previousContent: words(50),
+          nextContent: words(400),
+          largeEditOverwriteConfirmed: true,
+        }),
+      ),
+    ).toBe("overwrite");
+  });
+
   it("large edit, confirmed ⇒ mint", () => {
     expect(
       resolveVersionAction(

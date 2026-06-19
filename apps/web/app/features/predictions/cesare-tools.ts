@@ -2668,6 +2668,19 @@ export const extractSideChannelMarkers = (
           accumulator.push(`<!--ohw:live-diff-b64:${b64}-->`);
         }
       }
+      // Spec 76 Slice 2 — a large unconfirmed edit asked instead of applying.
+      // No version was written; emit the ask marker so the client renders the
+      // [Sovrascrivi] [Nuova versione] card (keyed on document_type so the
+      // re-send targets the same entity).
+      if (payload && payload["asked_new_version"] === true) {
+        accumulator.push(
+          `<!--ohw:ask-new-version:${JSON.stringify({
+            document_type: payload["document_type"],
+            changed_word_ratio: payload["changed_word_ratio"],
+            ask: payload["ask"],
+          })}-->`,
+        );
+      }
     } catch {
       // ignore malformed payloads — the marker is best-effort
     }

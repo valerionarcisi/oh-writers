@@ -515,6 +515,22 @@ export function CesareSheet({
     [page, splitDrawerCtx],
   );
 
+  // Spec 76 — the large-edit ask card's choice. Re-send a short IT confirmation:
+  // the model re-runs the same edit (the instruction is still in the thread) and
+  // the intent classifier maps the phrasing to overwrite vs a new version, so the
+  // edit applies LIVE the way the writer just chose — no side draft tray.
+  const handleChooseVersionAction = useCallback(
+    (args: { documentType: string; action: "overwrite" | "mint" }) => {
+      if (isLoading) return;
+      const text =
+        args.action === "mint"
+          ? "Sì, fanne una nuova versione e applica la modifica."
+          : "Sovrascrivi la versione corrente con questa modifica.";
+      void chat.send(text);
+    },
+    [isLoading, chat],
+  );
+
   const handleSubmit = useCallback(() => {
     if (isLoading) return;
     const text = input;
@@ -573,6 +589,7 @@ export function CesareSheet({
         page={page}
         onShowChanges={handleShowChanges}
         onHideChanges={handleHideChanges}
+        onChooseVersionAction={handleChooseVersionAction}
         emptyState={
           <>
             <EmptyState page={page} />

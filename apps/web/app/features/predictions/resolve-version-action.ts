@@ -19,6 +19,9 @@ export interface ResolveVersionActionInput {
   readonly userRequestedNewVersion: boolean;
   /** A prior turn asked, the user chose "Nuova versione", and this is the apply. */
   readonly largeEditConfirmed: boolean;
+  /** A prior turn asked, the user chose "Sovrascrivi", and this is the apply —
+   *  apply the large edit in place instead of minting. Defaults to false. */
+  readonly largeEditOverwriteConfirmed?: boolean;
 }
 
 /**
@@ -40,6 +43,8 @@ export const resolveVersionAction = (
   const size = classifyEditSize(input.previousContent, input.nextContent);
   if (size === "small") return "overwrite";
 
-  // large edit
+  // large edit — the writer's confirmed choice (after the ask) wins; otherwise
+  // ask. "Sovrascrivi" applies in place, "Nuova versione" mints.
+  if (input.largeEditOverwriteConfirmed) return "overwrite";
   return input.largeEditConfirmed ? "mint" : "ask";
 };

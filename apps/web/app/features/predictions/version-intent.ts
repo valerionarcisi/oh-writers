@@ -35,3 +35,27 @@ export const userRequestedNewVersion = (
   const normalised = instruction.toLowerCase();
   return NEW_VERSION_PHRASES.some((phrase) => normalised.includes(phrase));
 };
+
+// Spec 76 Slice 2 — the "Sovrascrivi" answer to the large-edit ask card. Lets a
+// large edit apply in place instead of minting. Narrow phrases: only an explicit
+// overwrite verb, so a normal edit instruction never trips it.
+const OVERWRITE_PHRASES = [
+  "sovrascrivi",
+  "sovrascriverla",
+  "applica sulla versione corrente",
+  "applica alla versione corrente",
+  "tieni la stessa versione",
+  "stessa versione",
+] as const;
+
+/**
+ * True when the instruction explicitly chooses to overwrite the current version
+ * (the "Sovrascrivi" choice on the large-edit ask). Null/empty ⇒ false.
+ */
+export const userConfirmedOverwrite = (
+  instruction: string | null | undefined,
+): boolean => {
+  if (!instruction) return false;
+  const normalised = instruction.toLowerCase();
+  return OVERWRITE_PHRASES.some((phrase) => normalised.includes(phrase));
+};

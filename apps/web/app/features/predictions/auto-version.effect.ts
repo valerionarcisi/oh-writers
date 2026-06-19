@@ -22,6 +22,9 @@ export interface CommitOptions {
   readonly userRequestedNewVersion: boolean;
   /** A prior turn asked and the user chose "Nuova versione"; this is the apply. */
   readonly largeEditConfirmed: boolean;
+  /** A prior turn asked and the user chose "Sovrascrivi"; apply the large edit in
+   *  place rather than minting. Defaults to false. */
+  readonly largeEditOverwriteConfirmed?: boolean;
 }
 
 const LEGACY_MINT: CommitOptions = {
@@ -199,14 +202,16 @@ const acquireVersion = (
       : [];
     const workingRow = sessionWorking[0] ?? null;
 
-    // Slice 1 (Spec 76): the `ask` resolution degrades to `mint` — a large edit
-    // still mints a new version (today's behaviour). The streamed ask-card is
-    // Slice 2. So we treat `ask` and `mint` identically here.
+    // Spec 76: the `ask` is resolved one level up in `commitOrAsk` (the tool
+    // boundary, where the step-event sink lives), so by the time the engine runs
+    // the action is only overwrite or mint. An `ask` reaching here can only mean
+    // a caller bypassed the boundary; treat it as mint (safe — it still versions).
     const action = resolveVersionAction({
       previousContent,
       nextContent: content,
       userRequestedNewVersion: options.userRequestedNewVersion,
       largeEditConfirmed: options.largeEditConfirmed,
+      largeEditOverwriteConfirmed: options.largeEditOverwriteConfirmed ?? false,
     });
     const wantsOverwrite = action === "overwrite";
 
@@ -502,6 +507,7 @@ export const commitOrAsk = (
     nextContent: content,
     userRequestedNewVersion: options.userRequestedNewVersion,
     largeEditConfirmed: options.largeEditConfirmed,
+    largeEditOverwriteConfirmed: options.largeEditOverwriteConfirmed ?? false,
   });
   if (action === "ask") {
     const asked: AskedNewVersion = {
