@@ -40,7 +40,7 @@ Detailed rules live in `docs/conventions/`. Load the file that matches the task:
 
 ## Workflow
 
-**Work queue:** `docs/BACKLOG.md` is the single live queue (NOW/NEXT/ICEBOX/DONE). **WIP = 1** — one front at a time, taken to merge, then `/clear` and pull the next. State lives in the .md files (backlog + specs + LEARNINGS), not the conversation, so context stays small.
+**Work queue:** the [GitHub Project board](https://github.com/users/valerionarcisi/projects/3) is the single live queue (columns NOW/NEXT/ICEBOX/Done) — bugs (Issues) + feature draft cards. `gh project item-list 3 --owner valerionarcisi` reads it. **WIP = 1** — one card in NOW at a time, taken to merge, then `/clear` and pull the next. `docs/BACKLOG.md` is the frozen pre-2026-06-24 snapshot (rich topic/audit context the cards link back to). Spec/LEARNINGS detail still lives in the .md files, not the conversation, so context stays small.
 
 1. Read the relevant feature folder and its schema files first
 2. Identify which domain owns the logic (see Domain Boundaries)
@@ -51,9 +51,11 @@ Detailed rules live in `docs/conventions/`. Load the file that matches the task:
 7. **Code-review the staged diff before every commit** — run the `/code-review` skill on the change, address any critical findings, then commit
 8. Commit following the Git conventions below
 
-A change is **done** only when it meets the [Definition of Done](docs/conventions/definition-of-done.md): tests at every applicable layer (E2E first), screenshots in a final recap, gates green, tracked in `docs/BACKLOG.md`/`docs/BUGS.md`.
+A change is **done** only when it meets the [Definition of Done](docs/conventions/definition-of-done.md): tests at every applicable layer (E2E first), screenshots in a final recap, gates green, tracked in `docs/BACKLOG.md` (work queue) and **GitHub Issues** (bugs).
 
-**Before implementation:** a spec in `docs/specs/` is required ONLY when the work changes a product invariant/contract, makes a hard-to-reverse decision (schema, API shape, dependency, pattern), needs to be shared across agents/sessions, or designs a new domain. Bug fixes, refactors, and small reversible improvements do NOT get a spec — the `docs/BUGS.md` entry or the tests are the contract. Full criterion: [Specs](docs/conventions/specs.md). Name specs `NN-feature-name.md` (or `NNb-…` for sub-specs); when one is required, it is written first.
+**Bug tracking lives in GitHub Issues, not `docs/BUGS.md`** (cutover 2026-06-24). File bugs with `gh issue create` using labels `bug` + `sev:alto|medio|basso` + `area:*`; close with `Fixes #N` in the PR/commit. `gh issue list --state open` is the live ledger; `docs/BUGS.md` is the frozen pre-cutover archive (repro detail only — do not add entries). **Specs/conventions/ADRs/LEARNINGS stay as `.md` in `docs/`** — they are read while coding and versioned with the code; only work-tracking (bugs, queue) moved off files.
+
+**Before implementation:** a spec in `docs/specs/` is required ONLY when the work changes a product invariant/contract, makes a hard-to-reverse decision (schema, API shape, dependency, pattern), needs to be shared across agents/sessions, or designs a new domain. Bug fixes, refactors, and small reversible improvements do NOT get a spec — the GitHub Issue or the tests are the contract. Full criterion: [Specs](docs/conventions/specs.md). Name specs `NN-feature-name.md` (or `NNb-…` for sub-specs); when one is required, it is written first.
 
 When in doubt about an architectural decision, stop and ask.
 

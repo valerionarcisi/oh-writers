@@ -33,8 +33,9 @@ anything skipped + why. (UI specifics: measure + screenshot, `ui-ux-research.md`
 
 ## 4. Tracked + recorded
 
-- The bug/feature is an item in `docs/BACKLOG.md`; bug detail (repro + proof + severity +
-  status) lives in `docs/BUGS.md`.
+- A feature is an item in `docs/BACKLOG.md`. A bug is a **GitHub Issue** (repro + proof +
+  severity via labels `sev:*` + `area:*`); close it with `Fixes #N`. (`docs/BUGS.md` is the
+  frozen pre-2026-06-24 archive — do not add entries.)
 - Any correction/mistake/dead-end along the way → `docs/LEARNINGS.md` + a feedback memory.
 
 ## 5. Committed clean

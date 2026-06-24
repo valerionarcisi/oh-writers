@@ -1,27 +1,51 @@
-# Bugs — live ledger
+# Bugs — pre-2026-06-24 archive (open bugs now live in GitHub Issues)
 
-The detail home for bugs we are actively tracking. `docs/BACKLOG.md` queues them (one
-line + link here); this file holds the repro + proof. Point-in-time audit findings live
-in their audit report (e.g. `docs/audits/2026-06-03/CONSOLIDATED.md`); when one is pulled
-into work, copy its detail here.
+> **Bug tracking moved to GitHub Issues on 2026-06-24.**
+> File new bugs with `gh issue create` (labels `bug` + `sev:alto|medio|basso` + `area:*`).
+> Read open bugs with `gh issue list --state open` (filter `--label sev:alto` for the fires).
+> The 7 bugs that were open at the cutover are now Issues #35–#41.
+> This file is the **frozen history** of fixed/closed bugs before the cutover — keep it for
+> repro detail and `git blame`, but do not add new entries here.
 
-**Entry format:**
-
-```
-### BUG-NNN — short title (YYYY-MM-DD)
-- Severity: ALTO | MEDIO | BASSO
-- Status: open | in-progress | fixed (commit)
-- Repro: page → action → observed result
-- Proof: screenshot path / file:line / repro steps
-- Notes / suspected cause
-```
+The sections below are the pre-cutover ledger (detail home for repro + proof).
 
 A bug is fixed only per `docs/conventions/definition-of-done.md` (tests at every layer,
 E2E first; screenshots in a recap; gates green).
 
 ---
 
-## Open
+## Migrated to GitHub Issues (2026-06-24)
+
+| was     | now                                                           | title                                                       |
+| ------- | ------------------------------------------------------------- | ----------------------------------------------------------- |
+| BUG-N72 | [#35](https://github.com/valerionarcisi/oh-writers/issues/35) | Cesare narrative edit doesn't reseed the Yjs CRDT           |
+| BUG-N73 | [#36](https://github.com/valerionarcisi/oh-writers/issues/36) | Spec 76 large-edit ASK percent ratio mis-fires on tiny docs |
+| BUG-N40 | [#37](https://github.com/valerionarcisi/oh-writers/issues/37) | fundraising-seed 503 in dev                                 |
+| BUG-067 | [#38](https://github.com/valerionarcisi/oh-writers/issues/38) | TopBar presence online→offline flip                         |
+| BUG-064 | [#39](https://github.com/valerionarcisi/oh-writers/issues/39) | Avvia sessione stray re-render                              |
+| BUG-N58 | [#40](https://github.com/valerionarcisi/oh-writers/issues/40) | Seeded screenplay clobbered (observation)                   |
+| BUG-065 | [#41](https://github.com/valerionarcisi/oh-writers/issues/41) | Cesare presence glow (enhancement)                          |
+
+---
+
+## Open (frozen — see GitHub Issues for live state)
+
+### BUG-N72 — Cesare narrative edit doesn't reseed the Yjs CRDT → editor shows the pre-edit text after reload (2026-06-23, live-confirm session, real AI)
+
+- Severity: ALTO (the user's AI edit appears not to "take": `documents.content` + the version rows are correct, but the live editor keeps the old text across a full reload — reads as silent failure / lost edit)
+- Status: open (found while live-confirming Spec 76 on seed `…012`)
+- Repro: any narrative doc with realtime ON → Cesare → apply an edit (e.g. "correggi 'proova' in 'prova' nel soggetto") → answer the apply prompt → reload. Observed: the editor still renders "proova".
+- Proof (DB-verified): after the edit, `documents.content` = "ciao come stai soggetto **prova**, prova. Prova" (43 chars, fixed) and `document_versions` v3 (kind=working) holds the fixed text, BUT `documents.yjs_state` (206 bytes) still encodes "proova"; the realtime editor reads the CRDT, not `content`, so it shows the stale text. Length divergence content=43 vs the CRDT's old payload.
+- Root cause: the same class BUG-N71 fixed for SCREENPLAY version restore (reseed CRDT from the version's Fountain on activate/promote) — the **Cesare narrative apply path** (`commitOrAsk` / the surgical-edit + generation seams that write `documents.content` + a `document_versions` row) never rebuilds `documents.yjs_state`. N71's reseed was scoped to `screenplay_versions`; the narrative twin is unfixed.
+- Fix direction: on a Cesare narrative commit, reseed `documents.yjs_state` from the new content (mirror `restoreVersion`'s clear-pmDoc + rebuild-yjsState via `yjsStateFromNarrativeContent`, Spec 72) so the live room and `content` never diverge. Add an E2E that applies a Cesare edit then asserts the reloaded editor shows the new text.
+
+### BUG-N73 — Spec 76 large-edit ASK uses a percent-of-text ratio → tiny docs always trip the ASK on a one-word fix (2026-06-23, live-confirm session, real AI)
+
+- Severity: MEDIO (the version-flood prevention over-asks on small docs; the writer gets a "modifica importante… ne creo una nuova?" prompt for fixing a single typo)
+- Status: open
+- Repro: a 43-char soggetto → Cesare "correggi il refuso 'proova' in 'prova'" → the ASK card reads "Questa è una modifica importante a soggetto (**143% del testo cambia**). La applico sulla versione corrente o ne creo una nuova?"
+- Cause: the small-vs-large classification is a relative ratio (changed chars / doc length). On a tiny doc any real edit exceeds the threshold (here the model rewrote the whole short doc → 143%). The intent (Spec 76: small edits overwrite silently, only large ones ask) is defeated when the doc itself is small.
+- Fix direction: gate the ASK on an ABSOLUTE floor too — e.g. don't ask when the changed span is under N chars/words regardless of %, and/or measure the edit by the diff span Cesare actually touched rather than a full-text resemblance on a rewrite. Reconcile with the 44 OHW-N66 unit cases.
 
 ### BUG-N70 — Cesare rename UX: 7 stacked cards, wrong case, blank reply, name change routed to per-occurrence edit (2026-06-19, real-use session, real AI)
 
@@ -39,7 +63,7 @@ E2E first; screenshots in a recap; gates green).
 - Repro: screenplay → Versioni → Attiva on a version; or Cesare draft banner → Promuovi a attiva / Apri il diff; or open Versions then promote Cesare to split.
 - Observed: (1) "Attiva" did not change the editor (DB updated `content` + `current_version_id` but left the old Yjs CRDT — the editor reads the CRDT, not `content`); the drawer also didn't close; (2) "Promuovi a attiva" was a no-op (same CRDT bug + never set `current_version_id` + invalidated the stale `["screenplay"]` key instead of `["screenplays", …]`); (3) "Apri il diff" linked to a route that now just redirects to the editor (the diff page was removed in Spec 66); (4) opening Cesare-split while Versions was open made Cesare fall back to the floating box layered over the Versions lane (no ↗/←/✕ controls).
 - Fixes: `restoreVersion` + `promoteDraftToActive` reseed the CRDT from the version's Fountain (clear pmDoc, rebuild yjsState) and set `current_version_id`; the lane closes on Attiva; promote invalidates the real editor + current-version keys; "Apri il diff" opens the unified Versions split lane; Option B precedence — an explicit Cesare split wins the single aux track over Versions (BUG-N64 invariant preserved: one lane, main track survives).
-- Proof: E2E `[OHW-571]` (Apri-diff opens the lane) + `[BUG-N64]` (Option B precedence) green; owner screenshots 2026-06-19. NOTE: Attiva/Promuovi CRDT reseed verified by code + needs a live confirm (editor/Yjs behaviour).
+- Proof: E2E `[OHW-571]` (Apri-diff opens the lane) + `[BUG-N64]` (Option B precedence) green; owner screenshots 2026-06-19. **Attiva LIVE-CONFIRMED 2026-06-23** (real stack, seed project `…012`): activating "Versione 2" reseeded the editor CRDT (chip → "Versione 2", editor content swapped, no reload) and moved `screenplays.current_version_id` v1 `a7a9be25`→v2 `9538e1f4` (DB-verified); the Versions lane closed on Attiva. Promuovi (Cesare draft → attiva) not separately re-exercised live this pass (the Cesare narrative apply path surfaced a related CRDT-stale gap — see BUG-N72).
 
 ### BUG-N63 — screenplay PDF export loses dialogue, title page incomplete, scene-heading bold mismatch (2026-06-11, real-use session)
 
@@ -95,7 +119,7 @@ Decision pending (owner): fix (b) [+ (d)] now as the deterministic export-fideli
 - Severity: ALTO (version list floods — v13/v14/v15 "Cesare · modifica" + 5-6 drafts for one screenplay request; the Versions surface becomes unusable)
 - Repro: iterative Cesare work on soggetto/screenplay → every turn lands a new version; a single "write the screenplay" request produced 5/6 drafts before the right one.
 - OWNER POLICY (decided 2026-06-11, applies to EVERY narrative part): by default Cesare OVERWRITES the current version with surgical edits; a NEW version only when the user explicitly asks — or Cesare may ASK the user ("ne faccio una nuova versione?") when the requested change is large. Reconcile with the auto-version invariant (CLAUDE.md point 3: snapshot-before-apply for revertibility) — e.g. ONE auto-checkpoint per session/turn-group instead of per turn, or collapse consecutive Cesare versions.
-- Status: **fixed — [Spec 76](specs/76-cesare-version-checkpoints.md) merged to main (2026-06-19)**. Full model shipped: `document_versions.kind` + `cesare_session_id`, default OVERWRITE on small edits, MINT on large/explicit, large-edit ASK streamed as the `[Sovrascrivi]/[Nuova versione]` card; the working-rows collapse under their checkpoint in the Versions drawer. Both INSERT seams (the generation tools AND the surgical edits `apply_text_edit`/`expand`/`compress`, formerly `persistDocumentContent`) converge on the shared `commitOrAsk` boundary. 44 OHW-N66 unit + 3 E2E green. Scope: narrative `document_versions`; screenplay `screenplay_versions` checkpointing remains a follow-up. **Live confirm pending** (merged per owner's call before the manual real-use pass).
+- Status: **fixed — [Spec 76](specs/76-cesare-version-checkpoints.md) merged to main (2026-06-19)**. Full model shipped: `document_versions.kind` + `cesare_session_id`, default OVERWRITE on small edits, MINT on large/explicit, large-edit ASK streamed as the `[Sovrascrivi]/[Nuova versione]` card; the working-rows collapse under their checkpoint in the Versions drawer. Both INSERT seams (the generation tools AND the surgical edits `apply_text_edit`/`expand`/`compress`, formerly `persistDocumentContent`) converge on the shared `commitOrAsk` boundary. 44 OHW-N66 unit + 3 E2E green. Scope: narrative `document_versions`; screenplay `screenplay_versions` checkpointing remains a follow-up. **LIVE-CONFIRMED 2026-06-23** (real AI, seed `…012` soggetto): a Cesare edit creates the `checkpoint` (before-snapshot) + `working` (applied) rows as designed; the large-edit ASK card fired with `[Sovrascrivi]/[Nuova versione]`; answering Sovrascrivi kept 3 rows (no version flood). **TWO live findings:** (i) the large-edit threshold is a PERCENT-of-text ratio, so a one-word typo fix on a 43-char doc reported "143% del testo cambia" → wrongly routed to the large-edit ASK; needs an absolute-size floor (small absolute diffs should overwrite silently regardless of %) — see BUG-N73. (ii) the Cesare apply writes `documents.content` + version rows but does NOT reseed `documents.yjs_state`, so the editor still renders the pre-edit text after reload — see BUG-N72.
 
 ### BUG-N67 — asked Cesare for the SCREENPLAY from the soggetto; it wrote the TREATMENT (2026-06-11, real-use session, real AI)
 

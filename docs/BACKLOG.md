@@ -1,7 +1,12 @@
-# Backlog — the single live work queue
+# Backlog — pre-2026-06-24 archive (live queue now on the GitHub board)
 
-State lives here, not in the chat. This is the ONE place that says what's open and
-what's next. Detail lives in the linked spec / audit / learning — keep entries to a line.
+> **Work tracking moved to the GitHub Project board on 2026-06-24:**
+> https://github.com/users/valerionarcisi/projects/3 (columns NOW / NEXT / ICEBOX / Done).
+> Bugs are GitHub Issues (`gh issue list`); the board carries bugs + feature draft cards.
+> This file is the **frozen pre-cutover queue** — kept for the rich topic/audit context the
+> cards link back to. Do not treat NOW/NEXT below as live; the board is the source of truth.
+
+State below is the pre-cutover snapshot. Detail lives in the linked spec / audit / learning.
 
 ## Protocol
 
