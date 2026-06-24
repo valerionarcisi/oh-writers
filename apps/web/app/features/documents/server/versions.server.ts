@@ -18,10 +18,36 @@ import {
   ValidationError,
   DbError,
 } from "../documents.errors";
+import {
+  isPmRoomDocType,
+  yjsStateFromNarrativeContent,
+} from "./yjs-seed.server";
 
 // ─── Shared guards ────────────────────────────────────────────────────────────
 
 type DocumentRow = typeof documents.$inferSelect;
+
+// Activating a version points `documents` at it and mirrors the version's
+// content. For PM-room doc types the realtime editor reads the CRDT, not
+// `content`, so the Yjs state is reseeded from the activated content too —
+// otherwise "Attiva" leaves the open/reloaded editor on the previous version's
+// text (BUG-N72, the narrative twin of the screenplay BUG-N71 reseed). A null
+// reseed (empty/HTML content) leaves the existing CRDT untouched rather than
+// wiping the room — the same guard the seed path uses.
+export const activateVersionSet = (
+  doc: DocumentRow,
+  version: DocumentVersion,
+) => {
+  const reseed = isPmRoomDocType(doc.type)
+    ? yjsStateFromNarrativeContent(version.content)
+    : null;
+  return {
+    currentVersionId: version.id,
+    content: version.content,
+    ...(reseed ? { yjsState: reseed } : {}),
+    updatedAt: new Date(),
+  };
+};
 
 const findDocument = (db: Db, documentId: string) =>
   ResultAsync.fromPromise(
@@ -220,7 +246,17 @@ export const createVersionFromScratch = createServerFn({ method: "POST" })
                 ? ResultAsync.fromPromise(
                     db
                       .update(documents)
-                      .set({ currentVersionId: version.id })
+                      // Blank version: mirror the empty content AND clear the
+                      // CRDT so the realtime editor renders blank instead of the
+                      // previous version's text (BUG-N72). A NULL yjs_state makes
+                      // the room reseed empty — correct for a deliberately blank
+                      // version, the one case where an empty CRDT is wanted.
+                      .set({
+                        currentVersionId: version.id,
+                        content: "",
+                        yjsState: null,
+                        updatedAt: new Date(),
+                      })
                       .where(eq(documents.id, doc.id))
                       .then(() => version),
                     (e) => new DbError("versions.create.update-current", e),
@@ -284,7 +320,7 @@ export const duplicateVersion = createServerFn({ method: "POST" })
                 ? ResultAsync.fromPromise(
                     db
                       .update(documents)
-                      .set({ currentVersionId: version.id })
+                      .set(activateVersionSet(doc, version))
                       .where(eq(documents.id, doc.id))
                       .then(() => version),
                     (e) => new DbError("versions.duplicate.update-current", e),
@@ -383,7 +419,7 @@ export const switchToVersion = createServerFn({ method: "POST" })
             ResultAsync.fromPromise(
               db
                 .update(documents)
-                .set({ currentVersionId: version.id })
+                .set(activateVersionSet(doc, version))
                 .where(eq(documents.id, doc.id))
                 .then(() => version),
               (e) => new DbError("versions.switch", e),

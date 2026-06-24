@@ -1,5 +1,6 @@
 import { createAPIFileRoute } from "@tanstack/start/api";
 import { and, eq } from "drizzle-orm";
+import * as Y from "yjs";
 import {
   documents,
   documentVersions,
@@ -7,6 +8,21 @@ import {
 } from "@oh-writers/db/schema";
 import { DocumentTypes, type DocumentType } from "@oh-writers/domain";
 import { getDb } from "~/server/db";
+import { XML_FRAGMENT } from "~/features/realtime/lib/yjs-plugins";
+
+// Decode a narrative `documents.yjs_state` (CRDT) back to its plain text, so a
+// test can assert the realtime editor (which reads the CRDT, not `content`) was
+// reseeded — the BUG-N72 contract. Mirrors how y-prosemirror stores the doc:
+// the shared XML fragment, read as text content.
+const crdtToText = (state: Uint8Array | null): string => {
+  if (!state || state.length === 0) return "";
+  const ydoc = new Y.Doc();
+  Y.applyUpdate(ydoc, state);
+  const fragment = ydoc.getXmlFragment(XML_FRAGMENT);
+  const text = fragment.toString().replace(/<[^>]+>/g, " ");
+  ydoc.destroy();
+  return text.replace(/\s+/g, " ").trim();
+};
 
 /**
  * Test-only endpoint (Spec 50 / OHW-050) that sets a project's narrative
@@ -66,6 +82,15 @@ export const APIRoute = createAPIFileRoute("/api/test/set-narrative-state")({
     const doc = await db.query.documents.findFirst({
       where: and(eq(documents.projectId, projectId), eq(documents.type, type)),
     });
+    // `?crdt=1` returns the text decoded from `documents.yjs_state` (the realtime
+    // CRDT the editor reads) — the BUG-N72 reseed proof.
+    if (url.searchParams.get("crdt") === "1") {
+      const crdtText = crdtToText(doc?.yjsState ?? null);
+      return new Response(
+        JSON.stringify({ crdtText, crdtLength: crdtText.length }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
     let content = doc?.content ?? "";
     if (doc?.currentVersionId) {
       const version = await db.query.documentVersions.findFirst({

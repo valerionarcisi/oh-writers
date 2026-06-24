@@ -10,14 +10,11 @@
 import { and, eq, isNull, ne, inArray } from "drizzle-orm";
 import { documents, screenplayVersions } from "@oh-writers/db/schema";
 import { yjsSnapshotFromFountain } from "../app/features/screenplay-editor/server/yjs-seed.server";
-import { yjsStateFromNarrativeContent } from "../app/features/documents/server/yjs-seed.server";
+import {
+  PM_ROOM_DOC_TYPES,
+  yjsStateFromNarrativeContent,
+} from "../app/features/documents/server/yjs-seed.server";
 import type { Db } from "@oh-writers/db";
-
-// Doc types whose editor mounts a ProseMirror view bound to the
-// `document:{id}` room. Outline renders the plain-React OutlineEditor and
-// logline has no PM surface at all — seeding their CRDT would create a stale
-// shadow copy nothing ever reads or updates.
-const PM_ROOM_DOC_TYPES = ["soggetto", "synopsis", "treatment"] as const;
 
 async function seedScreenplayVersionSnapshots(db: Db): Promise<number> {
   const rows = await db

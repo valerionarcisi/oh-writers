@@ -6,6 +6,10 @@ import { buildWordDiffSegments } from "@oh-writers/utils";
 import { okAsync, ResultAsync } from "neverthrow";
 import type { Db } from "~/server/db";
 import { DbService, toResultAsync } from "~/server/effect";
+import {
+  isPmRoomDocType,
+  yjsStateFromNarrativeContent,
+} from "~/features/documents/server/yjs-seed.server";
 import { CesareError } from "./cesare.errors";
 import { resolveVersionAction } from "./resolve-version-action";
 import { changedWordRatio } from "./classify-edit-size";
@@ -313,14 +317,24 @@ const acquireVersion = (
   });
 
 // use: apply live — point the document at the new version and mirror its content
-// so the open editor reflects it behind the floating chat.
+// so the open editor reflects it behind the floating chat. For PM-room doc types
+// (soggetto/synopsis/treatment) the realtime editor reads the CRDT, not
+// `content`, so the Yjs state is reseeded from the new content too — otherwise
+// the open/reloaded editor keeps the pre-edit text (BUG-N72, the narrative twin
+// of the screenplay BUG-N71 reseed). `yjsStateFromNarrativeContent` returns null
+// for empty/HTML content; in that case the existing CRDT is left untouched
+// (nulling it would wipe the room), the same guard the seed path uses.
 const applyLive = (
   documentId: string,
+  documentType: DocumentType,
   acquired: AcquiredVersion,
   content: string,
 ): Effect.Effect<void, CesareError, DbService> =>
   Effect.gen(function* () {
     const { db } = yield* DbService;
+    const reseed = isPmRoomDocType(documentType)
+      ? yjsStateFromNarrativeContent(content)
+      : null;
     yield* dbStep(
       () =>
         db
@@ -328,6 +342,7 @@ const applyLive = (
           .set({
             currentVersionId: acquired.versionId,
             content,
+            ...(reseed ? { yjsState: reseed } : {}),
             updatedAt: new Date(),
           })
           .where(eq(documents.id, documentId)),
@@ -341,10 +356,16 @@ const applyLive = (
 // guarantee; this is the explicit, observable compensation.
 const rollbackApply = (
   documentId: string,
+  documentType: DocumentType,
   acquired: AcquiredVersion,
 ): Effect.Effect<void, never, DbService> =>
   Effect.gen(function* () {
     const { db } = yield* DbService;
+    // Reseed the CRDT back to the "before" content too, so a failed apply never
+    // leaves the room on the half-applied edit while `content` reverts (BUG-N72).
+    const reseed = isPmRoomDocType(documentType)
+      ? yjsStateFromNarrativeContent(acquired.previousContent)
+      : null;
     yield* Effect.ignore(
       dbStep(
         () =>
@@ -353,6 +374,7 @@ const rollbackApply = (
             .set({
               currentVersionId: acquired.previousVersionId,
               content: acquired.previousContent,
+              ...(reseed ? { yjsState: reseed } : {}),
               updatedAt: new Date(),
             })
             .where(eq(documents.id, documentId)),
@@ -408,7 +430,7 @@ export const applyVersionLiveEffect = (
   Effect.acquireUseRelease(
     acquireVersion(documentId, createdBy, content, label, options),
     (acquired) =>
-      applyLive(documentId, acquired, content).pipe(
+      applyLive(documentId, documentType, acquired, content).pipe(
         Effect.map(
           (): CreatedDraft => ({
             versionId: acquired.versionId,
@@ -428,7 +450,9 @@ export const applyVersionLiveEffect = (
         ),
       ),
     (acquired, exit) =>
-      Exit.isFailure(exit) ? rollbackApply(documentId, acquired) : Effect.void,
+      Exit.isFailure(exit)
+        ? rollbackApply(documentId, documentType, acquired)
+        : Effect.void,
   );
 
 /**

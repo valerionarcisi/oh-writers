@@ -24,8 +24,19 @@
 import type { Node as PMNode } from "prosemirror-model";
 import { prosemirrorToYDoc } from "y-prosemirror";
 import * as Y from "yjs";
+import type { DocumentType } from "@oh-writers/domain";
 import { XML_FRAGMENT } from "../../realtime/lib/yjs-plugins";
 import { getNarrativeSchema } from "../lib/narrative-schema";
+
+// The narrative document types that mount a ProseMirror realtime room
+// (`document:{id}`) and therefore read their content from `documents.yjs_state`,
+// not `documents.content`. logline (no room) and outline (OutlineEditor, not a
+// PM narrative room) are excluded. Any write to these types' content must reseed
+// the CRDT or the open/reloaded editor keeps the stale text (BUG-N72).
+export const PM_ROOM_DOC_TYPES = ["soggetto", "synopsis", "treatment"] as const;
+
+export const isPmRoomDocType = (type: DocumentType): boolean =>
+  (PM_ROOM_DOC_TYPES as readonly string[]).includes(type);
 
 export const plainTextToNarrativeDoc = (text: string): PMNode => {
   const schema = getNarrativeSchema(true);

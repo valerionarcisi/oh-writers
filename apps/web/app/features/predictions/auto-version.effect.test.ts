@@ -16,9 +16,19 @@ import { applyVersionLiveEffect } from "./auto-version.effect";
 
 type Op =
   | { kind: "insertVersion"; content: string; versionKind: string }
-  | { kind: "applyUpdate"; versionId: string; content: string }
+  | {
+      kind: "applyUpdate";
+      versionId: string;
+      content: string;
+      reseededCrdt: boolean;
+    }
   | { kind: "updateWorking"; versionId: string; content: string }
-  | { kind: "revertUpdate"; versionId: string | null; content: string }
+  | {
+      kind: "revertUpdate";
+      versionId: string | null;
+      content: string;
+      reseededCrdt: boolean;
+    }
   | { kind: "restoreWorking"; versionId: string; content: string }
   | { kind: "deleteVersion"; versionId: string };
 
@@ -91,16 +101,29 @@ const makeMockDb = (opts: MockOptions) => {
         if (table === documents) {
           const versionId = values["currentVersionId"] as string | null;
           const content = values["content"] as string;
+          // `yjsState` is present in the .set() only when the apply/revert
+          // reseeds the CRDT (PM-room doc type + non-empty/non-HTML content).
+          const reseededCrdt = "yjsState" in values;
           // The apply points at the target version (minted OR the working row);
           // the rollback points back at the previous one (or null).
           const isApply = versionId === insertedId || versionId === workingId;
           if (isApply) {
-            ops.push({ kind: "applyUpdate", versionId: versionId!, content });
+            ops.push({
+              kind: "applyUpdate",
+              versionId: versionId!,
+              content,
+              reseededCrdt,
+            });
             if (opts.failApply) {
               return Promise.reject(new Error("forced apply failure"));
             }
           } else {
-            ops.push({ kind: "revertUpdate", versionId, content });
+            ops.push({
+              kind: "revertUpdate",
+              versionId,
+              content,
+              reseededCrdt,
+            });
           }
         }
         if (table === documentVersions) {
@@ -455,5 +478,74 @@ describe("[OHW-048] auto-version acquireRelease — guards preserved", () => {
     if (Exit.isFailure(exit)) {
       expect(String(exit.cause)).toContain("identico a una versione esistente");
     }
+  });
+});
+
+describe("[OHW-N72] Cesare narrative apply reseeds the CRDT", () => {
+  it("PM-room doc type (soggetto) → applyUpdate reseeds yjs_state from the new content", async () => {
+    const mock = makeMockDb({
+      currentVersionId: "version-prev",
+      currentContent: PREV,
+    });
+    const exit = await Effect.runPromiseExit(
+      Effect.provide(
+        applyVersionLiveEffect(
+          "doc-1",
+          DocumentTypes.SOGGETTO,
+          "user-1",
+          NEXT,
+          "draft Cesare · soggetto",
+        ),
+        mock.layer,
+      ),
+    );
+    expect(Exit.isSuccess(exit)).toBe(true);
+    const apply = mock.ops.find((o) => o.kind === "applyUpdate");
+    expect(apply).toMatchObject({ reseededCrdt: true });
+  });
+
+  it("non-PM-room doc type (logline) → applyUpdate does NOT touch yjs_state", async () => {
+    const mock = makeMockDb({
+      currentVersionId: "version-prev",
+      currentContent: PREV,
+    });
+    const exit = await Effect.runPromiseExit(
+      Effect.provide(
+        applyVersionLiveEffect(
+          "doc-1",
+          DocumentTypes.LOGLINE,
+          "user-1",
+          NEXT,
+          "draft Cesare · logline",
+        ),
+        mock.layer,
+      ),
+    );
+    expect(Exit.isSuccess(exit)).toBe(true);
+    const apply = mock.ops.find((o) => o.kind === "applyUpdate");
+    expect(apply).toMatchObject({ reseededCrdt: false });
+  });
+
+  it("rollback on failure reseeds the CRDT back to the previous content", async () => {
+    const mock = makeMockDb({
+      currentVersionId: "version-prev",
+      currentContent: PREV,
+      failApply: true,
+    });
+    const exit = await Effect.runPromiseExit(
+      Effect.provide(
+        applyVersionLiveEffect(
+          "doc-1",
+          DocumentTypes.SOGGETTO,
+          "user-1",
+          NEXT,
+          "draft Cesare · soggetto",
+        ),
+        mock.layer,
+      ),
+    );
+    expect(Exit.isFailure(exit)).toBe(true);
+    const revert = mock.ops.find((o) => o.kind === "revertUpdate");
+    expect(revert).toMatchObject({ content: PREV, reseededCrdt: true });
   });
 });
