@@ -9,8 +9,7 @@
 // full-screen/focus-mode takeover); the prompt is centred within the main lane.
 // Typing + submitting the first message creates the session and DOCKS into the
 // normal conversation view — the SAME single chat container (no duplicate). The
-// landing is routed + deep-linkable, and `prefers-reduced-motion` removes the
-// glow animation.
+// landing is routed + deep-linkable.
 import { test, expect } from "./fixtures";
 import { BASE_URL } from "./fixtures";
 import { TEAM_PROJECT_ID } from "./breakdown/helpers";
@@ -137,24 +136,5 @@ test.describe("[OHW-052] Full-screen glowy Cesare new-session landing", () => {
 
     const input = page.getByTestId("new-session-input");
     await expect(input).not.toHaveValue("");
-  });
-
-  test("prefers-reduced-motion → the glow ring is not animated", async ({
-    authenticatedPage: page,
-  }) => {
-    // Force reduced motion on the authenticated page. The glow ring must drop
-    // its animation (static ring) under the media query.
-    await page.emulateMedia({ reducedMotion: "reduce" });
-
-    await page.goto(`${BASE_URL}/projects/${TEAM_PROJECT_ID}/sessions/new`);
-    await expect(page.getByTestId("cesare-new-session-landing")).toBeVisible({
-      timeout: 10_000,
-    });
-
-    const ringAnimation = await page
-      .locator('[data-testid="new-session-glow"] > div')
-      .first()
-      .evaluate((el) => getComputedStyle(el).animationName);
-    expect(ringAnimation).toBe("none");
   });
 });

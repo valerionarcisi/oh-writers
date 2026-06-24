@@ -54,46 +54,15 @@
   color: var(--ds-text-3);
 }
 
-/* ── Glow composer ───────────────────────────────────────────────────────
-   The glow is a soft animated gradient ring painted by a blurred pseudo-layer
-   BEHIND the composer surface, so the input itself stays crisp and readable.
-   The conic gradient slowly rotates + the ring pulses its opacity; both pause
-   under prefers-reduced-motion (static ring, no animation). */
+/* ── Composer ─────────────────────────────────────────────────────────────
+   A clean centred composer: a bordered surface that lights its focus-ring
+   border while typing. No animated background. */
 
 .glowWrap {
   position: relative;
   inline-size: 100%;
   margin-block-start: var(--ds-space-4);
   isolation: isolate;
-}
-
-.glowRing {
-  position: absolute;
-  /* A generous, soft halo BEHIND the composer. The wide negative inset + heavy
-     blur dissolve the conic seams into an ambient glow rather than a hard cross
-     (N-13: the old tight ring painted a visible "X" through the surface). */
-  inset: calc(-1 * var(--ds-space-6));
-  z-index: -1;
-  border-radius: var(--ds-radius-pill);
-  background: conic-gradient(
-    from 0deg,
-    var(--ds-agent),
-    var(--ds-action),
-    var(--ds-agent),
-    var(--ds-action),
-    var(--ds-agent)
-  );
-  filter: blur(var(--ds-space-8));
-  opacity: 0.28;
-  animation:
-    glow-spin 9s linear infinite,
-    glow-pulse 3.2s var(--ds-ease) infinite;
-}
-
-/* The composer lights its own focus-ring when the user is typing, layered on
-   top of the ambient glow so the active field reads clearly. */
-.glowWrap:focus-within .glowRing {
-  opacity: 0.45;
 }
 
 .composer {
@@ -233,30 +202,4 @@
   margin-block-start: var(--ds-space-2);
   font-size: 0.875rem;
   color: var(--ds-danger);
-}
-
-@keyframes glow-spin {
-  to {
-    transform: rotate(1turn);
-  }
-}
-
-@keyframes glow-pulse {
-  0%,
-  100% {
-    opacity: 0.24;
-  }
-  50% {
-    opacity: 0.4;
-  }
-}
-
-/* Reduced motion → a static, non-animated ring (the glow stays, the movement
-   stops). The --ds-duration-* tokens already collapse to 0ms here; we also halt
-   the spin/pulse keyframes so nothing moves. */
-@media (prefers-reduced-motion: reduce) {
-  .glowRing {
-    animation: none;
-    opacity: 0.3;
-  }
 }

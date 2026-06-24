@@ -174,10 +174,10 @@ export function NewSessionLandingPage({ projectId }: { projectId: string }) {
   );
 }
 
-// ─── Glow composer ─────────────────────────────────────────────────────────
-// The large centred input with the token-driven glowing focus ring. It is the
-// existing composer pattern scaled up + centred — the glow is CSS only (no new
-// input primitive). react-aria `useButton` drives the send affordance.
+// ─── Composer ──────────────────────────────────────────────────────────────
+// The large centred input. It is the existing composer pattern scaled up +
+// centred, with a focus-ring border when typing (no animated background).
+// react-aria `useButton` drives the send affordance.
 
 interface GlowComposerProps {
   readonly value: string;
@@ -207,7 +207,6 @@ const GlowComposer = ({
 
   return (
     <div className={styles.glowWrap} data-testid="new-session-glow">
-      <div className={styles.glowRing} aria-hidden="true" />
       <div className={styles.composer}>
         <textarea
           ref={ref}
