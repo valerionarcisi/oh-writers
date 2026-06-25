@@ -6,11 +6,10 @@
  * deliberate difference from the floating Cesare drawer. */
 
 .lane {
-  /* Token-driven column width, clamped so it stays usable on small viewports
-     and never starves the main lane. AppShell sets the grid track to this same
-     width via the `--cesare-peek-size` custom property. */
-  --cesare-peek-size: clamp(360px, 42vw, 560px);
-
+  /* The lane fills the single auxiliary grid track (`--split-aux-width`, owned
+     by AppShell). It does not set its own width — the track is constant across
+     Cesare / Versioni / Notifiche so switching surfaces never reflows the page
+     (Spec 78 A6 / refound). */
   grid-column: 3;
   min-inline-size: 0;
   /* N-06 — pin the lane to the viewport. The shell grid is `min-block-size:

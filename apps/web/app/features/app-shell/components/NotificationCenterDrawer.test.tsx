@@ -139,10 +139,10 @@ describe("useBellOpener", () => {
 });
 
 describe("NotificationCenterDrawerHeader", () => {
-  it("shows the 'Tutto letto' state when no notifications are unseen", () => {
+  it("shows the title with NO subtitle when no notifications are unseen (Spec 78 B5: the 'Tutto letto' line was dropped)", () => {
     render(withProviders(<NotificationCenterDrawerHeader />));
     expect(screen.getByText("Notifiche Cesare")).toBeTruthy();
-    expect(screen.getByText("Tutto letto")).toBeTruthy();
+    expect(screen.queryByText("Tutto letto")).toBeNull();
   });
 
   it("renders the 'Segna tutte come lette' action when there are unseen items", () => {
