@@ -271,10 +271,16 @@ test.describe("[OHW-049] Versions SplitDrawer (routed)", () => {
   }) => {
     // Two routed surfaces claiming the single 3rd grid track squeezed the main
     // lane to zero — a blank white page. The shell resolves to AT MOST ONE
-    // auxiliary lane. Precedence (Option B): an EXPLICIT Cesare split wins the
-    // track and Versions yields, so Cesare renders as a real lane (with its
-    // ↗/←/✕ controls) instead of a floating box over Versions. The invariant
-    // this guards is unchanged: exactly one aux lane, the main track survives.
+    // auxiliary lane.
+    //
+    // Realigned to the unified navigable host (Spec 78 A6): the two routed
+    // surfaces are now MUTUALLY EXCLUSIVE via the shared-history reconciler, so a
+    // simultaneous deep-link of BOTH params converges to exactly ONE lane (and
+    // its single body flag) while the other param is dropped. The N64 invariant
+    // this test guards is unchanged: exactly one aux lane, the main track never
+    // collapses. The deterministic winner under unification is Versions (the
+    // higher-precedence routed surface); we assert the invariant, not a specific
+    // winner, so the test tracks the contract rather than the precedence detail.
     await page.goto(SOGGETTO_PATH);
     await expect(page.getByTestId("soggetto-page")).toBeVisible({
       timeout: 15_000,
@@ -286,19 +292,36 @@ test.describe("[OHW-049] Versions SplitDrawer (routed)", () => {
       timeout: 15_000,
     });
 
-    // Cesare wins the track; Versions yields entirely (no lane, no body flag).
-    await expect(page.getByTestId("cesare-peek-lane")).toBeVisible({
-      timeout: 5_000,
-    });
+    // Exactly ONE auxiliary lane is live (never both): count the visible lanes
+    // and the body flags, which must sum to one.
     await expect
-      .poll(() => page.evaluate(() => document.body.dataset.cesareSplit ?? ""))
-      .toBe("open");
-    await expect(page.getByTestId("versions-split-lane")).toHaveCount(0);
+      .poll(async () => {
+        const cesare = await page.getByTestId("cesare-peek-lane").count();
+        const versions = await page.getByTestId("versions-split-lane").count();
+        return cesare + versions;
+      })
+      .toBe(1);
     await expect
       .poll(() =>
-        page.evaluate(() => document.body.dataset.versionsSplit ?? ""),
+        page.evaluate(() => {
+          const d = document.body.dataset;
+          return [d.cesareSplit, d.versionsSplit, d.previewSplit].filter(
+            Boolean,
+          ).length;
+        }),
       )
-      .toBe("");
+      .toBe(1);
+
+    // The two routed params never coexist after the reconciler settles.
+    await expect
+      .poll(() => {
+        const u = new URL(page.url());
+        return [
+          u.searchParams.get("peek"),
+          u.searchParams.get("versions"),
+        ].filter((v) => v !== null).length;
+      })
+      .toBe(1);
 
     // The main lane is NOT squeezed to zero: the grid keeps a real middle track.
     const mainTrackWidth = await page.evaluate(() => {

@@ -217,9 +217,19 @@ function AppLayout() {
   // only compresses) and only the search param changes. Browser-back then
   // closes the peek (the param pops). Each open is a distinct history entry.
   const openCesarePeek = useCallback(() => {
+    // Mutually exclusive with the Versions surface: drop `?versions` (+ its
+    // companions) when promoting Cesare to the single auxiliary track, so the two
+    // routed params never coexist (Spec 78 A6 — one navigable host, one track).
+    const {
+      versions: _v,
+      vstate: _vs,
+      vcur: _vc,
+      vkind: _vk,
+      ...rest
+    } = search;
     void navigate({
       to: pathname,
-      search: { ...search, peek: CESARE_PEEK_TOKEN },
+      search: { ...rest, peek: CESARE_PEEK_TOKEN },
     });
   }, [navigate, pathname, search]);
   const closePeek = useCallback(() => {
@@ -236,6 +246,21 @@ function AppLayout() {
     companions: ["vstate", "vcur", "vkind"],
   });
   const closeVersions = versionsSurface.close;
+  // Re-open the Versions surface when the shared split history navigates to it
+  // (Spec 78 A6). One navigate sets `?versions=` (+ `vcur` / `vkind`) AND drops
+  // `?peek`, so the routed params are mutually exclusive (one navigable track).
+  const openVersions = useCallback(
+    (documentId: string, companions: Readonly<Record<string, string>>) => {
+      // Mutually exclusive with the Cesare peek: drop `?peek` so the two routed
+      // params never coexist in the single auxiliary track (Spec 78 A6).
+      const { peek: _peek, ...rest } = search;
+      void navigate({
+        to: pathname,
+        search: { ...rest, ...companions, versions: documentId },
+      });
+    },
+    [navigate, pathname, search],
+  );
   // `↗` expand → real navigation to the full-screen versions route (new history
   // entry; browser-back / `↙` returns to the split). The doc + baseline + kind are
   // preserved so the full route stays deep-linkable.
@@ -427,6 +452,7 @@ function AppLayout() {
         versionsCurrentParam={vcur ?? null}
         versionsKindParam={vkind ?? null}
         onCloseVersions={closeVersions}
+        onOpenVersions={openVersions}
         onExpandVersions={expandVersions}
         onStepBackVersions={stepBackVersions}
       >
