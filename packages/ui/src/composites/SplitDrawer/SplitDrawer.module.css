@@ -100,27 +100,9 @@
   block-size: 100dvh;
   max-block-size: 100vh;
   max-block-size: 100dvh;
-  /* Entrance animation: the lane content slides in from the right and fades up
-     as the page reflows to make room (the grid-column reflow is animated by the
-     shell). Gives the split a fluid "enter" instead of a hard pop-in. */
-  animation: split-lane-enter var(--ds-duration-3) var(--ds-ease);
-}
-
-@keyframes split-lane-enter {
-  from {
-    opacity: 0;
-    transform: translateX(16px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .root[data-placement="lane"][data-state="open"] {
-    animation: none;
-  }
+  /* No entrance animation on lane content: navigating between surfaces
+     (Cesare ↔ Versioni ↔ Notifiche) must not slide/shift the panel on each
+     click. */
 }
 
 .root[data-placement="lane"][data-state="full"] {
