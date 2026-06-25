@@ -50,15 +50,18 @@ export function NotificationCenterDrawerHeader(
     <div className={styles.header}>
       <div>
         <h2 className={styles.title}>{t("shell.notif.title")}</h2>
-        <p className={styles.subtitle}>
-          {unseenCount > 0
-            ? `${unseenCount} ${
-                unseenCount === 1
-                  ? t("shell.notif.unreadSingular")
-                  : t("shell.notif.unreadPlural")
-              }`
-            : t("shell.notif.allRead")}
-        </p>
+        {/* Only the unread count is surfaced. The "Tutto letto" all-read
+            subtitle was intentionally dropped (Spec 78 B5): an empty all-read
+            line added chrome without information. */}
+        {unseenCount > 0 && (
+          <p className={styles.subtitle}>
+            {`${unseenCount} ${
+              unseenCount === 1
+                ? t("shell.notif.unreadSingular")
+                : t("shell.notif.unreadPlural")
+            }`}
+          </p>
+        )}
       </div>
       <div className={styles.headerActions}>
         {unseenCount > 0 && <MarkAllSeenButton onPress={markAllSeen} />}

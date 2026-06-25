@@ -43,6 +43,19 @@ const readMainWidth = async (page: Page): Promise<number> =>
     return el ? Math.round(el.getBoundingClientRect().width) : -1;
   });
 
+// The single auxiliary track width — the computed `--split-aux-width` resolved on
+// the shell, which every surface (Cesare / Versioni / Notifiche) shares. Read the
+// resolved track width off the live grid (last grid-template-columns track) so we
+// measure what the user actually sees, not the token string.
+const readAuxTrackWidth = async (page: Page): Promise<number> =>
+  page.evaluate(() => {
+    const shell = document.querySelector('[class*="shell"]');
+    if (!shell) return -1;
+    const cols = getComputedStyle(shell).gridTemplateColumns.split(" ");
+    const last = cols[cols.length - 1];
+    return last ? Math.round(parseFloat(last)) : -1;
+  });
+
 const peekParam = (page: Page): string | null =>
   new URL(page.url()).searchParams.get("peek");
 const versionsParam = (page: Page): string | null =>
@@ -235,5 +248,81 @@ test.describe("[OHW-N78-A6] unified navigable split host", () => {
     await expect.poll(() => peekParam(page)).toBe("cesare");
     expect(await activeSplitFlags(page)).toEqual(["cesare-split"]);
     expect(await readMainWidth(page)).toBeGreaterThan(200);
+  });
+
+  // ── Refound host: constant width + arrows everywhere + no loop ───────────────
+  // The refound SplitDrawer host abstracts ONE constant-width aux column with a
+  // header that is the router (←/→ always present) and a content slot. This test
+  // locks the three refound invariants the bridge lacked:
+  //   (a) the aux column width is IDENTICAL across Cesare / Versioni / Notifiche
+  //       (switching surfaces never reflows the page);
+  //   (b) the ←/→ history arrows are present on ALL three, including Cesare, even
+  //       with a single-item history (the header is the router);
+  //   (c) opening the bell while Cesare is active does NOT feedback-loop (no
+  //       "Maximum update depth" console error) and the main lane survives.
+  test("refound: constant aux width + ←/→ arrows on all three + no loop on bell-while-Cesare", async ({
+    authenticatedPage: page,
+  }) => {
+    // Capture any React "Maximum update depth" loop error for the whole flow.
+    const consoleErrors: string[] = [];
+    page.on("console", (msg) => {
+      if (msg.type() === "error") consoleErrors.push(msg.text());
+    });
+    page.on("pageerror", (err) => consoleErrors.push(err.message));
+
+    // ── Cesare peek: arrows present (single-item history), record the width ───
+    await page.goto(`${SOGGETTO_PATH}?peek=cesare`);
+    await expect(page.getByTestId("soggetto-page")).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByTestId("cesare-peek-lane")).toBeVisible({
+      timeout: 5_000,
+    });
+    // The header IS the router: the ←/→ arrows render on Cesare too (disabled at
+    // a single-item history, but ALWAYS in the DOM). `attached`, not `visible`,
+    // because a disabled arrow is faint but present.
+    await expect(page.getByTestId("split-drawer-back")).toBeAttached({
+      timeout: 5_000,
+    });
+    await expect(page.getByTestId("split-drawer-forward")).toBeAttached();
+    const cesareAuxWidth = await readAuxTrackWidth(page);
+    expect(cesareAuxWidth).toBeGreaterThan(200);
+    expect(await readMainWidth(page)).toBeGreaterThan(200);
+
+    // ── Versioni: SAME width, arrows present ─────────────────────────────────
+    await page.getByTestId("topbar-version-chip").click();
+    await expect(page.getByTestId("versions-split-lane")).toBeVisible({
+      timeout: 5_000,
+    });
+    await expect(page.getByTestId("split-drawer-back")).toBeAttached();
+    const versionsAuxWidth = await readAuxTrackWidth(page);
+    expect(versionsAuxWidth).toBe(cesareAuxWidth);
+    expect(await readMainWidth(page)).toBeGreaterThan(200);
+
+    // ── ← back to Cesare, then bell → Notifiche: SAME width, NO loop ──────────
+    await clickHistoryArrowUntil(page, "split-drawer-back", "cesare-peek-lane");
+    await expect(page.getByTestId("cesare-peek-lane")).toBeVisible({
+      timeout: 5_000,
+    });
+    await page
+      .getByTestId("topbar-account")
+      .getByTestId("notifications-btn")
+      .click();
+    await expect(page.getByTestId("notification-center-drawer")).toBeVisible({
+      timeout: 5_000,
+    });
+    // Cesare ceded the URL track but the column width is unchanged.
+    await expect.poll(() => peekParam(page)).toBeNull();
+    const notifAuxWidth = await readAuxTrackWidth(page);
+    expect(notifAuxWidth).toBe(cesareAuxWidth);
+    expect(await readMainWidth(page)).toBeGreaterThan(200);
+    // Arrows present on the notifications header too.
+    await expect(page.getByTestId("split-drawer-back")).toBeAttached();
+
+    // The whole flow ran without a React update-depth feedback loop.
+    const loopErrors = consoleErrors.filter((t) =>
+      /Maximum update depth/i.test(t),
+    );
+    expect(loopErrors).toEqual([]);
   });
 });

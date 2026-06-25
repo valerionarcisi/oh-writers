@@ -6,14 +6,13 @@
    drive the rail width and Focus mode visibility — both are CSS-only so
    transitions stay cheap and there's a single source of truth. */
 .shell {
-  --cesare-peek-size: clamp(360px, 42vw, 560px);
-  /* Versions split lane width. AppShell writes the live drag width to
-     `--versions-split-size` on <body>; this falls back when the drag has not
-     run yet. Clamped so it stays usable and never starves the main lane. */
-  --versions-split-track: clamp(360px, var(--versions-split-size, 480px), 60vw);
-  /* Shell SplitDrawer (preview + notifications) lane width. AppShell writes the
-     live drag width to `--split-width` on <body>; falls back when not dragged. */
-  --preview-split-track: clamp(360px, var(--split-width, 480px), 60vw);
+  /* ONE auxiliary-track width for the single navigable split host (Spec 78 A6 /
+     refound). Cesare peek, Versioni and Notifiche all open INTO the same lane,
+     so the column is the SAME width for every surface — switching surfaces never
+     reflows the page. Clamped so the track stays usable and never starves the
+     main (middle) lane. There is no per-surface width and no drag-divergence:
+     constant width is the whole point of the refound. */
+  --split-aux-width: clamp(360px, 480px, 42vw);
 
   display: grid;
   grid-template-columns: 240px 1fr;
@@ -40,44 +39,22 @@
   grid-template-columns: minmax(0, 1fr);
 }
 
-/* Cesare split column (Spec 46 ?peek=, Spec 47 A4). The shell grows a third
-   track for the peek lane; the main lane (`minmax(0, 1fr)`) reflows narrower so
-   the page COLLAPSES beside Cesare instead of being overlaid. This is the
-   deliberate difference from the floating drawer, which never reflows the page.
-   The grid-template-columns transition animates the collapse smoothly. */
-:global(body[data-cesare-split="open"]) .shell {
-  grid-template-columns: 240px minmax(0, 1fr) var(--cesare-peek-size);
+/* ── The single auxiliary split track (Spec 78 A6 / refound) ─────────────────
+   There is exactly ONE auxiliary (3rd) grid track. Cesare peek, Versioni and
+   Notifiche all open INTO it (each becomes a navigation record in the shared
+   ←/→ history); AppShell sets `body[data-split-aux="open"]` whenever ANY of them
+   owns the track. The main lane (`minmax(0, 1fr)`) reflows narrower so the page
+   COMPRESSES beside the lane — never an overlay. Because the width is the SAME
+   `--split-aux-width` for every surface, switching surfaces (Cesare ↔ Versioni ↔
+   Notifiche) never changes the column width and the page never shifts. The
+   grid-template-columns transition animates the initial collapse smoothly. */
+:global(body[data-split-aux="open"]) .shell {
+  grid-template-columns: 240px minmax(0, 1fr) var(--split-aux-width);
 }
 
-:global(body[data-cesare-split="open"][data-shell="collapsed"]) .shell,
-:global(body[data-cesare-split="open"][data-shell="focus"]) .shell {
-  grid-template-columns: 0 minmax(0, 1fr) var(--cesare-peek-size);
-}
-
-/* Versions split column (Spec 49 W1 + W2). Same grid mechanism as the Cesare
-   split: the shell grows a third track for the Versions lane and the main lane
-   (`minmax(0, 1fr)`) reflows narrower so the host page COMPRESSES beside it.
-   The track is drag-resizable via `--versions-split-size`. */
-:global(body[data-versions-split="open"]) .shell {
-  grid-template-columns: 240px minmax(0, 1fr) var(--versions-split-track);
-}
-
-:global(body[data-versions-split="open"][data-shell="collapsed"]) .shell,
-:global(body[data-versions-split="open"][data-shell="focus"]) .shell {
-  grid-template-columns: 0 minmax(0, 1fr) var(--versions-split-track);
-}
-
-/* Shell-level SplitDrawer (Cesare change-preview + notifications). The one and
-   only drawer is ALWAYS an in-flow collapsing lane (CONTEXT.md / ADR-0002): the
-   shell grows a third track and the main lane reflows narrower beside it — never
-   a fixed overlay. Same grid mechanism as the Cesare/Versions splits. */
-:global(body[data-preview-split="open"]) .shell {
-  grid-template-columns: 240px minmax(0, 1fr) var(--preview-split-track);
-}
-
-:global(body[data-preview-split="open"][data-shell="collapsed"]) .shell,
-:global(body[data-preview-split="open"][data-shell="focus"]) .shell {
-  grid-template-columns: 0 minmax(0, 1fr) var(--preview-split-track);
+:global(body[data-split-aux="open"][data-shell="collapsed"]) .shell,
+:global(body[data-split-aux="open"][data-shell="focus"]) .shell {
+  grid-template-columns: 0 minmax(0, 1fr) var(--split-aux-width);
 }
 
 /* ── Shell SplitDrawer header (history nav + title) ─────────────────────── */

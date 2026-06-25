@@ -506,14 +506,6 @@ function AppShellInner({
     };
   }, [isVersionsSplitActive]);
 
-  useEffect(() => {
-    if (typeof document === "undefined") return;
-    document.body.style.setProperty(
-      "--versions-split-size",
-      `${effectiveVersionsWidth}px`,
-    );
-  }, [effectiveVersionsWidth]);
-
   // Shell SplitDrawer (Cesare preview + notifications) is ALWAYS an in-flow
   // collapsing lane (CONTEXT.md / ADR-0002), never a fixed overlay. While it has
   // content open in the `open` state, grow the third grid track so the page
@@ -545,6 +537,31 @@ function AppShellInner({
   const isCesareSplitActive = isCesareSplitActiveRaw && !isVersionsSplitActive;
   const isPreviewSplitActive =
     isPreviewSplitActiveRaw && !isVersionsSplitActive && !isCesareSplitActive;
+
+  // ── The single auxiliary split track (refound) ───────────────────────────
+  // There is exactly ONE auxiliary (3rd) grid track shared by Cesare peek,
+  // Versioni and Notifiche (Spec 78 A6). `data-split-aux` lights that track at a
+  // CONSTANT `--split-aux-width` regardless of which surface owns it — so
+  // switching surfaces never reflows the page (the whole point of the refound).
+  // The per-surface attrs below (`data-cesare-split` / `data-versions-split` /
+  // `data-preview-split`) still flag WHICH surface is live (the N64
+  // single-lane invariant + the floating-drawer offset read them), but they no
+  // longer drive the column width — only `data-split-aux` does.
+  const isAnyAuxLaneActive =
+    isCesareSplitActive || isVersionsSplitActive || isPreviewSplitActive;
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    if (isAnyAuxLaneActive) {
+      document.body.setAttribute("data-split-aux", "open");
+    } else {
+      document.body.removeAttribute("data-split-aux");
+    }
+    return () => {
+      if (typeof document !== "undefined") {
+        document.body.removeAttribute("data-split-aux");
+      }
+    };
+  }, [isAnyAuxLaneActive]);
 
   // ── Unified navigable split track (Spec 78 A6) ───────────────────────────
   // Mirror the routed Cesare-peek + Versions surfaces into the shell SplitDrawer
@@ -1750,9 +1767,11 @@ function SplitDrawerHistoryNav({
   backLabel: string;
   forwardLabel: string;
 }) {
-  // Hide entirely when there's nowhere to go (single-item history) so the header
-  // stays clean — the controls only appear once a second content has been shown.
-  if (!canGoBack && !canGoForward) return null;
+  // ALWAYS render the ←/→ arrows — the split header IS the router, so every
+  // surface (Cesare peek, Versioni, Notifiche) carries the same back/forward
+  // affordance even with a single-item history (the arrows are simply disabled).
+  // A constant header chrome means the user always knows the lane is navigable
+  // and the column width never shifts as history grows (Spec 78 A6 / refound).
   return (
     <div className={styles.splitHistoryNav} data-testid="split-drawer-history">
       <SplitDrawerHistoryArrow

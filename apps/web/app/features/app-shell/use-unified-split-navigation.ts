@@ -46,7 +46,7 @@
 // This hook is framework-aware (it reads/writes the router) but carries NO React
 // rendering — it returns the shared history controls the lanes wire their ←/→ to.
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { match } from "ts-pattern";
 import type {
   SplitDrawerPayload,
@@ -191,59 +191,95 @@ export function useUnifiedSplitNavigation({
   const { openCesarePeek, closeCesarePeek, openVersions, closeVersions } =
     actions;
 
+  // Callers build fresh `cesarePeek` / `versions` objects every render (inline
+  // literals), so depending on them directly would re-run the effects on EVERY
+  // render — the engine of the bell-while-Cesare feedback loop (Effect 2 fires,
+  // navigates, re-renders, fires again). Reduce them to their PRIMITIVE fields
+  // and re-memoise stable objects keyed on those primitives, so the effects run
+  // only when the URL-driven surface state genuinely changes.
+  const peekActive = cesarePeek.isActive;
+  const versionsDocumentId = versions.documentId;
+  const versionsCurrentVersionId = versions.currentVersionId;
+  const versionsKind = versions.versionKind;
+
+  const stableCesarePeek = useMemo<RoutedCesarePeekState>(
+    () => ({ isActive: peekActive }),
+    [peekActive],
+  );
+  const stableVersions = useMemo<RoutedVersionsState>(
+    () => ({
+      documentId: versionsDocumentId,
+      currentVersionId: versionsCurrentVersionId,
+      versionKind: versionsKind,
+    }),
+    [versionsDocumentId, versionsCurrentVersionId, versionsKind],
+  );
+
   // ── Effect 1: URL → history ───────────────────────────────────────────────
   // Mirror each routed surface into the shared stack when it turns active. The
   // context dedupes by payload key, so a surface that is already the active
   // entry is refreshed in place (no duplicate push); a NEW surface pushes a
   // fresh entry (so opening Versioni over Cesare adds a back-step to Cesare).
   useEffect(() => {
-    if (!cesarePeek.isActive) return;
+    if (!peekActive) return;
     open({ kind: "cesare-peek" });
-  }, [cesarePeek.isActive, open]);
+  }, [peekActive, open]);
 
   useEffect(() => {
-    if (versions.documentId === null) return;
+    if (versionsDocumentId === null) return;
     open({
       kind: "versions",
-      documentId: versions.documentId,
-      currentVersionId: versions.currentVersionId,
-      versionKind: versions.versionKind,
+      documentId: versionsDocumentId,
+      currentVersionId: versionsCurrentVersionId,
+      versionKind: versionsKind,
     });
-  }, [
-    versions.documentId,
-    versions.currentVersionId,
-    versions.versionKind,
-    open,
-  ]);
+  }, [versionsDocumentId, versionsCurrentVersionId, versionsKind, open]);
 
   // ── Effect 2: history → URL ───────────────────────────────────────────────
   // Project the active payload back to the URL whenever they disagree. This is
   // what makes ←/→ actually navigate: moving the cursor changes `payload`, and
   // this effect reconciles the URL to match, which re-renders the right lane.
   //
-  // The `lastReconciledRef` signature guard fires the same navigation at most
-  // once while the router is mid-transition (the URL hasn't caught up across two
-  // renders). Once the URL matches the payload, `reconcileUrlAction` returns
-  // `none` and the ref resets — so the round-trip cannot loop.
+  // The `lastReconciledRef` signature includes BOTH the action AND the live URL
+  // state it was computed from, so the same navigation fires AT MOST ONCE per
+  // distinct (action × URL) — a render storm while the router catches up cannot
+  // re-fire it, and it only re-fires after the URL actually changes. Once the
+  // URL matches the payload, `reconcileUrlAction` returns `none` and the ref
+  // resets. This is what kills the bell-while-Cesare feedback loop: opening the
+  // bell yields the track ONCE (drops `?peek`), then settles.
   const lastReconciledRef = useRef<string | null>(null);
   useEffect(() => {
     // Read-and-reset whether the active payload arrived via a ←/→ navigation, so
     // a back/forward to a routed surface whose param is currently absent RE-OPENS
-    // it instead of being mistaken for an external close.
+    // it instead of being mistaken for an external close. Effect deps are stable
+    // primitives/memos, so this effect runs only when the payload or the URL
+    // state genuinely changes — never on every render — so consuming the nav
+    // intent here is read at most once per real transition.
     const navIntent = consumeNavIntent();
-    const action = reconcileUrlAction(payload, cesarePeek, versions, navIntent);
+    const action = reconcileUrlAction(
+      payload,
+      stableCesarePeek,
+      stableVersions,
+      navIntent,
+    );
     if (action.kind === "none") {
       lastReconciledRef.current = null;
       return;
     }
-    const signature =
+    const actionKey =
       action.kind === "open-versions"
         ? `open-versions:${action.documentId}`
         : action.kind;
+    // Signature ties the action to the URL state it was computed from, so the
+    // same navigation fires AT MOST ONCE per distinct (action × URL): a render
+    // storm while the router catches up cannot re-fire it, and it only re-fires
+    // after the URL actually changes. This is the bell-while-Cesare loop guard.
+    const urlState = `${peekActive ? "p" : ""}:${versionsDocumentId ?? ""}`;
+    const signature = `${actionKey}@${urlState}`;
     if (lastReconciledRef.current === signature) return;
     lastReconciledRef.current = signature;
 
-    // `none` is handled by the early return above, so the match covers the three
+    // `none` is handled by the early return above, so the match covers the four
     // navigating actions exhaustively.
     match(action)
       .with({ kind: "open-cesare" }, () => openCesarePeek())
@@ -251,8 +287,8 @@ export function useUnifiedSplitNavigation({
         openVersions(documentId, companions),
       )
       .with({ kind: "clear-both" }, () => {
-        if (cesarePeek.isActive) closeCesarePeek();
-        if (versions.documentId !== null) closeVersions();
+        if (peekActive) closeCesarePeek();
+        if (versionsDocumentId !== null) closeVersions();
       })
       // A routed surface was closed externally (× / ESC / browser-back dropped
       // its param): clear the shared history so effect-1 stops re-pushing it and
@@ -261,8 +297,10 @@ export function useUnifiedSplitNavigation({
       .exhaustive();
   }, [
     payload,
-    cesarePeek,
-    versions,
+    stableCesarePeek,
+    stableVersions,
+    peekActive,
+    versionsDocumentId,
     consumeNavIntent,
     openCesarePeek,
     closeCesarePeek,
