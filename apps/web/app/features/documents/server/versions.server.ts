@@ -22,6 +22,7 @@ import {
   isPmRoomDocType,
   yjsStateFromNarrativeContent,
 } from "./yjs-seed.server";
+import { notifyRoomReseed } from "~/features/realtime/server/notify-room-reseed";
 
 // ─── Shared guards ────────────────────────────────────────────────────────────
 
@@ -258,7 +259,13 @@ export const createVersionFromScratch = createServerFn({ method: "POST" })
                         updatedAt: new Date(),
                       })
                       .where(eq(documents.id, doc.id))
-                      .then(() => version),
+                      .then(() => {
+                        // Cleared the CRDT to blank — drop the live room so
+                        // editors reload empty (BUG-N72).
+                        if (isPmRoomDocType(doc.type))
+                          void notifyRoomReseed(doc.id);
+                        return version;
+                      }),
                     (e) => new DbError("versions.create.update-current", e),
                   )
                 : err(new DbError("versions.create", "no row returned")),
@@ -322,7 +329,11 @@ export const duplicateVersion = createServerFn({ method: "POST" })
                       .update(documents)
                       .set(activateVersionSet(doc, version))
                       .where(eq(documents.id, doc.id))
-                      .then(() => version),
+                      .then(() => {
+                        if (isPmRoomDocType(doc.type))
+                          void notifyRoomReseed(doc.id);
+                        return version;
+                      }),
                     (e) => new DbError("versions.duplicate.update-current", e),
                   )
                 : err(new DbError("versions.duplicate", "no row returned")),
@@ -421,7 +432,12 @@ export const switchToVersion = createServerFn({ method: "POST" })
                 .update(documents)
                 .set(activateVersionSet(doc, version))
                 .where(eq(documents.id, doc.id))
-                .then(() => version),
+                .then(() => {
+                  // Reseeded the CRDT — drop the live room so editors reload it
+                  // instead of keeping the previous version's text (BUG-N72).
+                  if (isPmRoomDocType(doc.type)) void notifyRoomReseed(doc.id);
+                  return version;
+                }),
               (e) => new DbError("versions.switch", e),
             ),
           ),

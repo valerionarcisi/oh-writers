@@ -124,6 +124,44 @@ const flushDirtyRooms = async (utils: YWebsocketUtils): Promise<void> => {
   }
 };
 
+/**
+ * Drop a room's in-memory copy WITHOUT flushing it, then disconnect its clients
+ * so they reconnect and re-bind from the fresh DB state (BUG-N72). Called when a
+ * server-side actor (Cesare apply / version activate) has just reseeded
+ * `documents.yjs_state` in the DB: the live room still holds the STALE doc, and
+ * a normal flush would persist that stale state back over the reseed. So we must
+ * NOT flush — we discard the live doc and let `bindState` reload the DB on the
+ * clients' reconnect.
+ *
+ * Returns the number of client connections that were closed (0 if the room was
+ * not live in this instance).
+ */
+export const reseedRoom = async (docName: string): Promise<number> => {
+  const utils = await getYWebsocketUtils();
+  const doc = utils.docs.get(docName) as
+    | (YDoc & { conns?: Map<{ close?: () => void }, unknown> })
+    | undefined;
+  if (!doc) return 0;
+
+  const conns = doc.conns ? [...doc.conns.keys()] : [];
+  // Drop the stale doc + its loaded-marker BEFORE closing the sockets, so a
+  // client that races a reconnect re-creates the room and re-binds from the DB
+  // (a fresh load) rather than re-attaching to the stale in-memory doc.
+  dirtyRooms.delete(docName);
+  utils.docs.delete(docName);
+  forgetRoomLoaded(docName);
+
+  for (const conn of conns) {
+    try {
+      conn.close?.();
+    } catch {
+      // A socket already closing is fine — the goal is just to make every
+      // client reconnect and reload.
+    }
+  }
+  return conns.length;
+};
+
 /** Flush every open room — used on graceful shutdown. */
 export const flushAll = async (): Promise<void> => {
   const utils = await getYWebsocketUtils();

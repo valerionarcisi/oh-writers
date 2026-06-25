@@ -36,6 +36,12 @@ const INSTANCE_ID = randomUUID();
 
 const UPDATE_CHANNEL = "ohw:yjs:update";
 const AWARENESS_CHANNEL = "ohw:yjs:awareness";
+// A server-side actor (the web app's Cesare apply / version activate) reseeded a
+// room's CRDT in the DB and asks every ws-server to drop its in-memory copy so
+// connected clients reload the fresh state (BUG-N72). Unlike UPDATE_CHANNEL this
+// carries no payload — just the room to evict. Published by the WEB app, not by
+// a ws-server, so it is NOT filtered by INSTANCE_ID (every instance must act).
+const RESEED_CHANNEL = "ohw:yjs:reseed";
 
 interface FanoutMessage {
   instanceId: string;
@@ -48,6 +54,19 @@ interface FanoutMessage {
 // module stays decoupled from y-websocket's `docs` map.
 export type DocResolver = (docName: string) => SharedAwarenessDoc | undefined;
 let resolveDoc: DocResolver = () => undefined;
+
+// Called when a RESEED_CHANNEL message arrives: drop the in-memory room so the
+// next client reload picks up the fresh DB state. Set from the binding (which
+// owns the docs map + the connection lifecycle). No-op until wired.
+export type ReseedHandler = (docName: string) => void;
+let onReseed: ReseedHandler = () => undefined;
+export const setReseedHandler = (handler: ReseedHandler): void => {
+  onReseed = handler;
+};
+
+interface ReseedMessage {
+  docName: string;
+}
 
 // `Redis | null`: null is the no-op (no REDIS_URL) state. ioredis needs a
 // dedicated subscriber connection, so we keep a publisher and a subscriber.
@@ -77,6 +96,11 @@ const onAwarenessMessage = (raw: string): void => {
   );
 };
 
+const onReseedMessage = (raw: string): void => {
+  const message = JSON.parse(raw) as ReseedMessage;
+  onReseed(message.docName);
+};
+
 /**
  * Connect Redis and start fan-out. No-op (and no connection) when `REDIS_URL`
  * is unset. `docResolver` maps an inbound `docName` to the local managed doc
@@ -98,9 +122,10 @@ export const initRedisSync = async (
   subscriber.on("message", (channel: string, raw: string) => {
     if (channel === UPDATE_CHANNEL) onUpdateMessage(raw);
     else if (channel === AWARENESS_CHANNEL) onAwarenessMessage(raw);
+    else if (channel === RESEED_CHANNEL) onReseedMessage(raw);
   });
 
-  await subscriber.subscribe(UPDATE_CHANNEL, AWARENESS_CHANNEL);
+  await subscriber.subscribe(UPDATE_CHANNEL, AWARENESS_CHANNEL, RESEED_CHANNEL);
 };
 
 const publish = (
@@ -147,6 +172,19 @@ export const publishAwareness = (
 };
 
 /**
+ * Ask every ws-server to drop its in-memory copy of `docName` so connected
+ * clients reload the fresh DB state (BUG-N72). Published by the WEB app after it
+ * reseeds a room's CRDT in the DB (Cesare apply / version activate). No-op
+ * without Redis — in single-instance dev the web and ws-server SHARE the Redis,
+ * so the publish reaches the local ws-server.
+ */
+export const publishReseed = (docName: string): void => {
+  if (!publisher) return;
+  const message: ReseedMessage = { docName };
+  void publisher.publish(RESEED_CHANNEL, JSON.stringify(message));
+};
+
+/**
  * Wire a room's doc + awareness into the fan-out: every local update/awareness
  * change is published to peers. Called once per room (from the persistence
  * `bindState` hook, which fires when the first client connects). No-op without
@@ -190,7 +228,11 @@ export const registerRoom = (
 /** Tear down the Redis fan-out on shutdown. No-op when never initialised. */
 export const closeRedisSync = async (): Promise<void> => {
   if (subscriber) {
-    await subscriber.unsubscribe(UPDATE_CHANNEL, AWARENESS_CHANNEL);
+    await subscriber.unsubscribe(
+      UPDATE_CHANNEL,
+      AWARENESS_CHANNEL,
+      RESEED_CHANNEL,
+    );
     await subscriber.quit();
     subscriber = null;
   }

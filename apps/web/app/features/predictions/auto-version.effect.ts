@@ -14,6 +14,7 @@ import {
   isPmRoomDocType,
   yjsStateFromNarrativeContent,
 } from "~/features/documents/server/yjs-seed.server";
+import { notifyRoomReseed } from "~/features/realtime/server/notify-room-reseed";
 import { CesareError } from "./cesare.errors";
 import { resolveVersionAction } from "./resolve-version-action";
 import { changedWordRatio } from "./classify-edit-size";
@@ -516,7 +517,14 @@ export const applyVersionLive = (
       label,
       options,
     ).pipe(Effect.provide(Layer.succeed(DbService, { db: tx }))),
-  );
+  ).map((draft) => {
+    // The DB (content + version + reseeded CRDT) is now committed. For a
+    // realtime PM-room doc, drop the live ws-server room so connected editors
+    // reload the fresh CRDT instead of keeping (and re-persisting) the stale one
+    // (BUG-N72). Fire-and-forget — a missing ws-server never affects the apply.
+    if (isPmRoomDocType(documentType)) void notifyRoomReseed(documentId);
+    return draft;
+  });
 
 // ─── Slice 2 (Spec 76): the large-edit ASK ──────────────────────────────────
 //

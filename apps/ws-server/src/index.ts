@@ -5,6 +5,7 @@ import {
   installPersistence,
   flushAll,
   getYWebsocketUtils,
+  reseedRoom,
 } from "./persistence-binding.js";
 import { attachWsServer } from "./ws-handler.js";
 import {
@@ -22,6 +23,25 @@ app.get("/health", (c) =>
     ws: "ok",
   }),
 );
+
+// Internal: the web app calls this after it reseeds a room's CRDT in the DB
+// (Cesare apply / version activate, BUG-N72). The live in-memory room still
+// holds the STALE doc and would otherwise persist it back over the reseed and
+// keep showing it to connected editors. We drop the live room (no flush) and
+// disconnect its clients so they reconnect and re-bind from the fresh DB.
+// Guarded by a shared secret so it is not callable from the public internet.
+app.post("/internal/reseed-room", async (c) => {
+  const secret = process.env["WS_INTERNAL_SECRET"];
+  if (secret && c.req.header("x-ws-internal-secret") !== secret) {
+    return c.json({ error: "forbidden" }, 403);
+  }
+  const body = (await c.req.json().catch(() => null)) as {
+    docName?: string;
+  } | null;
+  if (!body?.docName) return c.json({ error: "docName required" }, 400);
+  const closed = await reseedRoom(body.docName);
+  return c.json({ ok: true, closedConnections: closed });
+});
 
 const port = Number(process.env["WS_PORT"] ?? 1234);
 
