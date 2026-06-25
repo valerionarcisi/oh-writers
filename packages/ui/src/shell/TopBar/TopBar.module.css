@@ -80,7 +80,19 @@
   gap: 14px;
   font-size: 13px;
   color: var(--ds-text-2);
-  min-width: 0;
+  min-inline-size: 0;
+  /* Take only the space the crumb needs and let it shrink first; never grow
+     into the right cluster. Combined with the crumb ellipsis the left cluster
+     degrades by truncating the breadcrumb rather than shoving the right-side
+     actions off-canvas when the bar is narrow (the ~450-650px Cesare-split
+     main lane). */
+  flex: 0 1 auto;
+}
+
+/* The hamburger (and any other start affordance) is a fixed hit-target: it
+   stays full-size and clickable while the crumb truncates around it. */
+.left > :where(button) {
+  flex-shrink: 0;
 }
 
 .crumb {
@@ -91,6 +103,8 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  /* The breadcrumb is the element that absorbs the squeeze in the left cluster. */
+  min-inline-size: 0;
 }
 
 .scope {
@@ -111,11 +125,29 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  /* The right cluster must never overflow the bar: at the Cesare-split width
+     the bar can be ~450-650px and the old `flex-shrink:0` pushed the account
+     icons (bell/avatar/gear) off the right edge of the main lane. The cluster
+     is now allowed to shrink; the squeeze is absorbed by the low-priority
+     page-actions group below, while the account zone + search stay fixed-size
+     and fully hit-testable. */
+  min-inline-size: 0;
+  flex: 0 1 auto;
+}
+
+/* Every child of the right cluster is a fixed hit-target by default — the
+   account zone (bell/avatar/gear) and the search button must never shrink or
+   clip. The ONE flexible child is `.pageActions` (which re-declares
+   `flex: 0 1 auto` below) so the squeeze is absorbed there, keeping the account
+   affordances fully clickable at the Cesare-split width. */
+.right > * {
   flex-shrink: 0;
 }
 
 /* Per-page actions cluster (version chip + ⋯ menu), grouped just left of the
- * account zone with a subtle divider so it reads as one Notion-style group. */
+ * account zone with a subtle divider so it reads as one Notion-style group.
+ * This is the shrink point of the right cluster: the version chip truncates
+ * (it sets its own ellipsis) before any account affordance is touched. */
 .pageActions {
   display: flex;
   align-items: center;
@@ -123,6 +155,8 @@
   padding-inline-end: 10px;
   margin-inline-end: 2px;
   border-inline-end: 1px solid var(--ds-line);
+  min-inline-size: 0;
+  flex: 0 1 auto;
 }
 
 .iconBtn {
@@ -160,6 +194,14 @@
 .versionSlot {
   display: inline-flex;
   align-items: center;
+  /* Lets the version chip be the first thing to truncate when the right
+     cluster is squeezed, protecting the account icons from clipping. */
+  min-inline-size: 0;
+  overflow: hidden;
+
+  & > * {
+    min-inline-size: 0;
+  }
 }
 
 /* Sceneggiatura element legend — second row of the top strip. */
