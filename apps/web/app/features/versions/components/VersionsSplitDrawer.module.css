@@ -96,6 +96,15 @@
   outline: var(--ring-focus);
 }
 
+/* The active/current version: a soft agent-tinted row + an agent-coloured left
+ * marker, so it stands out at a glance in a long list without opening the detail.
+ * The fill wins over the plain hover so the highlight never disappears on hover. */
+.versionRowCurrent,
+.versionRowCurrent:hover {
+  background: var(--ds-agent-soft);
+  box-shadow: inset var(--space-1) 0 0 0 var(--ds-agent);
+}
+
 .dot {
   flex: none;
   inline-size: var(--space-3);
@@ -129,14 +138,16 @@
   font-size: var(--text-xs);
   font-weight: 600;
   color: var(--ds-agent);
+  background: var(--ds-agent-soft);
   padding-inline: var(--space-2);
   border: 1px solid var(--ds-agent);
   border-radius: var(--radius-sm);
 }
 
-.badgeCheck {
-  font-size: 0.85em;
+.badgeDot {
+  font-size: 0.7em;
   line-height: 1;
+  color: var(--ds-agent);
 }
 
 .renameInput {

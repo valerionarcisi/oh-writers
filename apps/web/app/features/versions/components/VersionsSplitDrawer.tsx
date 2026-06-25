@@ -227,11 +227,13 @@ export function VersionsSplitDrawer({
           type="button"
           className={[
             styles.versionRow,
+            isCurrent ? styles.versionRowCurrent : "",
             isWorking ? styles.versionRowNested : "",
           ]
             .filter(Boolean)
             .join(" ")}
           onClick={() => setSelectedId(v.id)}
+          data-current={isCurrent ? "true" : undefined}
           data-testid={`versions-split-row-${v.id}`}
         >
           <span
@@ -271,8 +273,8 @@ export function VersionsSplitDrawer({
               className={styles.badgeCurrent}
               data-testid={`versions-split-current-${v.id}`}
             >
-              <span className={styles.badgeCheck} aria-hidden>
-                ✓
+              <span className={styles.badgeDot} aria-hidden>
+                ●
               </span>
               {t("versions.split.badgeCurrent")}
             </span>

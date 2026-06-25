@@ -83,6 +83,23 @@ test.describe("[OHW-066] Versions master→detail", () => {
     await expect(
       page.locator('[data-testid^="versions-split-current-"]'),
     ).toHaveCount(1);
+
+    // [A3] The active version's ROW is distinct at a glance: exactly one row
+    // carries the data-current marker, and that same row hosts the "● Attuale"
+    // badge in the LIST itself (not just the detail pane).
+    const currentRows = page.locator(
+      '[data-testid^="versions-split-row-"][data-current="true"]',
+    );
+    await expect(currentRows).toHaveCount(1);
+    await expect(currentRows.first()).toContainText("Attuale");
+    // The marker carries a tinted (non-transparent) background, so it reads as
+    // highlighted versus the plain rows.
+    const currentBg = await currentRows
+      .first()
+      .evaluate((el) => getComputedStyle(el).backgroundColor);
+    expect(currentBg).not.toBe("rgba(0, 0, 0, 0)");
+    expect(currentBg).not.toBe("transparent");
+
     // The "+ Nuova versione" affordance is present.
     await expect(page.getByTestId("version-new")).toBeVisible();
 
