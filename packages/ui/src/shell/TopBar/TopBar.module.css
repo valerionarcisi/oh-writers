@@ -74,6 +74,34 @@
   }
 }
 
+/* The Cesare-split main lane can compress to ~340-720px (rail expanded at a
+   1280-1680px viewport puts it at ~500-880px; a narrower viewport or a wider
+   peek lane drags it lower still). In that tight band the right cluster used to
+   keep its full content width: the version chip's box stayed ~106px and slid
+   UNDER the search/bell icons (covered, non-hit-testable) while the icons piled
+   to the left. This breakpoint makes the right cluster degrade in priority
+   order — gaps tighten, the page-actions group (version chip + ⋯) is the sole
+   shrink point and the version chip truncates FIRST — so the account zone
+   (search · bell · avatar · gear) and the ⋯ menu always stay full-size,
+   non-overlapping and clickable down to the narrowest lane. */
+@container (max-width: 720px) {
+  .row {
+    /* Reclaim horizontal room from the row padding without touching the
+       hit-target sizes; the side clusters get the space instead. */
+    padding-inline: var(--ds-space-3);
+    column-gap: var(--ds-space-2);
+  }
+
+  .right {
+    gap: var(--ds-space-1);
+  }
+
+  .pageActions {
+    gap: var(--ds-space-1);
+    padding-inline-end: var(--ds-space-2);
+  }
+}
+
 .left {
   display: flex;
   align-items: center;
@@ -199,7 +227,16 @@
   min-inline-size: 0;
   overflow: hidden;
 
-  & > * {
+  /* Propagate the shrink ALL the way down to the chip's label. The chip lives
+     in its own CSS Module (VersionTrigger) whose button + label keep their
+     intrinsic width by default; without a min-inline-size:0 chain the chip's
+     flex box never shrinks below its content, so at the tight Cesare-split
+     main-lane width (~340-400px) the `overflow:hidden` above merely CLIPPED it
+     to a "VE…" sliver that the search icon then covered — the chip became
+     invisible AND non-hit-testable. Pushing min-inline-size:0 through every
+     descendant lets the box itself shrink so the label ellipses cleanly inside
+     a narrower, still-clickable chip instead of being clipped under a sibling. */
+  & :where(*) {
     min-inline-size: 0;
   }
 }
