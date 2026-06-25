@@ -122,6 +122,50 @@ export type UrlReconcileAction =
   | { readonly kind: "clear-both" }
   | { readonly kind: "close-host" };
 
+/** The `versions` surface coordinates the mirror needs to compare for identity. */
+export interface VersionsMirrorIdentity {
+  readonly documentId: string;
+  readonly currentVersionId: string | null;
+  readonly versionKind: string | null;
+}
+
+/**
+ * Is the routed surface ALREADY the active shared-history entry, with the SAME
+ * coordinates? Used to make the URL → history mirror (Effect 1) strictly
+ * idempotent: re-mirroring a surface that is already the cursor entry must be a
+ * NO-OP, never another `open()` (which would reset `navIntentRef` and re-fire the
+ * cursor/state setters). Without this guard a routed param flip that lands back on
+ * the already-active payload still churns the context — the seed of the
+ * URL ↔ history oscillation the unified host is supposed to settle.
+ *
+ * For `versions` the identity is the FULL coordinate set — `documentId` AND the
+ * `currentVersionId` / `versionKind` companions — not the `documentId` alone.
+ * The history dedupe key is `versions:<documentId>`, so a companion-only change
+ * (same document, new `?vcur` / `?vkind`) keeps the same entry; the mirror MUST
+ * still run `open()` to refresh that entry's companions in place, or the stale
+ * companions get projected back to the URL by Effect 2 and clobber the user's
+ * baseline/kind selection. Hence the guard skips ONLY a fully-identical payload.
+ * For `cesare-peek` the surface has a single identity, so kind match is enough.
+ */
+export function isPayloadActive(
+  payload: SplitDrawerPayload | null,
+  kind: "cesare-peek" | "versions",
+  versionsIdentity?: VersionsMirrorIdentity,
+): boolean {
+  if (payload === null) return false;
+  if (payload.kind !== kind) return false;
+  if (payload.kind === "versions") {
+    return (
+      versionsIdentity !== undefined &&
+      payload.documentId === versionsIdentity.documentId &&
+      (payload.currentVersionId ?? null) ===
+        versionsIdentity.currentVersionId &&
+      (payload.versionKind ?? null) === versionsIdentity.versionKind
+    );
+  }
+  return true;
+}
+
 export function reconcileUrlAction(
   payload: SplitDrawerPayload | null,
   cesarePeek: RoutedCesarePeekState,
@@ -215,18 +259,45 @@ export function useUnifiedSplitNavigation({
     [versionsDocumentId, versionsCurrentVersionId, versionsKind],
   );
 
+  // The active payload, read through a ref so the URL → history mirror (Effect 1)
+  // can CHECK it without DEPENDING on it. Listing `payload` as an Effect-1 dep
+  // would re-fire the mirror on every ←/→ cursor move, re-pushing the routed
+  // surface and snapping a back-navigation forward again (the exact oscillation
+  // the unified host must avoid). The mirror's only legitimate trigger is a
+  // URL-param change; it merely needs the latest payload to no-op when the
+  // surface is already active.
+  const payloadRef = useRef<SplitDrawerPayload | null>(payload);
+  payloadRef.current = payload;
+
   // ── Effect 1: URL → history ───────────────────────────────────────────────
-  // Mirror each routed surface into the shared stack when it turns active. The
-  // context dedupes by payload key, so a surface that is already the active
-  // entry is refreshed in place (no duplicate push); a NEW surface pushes a
-  // fresh entry (so opening Versioni over Cesare adds a back-step to Cesare).
+  // Mirror each routed surface into the shared stack when its URL param turns
+  // active. The context dedupes by payload key, so a surface already in history
+  // is refreshed in place (no duplicate push); a NEW surface pushes a fresh entry
+  // (so opening Versioni over Cesare adds a back-step to Cesare).
+  //
+  // Idempotency guard (`isPayloadActive`): when the surface is ALREADY the active
+  // cursor entry, skip `open()` entirely. `open()` resets `navIntentRef` and runs
+  // the cursor/state setters, so re-mirroring an already-active payload (after a
+  // routed-param flip that settles back onto it) churns the context for nothing —
+  // the seed of the URL ↔ history oscillation. With this guard each mirror runs
+  // at most once per genuine surface change, so the round-trip converges to a
+  // fixpoint and cannot ping-pong.
   useEffect(() => {
     if (!peekActive) return;
+    if (isPayloadActive(payloadRef.current, "cesare-peek")) return;
     open({ kind: "cesare-peek" });
   }, [peekActive, open]);
 
   useEffect(() => {
     if (versionsDocumentId === null) return;
+    if (
+      isPayloadActive(payloadRef.current, "versions", {
+        documentId: versionsDocumentId,
+        currentVersionId: versionsCurrentVersionId,
+        versionKind: versionsKind,
+      })
+    )
+      return;
     open({
       kind: "versions",
       documentId: versionsDocumentId,
