@@ -62,6 +62,7 @@ import {
   importAsActiveVersionTx,
   fountainToDoc,
   docToFountain,
+  splitInlineCues,
 } from "~/features/screenplay-editor";
 
 // ─── Tool definitions ─────────────────────────────────────────────────────────
@@ -702,7 +703,8 @@ Formato Fountain (rispetta ESATTAMENTE la struttura — ogni elemento è una rig
 - TRANSIZIONE: a inizio riga, TUTTO MAIUSCOLO, che termina con "TO:" oppure le forme note "FADE IN:", "FADE OUT.", "FADE TO BLACK.", "DISSOLVENZA.", "STACCO.". Es: "FADE TO BLACK." è una TRANSIZIONE, non azione.
 
 DISTINZIONE CRITICA (sbagliarla rovina la sceneggiatura):
-- Il PERSONAGGIO è SOLO il nome in maiuscolo; la sua battuta (DIALOGO) va sulla riga successiva in minuscolo. NON scrivere la battuta in maiuscolo e NON metterla sulla stessa riga del nome.
+- Il PERSONAGGIO è SOLO il nome in maiuscolo; la sua battuta (DIALOGO) va sulla riga successiva in minuscolo. NON scrivere la battuta in maiuscolo e NON metterla sulla stessa riga del nome. SBAGLIATO: "GIULIO E allora?" (nome e battuta sulla stessa riga). GIUSTO: "GIULIO" su una riga, poi "E allora?" sulla riga sotto.
+- Quando l'azione nomina un personaggio, scrivilo in maiuscola/minuscola NORMALE dentro la prosa (es. "Filippo attraversa la sala") — il nome TUTTO MAIUSCOLO a inizio riga è SEMPRE e SOLO un PERSONAGGIO che sta per parlare.
 - "FADE TO BLACK." / "DISSOLVENZA." / "STACCO." sono TRANSIZIONI (riga a sé, maiuscolo), NON azione.
 
 Esempio corretto:
@@ -1360,7 +1362,14 @@ const handleGenerateScreenplay = (
         // saved screenplay is always correctly typed — Cesare effectively uses
         // every screenplay element correctly. Falls back to the raw text if the
         // round-trip somehow yields nothing.
-        const normalised = docToFountain(fountainToDoc(raw)).trim();
+        //
+        // BUG #46: the round-trip alone can't recover a cue that shares a line
+        // with its dialogue ("GIULIO And?") — the parser already sees it as
+        // action. So we PRE-split inline cues onto their own line (with the
+        // dialogue below) BEFORE parsing, then canonicalise.
+        const normalised = docToFountain(
+          fountainToDoc(splitInlineCues(raw)),
+        ).trim();
         const fountain = normalised.length > 0 ? normalised : raw;
         return ResultAsync.fromPromise(
           db.transaction((tx) =>
