@@ -160,14 +160,26 @@ test.describe("[OHW-066] Versions master→detail", () => {
     // so target the activate testid explicitly to avoid the row swallowing it).
     await page.getByTestId(`version-activate-${targetId}`).click();
 
-    // After activation the pointer has moved to the target row — it now carries
-    // the current badge and exactly one version is current. The list refetches,
-    // so poll.
+    // [A4] Visible confirmation: a success toast announces the activation, so
+    // the writer is never left guessing whether it worked.
+    await expect(page.getByText("Versione attivata")).toBeVisible({
+      timeout: 10_000,
+    });
+
+    // [A4] After activation the "Attuale" marker MOVES to the target row — it now
+    // carries the current badge and exactly one version is current. The list
+    // refetches the live current-version pointer, so poll.
     await expect(
       page.getByTestId(`versions-split-current-${targetId}`),
     ).toBeVisible({ timeout: 10_000 });
     await expect(
       page.locator('[data-testid^="versions-split-current-"]'),
+    ).toHaveCount(1);
+    // The moved marker lives on the same row that was activated (data-current).
+    await expect(
+      page.locator(
+        `[data-testid="versions-split-row-${targetId}"][data-current="true"]`,
+      ),
     ).toHaveCount(1);
   });
 
