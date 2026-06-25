@@ -1,6 +1,10 @@
 import { describe, it, expect } from "vitest";
 import { Effect, Exit, Layer } from "effect";
-import { documents, documentVersions } from "@oh-writers/db/schema";
+import {
+  cesareSessions,
+  documents,
+  documentVersions,
+} from "@oh-writers/db/schema";
 import { DocumentTypes } from "@oh-writers/domain";
 import type { Db } from "~/server/db";
 import { DbService } from "~/server/effect";
@@ -15,7 +19,12 @@ import { applyVersionLiveEffect } from "./auto-version.effect";
 // the Effect semantics from Postgres' own transaction rollback.
 
 type Op =
-  | { kind: "insertVersion"; content: string; versionKind: string }
+  | {
+      kind: "insertVersion";
+      content: string;
+      versionKind: string;
+      cesareSessionId: string | null;
+    }
   | {
       kind: "applyUpdate";
       versionId: string;
@@ -41,6 +50,9 @@ interface MockOptions {
   // select filtered by (kind=working, cesareSessionId) returns this working row,
   // so `acquireVersion` takes the in-place overwrite branch.
   sessionWorkingRow?: { id: string; content: string } | null;
+  // BUG #42: when false, the resolveSessionId existence probe returns no row, so
+  // a stale/synthetic session id must be written as null (FK-safe), not crash.
+  sessionExists?: boolean;
 }
 
 const makeMockDb = (opts: MockOptions) => {
@@ -62,6 +74,12 @@ const makeMockDb = (opts: MockOptions) => {
               content: opts.currentContent ?? "",
             },
           ];
+        }
+        // resolveSessionId existence probe (BUG #42). Defaults to "exists" so
+        // every existing test keeps its session id; sessionExists:false models a
+        // stale/synthetic id that must resolve to null instead of crashing.
+        if (table === cesareSessions) {
+          return opts.sessionExists === false ? [] : [{ id: "session-row" }];
         }
         if (table === documentVersions && "max" in columns) {
           return [{ max: (opts.existingVersionContents ?? []).length }];
@@ -155,6 +173,7 @@ const makeMockDb = (opts: MockOptions) => {
           kind: "insertVersion",
           content: v["content"] as string,
           versionKind,
+          cesareSessionId: (v["cesareSessionId"] as string | null) ?? null,
         });
         // A minted checkpoint is a distinct row from the working row that follows.
         const id =
@@ -547,5 +566,64 @@ describe("[OHW-N72] Cesare narrative apply reseeds the CRDT", () => {
     expect(Exit.isFailure(exit)).toBe(true);
     const revert = mock.ops.find((o) => o.kind === "revertUpdate");
     expect(revert).toMatchObject({ content: PREV, reseededCrdt: true });
+  });
+});
+
+describe("[OHW-N42] stale/synthetic session id is FK-safe (does not crash the apply)", () => {
+  it("a sessionId that no longer exists is written as null, the version still commits", async () => {
+    const mock = makeMockDb({
+      currentVersionId: "version-prev",
+      currentContent: PREV,
+      // The session id in overwriteOpts is gone from cesare_sessions → the
+      // existence probe returns no row.
+      sessionExists: false,
+    });
+    const exit = await Effect.runPromiseExit(
+      Effect.provide(
+        applyVersionLiveEffect(
+          "doc-1",
+          DocumentTypes.SOGGETTO,
+          "user-1",
+          NEXT,
+          "draft Cesare · soggetto",
+          overwriteOpts,
+        ),
+        mock.layer,
+      ),
+    );
+    // The apply succeeds (no FK crash) …
+    expect(Exit.isSuccess(exit)).toBe(true);
+    // … and every inserted version row carries a null session id, never the
+    // stale one.
+    const inserts = mock.ops.filter((o) => o.kind === "insertVersion");
+    expect(inserts.length).toBeGreaterThan(0);
+    for (const ins of inserts) {
+      expect(ins).toMatchObject({ cesareSessionId: null });
+    }
+  });
+
+  it("a live sessionId is preserved on the inserted version row", async () => {
+    const mock = makeMockDb({
+      currentVersionId: "version-prev",
+      currentContent: PREV,
+      sessionExists: true,
+    });
+    const exit = await Effect.runPromiseExit(
+      Effect.provide(
+        applyVersionLiveEffect(
+          "doc-1",
+          DocumentTypes.SOGGETTO,
+          "user-1",
+          NEXT,
+          "draft Cesare · soggetto",
+          overwriteOpts,
+        ),
+        mock.layer,
+      ),
+    );
+    expect(Exit.isSuccess(exit)).toBe(true);
+    const inserts = mock.ops.filter((o) => o.kind === "insertVersion");
+    expect(inserts.length).toBeGreaterThan(0);
+    expect(inserts.some((i) => i.cesareSessionId === SESSION)).toBe(true);
   });
 });

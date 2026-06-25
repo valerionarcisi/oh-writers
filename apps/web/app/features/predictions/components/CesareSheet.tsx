@@ -412,6 +412,29 @@ export function CesareSheet({
     setInput("");
   }, [createSession, chat]);
 
+  // Every send must target a REAL (DB-backed) session. When none is active yet
+  // (a fresh project, or before the first session row exists), the floating
+  // drawer used to send into the synthetic `PENDING_SESSION` id — the server
+  // then failed `persistTurn` with CesareSessionNotFoundError and silently
+  // dropped the whole turn (BUG #42: every Cesare edit failed, the editor never
+  // updated, and Cesare falsely reported success). Create the session first and
+  // send into its real id. The conversation page / landing already do this; the
+  // drawer's send paths now share it.
+  const sendInSession = useCallback(
+    async (text: string) => {
+      const existing = activeSessionId;
+      if (existing) {
+        void chat.send(text, existing);
+        return;
+      }
+      const session = await createSession.mutateAsync(undefined);
+      setActiveSessionId(session.id);
+      chat.selectSession(session.id);
+      await chat.send(text, session.id);
+    },
+    [activeSessionId, chat, createSession],
+  );
+
   const drawerSessions = useMemo(
     () => toDrawerSessions(sessionsQuery.data ?? [], activeSessionId, t),
     [sessionsQuery.data, activeSessionId, t],
@@ -526,23 +549,23 @@ export function CesareSheet({
         args.action === "mint"
           ? "Sì, fanne una nuova versione e applica la modifica."
           : "Sovrascrivi la versione corrente con questa modifica.";
-      void chat.send(text);
+      void sendInSession(text);
     },
-    [isLoading, chat],
+    [isLoading, sendInSession],
   );
 
   const handleSubmit = useCallback(() => {
     if (isLoading) return;
     const text = input;
     setInput("");
-    void chat.send(text);
-  }, [input, isLoading, chat]);
+    void sendInSession(text);
+  }, [input, isLoading, sendInSession]);
 
   const handleQuickPrompt = useCallback(
     (prompt: string) => {
-      void chat.send(prompt);
+      void sendInSession(prompt);
     },
-    [chat],
+    [sendInSession],
   );
 
   // ── Next-step suggestion (Spec 50) ───────────────────────────────────────
@@ -553,9 +576,9 @@ export function CesareSheet({
   const handleNextStep = useCallback(
     (prompt: string) => {
       if (isLoading) return;
-      void chat.send(prompt);
+      void sendInSession(prompt);
     },
-    [isLoading, chat],
+    [isLoading, sendInSession],
   );
   const showInlineNextStep =
     nextStep !== null && messages.length > 0 && !isLoading;

@@ -1,6 +1,10 @@
 import { Cause, Effect, Exit, Layer } from "effect";
 import { and, desc, eq, sql } from "drizzle-orm";
-import { documents, documentVersions } from "@oh-writers/db/schema";
+import {
+  cesareSessions,
+  documents,
+  documentVersions,
+} from "@oh-writers/db/schema";
 import { type DocumentType } from "@oh-writers/domain";
 import { buildWordDiffSegments } from "@oh-writers/utils";
 import { okAsync, ResultAsync } from "neverthrow";
@@ -99,6 +103,32 @@ const dbStep = <A>(
       fail(e instanceof Error ? e.message : `${context}: ${String(e)}`),
   });
 
+// Defence in depth (BUG #42): the version row carries a FK to cesare_sessions.
+// A stale/synthetic session id (a client that sent before its session was
+// persisted) would otherwise make the INSERT fail with a foreign-key violation,
+// aborting the whole document apply — the editor never updates and Cesare
+// falsely reports success. Resolve the id to null when the session does not
+// exist, so the version still commits (it just doesn't collapse under that
+// session's checkpoint). The primary fix is client-side (always send a real
+// session id); this keeps the server from ever crashing an apply on a bad id.
+const resolveSessionId = (
+  cesareSessionId: string | null,
+): Effect.Effect<string | null, CesareError, DbService> =>
+  Effect.gen(function* () {
+    if (!cesareSessionId) return null;
+    const { db } = yield* DbService;
+    const [row] = yield* dbStep(
+      () =>
+        db
+          .select({ id: cesareSessions.id })
+          .from(cesareSessions)
+          .where(eq(cesareSessions.id, cesareSessionId))
+          .limit(1),
+      "resolveSessionId.exists",
+    );
+    return row ? cesareSessionId : null;
+  });
+
 // Insert a fresh numbered version row. Shared by the mint path and by the
 // overwrite path's first-of-session checkpoint + working seeding.
 const insertVersionRow = (
@@ -111,6 +141,7 @@ const insertVersionRow = (
 ): Effect.Effect<string, CesareError, DbService> =>
   Effect.gen(function* () {
     const { db } = yield* DbService;
+    const safeSessionId = yield* resolveSessionId(cesareSessionId);
     const [maxRow] = yield* dbStep(
       () =>
         db
@@ -132,7 +163,7 @@ const insertVersionRow = (
             label,
             content,
             kind,
-            cesareSessionId,
+            cesareSessionId: safeSessionId,
             isDraft: false,
             createdBy,
           })

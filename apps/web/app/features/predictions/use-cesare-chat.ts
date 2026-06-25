@@ -67,22 +67,27 @@ export const useCesareChat = (args: UseCesareChatArgs): UseCesareChat => {
     onTurnStart,
     onTurnSettled,
   } = args;
-  useEffect(() => {
-    store?.setSendDeps({
-      askCesare,
-      pageContext,
-      onAssistantResponse,
-      onTurnStart,
-      onTurnSettled,
-    });
-  }, [
-    store,
+  // Keep the latest deps in a ref so the publish effect never depends on the
+  // (per-render-new) identity of `pageContext` / the callbacks. Depending on
+  // those identities made `setSendDeps` → store setState → re-render → new
+  // identities → effect re-fires → infinite "Maximum update depth" loop on the
+  // Cesare peek surface. The effect now re-fires ONLY when the page context's
+  // primitive VALUES change (serialised key), and reads the freshest deps from
+  // the ref at publish time.
+  const sendDeps = {
     askCesare,
     pageContext,
     onAssistantResponse,
     onTurnStart,
     onTurnSettled,
-  ]);
+  };
+  const sendDepsRef = useRef(sendDeps);
+  sendDepsRef.current = sendDeps;
+  const pageContextKey = JSON.stringify(pageContext);
+  useEffect(() => {
+    store?.setSendDeps(sendDepsRef.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [store, pageContextKey]);
 
   // Keep the store's active session in sync with this surface's selection.
   const desiredSession = args.activeSessionId ?? "__pending__";
