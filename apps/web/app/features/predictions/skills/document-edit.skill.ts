@@ -80,12 +80,17 @@ export const buildDocumentEditSkill = (
     const readResult = tryExecuteReadTool(block, db, projectId);
     if (readResult) return readResult;
     if (isDocumentGenToolName(block.name)) {
+      // Spec 78 §A5 — thread the user's turn message so the large-edit
+      // confirm-card choice ("nuova versione" / "sovrascrivi") is honoured
+      // turn-wide. Without it the gen tools re-read intent from each tool's
+      // paraphrased `instruction`, so a second tool re-asked (the ask-loop).
       return executeDocumentGenTool(
         block,
         db,
         projectId,
         userIdFallback,
         sessionId,
+        userInstruction,
       );
     }
     // Spec 76 — thread sessionId + the user's words so the surgical edit honours

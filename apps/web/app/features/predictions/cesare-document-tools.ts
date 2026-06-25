@@ -31,16 +31,32 @@ import {
 // sessionId activates overwrite-into-one-working-row; an explicit "nuova
 // versione" instruction forces a mint (precedence rule 1). `largeEditConfirmed`
 // is set only on the follow-up turn after the streamed ask-card (Slice 2).
+//
+// Spec 78 §A5 — the large-edit ask-loop fix. The confirm-card choice is re-sent
+// as a USER MESSAGE ("…fanne una nuova versione…" / "Sovrascrivi…"), but the
+// model re-runs the edit with its own paraphrased tool `instruction`, which may
+// drop the trigger word — so reading the choice from the tool argument alone made
+// the confirmation fragile and PER TOOL: a second tool in the same turn re-asked
+// and overrode the user's answer (the loop). The user's turn message is identical
+// for every tool in the turn, so OR-ing it in makes the confirmed decision STICKY
+// for the whole turn — once the writer answered the ask, no tool re-asks the same
+// decision.
 const commitOptions = (
   sessionId: string | null,
   instruction: string | null | undefined,
+  userInstruction: string | null = null,
 ): CommitOptions => ({
   sessionId,
-  userRequestedNewVersion: userRequestedNewVersion(instruction),
+  userRequestedNewVersion:
+    userRequestedNewVersion(instruction) ||
+    userRequestedNewVersion(userInstruction),
   largeEditConfirmed: false,
   // "Sovrascrivi" on the ask card → apply the large edit in place. Detected from
-  // the re-sent confirmation phrasing, mirroring the new-version intent.
-  largeEditOverwriteConfirmed: userConfirmedOverwrite(instruction),
+  // the re-sent confirmation phrasing (the turn message), mirroring the
+  // new-version intent.
+  largeEditOverwriteConfirmed:
+    userConfirmedOverwrite(instruction) ||
+    userConfirmedOverwrite(userInstruction),
 });
 import {
   importAsActiveVersionTx,
@@ -826,6 +842,7 @@ const handleProposeLogline = (
   projectId: string,
   userIdFallback: string | null,
   sessionId: string | null = null,
+  userInstruction: string | null = null,
 ): ResultAsync<CommitOutcome, CesareError> =>
   loadScreenplayContent(db, projectId).andThen((screenplay) => {
     if (screenplay.trim().length === 0) {
@@ -864,7 +881,7 @@ const handleProposeLogline = (
               doc.content,
               logline,
               buildDraftLabel(DocumentTypes.LOGLINE, input.instruction ?? null),
-              commitOptions(sessionId, input.instruction),
+              commitOptions(sessionId, input.instruction, userInstruction),
             );
           },
         ),
@@ -884,6 +901,7 @@ const handleWriteLogline = (
   projectId: string,
   userIdFallback: string | null,
   sessionId: string | null = null,
+  userInstruction: string | null = null,
 ): ResultAsync<CommitOutcome, CesareError> => {
   const instruction = (input.instruction ?? "").trim();
   if (instruction.length === 0) {
@@ -943,7 +961,7 @@ const handleWriteLogline = (
             doc.content,
             logline,
             buildDraftLabel(DocumentTypes.LOGLINE, instruction),
-            commitOptions(sessionId, instruction),
+            commitOptions(sessionId, instruction, userInstruction),
           );
         });
     },
@@ -956,6 +974,7 @@ const handleProposeSynopsis = (
   projectId: string,
   userIdFallback: string | null,
   sessionId: string | null = null,
+  userInstruction: string | null = null,
 ): ResultAsync<CommitOutcome, CesareError> =>
   loadUpstreamNarrative(db, projectId, DocumentTypes.SYNOPSIS).andThen(
     (upstream) => {
@@ -1003,7 +1022,7 @@ const handleProposeSynopsis = (
                   DocumentTypes.SYNOPSIS,
                   input.instruction ?? null,
                 ),
-                commitOptions(sessionId, input.instruction),
+                commitOptions(sessionId, input.instruction, userInstruction),
               );
             },
           ),
@@ -1017,6 +1036,7 @@ const handleProposeSoggettoV2 = (
   projectId: string,
   userIdFallback: string | null,
   sessionId: string | null = null,
+  userInstruction: string | null = null,
 ): ResultAsync<CommitOutcome, CesareError> => {
   if (!input.instruction || !input.label) {
     return errAsync(
@@ -1098,7 +1118,7 @@ ${doc.content.slice(0, 18_000)}
           doc.content,
           next,
           label.slice(0, 80),
-          commitOptions(sessionId, instruction),
+          commitOptions(sessionId, instruction, userInstruction),
         );
       });
   });
@@ -1179,6 +1199,7 @@ const handleProposeTreatment = (
   projectId: string,
   userIdFallback: string | null,
   sessionId: string | null = null,
+  userInstruction: string | null = null,
 ): ResultAsync<CommitOutcome, CesareError> =>
   ResultAsync.combine([
     loadDocumentForType(db, projectId, DocumentTypes.TREATMENT),
@@ -1236,7 +1257,7 @@ const handleProposeTreatment = (
           doc.content,
           treatment,
           buildDraftLabel(DocumentTypes.TREATMENT, input.instruction ?? null),
-          commitOptions(sessionId, input.instruction),
+          commitOptions(sessionId, input.instruction, userInstruction),
         );
       });
   });
@@ -1422,6 +1443,10 @@ export const executeDocumentGenTool = (
   projectId: string,
   userIdFallback: string | null,
   sessionId: string | null = null,
+  // Spec 78 §A5 — the user's turn message, threaded so the confirm-card choice
+  // ("nuova versione" / "sovrascrivi") is honoured turn-wide rather than re-read
+  // from each tool's paraphrased `instruction` (which caused the ask-loop).
+  userInstruction: string | null = null,
 ): ResultAsync<ToolResult, CesareError> => {
   const input = block.input as ProposeInput;
   if (block.name === "propose_logline_from_screenplay") {
@@ -1431,6 +1456,7 @@ export const executeDocumentGenTool = (
       projectId,
       userIdFallback,
       sessionId,
+      userInstruction,
     ).map((outcome) => successResult(block.id, outcomePayload(outcome)));
   }
   if (block.name === "write_logline") {
@@ -1440,6 +1466,7 @@ export const executeDocumentGenTool = (
       projectId,
       userIdFallback,
       sessionId,
+      userInstruction,
     ).map((outcome) => successResult(block.id, outcomePayload(outcome)));
   }
   if (block.name === "propose_synopsis_from_screenplay") {
@@ -1449,6 +1476,7 @@ export const executeDocumentGenTool = (
       projectId,
       userIdFallback,
       sessionId,
+      userInstruction,
     ).map((outcome) => successResult(block.id, outcomePayload(outcome)));
   }
   if (block.name === "propose_soggetto_v2") {
@@ -1458,6 +1486,7 @@ export const executeDocumentGenTool = (
       projectId,
       userIdFallback,
       sessionId,
+      userInstruction,
     ).map((outcome) => successResult(block.id, outcomePayload(outcome)));
   }
   if (block.name === "propose_scaletta_from_soggetto") {
@@ -1476,6 +1505,7 @@ export const executeDocumentGenTool = (
       projectId,
       userIdFallback,
       sessionId,
+      userInstruction,
     ).map((outcome) => successResult(block.id, outcomePayload(outcome)));
   }
   if (block.name === "generate_screenplay_from_narrative") {
@@ -1512,6 +1542,9 @@ export const createDocumentGenTools = (
   projectId: string,
   userIdFallback: string | null,
   sessionId: string | null = null,
+  // Spec 78 §A5 — the user's turn message, so the streamed (AI-SDK) path honours
+  // the confirm-card choice turn-wide instead of re-asking on a second tool.
+  userInstruction: string | null = null,
 ) => ({
   propose_logline_from_screenplay: tool({
     description:
@@ -1534,6 +1567,7 @@ export const createDocumentGenTools = (
         projectId,
         userIdFallback,
         sessionId,
+        userInstruction,
       );
       if (result.isErr()) return { error: result.error.message };
       return outcomePayload(result.value);
@@ -1564,6 +1598,7 @@ export const createDocumentGenTools = (
         projectId,
         userIdFallback,
         sessionId,
+        userInstruction,
       );
       if (result.isErr()) return { error: result.error.message };
       return outcomePayload(result.value);
@@ -1589,6 +1624,7 @@ export const createDocumentGenTools = (
         projectId,
         userIdFallback,
         sessionId,
+        userInstruction,
       );
       if (result.isErr()) return { error: result.error.message };
       return outcomePayload(result.value);
@@ -1618,6 +1654,7 @@ export const createDocumentGenTools = (
         projectId,
         userIdFallback,
         sessionId,
+        userInstruction,
       );
       if (result.isErr()) return { error: result.error.message };
       return outcomePayload(result.value);
@@ -1667,6 +1704,7 @@ export const createDocumentGenTools = (
         projectId,
         userIdFallback,
         sessionId,
+        userInstruction,
       );
       if (result.isErr()) return { error: result.error.message };
       return outcomePayload(result.value);
