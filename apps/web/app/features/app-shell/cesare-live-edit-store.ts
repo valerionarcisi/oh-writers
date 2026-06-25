@@ -1,15 +1,18 @@
 // apps/web/app/features/app-shell/cesare-live-edit-store.ts
 //
-// The stack of recent live Cesare edits, per documentType, for the current
-// browser session. Drives the entity-page card stack (Spec 63): when the open
-// document's editor is in front of the writer, agentic edits are shown by an
-// in-editor card stack — NOT a split-preview that would duplicate the document.
+// The LATEST live Cesare edit, per documentType, for the current browser session.
+// Drives the entity-page "Cesare ha aggiornato …" notice (Spec 78 §A2): when the
+// open document's editor is in front of the writer, a single discreet, auto-
+// dismissing line confirms the live edit — never a stack, never a pile.
 //
-// One entry per Cesare TURN (prose docs). Each entry carries the pre-turn version
-// id so "↩ Annulla" restores the document to the state BEFORE the turn began.
+// At most ONE entry per documentType: a new Cesare turn REPLACES the previous
+// notice rather than appending (Spec 78 §A2 — no stacking). The edit applies LIVE
+// behind the chat; the chat result card is the record; true revert lives in the
+// Versions SplitDrawer (Spec 47e), not here. Each entry still carries the pre-turn
+// version id for diagnostics, but the banner no longer offers an inline undo.
 //
 // Browser-session memory (a singleton): survives client-side routing (so the bell
-// can carry the writer to the entity and find the card waiting) but dies on a tab
+// can carry the writer to the entity and find the notice waiting) but dies on a tab
 // reload. The durable history is the Versions surface. Pure client state, no React.
 
 export interface LiveEditSegment {
@@ -28,15 +31,16 @@ export interface LiveEdit {
   readonly segments: ReadonlyArray<LiveEditSegment>;
   /** Cesare's "Cosa cambia" bullet summary (already distilled). */
   readonly summary: string;
-  /** Version active BEFORE the turn began — restored by "↩ Annulla". Null when no
-   *  pre-turn snapshot was captured (then Annulla is unavailable). */
+  /** Version active BEFORE the turn began. Kept for diagnostics; the banner no
+   *  longer offers an inline undo (revert lives in the Versions drawer). Null when
+   *  no pre-turn snapshot was captured. */
   readonly previousVersionId: string | null;
-  /** Creation order, newest first in the stack. */
+  /** Creation timestamp. */
   readonly at: number;
 }
 
 export interface LiveEditState {
-  /** Stack of edits per documentType, newest LAST. */
+  /** The single latest edit per documentType (a new turn replaces the previous). */
   readonly stacks: Readonly<Record<string, ReadonlyArray<LiveEdit>>>;
 }
 
@@ -67,7 +71,7 @@ export function getLiveEditState(): LiveEditState {
   return state;
 }
 
-/** The stack for one document, newest LAST. */
+/** The latest edit for one document as a 0-or-1 array (never stacks). */
 export function getLiveEditsFor(documentType: string): ReadonlyArray<LiveEdit> {
   return state.stacks[documentType] ?? [];
 }
@@ -80,7 +84,9 @@ export interface PublishLiveEditInput {
   readonly previousVersionId: string | null;
 }
 
-/** Push the latest Cesare edit(s) onto each touched document's stack. */
+/** Publish the latest Cesare edit per touched document. A new edit REPLACES the
+ *  document's previous notice (Spec 78 §A2 — never stacks). When a turn touches the
+ *  same document twice, only the last write survives. */
 export function publishLiveEdits(
   inputs: ReadonlyArray<PublishLiveEditInput>,
 ): void {
@@ -102,8 +108,8 @@ export function publishLiveEdits(
       id: `live-edit-${idCounter}`,
       at,
     };
-    const prev = stacks[input.documentType] ?? [];
-    stacks[input.documentType] = [...prev, entry];
+    // Replace (not append): at most one notice per document.
+    stacks[input.documentType] = [entry];
     // The new version becomes the pre-turn snapshot for the NEXT turn.
     preTurnVersionByDocType.delete(input.documentType);
   }

@@ -1,9 +1,6 @@
-/* Spec 63 — discreet, persistent "Cesare ha aggiornato" banner above the editor.
-   Soft agent-tinted strip; never loud. */
+/* Spec 78 §A2 — one discreet, auto-dismissing "Cesare ha aggiornato" line above
+   the editor. Soft agent-tinted strip; never loud, never a stack. */
 .banner {
-  display: flex;
-  flex-direction: column;
-  gap: var(--ds-space-2);
   inline-size: 100%;
   max-inline-size: 760px;
   margin-inline: auto;
@@ -11,159 +8,47 @@
   animation: cesare-banner-in var(--ds-duration-2) var(--ds-ease);
 }
 
-/* One change card — a solid green-bordered strip, the notification colour. */
-.card {
+/* The single confirmation line — a soft agent-tinted strip. */
+.line {
   display: flex;
   align-items: center;
   gap: var(--ds-space-3);
   padding: var(--ds-space-2) var(--ds-space-3);
-  border: 1px solid var(--ds-agent, #5a7d4f);
+  border: 1px solid var(--ds-agent);
   border-radius: var(--ds-radius-md);
   background: var(--ds-agent-soft, var(--ds-surface));
   color: var(--ds-text);
   font-size: 13px;
 }
 
-/* Collapsed pile — the most recent card on top, the rest hinted behind it
-   (iOS-style). Click fans the stack out. */
-.pile {
-  position: relative;
-  display: block;
-  inline-size: 100%;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  font: inherit;
-  cursor: pointer;
-  /* Room for the hinted edges peeking below the top card. */
-  margin-block-end: 8px;
-}
-
-.pileTop {
-  position: relative;
-  z-index: 3;
-  display: flex;
-  align-items: center;
-  gap: var(--ds-space-3);
-  padding: var(--ds-space-2) var(--ds-space-3);
-  border: 1px solid var(--ds-agent, #5a7d4f);
-  border-radius: var(--ds-radius-md);
-  background: var(--ds-agent-soft, var(--ds-surface));
-  color: var(--ds-text);
-  font-size: 13px;
-}
-
-/* The two hinted cards behind the top one — offset down + inset sides. */
-.pileEdge {
-  position: absolute;
-  inset-inline: 6px;
-  block-size: 100%;
-  border: 1px solid var(--ds-agent, #5a7d4f);
-  border-radius: var(--ds-radius-md);
-  background: var(--ds-agent-soft, var(--ds-surface));
-}
-
-.pileEdge[data-depth="1"] {
-  inset-block-start: 4px;
-  inset-inline: 4px;
-  z-index: 2;
-  opacity: 0.9;
-}
-
-.pileEdge[data-depth="2"] {
-  inset-block-start: 8px;
-  inset-inline: 8px;
-  z-index: 1;
-  opacity: 0.75;
-}
-
-.badge {
-  margin-inline-start: auto;
+.glyph {
+  color: var(--ds-agent);
   flex-shrink: 0;
-  min-inline-size: 22px;
-  padding: 1px 7px;
-  border-radius: 999px;
-  background: var(--ds-agent, #5a7d4f);
-  color: var(--ds-text-on-dark);
-  font-size: 11px;
-  font-weight: 600;
-  text-align: center;
 }
 
-/* Fanned-out cascade — newest on top, each card offset down + slightly inset. */
-.fan {
-  display: flex;
-  flex-direction: column;
-  animation: cesare-fan-in var(--ds-duration-2) var(--ds-ease);
-}
-
-.fanItem {
-  position: relative;
-  margin-block-start: -6px;
-  transition: margin-block-start var(--ds-duration-1) var(--ds-ease);
-}
-
-.fanItem:first-child {
-  margin-block-start: 0;
-}
-
-.fan:hover .fanItem {
-  margin-block-start: var(--ds-space-1);
-}
-
-.fan:hover .fanItem:first-child {
-  margin-block-start: 0;
-}
-
-@keyframes cesare-fan-in {
-  from {
-    opacity: 0.4;
-    transform: translateY(-6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.fanFooter {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--ds-space-2);
-  margin-block-start: var(--ds-space-2);
-}
-
-.collapse {
-  height: 26px;
-  padding: 0 10px;
-  border: 1px solid var(--ds-line);
-  border-radius: var(--ds-radius-sm);
-  background: transparent;
+.message {
+  flex: 1 1 auto;
+  min-inline-size: 0;
   color: var(--ds-text-2);
-  font: inherit;
-  font-size: 12px;
-  cursor: pointer;
 }
 
-.collapse:hover {
-  background: var(--ds-surface-2, var(--ds-surface));
-  color: var(--ds-text);
-}
-
-.dismissAll {
-  height: 26px;
-  padding: 0 10px;
-  border: 1px solid var(--ds-line);
-  border-radius: var(--ds-radius-sm);
+.dismiss {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 24px;
+  block-size: 24px;
+  flex-shrink: 0;
+  border: none;
   background: transparent;
-  color: var(--ds-text-2);
-  font: inherit;
-  font-size: 12px;
+  color: var(--ds-text-faint);
+  border-radius: var(--ds-radius-sm);
   cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
 }
 
-.dismissAll:hover {
-  background: var(--ds-surface-2, var(--ds-surface));
+.dismiss:hover {
   color: var(--ds-text);
 }
 
@@ -182,118 +67,4 @@
   .banner {
     animation: none;
   }
-}
-
-.glyph {
-  color: var(--ds-agent);
-  flex-shrink: 0;
-}
-
-.message {
-  flex: 1 1 auto;
-  min-inline-size: 0;
-  color: var(--ds-text-2);
-}
-
-.count {
-  font-size: 12px;
-  color: var(--ds-text-2);
-  white-space: nowrap;
-}
-
-.actions {
-  display: flex;
-  align-items: center;
-  gap: var(--ds-space-2);
-  flex-shrink: 0;
-}
-
-.see {
-  height: 26px;
-  padding: 0 10px;
-  border: 1px solid var(--ds-agent);
-  border-radius: var(--ds-radius-sm);
-  background: transparent;
-  color: var(--ds-agent);
-  font: inherit;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition:
-    background var(--ds-duration-1) var(--ds-ease),
-    color var(--ds-duration-1) var(--ds-ease);
-}
-
-.see:hover {
-  background: var(--ds-agent);
-  color: var(--ds-text-on-dark);
-}
-
-.undo {
-  height: 26px;
-  padding: 0 10px;
-  border: 1px solid var(--ds-line);
-  border-radius: var(--ds-radius-sm);
-  background: transparent;
-  color: var(--ds-text-2);
-  font: inherit;
-  font-size: 12px;
-  cursor: pointer;
-  transition:
-    background var(--ds-duration-1) var(--ds-ease),
-    color var(--ds-duration-1) var(--ds-ease);
-}
-
-.undo:hover {
-  background: var(--ds-surface-2, var(--ds-surface));
-  color: var(--ds-text);
-}
-
-.undo[data-loading] {
-  opacity: 0.75;
-  cursor: default;
-}
-
-/* Small inline loader shown on "Indietro" while the revert is in flight. */
-.spinner {
-  display: inline-block;
-  inline-size: 11px;
-  block-size: 11px;
-  margin-inline-end: 6px;
-  vertical-align: -1px;
-  border: 1.5px solid var(--ds-line);
-  border-top-color: var(--ds-agent, var(--ds-text-2));
-  border-radius: 50%;
-  animation: cesare-undo-spin 0.6s linear infinite;
-}
-
-@keyframes cesare-undo-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .spinner {
-    animation-duration: 1.4s;
-  }
-}
-
-.dismiss {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  inline-size: 24px;
-  block-size: 24px;
-  border: none;
-  background: transparent;
-  color: var(--ds-text-faint);
-  border-radius: var(--ds-radius-sm);
-  cursor: pointer;
-  font-size: 16px;
-  line-height: 1;
-}
-
-.dismiss:hover {
-  color: var(--ds-text);
 }

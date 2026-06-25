@@ -1,16 +1,15 @@
 // tests/cesare-agentic-updated-banner.spec.ts
 //
-// [OHW-063] Entity-page Cesare-updated card stack.
+// [OHW-N38] Entity-page Cesare-updated confirmation line (Spec 78 §A2).
 //
-// Spec 63: when the writer is ON the page Cesare just edited, the change is shown
-// by an in-editor card — never the SplitDrawer (which would duplicate the document
-// the writer is already reading). One card per Cesare turn; multiple turns stack
-// collapsed with a "N modifiche" counter + ‹ › nav. "↩ Annulla" restores the
-// pre-turn version; "Ho visto"/× dismisses the card.
+// The agentic-edit pattern (CLAUDE.md): the edit applies LIVE behind the chat, the
+// chat result card is the record, and true revert lives in the Versions
+// SplitDrawer (Spec 47e). So the entity page shows ONE discreet, auto-dismissing
+// line confirming "Cesare ha aggiornato il <Entity>" — never a stack, never a pile,
+// no "Mostra cosa è cambiato" inline highlight, no inline undo.
 //
-// We drive deterministic mock soggetto edits and assert the card surfaces, the
-// stack counter grows across turns, navigation moves between cards, and Annulla
-// removes a card.
+// These tests pin the NEW contract: the line surfaces, it carries no see/undo/stack
+// affordances, and a second Cesare turn REPLACES it (never accumulates two cards).
 import { test, expect } from "./fixtures";
 import { BASE_URL } from "./fixtures";
 import { TEAM_PROJECT_ID } from "./breakdown/helpers";
@@ -33,12 +32,12 @@ async function sendSoggettoEdit(page: import("@playwright/test").Page) {
   expect(reply.toLowerCase()).toMatch(/soggetto|aggiornat|applicat/);
 }
 
-test.describe("[OHW-063] Cesare-updated card stack on the entity page", () => {
+test.describe("[OHW-N38] Cesare-updated confirmation line on the entity page", () => {
   test.beforeEach(async ({ authenticatedPage }) => {
     await resetCesareState(authenticatedPage, TEAM_PROJECT_ID);
   });
 
-  test("a Cesare edit surfaces the in-editor card (never the split)", async ({
+  test("a Cesare edit surfaces ONE discreet line — no see/undo/stack clutter", async ({
     authenticatedPage: page,
   }) => {
     test.setTimeout(120_000);
@@ -60,52 +59,21 @@ test.describe("[OHW-063] Cesare-updated card stack on the entity page", () => {
       MOCK_V2_MARKER,
       { timeout: 15_000 },
     );
-    // A single turn shows no stack toggle.
+
+    // The banner clutter is GONE: no "Mostra cosa è cambiato", no inline undo,
+    // no stack toggle. Only the dismiss × remains. The split lanes stay absent.
+    await expect(page.getByTestId("cesare-updated-see")).toHaveCount(0);
+    await expect(page.getByTestId("cesare-updated-undo")).toHaveCount(0);
     await expect(page.getByTestId("cesare-updated-stack-toggle")).toHaveCount(
       0,
     );
-
-    // "Mostra cosa è cambiato" underlines the changed text INSIDE the document
-    // prose (a decoration on the real text), never an overlay and never the
-    // split. The split lane must stay absent on the entity page.
-    await page.getByTestId("cesare-updated-see").click();
-    await expect(page.locator(".cesare-change-underline").first()).toBeVisible({
-      timeout: 5_000,
-    });
+    await expect(page.getByTestId("cesare-updated-count")).toHaveCount(0);
+    await expect(page.getByTestId("cesare-updated-dismiss")).toHaveCount(1);
     await expect(page.getByTestId("versions-split-lane")).toHaveCount(0);
     await expect(page.getByTestId("cesare-peek-lane")).toHaveCount(0);
-
-    // Toggle off removes the underline.
-    await page.getByTestId("cesare-updated-see").click();
-    await expect(page.locator(".cesare-change-underline")).toHaveCount(0);
   });
 
-  // BUG-N61: pins the DEFERRED half of Spec 63 (in-editor card owns the
-  // highlight → the chat card suppresses Mostra modifiche). Written with N-37,
-  // merged red the same day. Un-fixme when backlog item N-38 ships.
-  test.fixme("the chat result card hides 'Mostra modifiche' when the editor is in front", async ({
-    authenticatedPage: page,
-  }) => {
-    test.setTimeout(120_000);
-    await page.goto(`${BASE_URL}/projects/${TEAM_PROJECT_ID}/soggetto`);
-    await page.waitForLoadState("networkidle");
-    await expect(page.getByTestId("rich-text-editor")).toBeVisible({
-      timeout: 15_000,
-    });
-
-    await openCesareSheet(page);
-    await sendSoggettoEdit(page);
-
-    // The result card appears in the floating chat, but its "Mostra modifiche"
-    // is suppressed here — the in-editor banner owns the highlight (no duplicate).
-    await expect(page.getByTestId("cesare-change-trace")).toBeVisible({
-      timeout: 15_000,
-    });
-    await expect(page.getByTestId("cesare-show-changes-btn")).toHaveCount(0);
-  });
-
-  // BUG-N61: the stack counter is part of the deferred Spec 63 half (N-38).
-  test.fixme("two turns stack: counter collapses, click expands the inline list", async ({
+  test("a second turn REPLACES the line — it never stacks two cards", async ({
     authenticatedPage: page,
   }) => {
     test.setTimeout(160_000);
@@ -123,20 +91,18 @@ test.describe("[OHW-063] Cesare-updated card stack on the entity page", () => {
     await sendSoggettoEdit(page);
     await closeCesareSheet(page);
 
-    // Collapsed: a "2 modifiche" header, the list hidden.
-    const toggle = page.getByTestId("cesare-updated-stack-toggle");
-    await expect(toggle).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByTestId("cesare-updated-count")).toContainText("2");
-    await expect(page.getByTestId("cesare-updated-list")).toHaveCount(0);
-
-    // Click expands the inline list with one card per turn.
-    await toggle.click();
-    const list = page.getByTestId("cesare-updated-list");
-    await expect(list).toBeVisible();
-    await expect(list.getByTestId("cesare-updated-see")).toHaveCount(2);
+    // Still exactly one line — never a stack/pile across turns.
+    await expect(page.getByTestId("cesare-updated-banner")).toHaveCount(1);
+    await expect(
+      page.locator('[data-testid^="cesare-updated-card-"]'),
+    ).toHaveCount(1);
+    await expect(page.getByTestId("cesare-updated-stack-toggle")).toHaveCount(
+      0,
+    );
+    await expect(page.getByTestId("cesare-updated-count")).toHaveCount(0);
   });
 
-  test("↩ Indietro restores the pre-turn text and dismisses the card", async ({
+  test("the dismiss × clears the line; revert lives in the Versions drawer", async ({
     authenticatedPage: page,
   }) => {
     test.setTimeout(120_000);
@@ -150,15 +116,12 @@ test.describe("[OHW-063] Cesare-updated card stack on the entity page", () => {
     await closeCesareSheet(page);
     const banner = page.getByTestId("cesare-updated-banner");
     await expect(banner).toBeVisible({ timeout: 15_000 });
-    // The edit is applied: the v2 marker is in the editor.
+    // The edit is applied: the v2 marker is in the editor (live-doc contract).
     await expect(editor).toContainText(MOCK_V2_MARKER, { timeout: 15_000 });
 
-    // "Indietro" restores the pre-turn version (real revert) AND closes the card.
-    const undo = page.getByTestId("cesare-updated-undo");
-    await expect(undo).toBeVisible();
-    await undo.click();
+    // Dismiss only hides the line — it does NOT revert (revert = Versions drawer).
+    await page.getByTestId("cesare-updated-dismiss").click();
     await expect(banner).toHaveCount(0, { timeout: 15_000 });
-    // The document reverted: the v2 marker is gone.
-    await expect(editor).not.toContainText(MOCK_V2_MARKER, { timeout: 15_000 });
+    await expect(editor).toContainText(MOCK_V2_MARKER, { timeout: 5_000 });
   });
 });
