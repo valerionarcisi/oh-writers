@@ -157,6 +157,36 @@ export const MOCK_SCENARIOS: ReadonlyArray<MockScenario> = [
     ],
   },
 
+  // [Spec 78 §A5] large-edit ASK then CONFIRM via a document-gen tool
+  // (propose_soggetto_v2 — the seam the ask-loop fix lives in). The SAME
+  // scenario matches both the initial trigger AND the confirm-card re-sends
+  // ("nuova versione" / "sovrascrivi"), so the model re-emits the gen tool on
+  // the confirm turn. The first run ASKS (the turn message has no confirmation),
+  // the confirm run APPLIES ONCE because the user's turn message now carries the
+  // choice — proving the confirmation is sticky and there is no re-ask loop.
+  {
+    match:
+      /riscrivi a fondo il soggetto a5|fanne una nuova versione e applica la modifica|sovrascrivi la versione corrente con questa modifica/i,
+    turns: [
+      {
+        tool_uses: [
+          {
+            name: "propose_soggetto_v2",
+            input: {
+              instruction: "riscrivi a fondo, tono più cupo",
+              label: "v2 A5",
+            },
+          },
+        ],
+        stop_reason: "tool_use",
+      },
+      {
+        text: "Ho aggiornato il soggetto. Il documento è aggiornato.",
+        stop_reason: "end_turn",
+      },
+    ],
+  },
+
   // Context engineering (spec 38) — verify setting prior injected + no Rome
   {
     match:

@@ -102,12 +102,15 @@ export const createUniversalCesareTools = (
       ctx.userInstruction,
     ),
 
-    // Document generation (logline/synopsis/scaletta/treatment proposers)
+    // Document generation (logline/synopsis/scaletta/treatment proposers).
+    // Spec 78 §A5 — thread the user's turn message so the large-edit confirm-card
+    // choice is honoured turn-wide (no ask-loop when a second tool runs).
     ...createDocumentGenTools(
       db,
       ctx.projectId,
       ctx.userIdFallback,
       ctx.sessionId,
+      ctx.userInstruction,
     ),
 
     // Breakdown tools (add_element, link_element_to_scene, …)

@@ -2177,6 +2177,7 @@ const handleAskCesareV2 = (
         {},
         access.user.id,
         data.sessionId ?? null,
+        data.message,
       );
       const prelimSkills = prelimRegistry.selectForPage(page, null);
 
@@ -2227,6 +2228,7 @@ const handleAskCesareV2 = (
               { "document-edit": docEditSkill },
               access.user.id,
               data.sessionId ?? null,
+              data.message,
             );
             finalSkills = finalRegistry.selectForPage(page, null);
           }

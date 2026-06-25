@@ -37,6 +37,9 @@ export const buildDocumentGenSkill = (
   _ctx: SkillBuildContext,
   userIdFallback: string | null = null,
   sessionId: string | null = null,
+  // Spec 78 §A5 — the user's turn message, so the large-edit confirm-card choice
+  // is honoured turn-wide (no ask-loop when a second tool runs in the turn).
+  userInstruction: string | null = null,
 ): Skill => ({
   id: "document-gen",
   tools: [...CESARE_DOCUMENT_GEN_TOOLS] as Skill["tools"],
@@ -49,6 +52,7 @@ export const buildDocumentGenSkill = (
         projectId,
         userIdFallback,
         sessionId,
+        userInstruction,
       );
     }
     const errorResult: ToolResult = {

@@ -54,6 +54,7 @@ const buildBaseSkills = (
   ctx: SkillBuildContext,
   userIdFallback: string | null,
   sessionId: string | null = null,
+  userInstruction: string | null = null,
 ): BaseSkills => ({
   locations: buildLocationsSkill(ctx),
   breakdown: buildBreakdownSkill(ctx),
@@ -61,7 +62,12 @@ const buildBaseSkills = (
   schedule: buildScheduleSkill(ctx),
   "shooting-plan": buildShootingPlanSkill(ctx),
   "screenplay-edit": buildScreenplayEditSkill(ctx),
-  "document-gen": buildDocumentGenSkill(ctx, userIdFallback, sessionId),
+  "document-gen": buildDocumentGenSkill(
+    ctx,
+    userIdFallback,
+    sessionId,
+    userInstruction,
+  ),
   "read-scene": buildReadSceneSkill(ctx),
   "read-document": buildReadDocumentSkill(ctx),
 });
@@ -76,8 +82,12 @@ export const buildSkillRegistry = (
   overrides: Partial<Record<SkillId, Skill>> = {},
   userIdFallback: string | null = null,
   sessionId: string | null = null,
+  // Spec 78 §A5 — the user's turn message, threaded to the always-available
+  // document-gen skill so the large-edit confirm-card choice is honoured
+  // turn-wide (no ask-loop when a second tool runs in the turn).
+  userInstruction: string | null = null,
 ): SkillRegistry => {
-  const base = buildBaseSkills(ctx, userIdFallback, sessionId);
+  const base = buildBaseSkills(ctx, userIdFallback, sessionId, userInstruction);
   const skills: Partial<Record<SkillId, Skill>> = { ...base, ...overrides };
 
   // Order the universal superset so the page-primary skills lead (their
