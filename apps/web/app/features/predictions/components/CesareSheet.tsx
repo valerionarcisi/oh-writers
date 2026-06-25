@@ -232,6 +232,11 @@ export interface CesareSheetProps {
   onOpenAsSplit?: () => void;
   /** Split surface only: close the peek lane and re-open the floating drawer. */
   onShrinkToFloat?: () => void;
+  /** Split surface only: shared auxiliary-lane history controls (←/→) rendered
+   *  in the Cesare split header (Spec 78 A6). The shell passes its
+   *  `SplitDrawerHistoryNav` so the one navigable track shows the same control
+   *  whether Cesare, Versioni or Notifiche occupies it. */
+  headerNav?: ReactNode;
   /** A prompt to auto-send once when the sheet opens (margin "start a session"
    *  affordance). The nonce makes re-sends of the same text distinct. */
   seedPrompt?: { text: string; nonce: number } | null;
@@ -259,6 +264,7 @@ export function CesareSheet({
   surface = "floating",
   onOpenAsSplit,
   onShrinkToFloat,
+  headerNav,
   seedPrompt = null,
 }: CesareSheetProps) {
   const { t } = useTranslation();
@@ -672,6 +678,7 @@ export function CesareSheet({
       surface={surface}
       onOpenAsSplit={onOpenAsSplit}
       onShrinkToFloat={onShrinkToFloat}
+      headerNav={headerNav}
       sessions={drawerSessions}
       activeSessionId={activeSessionId ?? undefined}
       onSessionSelectorClick={handleSessionSelectorClick}

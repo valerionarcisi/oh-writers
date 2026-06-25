@@ -16,7 +16,7 @@
 // Spec 49): `?versions=<id>` → open (split); `?vstate=full` → full; param dropped
 // → closed. `↗` is a REAL navigation so the URL stays shareable.
 
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, type ReactNode } from "react";
 import { useDialog, useOverlay, FocusScope } from "react-aria";
 import { match } from "ts-pattern";
 import { SplitDrawer, useToast } from "@oh-writers/ui";
@@ -66,6 +66,11 @@ export interface VersionsSplitLaneProps {
   readonly onStepBack: () => void;
   /** `×` / ESC / outside-dismiss → clear the `?versions` param. */
   readonly onClose: () => void;
+  /** Shared auxiliary-lane history controls (←/→) for the one navigable split
+   *  track (Spec 78 A6). The shell threads its `SplitDrawerHistoryNav` here so
+   *  the Versions lane carries the same back/forward control as the Cesare /
+   *  Notifiche lanes; `null` collapses to no control. */
+  readonly headerNav?: ReactNode;
 }
 
 // ─── Narrative ────────────────────────────────────────────────────────────────
@@ -263,6 +268,7 @@ export function VersionsSplitLane({
   onExpand,
   onStepBack,
   onClose,
+  headerNav,
 }: VersionsSplitLaneProps) {
   const { t } = useTranslation();
   const ref = useRef<HTMLDivElement>(null);
@@ -314,7 +320,10 @@ export function VersionsSplitLane({
           onStepBack={onStepBack}
           onClose={onClose}
           header={
-            <h2 className={styles.title}>{t("shell.versionsLane.title")}</h2>
+            <div className={styles.headerRow}>
+              {headerNav}
+              <h2 className={styles.title}>{t("shell.versionsLane.title")}</h2>
+            </div>
           }
           size={{ width }}
           onSizeChange={({ width: next }) => onWidthChange(next)}

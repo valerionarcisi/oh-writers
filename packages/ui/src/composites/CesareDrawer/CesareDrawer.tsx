@@ -117,6 +117,16 @@ export interface CesareDrawerProps {
    */
   onShrinkToFloat?: () => void;
 
+  /**
+   * Split surface only: a leading header slot for the shared auxiliary-lane
+   * history controls (←/→). When the single split track is navigable across
+   * Cesare ↔ Versioni ↔ Notifiche (Spec 78 A6) the shell passes its
+   * `SplitDrawerHistoryNav` here so the arrows live in the Cesare split header —
+   * exactly where the Versions / Notifiche lanes render the same control. The UI
+   * package stays agnostic to the navigation logic: it only paints the node.
+   */
+  headerNav?: ReactNode;
+
   /** Sessions metadata for the dropdown trigger in the header. */
   sessions?: ReadonlyArray<CesareDrawerSession>;
   activeSessionId?: string;
@@ -287,6 +297,7 @@ export function CesareDrawer({
   surface = "floating",
   onOpenAsSplit,
   onShrinkToFloat,
+  headerNav,
   sessions,
   activeSessionId,
   onSessionSelectorClick,
@@ -505,6 +516,11 @@ export function CesareDrawer({
       <div className={styles.frame}>
         <header className={styles.header}>
           <div className={styles.headerLeft}>
+            {/* Shared auxiliary-lane history (←/→) — split surface only (Spec 78
+                A6). The shell threads its SplitDrawerHistoryNav here so the Cesare
+                split header carries the same back/forward control the Versioni /
+                Notifiche lanes render. */}
+            {isSplitSurface && headerNav}
             <span className={styles.agentBadge}>Cesare</span>
 
             {sessions && (

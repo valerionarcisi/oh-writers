@@ -33,6 +33,7 @@ import {
   useCallback,
   useContext,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -89,12 +90,49 @@ export interface SplitDrawerNotificationsPayload {
 }
 
 /**
+ * Payload mirroring the routed Cesare PEEK column (`?peek=cesare`) into the
+ * shared history. Unlike `preview` / `notifications`, the body is NOT rendered
+ * by the shell SplitDrawer host: the lane is still `CesarePeekLane` driven by
+ * the URL param. This entry is a NAVIGATION RECORD — it lets the one auxiliary
+ * track be navigable across Cesare ↔ Versioni ↔ Notifiche with a single ←/→
+ * history (Spec 78 A6). The shell reconciles the active payload back to the URL.
+ */
+export interface SplitDrawerCesarePeekPayload {
+  kind: "cesare-peek";
+  /** Stable identity for history dedupe. Defaults to the kind. */
+  dedupeKey?: string;
+}
+
+/**
+ * Payload mirroring the routed Versions surface (`?versions=<documentId>`) into
+ * the shared history. Like `cesare-peek`, the body is rendered by the URL-driven
+ * `VersionsSplitLane` (so the A3/A4 master→detail UI is untouched); this entry
+ * only carries the routed-surface coordinates so the shell can reconcile it back
+ * to the URL when the user navigates the shared history (←/→). Spec 78 A6.
+ */
+export interface SplitDrawerVersionsPayload {
+  kind: "versions";
+  /** The versioned entity id (the `?versions=` value). */
+  documentId: string;
+  /** `?vcur=` companion — the current baseline version id, if known. */
+  currentVersionId?: string | null;
+  /** `?vkind=` companion — `screenplay` versions a screenplay, else narrative. */
+  versionKind?: string | null;
+  /** Stable identity for history dedupe. Defaults to `versions:<documentId>`. */
+  dedupeKey?: string;
+}
+
+/**
  * Discriminated union of every payload the shell-level SplitDrawer can
- * host. New kinds (versions, document browser) get added here.
+ * host. `preview` / `notifications` are rendered by the host body; `cesare-peek`
+ * / `versions` are navigation records mirroring the routed lanes so the single
+ * auxiliary track is navigable with one shared ←/→ history (Spec 78 A6).
  */
 export type SplitDrawerPayload =
   | SplitDrawerPreviewPayload
-  | SplitDrawerNotificationsPayload;
+  | SplitDrawerNotificationsPayload
+  | SplitDrawerCesarePeekPayload
+  | SplitDrawerVersionsPayload;
 
 interface SplitDrawerContextValue {
   /** Open the drawer with a new content — pushes it onto the history and shows
@@ -116,6 +154,11 @@ interface SplitDrawerContextValue {
   /** Whether a previous / next content exists (drives ←/→ enabled state). */
   canGoBack: boolean;
   canGoForward: boolean;
+  /** Read-and-reset whether the last history mutation was a ←/→ navigation.
+   *  Lets the unified-split reconciler distinguish "navigated to a routed
+   *  surface" (re-assert its URL param) from "the param was cleared externally"
+   *  (close the host). Consumed exactly once per navigation (Spec 78 A6). */
+  consumeNavIntent: () => boolean;
   /** Collapse the lane but KEEP the history, so the ⊟ toggle can re-open the last
    *  content. (vs `close`, which destroys the history.) */
   hide: () => void;
@@ -138,6 +181,9 @@ function payloadKey(p: SplitDrawerPayload): string {
   if (p.kind === "preview") {
     return `preview:${p.pageRef.kind}:${p.pageRef.scope ?? ""}`;
   }
+  if (p.kind === "versions") {
+    return `versions:${p.documentId}`;
+  }
   return p.kind;
 }
 
@@ -147,9 +193,23 @@ export function SplitDrawerProvider({ children }: { children: ReactNode }) {
   // content is visible at a time (history[cursor]); ←/→ move the cursor.
   const [history, setHistory] = useState<ReadonlyArray<SplitDrawerPayload>>([]);
   const [cursor, setCursor] = useState(-1);
+  // Mirror the cursor into a ref so `open` reads the LATEST value without closing
+  // over `cursor` state. `open` must stay REFERENCE-STABLE: the unified-split
+  // mirror effect (use-unified-split-navigation) lists it as a dep, and if `open`
+  // changed identity on every cursor move the effect would re-fire and re-dedupe
+  // the active payload to its old index — snapping a forward navigation back.
+  const cursorRef = useRef(cursor);
+  cursorRef.current = cursor;
+  // Records that the LAST history mutation was a ←/→ navigation (vs an `open`).
+  // The unified-split reconciler reads this to tell "navigated back to a routed
+  // surface whose URL param is currently absent" (re-open it) apart from "the
+  // surface's param was cleared externally" (close the host). `consumeNavIntent`
+  // reads-and-resets it so each navigation is honoured exactly once (Spec 78 A6).
+  const navIntentRef = useRef(false);
 
   const open = useCallback(
     (next: SplitDrawerPayload, target: SplitDrawerState = "open") => {
+      navIntentRef.current = false;
       setHistory((prev) => {
         const key = payloadKey(next);
         const existingIdx = prev.findIndex((p) => payloadKey(p) === key);
@@ -162,17 +222,18 @@ export function SplitDrawerProvider({ children }: { children: ReactNode }) {
           return updated;
         }
         // New content: drop any "forward" entries past the cursor, then push.
-        const base = prev.slice(0, cursor + 1);
+        const base = prev.slice(0, cursorRef.current + 1);
         const pushed = [...base, next];
         setCursor(pushed.length - 1);
         return pushed;
       });
       setState(target);
     },
-    [cursor],
+    [],
   );
 
   const close = useCallback(() => {
+    navIntentRef.current = false;
     setState("closed");
     setHistory([]);
     setCursor(-1);
@@ -188,11 +249,24 @@ export function SplitDrawerProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const back = useCallback(() => {
-    setCursor((c) => (c > 0 ? c - 1 : c));
+    setCursor((c) => {
+      if (c <= 0) return c;
+      navIntentRef.current = true;
+      return c - 1;
+    });
   }, []);
 
   const forward = useCallback(() => {
-    setCursor((c) => c + 1);
+    setCursor((c) => {
+      navIntentRef.current = true;
+      return c + 1;
+    });
+  }, []);
+
+  const consumeNavIntent = useCallback(() => {
+    const was = navIntentRef.current;
+    navIntentRef.current = false;
+    return was;
   }, []);
 
   // Content shows only when the lane is open AND the cursor points at an entry.
@@ -214,6 +288,7 @@ export function SplitDrawerProvider({ children }: { children: ReactNode }) {
       forward,
       canGoBack,
       canGoForward,
+      consumeNavIntent,
       hide,
       reopen,
       hasContent,
@@ -228,6 +303,7 @@ export function SplitDrawerProvider({ children }: { children: ReactNode }) {
       forward,
       canGoBack,
       canGoForward,
+      consumeNavIntent,
       hide,
       reopen,
       hasContent,
@@ -251,6 +327,7 @@ const INERT_SPLIT_DRAWER: SplitDrawerContextValue = {
   forward: () => undefined,
   canGoBack: false,
   canGoForward: false,
+  consumeNavIntent: () => false,
   hide: () => undefined,
   reopen: () => undefined,
   hasContent: false,

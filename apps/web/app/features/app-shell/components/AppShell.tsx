@@ -8,6 +8,7 @@ import {
 } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter, useRouterState } from "@tanstack/react-router";
+import { useButton } from "react-aria";
 import { match } from "ts-pattern";
 import {
   TopBar,
@@ -101,6 +102,7 @@ import { parseVersionsPeek } from "../versions-peek";
 import { CesarePeekLane } from "./CesarePeekLane";
 import { SplitDrawerPreviewBody } from "./SplitDrawerPreviewBody";
 import { VersionsSplitLane } from "./VersionsSplitLane";
+import { useUnifiedSplitNavigation } from "../use-unified-split-navigation";
 import styles from "./AppShell.module.css";
 
 // ─── Shell state model ────────────────────────────────────────
@@ -194,6 +196,12 @@ interface AppShellProps {
   versionsKindParam?: string | null;
   /** Clear `?versions` (× / ESC / browser-back). */
   onCloseVersions?: () => void;
+  /** Set `?versions=<id>` (+ companions) — re-opening the Versions surface when
+   *  the shared split history navigates back/forward to it (Spec 78 A6). */
+  onOpenVersions?: (
+    documentId: string,
+    companions: Readonly<Record<string, string>>,
+  ) => void;
   /** `↗` expand the Versions lane to the full-screen route. */
   onExpandVersions?: () => void;
   /** `↙` step the full-screen Versions route back to the split. */
@@ -277,6 +285,7 @@ function AppShellInner({
   versionsCurrentParam = null,
   versionsKindParam = null,
   onCloseVersions,
+  onOpenVersions,
   onExpandVersions,
   onStepBackVersions,
   children,
@@ -460,6 +469,13 @@ function AppShellInner({
     versionsPeek !== null &&
     versionsPeek.state === "split" &&
     !isCesareSplitActiveRaw;
+  // The RAW Versions intent — a valid `?versions=` in the split state, BEFORE the
+  // Cesare-yield. The unified-navigation hook mirrors this into the shared history
+  // even when `?peek=cesare` is still in the URL (the version chip preserves the
+  // peek param), so opening Versioni over Cesare PUSHES a history entry; the
+  // history→URL reconciler then drops `?peek` so Versions wins the single track.
+  const versionsRawSplit =
+    versionsPeek !== null && versionsPeek.state === "split";
   // Master→detail width: the LIST is a narrow rail; opening a version's DETAIL
   // widens the lane to ~half the page (the read-only preview needs room). The
   // user's drag-resize is kept per-view in `versionsLaneWidth`; the effective
@@ -503,8 +519,16 @@ function AppShellInner({
   // content open in the `open` state, grow the third grid track so the page
   // compresses beside it. `full` escalates to its own overlay route, so no track
   // is reserved then.
+  // Only the host-rendered kinds (preview / notifications) light the preview
+  // grid track. `cesare-peek` / `versions` payloads are navigation records whose
+  // bodies are painted by their own routed lanes (Spec 78 A6) — they must NOT
+  // also reserve the preview track, or two tracks would fight for the slot.
+  const isHostRenderedPayload =
+    splitDrawer.payload !== null &&
+    splitDrawer.payload.kind !== "cesare-peek" &&
+    splitDrawer.payload.kind !== "versions";
   const isPreviewSplitActiveRaw =
-    splitDrawer.payload !== null && splitDrawer.state === "open";
+    isHostRenderedPayload && splitDrawer.state === "open";
 
   // ── Single auxiliary-lane resolver (BUG-N64, fail-closed) ─────────────────
   // The shell grid has exactly ONE auxiliary (3rd) track. Two routed surfaces
@@ -521,6 +545,64 @@ function AppShellInner({
   const isCesareSplitActive = isCesareSplitActiveRaw && !isVersionsSplitActive;
   const isPreviewSplitActive =
     isPreviewSplitActiveRaw && !isVersionsSplitActive && !isCesareSplitActive;
+
+  // ── Unified navigable split track (Spec 78 A6) ───────────────────────────
+  // Mirror the routed Cesare-peek + Versions surfaces into the shell SplitDrawer
+  // history so the ONE auxiliary track is navigable across Cesare ↔ Versioni ↔
+  // Notifiche with a single ←/→. The hook keeps the URL and the shared history
+  // in sync (idempotently); the lanes render the same `sharedHistoryNav` below.
+  // `isVersionsSplitActive` carries the resolved (split, not full) Versions
+  // surface so a full-screen Versions route is NOT mirrored into the track.
+  useUnifiedSplitNavigation({
+    splitDrawer,
+    cesarePeek: { isActive: isCesareSplitActiveRaw },
+    versions: {
+      documentId: versionsRawSplit ? versionsPeek!.documentId : null,
+      currentVersionId: versionsRawSplit
+        ? versionsPeek!.currentVersionId
+        : null,
+      versionKind: versionsRawSplit
+        ? versionsPeek!.kind === "screenplay"
+          ? "screenplay"
+          : "narrative"
+        : null,
+    },
+    actions: {
+      openCesarePeek: () => onOpenCesarePeek?.(),
+      closeCesarePeek: () => onClosePeek?.(),
+      openVersions: (documentId, companions) =>
+        onOpenVersions?.(documentId, companions),
+      closeVersions: () => onCloseVersions?.(),
+    },
+  });
+
+  // Closing ANY routed lane (Cesare ×, Versions ×/ESC) clears ONLY its URL param.
+  // The unified-navigation reconciler then sees a routed payload with no routed
+  // param left and fires `close-host`, clearing the shared history so the WHOLE
+  // navigable host collapses — one close path that keeps history + URL in sync
+  // without the manual `splitDrawer.close()` racing effect-1's re-push (Spec 78
+  // A6). Browser-back hits the same path (it drops the param too).
+  const handleCloseCesarePeek = useCallback(() => {
+    onClosePeek?.();
+  }, [onClosePeek]);
+  const handleCloseVersionsLane = useCallback(() => {
+    onCloseVersions?.();
+  }, [onCloseVersions]);
+
+  // The shared ←/→ history control, rendered in WHICHEVER lane currently owns the
+  // single auxiliary track (Cesare split header, Versions header, or the host
+  // preview/notifications header). One stack, one control — so back from Versioni
+  // returns to Cesare and forward re-navigates.
+  const sharedHistoryNav = (
+    <SplitDrawerHistoryNav
+      canGoBack={splitDrawer.canGoBack}
+      canGoForward={splitDrawer.canGoForward}
+      onBack={splitDrawer.back}
+      onForward={splitDrawer.forward}
+      backLabel={t("shell.splitDrawer.historyBack")}
+      forwardLabel={t("shell.splitDrawer.historyForward")}
+    />
+  );
 
   // When the Cesare split lane opens, collapse the rail ONCE to give it room.
   // We only act on the false→true edge so the user can re-open the rail
@@ -897,21 +979,16 @@ function AppShellInner({
 
   // BUG (N64 family) — the bell notifications open in the shell's preview
   // SplitDrawer, which shares the single auxiliary (3rd) grid track with the
-  // Cesare peek and the Versions lane. The lane resolver gives Cesare peek a
-  // HIGHER precedence than the preview drawer, so clicking the bell while
-  // `?peek=cesare` is open would suppress the notifications entirely (the panel
-  // mounts with no track behind the Cesare column) — the click produced nothing
-  // visible. An explicit user action (opening notifications) must win the lane:
-  // we cede the track by closing the Cesare peek (clearing `?peek`) BEFORE
-  // opening the bell drawer, so the two never coexist in the third track and the
-  // notifications are always visible (the N64 invariant: at most one auxiliary
-  // lane is live).
+  // Cesare peek and the Versions lane. With the unified navigable host (Spec 78
+  // A6) opening the bell PUSHES the notifications payload onto the shared history
+  // — it does NOT close Cesare. The history→URL reconciler then cedes the track
+  // by dropping `?peek` (a host kind owns no routed param), so the notifications
+  // are visible AND ← returns to the Cesare peek. The N64 invariant still holds:
+  // only one auxiliary lane is live (the host body renders while the routed param
+  // is cleared), so the two never coexist in the third track.
   const handleBell = useCallback(() => {
-    if (isCesareSplitActive) {
-      onClosePeek?.();
-    }
     openBellDrawer();
-  }, [isCesareSplitActive, onClosePeek, openBellDrawer]);
+  }, [openBellDrawer]);
 
   const openCesare = useCallback(
     (opts?: OpenCesareOptions) => {
@@ -1218,7 +1295,7 @@ function AppShellInner({
   // a single container (no duplication). The split lane's close clears `?peek`;
   // the floating sheet's close just toggles the drawer off.
   const renderCesareSheet = useCallback(
-    (surface: "floating" | "split") => {
+    (surface: "floating" | "split", headerNav?: ReactNode) => {
       if (!projectId) return null;
       const isSplit = surface === "split";
       return (
@@ -1237,10 +1314,11 @@ function AppShellInner({
             ? { seedPrompt: cesareSeedPrompt }
             : {})}
           onOpenAsSplit={isSplit ? undefined : handleOpenAsSplit}
+          headerNav={isSplit ? headerNav : undefined}
           onShrinkToFloat={
             isSplit
               ? () => {
-                  onClosePeek?.();
+                  handleCloseCesarePeek();
                   setCesareOpen(true);
                   setCesareState("expanded");
                 }
@@ -1248,7 +1326,7 @@ function AppShellInner({
           }
           onClose={() => {
             if (isSplit) {
-              onClosePeek?.();
+              handleCloseCesarePeek();
             } else {
               setCesareOpen(false);
             }
@@ -1262,7 +1340,7 @@ function AppShellInner({
             const targetSessionId = sessionId ?? focusedSessionId;
             if (projectId && targetSessionId) {
               if (isSplit) {
-                onClosePeek?.();
+                handleCloseCesarePeek();
               } else {
                 setCesareOpen(false);
               }
@@ -1303,7 +1381,7 @@ function AppShellInner({
       cesareOpen,
       cesareSeedPrompt,
       handleOpenAsSplit,
-      onClosePeek,
+      handleCloseCesarePeek,
       handleCesareAssistantResponse,
       handleCesareTurnStart,
       handleCesareTurnSettled,
@@ -1416,8 +1494,8 @@ function AppShellInner({
               collapses). Hosts the single split CesareSheet; closing it clears
               `?peek`. */}
         {isCesareSplitActive && (
-          <CesarePeekLane onClose={() => onClosePeek?.()}>
-            {renderCesareSheet("split")}
+          <CesarePeekLane onClose={handleCloseCesarePeek}>
+            {renderCesareSheet("split", sharedHistoryNav)}
           </CesarePeekLane>
         )}
 
@@ -1435,7 +1513,8 @@ function AppShellInner({
             onWidthChange={setVersionsLaneWidth}
             onExpand={() => onExpandVersions?.()}
             onStepBack={() => onStepBackVersions?.()}
-            onClose={() => onCloseVersions?.()}
+            onClose={handleCloseVersionsLane}
+            headerNav={sharedHistoryNav}
           />
         )}
 
@@ -1513,6 +1592,15 @@ function SplitDrawerHost({
   if (!splitDrawer.payload) return null;
 
   const payload = splitDrawer.payload;
+
+  // `cesare-peek` / `versions` are NAVIGATION RECORDS in the shared history, not
+  // host-rendered bodies: the routed `CesarePeekLane` / `VersionsSplitLane` paint
+  // them (Spec 78 A6). The host renders ONLY its own kinds (preview /
+  // notifications); when the active payload is a routed kind the host yields the
+  // track entirely so the two never double-render.
+  if (payload.kind === "cesare-peek" || payload.kind === "versions") {
+    return null;
+  }
 
   const onCycle = () => {
     if (splitDrawer.state === "open") {
@@ -1613,6 +1701,40 @@ function SplitDrawerHost({
 // (CONTEXT.md): opening a new content pushes it; ←/→ move through the stack so a
 // replaced content is never lost. × (the drawer's own close) clears the history.
 
+// One ←/→ arrow, focus/keyboard-managed by react-aria `useButton` (mandatory for
+// every interactive primitive). A disabled arrow stays in the DOM (so the nav
+// keeps a stable width) but is inert.
+function SplitDrawerHistoryArrow({
+  glyph,
+  onPress,
+  disabled,
+  label,
+  testId,
+}: {
+  glyph: string;
+  onPress: () => void;
+  disabled: boolean;
+  label: string;
+  testId: string;
+}) {
+  const ref = useRef<HTMLButtonElement>(null);
+  const { buttonProps } = useButton(
+    { onPress, isDisabled: disabled, "aria-label": label },
+    ref,
+  );
+  return (
+    <button
+      {...buttonProps}
+      ref={ref}
+      className={styles.splitHistoryBtn}
+      title={label}
+      data-testid={testId}
+    >
+      {glyph}
+    </button>
+  );
+}
+
 function SplitDrawerHistoryNav({
   canGoBack,
   canGoForward,
@@ -1633,28 +1755,20 @@ function SplitDrawerHistoryNav({
   if (!canGoBack && !canGoForward) return null;
   return (
     <div className={styles.splitHistoryNav} data-testid="split-drawer-history">
-      <button
-        type="button"
-        className={styles.splitHistoryBtn}
-        onClick={onBack}
+      <SplitDrawerHistoryArrow
+        glyph="←"
+        onPress={onBack}
         disabled={!canGoBack}
-        aria-label={backLabel}
-        title={backLabel}
-        data-testid="split-drawer-back"
-      >
-        ←
-      </button>
-      <button
-        type="button"
-        className={styles.splitHistoryBtn}
-        onClick={onForward}
+        label={backLabel}
+        testId="split-drawer-back"
+      />
+      <SplitDrawerHistoryArrow
+        glyph="→"
+        onPress={onForward}
         disabled={!canGoForward}
-        aria-label={forwardLabel}
-        title={forwardLabel}
-        data-testid="split-drawer-forward"
-      >
-        →
-      </button>
+        label={forwardLabel}
+        testId="split-drawer-forward"
+      />
     </div>
   );
 }

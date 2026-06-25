@@ -1,0 +1,273 @@
+// apps/web/app/features/app-shell/use-unified-split-navigation.ts
+//
+// `useUnifiedSplitNavigation` — the deep module that makes the single auxiliary
+// split track navigable across the routed lanes (Cesare PEEK + Versioni) and the
+// imperative host lanes (preview + notifications) with ONE browser-like history
+// (Spec 78 A6).
+//
+// The problem it solves
+// ─────────────────────
+// Cesare peek (`?peek=cesare`) and Versions (`?versions=`) are SEPARATE routed
+// lanes, each driven by its own URL search param. The BUG-N64 single-aux-lane
+// resolver renders at most ONE of them, suppressing the other — so opening
+// Versioni while Cesare is in split hid the versions UNDER Cesare. Meanwhile the
+// shell SplitDrawer host already owned a generic history stack (open/back/forward
+// + ←/→ arrows) used only for preview + notifications.
+//
+// The unification
+// ───────────────
+// The SplitDrawer history stack becomes the SINGLE source of "which auxiliary
+// surface is showing + where in the nav we are". The routed lanes are MIRRORED
+// into that stack as navigation records (`cesare-peek` / `versions` payloads),
+// so opening Versioni while Cesare is up PUSHES a history entry instead of
+// suppressing it. Two reconciling effects keep the URL and the history in sync:
+//
+//   1. URL → history: when the routed Cesare peek or Versions surface becomes
+//      active, push (deduped) the matching payload so it joins the shared stack.
+//   2. history → URL: when the active payload is a routed kind, project it back
+//      to the URL (set `?peek` / `?versions`, clear the other). When it is a
+//      host kind (preview / notifications) or none, clear both routed params.
+//
+// Both effects are IDEMPOTENT — they only navigate when the URL genuinely
+// disagrees with the active payload — so the round-trip cannot loop. ←/→ simply
+// move the history cursor; effect (2) then drives the URL, which re-renders the
+// right lane. Closing the host (`close()`) clears the whole stack AND the URL.
+//
+// Invariants preserved
+// ────────────────────
+//   - BUG-N64: still at most ONE lane live (the resolver in AppShell renders one
+//     lane; this module only decides WHICH, by the active payload). The main
+//     track never collapses to 0.
+//   - Spec 49 (URL is the routed-surface source of truth): the URL still reflects
+//     the active routed surface; deep links keep working.
+//   - Cesare SESSIONS stay a central route, never a peek (this module never
+//     touches `/sessions/...`).
+//
+// This hook is framework-aware (it reads/writes the router) but carries NO React
+// rendering — it returns the shared history controls the lanes wire their ←/→ to.
+
+import { useEffect, useRef } from "react";
+import { match } from "ts-pattern";
+import type {
+  SplitDrawerPayload,
+  useSplitDrawer,
+} from "./split-drawer-context";
+
+type SplitDrawerApi = ReturnType<typeof useSplitDrawer>;
+
+/** The routed Cesare-peek surface state, as resolved by the shell. */
+export interface RoutedCesarePeekState {
+  /** Whether `?peek=cesare` resolves to the Cesare split lane right now. */
+  readonly isActive: boolean;
+}
+
+/** The routed Versions surface state, as resolved by the shell. */
+export interface RoutedVersionsState {
+  /** The versioned entity id when the split Versions lane is active, else null. */
+  readonly documentId: string | null;
+  /** `?vcur=` companion (current baseline), or null. */
+  readonly currentVersionId: string | null;
+  /** `?vkind=` companion (`screenplay` | `narrative`), or null. */
+  readonly versionKind: string | null;
+}
+
+/** URL mutators the shell already owns (one open/close contract per surface). */
+export interface UnifiedSplitNavigationActions {
+  /** Set `?peek=cesare` on the current route (new history entry). */
+  readonly openCesarePeek: () => void;
+  /** Drop `?peek`. */
+  readonly closeCesarePeek: () => void;
+  /** Set `?versions=<id>` (+ companions) on the current route. */
+  readonly openVersions: (
+    documentId: string,
+    companions: Readonly<Record<string, string>>,
+  ) => void;
+  /** Drop `?versions` (+ companions). */
+  readonly closeVersions: () => void;
+}
+
+export interface UseUnifiedSplitNavigationArgs {
+  readonly splitDrawer: SplitDrawerApi;
+  readonly cesarePeek: RoutedCesarePeekState;
+  readonly versions: RoutedVersionsState;
+  readonly actions: UnifiedSplitNavigationActions;
+}
+
+/**
+ * Does the active payload already match the live URL for the routed kinds?
+ * Used to keep the history → URL effect idempotent (only navigate on a genuine
+ * mismatch, never echo the URL the user just arrived at).
+ */
+/**
+ * The URL action that reconciles the live routed params with the active history
+ * payload. Pure + exhaustive so the history→URL projection is unit-testable in
+ * isolation (the effect just runs the returned action):
+ *   - `"none"` — the URL already matches the active payload; do nothing.
+ *   - `"open-cesare"` — set `?peek=cesare` (drops `?versions`).
+ *   - `"open-versions"` — set `?versions=<id>` (drops `?peek`).
+ *   - `"clear-both"` — a host kind / no payload owns the track: drop both routed
+ *     params so the host body (or nothing) shows.
+ *
+ * Mutual exclusion is the invariant: the two routed params must NEVER coexist,
+ * or the BUG-N64 resolver would render two lanes for the single track.
+ */
+export type UrlReconcileAction =
+  | { readonly kind: "none" }
+  | { readonly kind: "open-cesare" }
+  | {
+      readonly kind: "open-versions";
+      readonly documentId: string;
+      readonly companions: Readonly<Record<string, string>>;
+    }
+  | { readonly kind: "clear-both" }
+  | { readonly kind: "close-host" };
+
+export function reconcileUrlAction(
+  payload: SplitDrawerPayload | null,
+  cesarePeek: RoutedCesarePeekState,
+  versions: RoutedVersionsState,
+  navIntent: boolean,
+): UrlReconcileAction {
+  const noRoutedParam = !cesarePeek.isActive && versions.documentId === null;
+
+  // No active payload: the history is empty. A routed param in the URL (e.g. a
+  // fresh `?peek=cesare` deep-link) is about to be MIRRORED into the history by
+  // effect-1 — the reconciler must NOT clear it here (that would fight the
+  // mirror and the lane would never open). With no param either, there's simply
+  // nothing to do. Hence: null payload ⇒ always `none`.
+  if (payload === null) return { kind: "none" };
+
+  // A ROUTED payload is active but NEITHER routed param is in the URL. Two cases,
+  // told apart by `navIntent` (set by `back`/`forward`, reset by `open`/`close`):
+  //   - NAVIGATED here via ←/→ from a sibling that had ceded the URL (e.g. back
+  //     to Cesare from the notifications host, which dropped `?peek`) ⇒ re-assert
+  //     this surface's param below (navIntent true).
+  //   - the surface's OWN param was cleared externally (× / ESC / browser-back)
+  //     while it was active ⇒ close the host, dropping the stale history so
+  //     effect-1 doesn't re-push it (navIntent false).
+  // "No other param set" alone cannot distinguish them: a back to Cesare from a
+  // host kind leaves no routed param either, yet must re-open, not close.
+  if (
+    (payload.kind === "cesare-peek" || payload.kind === "versions") &&
+    noRoutedParam &&
+    !navIntent
+  ) {
+    return { kind: "close-host" };
+  }
+
+  if (payload.kind === "cesare-peek") {
+    // Cesare wins the single track only when its param is set AND Versions has
+    // ceded (the resolver gives Versions precedence over an explicit `?peek`).
+    const matches = cesarePeek.isActive && versions.documentId === null;
+    return matches ? { kind: "none" } : { kind: "open-cesare" };
+  }
+  if (payload.kind === "versions") {
+    // Versions wins only when its param matches AND Cesare has ceded (the two
+    // routed params must never coexist).
+    const matches =
+      versions.documentId === payload.documentId && !cesarePeek.isActive;
+    if (matches) return { kind: "none" };
+    const companions: Record<string, string> = {};
+    if (payload.currentVersionId) companions["vcur"] = payload.currentVersionId;
+    if (payload.versionKind) companions["vkind"] = payload.versionKind;
+    return {
+      kind: "open-versions",
+      documentId: payload.documentId,
+      companions,
+    };
+  }
+  // Host kind (preview / notifications) or no payload: the track must carry no
+  // routed param. Already clear → nothing to do.
+  return noRoutedParam ? { kind: "none" } : { kind: "clear-both" };
+}
+
+export function useUnifiedSplitNavigation({
+  splitDrawer,
+  cesarePeek,
+  versions,
+  actions,
+}: UseUnifiedSplitNavigationArgs): void {
+  const { open, payload, close, consumeNavIntent } = splitDrawer;
+  const { openCesarePeek, closeCesarePeek, openVersions, closeVersions } =
+    actions;
+
+  // ── Effect 1: URL → history ───────────────────────────────────────────────
+  // Mirror each routed surface into the shared stack when it turns active. The
+  // context dedupes by payload key, so a surface that is already the active
+  // entry is refreshed in place (no duplicate push); a NEW surface pushes a
+  // fresh entry (so opening Versioni over Cesare adds a back-step to Cesare).
+  useEffect(() => {
+    if (!cesarePeek.isActive) return;
+    open({ kind: "cesare-peek" });
+  }, [cesarePeek.isActive, open]);
+
+  useEffect(() => {
+    if (versions.documentId === null) return;
+    open({
+      kind: "versions",
+      documentId: versions.documentId,
+      currentVersionId: versions.currentVersionId,
+      versionKind: versions.versionKind,
+    });
+  }, [
+    versions.documentId,
+    versions.currentVersionId,
+    versions.versionKind,
+    open,
+  ]);
+
+  // ── Effect 2: history → URL ───────────────────────────────────────────────
+  // Project the active payload back to the URL whenever they disagree. This is
+  // what makes ←/→ actually navigate: moving the cursor changes `payload`, and
+  // this effect reconciles the URL to match, which re-renders the right lane.
+  //
+  // The `lastReconciledRef` signature guard fires the same navigation at most
+  // once while the router is mid-transition (the URL hasn't caught up across two
+  // renders). Once the URL matches the payload, `reconcileUrlAction` returns
+  // `none` and the ref resets — so the round-trip cannot loop.
+  const lastReconciledRef = useRef<string | null>(null);
+  useEffect(() => {
+    // Read-and-reset whether the active payload arrived via a ←/→ navigation, so
+    // a back/forward to a routed surface whose param is currently absent RE-OPENS
+    // it instead of being mistaken for an external close.
+    const navIntent = consumeNavIntent();
+    const action = reconcileUrlAction(payload, cesarePeek, versions, navIntent);
+    if (action.kind === "none") {
+      lastReconciledRef.current = null;
+      return;
+    }
+    const signature =
+      action.kind === "open-versions"
+        ? `open-versions:${action.documentId}`
+        : action.kind;
+    if (lastReconciledRef.current === signature) return;
+    lastReconciledRef.current = signature;
+
+    // `none` is handled by the early return above, so the match covers the three
+    // navigating actions exhaustively.
+    match(action)
+      .with({ kind: "open-cesare" }, () => openCesarePeek())
+      .with({ kind: "open-versions" }, ({ documentId, companions }) =>
+        openVersions(documentId, companions),
+      )
+      .with({ kind: "clear-both" }, () => {
+        if (cesarePeek.isActive) closeCesarePeek();
+        if (versions.documentId !== null) closeVersions();
+      })
+      // A routed surface was closed externally (× / ESC / browser-back dropped
+      // its param): clear the shared history so effect-1 stops re-pushing it and
+      // the whole host collapses. The URL is already clean — nothing to navigate.
+      .with({ kind: "close-host" }, () => close())
+      .exhaustive();
+  }, [
+    payload,
+    cesarePeek,
+    versions,
+    consumeNavIntent,
+    openCesarePeek,
+    closeCesarePeek,
+    openVersions,
+    closeVersions,
+    close,
+  ]);
+}

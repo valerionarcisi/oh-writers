@@ -127,6 +127,42 @@ always survives (never collapses to 0). This touches `AppShell.tsx` /
 Versions/Notifications go through the navigable split host (see Spec 46 / CLAUDE.md
 "Never conflate CesareDrawer with SplitDrawer").
 
+**Implemented (as built):** the routed lanes stay URL-driven (`?peek=cesare` /
+`?versions=` remain the deep-linkable source of truth, Spec 49), so the
+A3/A4 master→detail Versions UI is untouched and Cesare-peek/Versions render in
+their own lanes. The unification is a BRIDGE: `cesare-peek` + `versions` payloads
+are added to the shared SplitDrawer history as NAVIGATION RECORDS (their bodies
+are still painted by the routed lanes, not the host body). The deep module
+`use-unified-split-navigation.ts` owns the URL↔history sync:
+
+- Effect 1 mirrors each active routed surface into the shared stack (opening
+  Versioni over Cesare PUSHES a history entry; the bell PUSHES notifications).
+- Effect 2 projects the active history payload back to the URL via the pure,
+  unit-tested `reconcileUrlAction` — keeping the two routed params MUTUALLY
+  EXCLUSIVE (never both at once → the BUG-N64 resolver still renders one lane),
+  and firing `close-host` when a lane is dismissed externally so the host
+  collapses cleanly instead of re-opening.
+
+The single `SplitDrawerHistoryNav` (react-aria `useButton` ←/→) is threaded into
+the Cesare split header (new `CesareDrawer.headerNav` slot) and the Versions
+header, so back/forward share one stack across all three surfaces. `_app`'s
+`openCesarePeek` / `openVersions` drop the other routed param atomically.
+`split-drawer-context.open` was made reference-stable (a `cursorRef`) so the
+mirror effect never re-dedupes the active payload and snaps a forward navigation
+back. Files: `split-drawer-context.tsx`, `use-unified-split-navigation.ts` (+
+`.test.ts`), `components/AppShell.tsx`, `components/VersionsSplitLane.tsx`,
+`predictions/components/CesareSheet.tsx`, `packages/ui/.../CesareDrawer.tsx`,
+`routes/_app.tsx`; E2E `tests/unified-split-navigation.spec.ts`. The N64
+dual-deep-link test was realigned to assert the mutual-exclusion invariant
+(exactly one lane, main survives) rather than a fixed winner; under unification
+the deterministic winner of a simultaneous `?versions=…&peek=cesare` deep-link is
+Versions.
+
+NOT done (deferred): the Notifiche lane participates as a host kind (the bell
+pushes onto the shared history and ← returns to the prior surface), but the
+Notifiche body is still the existing host-rendered `notifications` payload —
+it was already part of the shared history, so no extra integration was needed.
+
 ---
 
 ## Hard constraints (every agent)

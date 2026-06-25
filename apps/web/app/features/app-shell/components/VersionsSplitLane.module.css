@@ -22,6 +22,15 @@
   min-block-size: 0;
 }
 
+/* Header row: the shared auxiliary-lane history nav (←/→) followed by the lane
+ * title — mirrors the preview / notifications host header layout (Spec 78 A6). */
+.headerRow {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  min-inline-size: 0;
+}
+
 .title {
   margin: 0;
   font-family: var(--ds-font-display);
