@@ -8,7 +8,6 @@ import { ActionsMenu, Skeleton, computeSaveStatus } from "@oh-writers/ui";
 import {
   canonicalNarrativeHtml,
   CesareUpdatedBanner,
-  useSwitchToVersion,
   ExportPdfModal,
   ExportSiaeModal,
   FreeNarrativeEditor,
@@ -245,8 +244,6 @@ function SoggettoPageReady({
     undefined,
     soggettoSave.flush,
   );
-  // "↩ Annulla" on the Cesare-updated banner restores the pre-edit version.
-  const switchToPrevVersion = useSwitchToVersion(soggettoDoc.id);
   const loglineSave = useAutoSave(
     saveLogline,
     loglineDoc.id,
@@ -349,12 +346,7 @@ function SoggettoPageReady({
         }
       >
         <div className={styles.pageShell}>
-          <CesareUpdatedBanner
-            documentType={DocumentTypes.SOGGETTO}
-            onUndo={async (prev) => {
-              await switchToPrevVersion.mutateAsync(prev);
-            }}
-          />
+          <CesareUpdatedBanner documentType={DocumentTypes.SOGGETTO} />
           <FreeNarrativeEditor
             content={soggettoContent}
             onChange={setSoggettoContent}

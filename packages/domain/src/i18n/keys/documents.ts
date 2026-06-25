@@ -30,15 +30,9 @@ export const documentsKeys = {
     "documents.loading.notes": "Loading notes",
     "documents.loading.suggestions": "Loading suggestions",
 
-    // Cesare-updated banner (entity page)
+    // Cesare-updated banner (entity page) — Spec 78 §A2: one discreet line.
     "documents.cesareUpdated.message": "✦ Cesare updated the {entity}",
-    "documents.cesareUpdated.see": "Show what changed",
-    "documents.cesareUpdated.undo": "↩ Back",
     "documents.cesareUpdated.dismiss": "Dismiss",
-    "documents.cesareUpdated.count": "{n} changes",
-    "documents.cesareUpdated.prev": "Previous change",
-    "documents.cesareUpdated.next": "Next change",
-    "documents.cesareUpdated.collapse": "Collapse",
     // Draft banner
     "documents.draftBanner.ariaLabel": "Cesare drafts",
     "documents.draftBanner.readyOne": "✦ Cesare has 1 draft ready",
@@ -228,13 +222,7 @@ export const documentsKeys = {
     "documents.loading.suggestions": "Caricamento suggerimenti",
 
     "documents.cesareUpdated.message": "✦ Cesare ha aggiornato il {entity}",
-    "documents.cesareUpdated.see": "Mostra cosa è cambiato",
-    "documents.cesareUpdated.undo": "↩ Indietro",
     "documents.cesareUpdated.dismiss": "Ho visto",
-    "documents.cesareUpdated.count": "{n} modifiche",
-    "documents.cesareUpdated.prev": "Modifica precedente",
-    "documents.cesareUpdated.next": "Modifica successiva",
-    "documents.cesareUpdated.collapse": "Comprimi",
     "documents.draftBanner.ariaLabel": "Bozze di Cesare",
     "documents.draftBanner.readyOne": "✦ Cesare ha pronto un draft",
     "documents.draftBanner.readyMany": "✦ Cesare ha pronto {count} draft",

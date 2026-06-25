@@ -1,8 +1,8 @@
 // apps/web/app/features/app-shell/cesare-live-edit-store.test.ts
 //
-// Spec 63 — the per-document stack of live Cesare edits. These pin the contract
-// the entity-page card stack relies on: one entry per turn, newest LAST, the
-// pre-turn snapshot for ↩ Annulla (option A over fall-back B), and the
+// Spec 78 §A2 — the per-document LATEST live Cesare edit. These pin the contract
+// the entity-page notice relies on: AT MOST ONE entry per documentType (a new turn
+// REPLACES the previous, never stacks), the pre-turn snapshot capture, and the
 // publish/dismiss/clear notify cycle. Module-level state has no public reset, so
 // each test keys its own documentType to avoid cross-test bleed.
 import { describe, it, expect, vi } from "vitest";
@@ -31,14 +31,37 @@ const editOn = (
 });
 
 describe("publishLiveEdits", () => {
-  it("pushes one entry per turn onto the document stack, newest LAST", () => {
-    const doc = "stack-order";
+  it("keeps only the LATEST edit per document — a new turn replaces, never stacks", () => {
+    const doc = "no-stack";
     publishLiveEdits([editOn(doc, { summary: "first" })]);
     publishLiveEdits([editOn(doc, { summary: "second" })]);
+    publishLiveEdits([editOn(doc, { summary: "third" })]);
     const stack = getLiveEditsFor(doc);
-    expect(stack).toHaveLength(2);
-    expect(stack[0]?.summary).toBe("first");
-    expect(stack[1]?.summary).toBe("second");
+    // Spec 78 §A2: at most one notice per document — no pile across turns.
+    expect(stack).toHaveLength(1);
+    expect(stack[0]?.summary).toBe("third");
+  });
+
+  it("collapses multiple writes to the SAME document in one turn to the last", () => {
+    const doc = "same-doc-one-turn";
+    publishLiveEdits([
+      editOn(doc, { summary: "early" }),
+      editOn(doc, { summary: "late" }),
+    ]);
+    const stack = getLiveEditsFor(doc);
+    expect(stack).toHaveLength(1);
+    expect(stack[0]?.summary).toBe("late");
+  });
+
+  it("keeps independent latest entries for different documents", () => {
+    publishLiveEdits([
+      editOn("multi-a", { summary: "a" }),
+      editOn("multi-b", { summary: "b" }),
+    ]);
+    expect(getLiveEditsFor("multi-a")).toHaveLength(1);
+    expect(getLiveEditsFor("multi-b")).toHaveLength(1);
+    expect(getLiveEditsFor("multi-a")[0]?.summary).toBe("a");
+    expect(getLiveEditsFor("multi-b")[0]?.summary).toBe("b");
   });
 
   it("is a no-op for an empty batch and does not notify", () => {
@@ -85,29 +108,40 @@ describe("pre-turn snapshot (option A over B)", () => {
     const doc = "snapshot-consume";
     reportCurrentVersion(doc, "v1");
     publishLiveEdits([editOn(doc, { previousVersionId: "marker-1" })]);
+    // First turn used the reported snapshot v1.
+    expect(getLiveEditsFor(doc)[0]?.previousVersionId).toBe("v1");
     // No new report → the second turn must fall back to its own marker, not v1.
+    // The new turn also REPLACES the first (no stacking).
     publishLiveEdits([editOn(doc, { previousVersionId: "marker-2" })]);
     const stack = getLiveEditsFor(doc);
-    expect(stack[0]?.previousVersionId).toBe("v1");
-    expect(stack[1]?.previousVersionId).toBe("marker-2");
+    expect(stack).toHaveLength(1);
+    expect(stack[0]?.previousVersionId).toBe("marker-2");
   });
 });
 
 describe("dismissLiveEdit / clearLiveEdits", () => {
-  it("removes one entry by id, leaving the rest of the stack", () => {
+  it("removes the current entry by id, emptying the document", () => {
     const doc = "dismiss-one";
-    publishLiveEdits([editOn(doc, { summary: "keep" })]);
-    publishLiveEdits([editOn(doc, { summary: "drop" })]);
-    const drop = getLiveEditsFor(doc).find((e) => e.summary === "drop");
-    dismissLiveEdit(doc, drop!.id);
-    const stack = getLiveEditsFor(doc);
-    expect(stack).toHaveLength(1);
-    expect(stack[0]?.summary).toBe("keep");
+    publishLiveEdits([editOn(doc, { summary: "only" })]);
+    const [entry] = getLiveEditsFor(doc);
+    dismissLiveEdit(doc, entry!.id);
+    expect(getLiveEditsFor(doc)).toHaveLength(0);
   });
 
-  it("clears the whole stack for one document", () => {
+  it("ignores a dismiss for a stale id once a newer edit replaced it", () => {
+    const doc = "dismiss-stale";
+    publishLiveEdits([editOn(doc, { summary: "old" })]);
+    const [old] = getLiveEditsFor(doc);
+    publishLiveEdits([editOn(doc, { summary: "new" })]);
+    // A stale auto-dismiss timer firing for the old id must not clear the new one.
+    dismissLiveEdit(doc, old!.id);
+    const stack = getLiveEditsFor(doc);
+    expect(stack).toHaveLength(1);
+    expect(stack[0]?.summary).toBe("new");
+  });
+
+  it("clears the document's notice", () => {
     const doc = "clear-all";
-    publishLiveEdits([editOn(doc)]);
     publishLiveEdits([editOn(doc)]);
     clearLiveEdits(doc);
     expect(getLiveEditsFor(doc)).toHaveLength(0);
