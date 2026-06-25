@@ -14,7 +14,6 @@
   display: flex;
   flex-direction: column;
   contain: layout style;
-  animation: versions-lane-slide-in var(--ds-duration-3) var(--ds-ease) both;
 }
 
 .lane > * {
@@ -61,21 +60,4 @@
  * screenplay styling; constrain it to the detail pane. */
 .screenplayBody {
   font-size: var(--text-sm);
-}
-
-@keyframes versions-lane-slide-in {
-  from {
-    opacity: 0;
-    transform: translateX(4%);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .lane {
-    animation: none;
-  }
 }
