@@ -33,6 +33,14 @@ const invalidateVersions = (
   documentId: string,
 ) => {
   void qc.invalidateQueries({ queryKey: ["document-versions", documentId] });
+  // Force-refetch the LIVE current-version pointer so the Versions list's
+  // "Attuale" badge moves to the activated version. The key is a sibling of the
+  // `["documents", ...]` family below, but an explicit refetch keeps it from
+  // being skipped (refetchQueries with a broad prefix can miss it on a race),
+  // which is what left the badge stuck on the old version after Attiva.
+  void qc.refetchQueries({
+    queryKey: currentVersionQueryOptions(documentId).queryKey,
+  });
   // Force-refetch the active document so the editor body reflects the new
   // current version. Plain invalidate() is a no-op when the data is fresh,
   // which leaves the editor stuck on the previous version's content.

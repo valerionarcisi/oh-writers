@@ -83,6 +83,23 @@ test.describe("[OHW-066] Versions master→detail", () => {
     await expect(
       page.locator('[data-testid^="versions-split-current-"]'),
     ).toHaveCount(1);
+
+    // [A3] The active version's ROW is distinct at a glance: exactly one row
+    // carries the data-current marker, and that same row hosts the "● Attuale"
+    // badge in the LIST itself (not just the detail pane).
+    const currentRows = page.locator(
+      '[data-testid^="versions-split-row-"][data-current="true"]',
+    );
+    await expect(currentRows).toHaveCount(1);
+    await expect(currentRows.first()).toContainText("Attuale");
+    // The marker carries a tinted (non-transparent) background, so it reads as
+    // highlighted versus the plain rows.
+    const currentBg = await currentRows
+      .first()
+      .evaluate((el) => getComputedStyle(el).backgroundColor);
+    expect(currentBg).not.toBe("rgba(0, 0, 0, 0)");
+    expect(currentBg).not.toBe("transparent");
+
     // The "+ Nuova versione" affordance is present.
     await expect(page.getByTestId("version-new")).toBeVisible();
 
@@ -143,14 +160,26 @@ test.describe("[OHW-066] Versions master→detail", () => {
     // so target the activate testid explicitly to avoid the row swallowing it).
     await page.getByTestId(`version-activate-${targetId}`).click();
 
-    // After activation the pointer has moved to the target row — it now carries
-    // the current badge and exactly one version is current. The list refetches,
-    // so poll.
+    // [A4] Visible confirmation: a success toast announces the activation, so
+    // the writer is never left guessing whether it worked.
+    await expect(page.getByText("Versione attivata")).toBeVisible({
+      timeout: 10_000,
+    });
+
+    // [A4] After activation the "Attuale" marker MOVES to the target row — it now
+    // carries the current badge and exactly one version is current. The list
+    // refetches the live current-version pointer, so poll.
     await expect(
       page.getByTestId(`versions-split-current-${targetId}`),
     ).toBeVisible({ timeout: 10_000 });
     await expect(
       page.locator('[data-testid^="versions-split-current-"]'),
+    ).toHaveCount(1);
+    // The moved marker lives on the same row that was activated (data-current).
+    await expect(
+      page.locator(
+        `[data-testid="versions-split-row-${targetId}"][data-current="true"]`,
+      ),
     ).toHaveCount(1);
   });
 

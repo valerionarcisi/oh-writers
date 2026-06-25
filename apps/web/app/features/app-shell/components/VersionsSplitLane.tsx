@@ -19,7 +19,7 @@
 import { useMemo, useRef, useState } from "react";
 import { useDialog, useOverlay, FocusScope } from "react-aria";
 import { match } from "ts-pattern";
-import { SplitDrawer } from "@oh-writers/ui";
+import { SplitDrawer, useToast } from "@oh-writers/ui";
 import type { SplitDrawerState } from "@oh-writers/ui";
 import type { DraftRevisionColor } from "@oh-writers/domain";
 import {
@@ -74,15 +74,13 @@ function NarrativeVersionsContent({
   documentId,
   currentVersionId,
   onDetailChange,
-  onActivated,
 }: {
   documentId: string;
   currentVersionId: string | null;
   onDetailChange: (open: boolean) => void;
-  /** Close the Versions lane once a version is activated. */
-  onActivated: () => void;
 }) {
   const { t } = useTranslation();
+  const { showToast } = useToast();
   const { data: result, isLoading } = useDocumentVersions(documentId);
   // Read the LIVE current version (not the static URL hint) so the badge tracks
   // Attiva. Falls back to the URL hint while the query is loading.
@@ -129,7 +127,19 @@ function NarrativeVersionsContent({
       loadError={loadError}
       renderContent={renderContent}
       canEdit
-      onActivate={(id) => activate.mutate(id, { onSuccess: onActivated })}
+      onActivate={(id) =>
+        activate.mutate(id, {
+          // Keep the lane open so the writer SEES the "Attuale" badge move to
+          // the activated version (the visible confirmation), and surface a
+          // success toast. The editor body refetches via the mutation's own
+          // invalidation (useSwitchToVersion → invalidateVersions).
+          onSuccess: () =>
+            showToast({
+              message: t("versions.split.activated"),
+              variant: "success",
+            }),
+        })
+      }
       onDuplicate={(id) => duplicate.mutate(id)}
       onRename={(id, label) => rename.mutate({ versionId: id, label })}
       onDelete={(id) => remove.mutate(id)}
@@ -148,16 +158,13 @@ function ScreenplayVersionsContent({
   screenplayId,
   currentVersionId,
   onDetailChange,
-  onActivated,
 }: {
   screenplayId: string;
   currentVersionId: string | null;
   onDetailChange: (open: boolean) => void;
-  /** Close the Versions lane once a version is activated (Spec 66 — Attiva
-   *  brings the writer back to the editor on the now-active version). */
-  onActivated: () => void;
 }) {
   const { t } = useTranslation();
+  const { showToast } = useToast();
   const { data: result, isLoading } = useScreenplayVersions(screenplayId);
   // Read the LIVE current-version pointer (not the static `?vcur` URL hint) so
   // the "Attuale" badge + the delete guard track the real active version — and
@@ -208,7 +215,19 @@ function ScreenplayVersionsContent({
       renderContent={renderContent}
       canEdit
       onActivate={(id) =>
-        restore.mutate({ versionId: id }, { onSuccess: onActivated })
+        restore.mutate(
+          { versionId: id },
+          {
+            // Keep the lane open so the "Attuale" badge visibly moves to the
+            // restored version; confirm with a success toast. The editor
+            // refetches via useRestoreVersion's own invalidation.
+            onSuccess: () =>
+              showToast({
+                message: t("versions.split.activated"),
+                variant: "success",
+              }),
+          },
+        )
       }
       onDuplicate={(id) => {
         const v = versions.find((x) => x.id === id);
@@ -310,14 +329,12 @@ export function VersionsSplitLane({
               screenplayId={peek.documentId}
               currentVersionId={peek.currentVersionId}
               onDetailChange={setDetailOpen}
-              onActivated={onClose}
             />
           ) : (
             <NarrativeVersionsContent
               documentId={peek.documentId}
               currentVersionId={peek.currentVersionId}
               onDetailChange={setDetailOpen}
-              onActivated={onClose}
             />
           )}
         </SplitDrawer>
