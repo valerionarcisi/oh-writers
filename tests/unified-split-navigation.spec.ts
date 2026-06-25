@@ -325,4 +325,64 @@ test.describe("[OHW-N78-A6] unified navigable split host", () => {
     );
     expect(loopErrors).toEqual([]);
   });
+
+  // ── #47/#48/#49 regression: full Cesare↔Versioni↔back↔forward cycle, then the
+  // Cesare composer still accepts input (no render-storm / pointer-events death).
+  // The earlier test proves the navigation does not loop; THIS one proves the
+  // lane stays INTERACTIVE after the cycle — the #49 symptom (input blocked) is
+  // its own failure mode that a clean console alone would not catch.
+  test("split lane stays interactive (composer accepts input) after a full navigation cycle", async ({
+    authenticatedPage: page,
+  }) => {
+    const consoleErrors: string[] = [];
+    page.on("console", (msg) => {
+      if (msg.type() === "error") consoleErrors.push(msg.text());
+    });
+    page.on("pageerror", (err) => consoleErrors.push(err.message));
+
+    // Cesare peek → Versioni → ← back → → forward → ← back to Cesare.
+    await page.goto(`${SOGGETTO_PATH}?peek=cesare`);
+    await expect(page.getByTestId("soggetto-page")).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByTestId("cesare-peek-lane")).toBeVisible({
+      timeout: 5_000,
+    });
+
+    await page.getByTestId("topbar-version-chip").click();
+    await expect(page.getByTestId("versions-split-lane")).toBeVisible({
+      timeout: 5_000,
+    });
+    await clickHistoryArrowUntil(page, "split-drawer-back", "cesare-peek-lane");
+    await expect(page.getByTestId("cesare-peek-lane")).toBeVisible({
+      timeout: 5_000,
+    });
+    await clickHistoryArrowUntil(
+      page,
+      "split-drawer-forward",
+      "versions-split-lane",
+    );
+    await expect(page.getByTestId("versions-split-lane")).toBeVisible({
+      timeout: 5_000,
+    });
+    await clickHistoryArrowUntil(page, "split-drawer-back", "cesare-peek-lane");
+
+    // ── #49: the Cesare composer inside the lane must accept keystrokes ────────
+    const composer = page
+      .getByTestId("cesare-peek-lane")
+      .getByLabel("Composer Cesare");
+    await expect(composer).toBeVisible({ timeout: 5_000 });
+    // pointer-events must be live (not trapped by a stale overlay).
+    await expect(composer).toBeEnabled();
+    await composer.click();
+    await composer.fill("regression check");
+    await expect(composer).toHaveValue("regression check");
+    // Clear it so the test never sends a message (no write to real data).
+    await composer.fill("");
+
+    const loopErrors = consoleErrors.filter((t) =>
+      /Maximum update depth/i.test(t),
+    );
+    expect(loopErrors).toEqual([]);
+  });
 });

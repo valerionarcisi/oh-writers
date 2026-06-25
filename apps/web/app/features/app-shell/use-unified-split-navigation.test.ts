@@ -9,6 +9,7 @@
 import { describe, it, expect } from "vitest";
 import {
   reconcileUrlAction,
+  isPayloadActive,
   type RoutedCesarePeekState,
   type RoutedVersionsState,
 } from "./use-unified-split-navigation";
@@ -222,5 +223,95 @@ describe("reconcileUrlAction — history → URL projection", () => {
         kind: "none",
       });
     });
+  });
+});
+
+// Full versions identity (documentId + companions) for the guard.
+const versionsId = (
+  documentId: string,
+  extra?: Partial<{
+    currentVersionId: string | null;
+    versionKind: string | null;
+  }>,
+) => ({
+  documentId,
+  currentVersionId: extra?.currentVersionId ?? null,
+  versionKind: extra?.versionKind ?? null,
+});
+
+describe("isPayloadActive — URL → history mirror idempotency guard", () => {
+  it("is false for a null payload (history empty → mirror must push)", () => {
+    expect(isPayloadActive(null, "cesare-peek")).toBe(false);
+    expect(isPayloadActive(null, "versions", versionsId(DOC))).toBe(false);
+  });
+
+  it("matches the cesare-peek payload by kind alone", () => {
+    expect(isPayloadActive(cesarePeekPayload, "cesare-peek")).toBe(true);
+  });
+
+  it("does NOT treat a versions payload as an active cesare-peek (and vice-versa)", () => {
+    expect(isPayloadActive(versionsPayload(DOC), "cesare-peek")).toBe(false);
+    expect(
+      isPayloadActive(cesarePeekPayload, "versions", versionsId(DOC)),
+    ).toBe(false);
+    expect(isPayloadActive(notificationsPayload, "cesare-peek")).toBe(false);
+    expect(
+      isPayloadActive(notificationsPayload, "versions", versionsId(DOC)),
+    ).toBe(false);
+  });
+
+  it("matches a versions payload only when the documentId is the SAME", () => {
+    expect(
+      isPayloadActive(versionsPayload(DOC), "versions", versionsId(DOC)),
+    ).toBe(true);
+    expect(
+      isPayloadActive(versionsPayload(DOC), "versions", versionsId("other")),
+    ).toBe(false);
+  });
+
+  it("does NOT match when only the companions differ (so the mirror still refreshes them)", () => {
+    // Same documentId, but the active payload carries a DIFFERENT baseline/kind:
+    // the guard must NOT skip, or Effect 2 re-projects the stale companions and
+    // clobbers the user's `?vcur` / `?vkind` selection (review finding 1d).
+    const payload = versionsPayload(DOC, {
+      currentVersionId: "v1",
+      versionKind: "narrative",
+    });
+    expect(
+      isPayloadActive(
+        payload,
+        "versions",
+        versionsId(DOC, { currentVersionId: "v2" }),
+      ),
+    ).toBe(false);
+    expect(
+      isPayloadActive(
+        payload,
+        "versions",
+        versionsId(DOC, { versionKind: "screenplay" }),
+      ),
+    ).toBe(false);
+    // Identical coordinates → skip is safe.
+    expect(
+      isPayloadActive(
+        payload,
+        "versions",
+        versionsId(DOC, { currentVersionId: "v1", versionKind: "narrative" }),
+      ),
+    ).toBe(true);
+  });
+
+  it("treats absent companions and explicit null as the same identity", () => {
+    // Payload built without companions (null) must equal a URL identity with null.
+    expect(
+      isPayloadActive(versionsPayload(DOC), "versions", versionsId(DOC)),
+    ).toBe(true);
+  });
+
+  it("guards the mirror: an already-active surface is a no-op (true), a new one is not (false)", () => {
+    expect(isPayloadActive(cesarePeekPayload, "cesare-peek")).toBe(true);
+    expect(
+      isPayloadActive(cesarePeekPayload, "versions", versionsId(DOC)),
+    ).toBe(false);
   });
 });
