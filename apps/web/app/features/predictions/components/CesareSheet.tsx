@@ -297,13 +297,16 @@ export function CesareSheet({
   // ── Sessions ────────────────────────────────────────────────────────────
   const sessionsQuery = useSessions(projectId);
   const createSession = useCreateSession(projectId);
+  // Issue #42 — Cesare opens CLEAN. The default active session is `null`, which
+  // selects the empty pending thread (the "Chiedimi qualunque cosa…" landing).
+  // We deliberately do NOT auto-select the most recent session on mount: that
+  // dropped the writer mid-conversation into a stale thread (with a leftover
+  // pending ask-card). Past sessions are reachable from the sessions list and
+  // become active only on an EXPLICIT pick (`handleSessionSelect`), a new
+  // session (`handleSessionNew`), or the central route's focused session
+  // (`focusedSessionId`). The in-session work still persists server-side and is
+  // re-reachable from that list.
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!sessionsQuery.data || activeSessionId) return;
-    const first = sessionsQuery.data[0];
-    if (first) setActiveSessionId(first.id);
-  }, [sessionsQuery.data, activeSessionId]);
 
   // ── Assistant-reply side channels ────────────────────────────────────────
   const handleAssistantSideChannels = useCallback(
@@ -809,6 +812,8 @@ function SessionsPopover({
               type="button"
               role="option"
               aria-selected={s.id === activeSessionId}
+              data-testid="cesare-session-row"
+              data-session-id={s.id}
               className={[
                 styles.sessionRow,
                 s.id === activeSessionId ? styles.sessionRowActive : "",
@@ -825,7 +830,12 @@ function SessionsPopover({
           </li>
         ))}
       </ul>
-      <button type="button" className={styles.sessionNewBtn} onClick={onNew}>
+      <button
+        type="button"
+        className={styles.sessionNewBtn}
+        data-testid="cesare-session-new-btn"
+        onClick={onNew}
+      >
         {t("cesare.sessions.new")}
       </button>
     </div>
