@@ -13,17 +13,12 @@ pnpm lint
 echo "→ Unit tests (Vitest)"
 pnpm test:unit
 
-# Husky pipes "<local_ref> <local_sha> <remote_ref> <remote_sha>" on stdin.
-# We sniff for refs/heads/main to trigger the full CI repro on main pushes.
-pushed_refs=$(cat || true)
-pushing_main=0
-case "$pushed_refs" in
-  *refs/heads/main*) pushing_main=1 ;;
-esac
-
-if [ "$pushing_main" = "1" ] || [ "${PRE_PUSH_FULL:-0}" = "1" ]; then
+# E2E (Playwright) are intentionally NOT in the pre-push gate — they take
+# minutes and belong in CI (qa.yml e2e-mock). Run them locally on demand with
+# `PRE_PUSH_FULL=1 git push …` or `pnpm ci:repro`.
+if [ "${PRE_PUSH_FULL:-0}" = "1" ]; then
   echo "→ Full CI repro (mirrors qa.yml e2e-mock)"
   pnpm ci:repro
 else
-  echo "✓ Fast gates passed. (Push to main or PRE_PUSH_FULL=1 to also run ci:repro.)"
+  echo "✓ Fast gates passed. (PRE_PUSH_FULL=1 git push … to also run ci:repro.)"
 fi
