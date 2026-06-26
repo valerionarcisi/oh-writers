@@ -202,16 +202,36 @@ export function reconcileUrlAction(
 
   // COEXISTENCE GUARD (the split-lane render loop, #47/#48/#49). Both routed
   // params can briefly coexist in the URL while a flip is in flight (e.g. opening
-  // Cesare-split over an open Versions lane: `?peek` is set before `?versions` is
-  // dropped). With both present, the two payload branches below "win" in OPPOSITE
-  // directions — a `cesare-peek` payload sees `versions.documentId !== null` and
-  // fires `open-cesare` (drops `?versions`), while a `versions` payload sees
-  // `cesarePeek.isActive` and fires `open-versions` (drops `?peek`) — so the
-  // effects ping-pong the URL forever ("Maximum update depth"). Resolve the
-  // coexistence ONCE, deterministically, the SAME way the AppShell single-lane
-  // resolver does: an explicit `?peek=cesare` WINS the track, so drop `?versions`
-  // and let Cesare own the lane. This converges to a single routed param.
+  // Versioni over an open Cesare peek: `?versions` is set before `?peek` is
+  // dropped, or vice-versa). With both present, the two payload branches below
+  // "win" in OPPOSITE directions — a `cesare-peek` payload sees
+  // `versions.documentId !== null` and fires `open-cesare` (drops `?versions`),
+  // while a `versions` payload sees `cesarePeek.isActive` and fires
+  // `open-versions` (drops `?peek`) — so the effects ping-pong the URL forever
+  // ("Maximum update depth"). Resolve the coexistence ONCE, deterministically,
+  // toward the ACTIVE PAYLOAD: the surface the user just opened is the one Effect
+  // 1 already advanced the cursor to, so projecting the URL toward it both honours
+  // the user's intent AND converges (the payload/cursor is stable, only the URL
+  // moves — one step, then the matching branch below returns `none`).
+  //
+  // Resolving unconditionally toward Cesare (the old behaviour) bounced Versioni
+  // back to Cesare: opening `?versions=` over `?peek=cesare` left a render tick
+  // where the payload was already `versions` but `?peek` had not yet cleared, so
+  // this guard fired `open-cesare`, dropped `?versions`, and snapped the lane back
+  // to Cesare (the BUG-rimbalzo confirmed via the reconcile trace). Following the
+  // payload makes the resolution directional and bounce-free in BOTH directions.
   if (cesarePeek.isActive && versions.documentId !== null) {
+    if (payload.kind === "versions") {
+      const companions: Record<string, string> = {};
+      if (payload.currentVersionId)
+        companions["vcur"] = payload.currentVersionId;
+      if (payload.versionKind) companions["vkind"] = payload.versionKind;
+      return {
+        kind: "open-versions",
+        documentId: payload.documentId,
+        companions,
+      };
+    }
     return { kind: "open-cesare" };
   }
 

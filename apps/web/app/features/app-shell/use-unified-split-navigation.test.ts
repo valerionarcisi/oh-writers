@@ -237,14 +237,15 @@ describe("reconcileUrlAction — history → URL projection", () => {
       expect(action).toMatchObject({ kind: "open-versions", documentId: DOC });
     });
 
-    it("resolves param coexistence to Cesare (open-cesare), never ping-ponging to versions", () => {
-      // The #47/#48/#49 split-lane loop: both routed params briefly coexist
-      // while a flip is in flight. A `versions` payload must NOT fire
-      // `open-versions` (which would drop `?peek` and let a `cesare-peek`
-      // payload fire `open-cesare` right back — the infinite ping-pong). The
-      // coexistence guard resolves it ONCE, the same way the AppShell single-lane
-      // resolver does: an explicit `?peek=cesare` wins the track, so drop
-      // `?versions` and converge on Cesare.
+    it("resolves param coexistence toward the ACTIVE PAYLOAD — versions payload wins versions (no bounce)", () => {
+      // The BUG-rimbalzo: opening Versioni over an open Cesare peek leaves a tick
+      // where the payload is already `versions` (Effect 1 advanced the cursor) but
+      // `?peek` has not yet cleared, so BOTH routed params coexist. The OLD guard
+      // resolved unconditionally to `open-cesare`, dropping `?versions` and
+      // snapping the lane back to Cesare. The guard now follows the active payload:
+      // a `versions` payload converges on Versions (`open-versions`, drop `?peek`),
+      // honouring the user's intent. No ping-pong — the payload/cursor is stable,
+      // only the URL moves one step, then the matching branch returns `none`.
       expect(
         reconcileUrlAction(
           versionsPayload(DOC),
@@ -253,10 +254,13 @@ describe("reconcileUrlAction — history → URL projection", () => {
           NO_NAV,
           NO_SUP,
         ),
-      ).toMatchObject({ kind: "open-cesare" });
+      ).toMatchObject({ kind: "open-versions", documentId: DOC });
     });
 
-    it("resolves coexistence to Cesare from a cesare-peek payload too (symmetric, no flip)", () => {
+    it("resolves coexistence to Cesare from a cesare-peek payload (opposite direction, the original #47 case)", () => {
+      // Symmetric: opening Cesare over an open Versions lane. The active payload is
+      // `cesare-peek`, so coexistence converges on Cesare (`open-cesare`, drop
+      // `?versions`). This is the direction the guard was originally written for.
       expect(
         reconcileUrlAction(
           cesarePeekPayload,
