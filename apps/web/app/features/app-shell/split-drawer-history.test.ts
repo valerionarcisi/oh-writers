@@ -47,12 +47,14 @@ describe("nextHistory — pure history-stack transition", () => {
     expect(r.cursor).toBe(1);
   });
 
-  it("NAVIGATES to an existing entry (cursor jumps back), never duplicating it — Bug 1/3 family", () => {
+  it("MOVES an existing entry to the front (most-recent), never duplicating it — BUG-N67", () => {
     const prev = [versions("d1"), cesare];
     // cursor at Cesare (1); re-open the versions surface already at index 0.
+    // Move-to-front: versions is removed from idx0 and re-appended at the end,
+    // cursor lands on it — it does NOT jump the cursor backward to idx0.
     const r = nextHistory(prev, 1, versions("d1"));
-    expect(keys(r.history)).toEqual(["versions:d1", "cesare-peek"]);
-    expect(r.cursor).toBe(0); // jumped to the EXISTING entry, not appended
+    expect(keys(r.history)).toEqual(["cesare-peek", "versions:d1"]);
+    expect(r.cursor).toBe(1); // the just-re-opened surface, now most-recent
   });
 
   it("refreshes an existing versions entry IN PLACE (same key, new companions) without duplicating", () => {
@@ -73,16 +75,18 @@ describe("nextHistory — pure history-stack transition", () => {
     expect(r.cursor).toBe(1);
   });
 
-  it("never produces duplicate keys (re-opening across a longer stack jumps, not appends)", () => {
+  it("never produces duplicate keys (re-opening across a longer stack moves to front, not appends a dup)", () => {
     const prev = [cesare, versions("d1"), notifications];
+    // Re-open Cesare (already at idx0): move-to-front removes it and re-appends
+    // it at the end — same length, no duplicate, cursor on the moved entry.
     const r = nextHistory(prev, 2, cesare);
     expect(keys(r.history)).toEqual([
-      "cesare-peek",
       "versions:d1",
       "notifications",
+      "cesare-peek",
     ]);
     expect(new Set(keys(r.history)).size).toBe(keys(r.history).length);
-    expect(r.cursor).toBe(0);
+    expect(r.cursor).toBe(2);
   });
 
   it("clamps an out-of-range (too-high) cursor so the stack is never silently dropped — Bug 4", () => {
@@ -103,6 +107,62 @@ describe("nextHistory — pure history-stack transition", () => {
     // safeCursor clamps to -1 → base is empty → append after nothing.
     expect(keys(r.history)).toEqual(["versions:d1"]);
     expect(r.cursor).toBe(0);
+  });
+
+  it("the 5-open sequence (C→V→N→V→C) keeps all THREE distinct surfaces reachable — BUG-N67", () => {
+    // The exact user sequence that stranded Notifiche under the old jump-back
+    // semantics. Replay it through the pure reducer and assert the navigable
+    // stack still holds all three distinct surfaces, the cursor in range.
+    let history: ReadonlyArray<SplitDrawerPayload> = [];
+    let cursor = -1;
+    const apply = (p: SplitDrawerPayload) => {
+      const r = nextHistory(history, cursor, p);
+      history = r.history;
+      cursor = r.cursor;
+    };
+    apply(cesare); // [C] @0
+    apply(versions("d1")); // [C,V] @1
+    apply(notifications); // [C,V,N] @2
+    apply(versions("d1")); // re-open V → [C,N,V] @2
+    apply(cesare); // re-open C → [N,V,C] @2
+
+    expect(keys(history)).toEqual([
+      "notifications",
+      "versions:d1",
+      "cesare-peek",
+    ]);
+    expect(cursor).toBe(2);
+    // No duplicates: exactly the three distinct surfaces.
+    expect(new Set(keys(history)).size).toBe(3);
+    expect(cursor).toBeGreaterThanOrEqual(0);
+    expect(cursor).toBeLessThan(history.length);
+
+    // Walking ALL the way back from the cursor must VISIT every distinct surface
+    // — none stranded as forward-only. Simulate the ← walk over the final stack.
+    const visited = new Set<string>();
+    for (let c = cursor; c >= 0; c--) {
+      const k = keys(history)[c]!;
+      visited.add(k);
+    }
+    expect(visited).toEqual(
+      new Set(["cesare-peek", "versions:d1", "notifications"]),
+    );
+  });
+
+  it("re-opening NEVER strands a distinct surface as forward-only (cursor at the most-recent entry)", () => {
+    // After move-to-front, the cursor is always at the LAST index, so there are
+    // no forward entries — everything is reachable by walking back.
+    const r = nextHistory(
+      [notifications, versions("d1"), cesare],
+      2,
+      versions("d1"),
+    );
+    expect(keys(r.history)).toEqual([
+      "notifications",
+      "cesare-peek",
+      "versions:d1",
+    ]);
+    expect(r.cursor).toBe(r.history.length - 1);
   });
 
   it("keeps the returned cursor a VALID index into the returned history for every input", () => {
