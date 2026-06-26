@@ -443,7 +443,18 @@ function AppShellInner({
   // Raw per-surface activations. Resolved into a MUTUALLY EXCLUSIVE set below
   // (BUG-N64): two routed surfaces sharing the single 3rd grid track squeeze the
   // main lane to nothing (white page). At most one auxiliary lane is ever live.
-  const isCesareSplitActiveRaw = isCesarePeek(peek, projectId ?? null);
+  // A Cesare PEEK and a central Cesare SURFACE (the full-screen session page /
+  // new-session landing) both ARE the chat — they must never be live at once. A
+  // session route still carrying a stale `?peek=cesare` would otherwise mount the
+  // peek lane while the central surface owns the chat (two chats) AND feed the
+  // URL ↔ split-history reconciler a peek it can never settle, looping the shell
+  // (#49). The central surface wins; the peek yields — the lane is suppressed and
+  // the reconciler collapses the shared host once, then converges (the URL
+  // `?peek=cesare` lingers harmlessly until the user leaves the session route, at
+  // which point the peek re-opens). `isCesarePeek` already fails closed without a
+  // project id, so a project-less / mid-transition route never lights the peek.
+  const isCesareSplitActiveRaw =
+    isCesarePeek(peek, projectId ?? null) && !isCesareSurfaceActive;
 
   // Versions SplitDrawer (Spec 49). The raw `?versions` param is validated to a
   // UUID (fail closed); a malformed / foreign id renders the host alone. When
@@ -562,6 +573,21 @@ function AppShellInner({
       }
     };
   }, [isAnyAuxLaneActive]);
+
+  // When a NON-Cesare auxiliary lane (Versioni / Notifiche / preview) claims the
+  // track while the floating Cesare drawer was open, the drawer is suppressed in
+  // render (#49). Reset its STATE too so `body[data-cesare]` doesn't stay
+  // "expanded" (which would falsely hide the launcher dock and signal Cesare
+  // open). The Cesare-PEEK lane manages its own state via `handleOpenAsSplit`, so
+  // it is intentionally excluded here.
+  const isNonCesareAuxLaneActive =
+    isVersionsSplitActive || isPreviewSplitActive;
+  useEffect(() => {
+    if (isNonCesareAuxLaneActive && cesareOpen) {
+      setCesareOpen(false);
+      setCesareState("closed");
+    }
+  }, [isNonCesareAuxLaneActive, cesareOpen]);
 
   // ── Unified navigable split track (Spec 78 A6) ───────────────────────────
   // Mirror the routed Cesare-peek + Versions surfaces into the shell SplitDrawer
@@ -1053,6 +1079,18 @@ function AppShellInner({
   );
 
   const toggleCesare = useCallback(() => {
+    // While an auxiliary lane (Versioni / Notifiche / preview) owns the single
+    // 3rd track, the floating Cesare drawer is suppressed so it can never blanket
+    // the lane's input (#49). The launcher must still REACH Cesare, so opening it
+    // here promotes Cesare INTO the shared navigable host (Spec 78 A6): the open
+    // lane becomes a back-step rather than being overlapped by a floating box.
+    if (cesareState === "closed" && isAnyAuxLaneActive) {
+      setCesareState("closed");
+      setCesareOpen(false);
+      onOpenCesarePeek?.();
+      markAllSeen();
+      return;
+    }
     if (cesareState === "closed") {
       setCesareState("expanded");
       setCesareOpen(true);
@@ -1061,7 +1099,7 @@ function AppShellInner({
       setCesareState("closed");
       setCesareOpen(false);
     }
-  }, [cesareState, markAllSeen]);
+  }, [cesareState, isAnyAuxLaneActive, onOpenCesarePeek, markAllSeen]);
 
   // Promote the floating chat into the split column. The split lane is the
   // authoritative surface for `?peek=cesare`, so we close the floating sheet
@@ -1591,11 +1629,16 @@ function AppShellInner({
           emptyLabel={t("shell.palette.empty")}
           resultsLabel={t("shell.palette.results")}
         />
-        {/* Floating Cesare sheet — the default surface. Unmounted while the
-              split lane is open OR a central Cesare surface (full-screen session
-              page) is active, so the chat never duplicates. The helper carries
-              the session-focus props (Spec 47-A5). */}
-        {!isCesareSplitActive &&
+        {/* Floating Cesare sheet — the default surface. Unmounted while ANY
+              auxiliary lane (Cesare peek / Versioni / Notifiche / preview) owns
+              the single 3rd track, OR a central Cesare surface (full-screen
+              session page) is active. The floating drawer (z `--cesare-drawer-z`)
+              would otherwise sit OVER the split host (z `--split-host-z`) and
+              blanket the lane's composer input — pointer-events dead (#49). The
+              launcher dock stays reachable (it promotes Cesare into the shared
+              navigable host while a lane is open — see `toggleCesare`). The chat
+              is never duplicated. Session-focus props per Spec 47-A5. */}
+        {!isAnyAuxLaneActive &&
           !isCesareSurfaceActive &&
           renderCesareSheet("floating")}
         <SplitDrawerHost

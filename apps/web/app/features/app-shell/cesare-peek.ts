@@ -106,6 +106,15 @@ export function parseCesarePeek(
   const decoded = safeDecode(raw.trim());
 
   if (decoded === CESARE_PEEK_TOKEN) {
+    // A Cesare peek is always scoped to a project — the chat reads the project's
+    // entities. Without a current project the token is meaningless, so fail
+    // CLOSED. This also kills a render loop (#49): on a project-less / mid-
+    // transition route `?peek=cesare` would otherwise keep `isCesareSplitActive`
+    // true while the rendered lane is null, and the URL ↔ split-history
+    // reconciler would re-navigate every render (`/projects/undefined/...`).
+    if (currentProjectId == null || currentProjectId.length === 0) {
+      return err(new InvalidPeekError("cross-project"));
+    }
     return ok({ kind: "cesare" });
   }
 
