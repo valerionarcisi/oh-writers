@@ -216,10 +216,26 @@ export function reconcileUrlAction(
 
   if (payload.kind === "cesare-peek") {
     // Cesare's param is set and Versions has ceded (coexistence handled above):
-    // the URL already matches a Cesare-owned track ⇒ nothing to do. If the param
-    // is absent we re-assert it (a ←/→ back to Cesare from a host kind).
-    const matches = cesarePeek.isActive;
-    return matches ? { kind: "none" } : { kind: "open-cesare" };
+    // the URL already matches a Cesare-owned track ⇒ nothing to do.
+    if (cesarePeek.isActive) return { kind: "none" };
+    // Cesare's param is ABSENT but the SIBLING routed surface (`?versions`) now
+    // owns the URL — and this was NOT a ←/→ navigation. Versioni SUPERSEDED Cesare
+    // (the version surface drops `?peek` on open; Spec 78 A6 / `useRoutedSurface`
+    // `conflicts`), so for a tick the active payload is still the OLD `cesare-peek`
+    // entry while Effect 1's versions mirror catches up the cursor. Do NOTHING
+    // here: re-asserting `?peek` (`open-cesare`) would drop `?versions` and seed
+    // the ping-pong (#47, 243+ navigations); closing the host would destroy the
+    // Cesare back-step the A6 shared history needs. `none` lets Effect 1 move the
+    // cursor to versions, after which this effect settles — WITHOUT touching the
+    // URL or the history. A genuine ←/→ BACK to Cesare (navIntent) while versions
+    // lingers is the OPPOSITE intent and re-asserts Cesare below.
+    if (versions.documentId !== null && !navIntent) {
+      return { kind: "none" };
+    }
+    // The param is absent because either: a ←/→ back to Cesare from a host kind /
+    // versions sibling (navIntent), or Cesare's own param was just cleared — in
+    // both surviving cases re-assert it.
+    return { kind: "open-cesare" };
   }
   if (payload.kind === "versions") {
     // Versions wins only when its param matches AND Cesare has ceded (the two
@@ -227,6 +243,13 @@ export function reconcileUrlAction(
     const matches =
       versions.documentId === payload.documentId && !cesarePeek.isActive;
     if (matches) return { kind: "none" };
+    // The SIBLING routed surface (`?peek`) now owns the URL and this was NOT a
+    // ←/→ navigation — Cesare SUPERSEDED Versioni. Symmetric to the cesare-peek
+    // branch: do NOTHING (`none`) and let Effect 1's Cesare mirror move the cursor
+    // off this stale `versions` entry. Re-asserting `?versions` would drop `?peek`
+    // and seed the ping-pong (#47). A genuine ←/→ back to versions (navIntent)
+    // re-asserts instead, falling through below.
+    if (cesarePeek.isActive && !navIntent) return { kind: "none" };
     const companions: Record<string, string> = {};
     if (payload.currentVersionId) companions["vcur"] = payload.currentVersionId;
     if (payload.versionKind) companions["vkind"] = payload.versionKind;
@@ -247,7 +270,7 @@ export function useUnifiedSplitNavigation({
   versions,
   actions,
 }: UseUnifiedSplitNavigationArgs): void {
-  const { open, payload, close, consumeNavIntent } = splitDrawer;
+  const { open, payload, close, consumeNavIntent, peekNavIntent } = splitDrawer;
   const { openCesarePeek, closeCesarePeek, openVersions, closeVersions } =
     actions;
 
@@ -336,13 +359,15 @@ export function useUnifiedSplitNavigation({
   // bell yields the track ONCE (drops `?peek`), then settles.
   const lastReconciledRef = useRef<string | null>(null);
   useEffect(() => {
-    // Read-and-reset whether the active payload arrived via a ←/→ navigation, so
-    // a back/forward to a routed surface whose param is currently absent RE-OPENS
-    // it instead of being mistaken for an external close. Effect deps are stable
-    // primitives/memos, so this effect runs only when the payload or the URL
-    // state genuinely changes — never on every render — so consuming the nav
-    // intent here is read at most once per real transition.
-    const navIntent = consumeNavIntent();
+    // PEEK (do not reset) whether the active payload arrived via a ←/→ navigation:
+    // a back/forward to a routed surface whose param is currently absent must
+    // RE-OPEN it rather than be mistaken for an external close or a stale-payload
+    // supersede. We must NOT consume the intent on a tick that resolves to a no-op
+    // (`none`) or to a navigation we've already issued — a transient reconcile tick
+    // doing so would swallow the intent before the real transition reads it, which
+    // broke ←/→ back to Cesare while a sibling routed param lingered. So peek here
+    // and consume ONLY when we actually issue a navigation below.
+    const navIntent = peekNavIntent();
     const action = reconcileUrlAction(
       payload,
       stableCesarePeek,
@@ -365,6 +390,10 @@ export function useUnifiedSplitNavigation({
     const signature = `${actionKey}@${urlState}`;
     if (lastReconciledRef.current === signature) return;
     lastReconciledRef.current = signature;
+
+    // We are about to actually navigate — NOW consume the nav intent so the next
+    // genuine transition starts clean (and a no-op tick above never swallowed it).
+    consumeNavIntent();
 
     // `none` is handled by the early return above, so the match covers the four
     // navigating actions exhaustively.
@@ -389,6 +418,7 @@ export function useUnifiedSplitNavigation({
     peekActive,
     versionsDocumentId,
     consumeNavIntent,
+    peekNavIntent,
     openCesarePeek,
     closeCesarePeek,
     openVersions,

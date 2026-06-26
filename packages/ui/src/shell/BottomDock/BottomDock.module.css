@@ -16,7 +16,13 @@
   border: 1px solid var(--ds-line);
   border-radius: var(--ds-radius-pill);
   box-shadow: var(--ds-shadow-4);
-  z-index: 300;
+  /* The dock launches the floating Cesare drawer, so it shares the Cesare
+     drawer's stacking level (310) and sits ABOVE the SplitDrawer host (305).
+     At the previous 300 the Notifiche/preview split lane (a fixed host at 305)
+     buried the launcher — the user could no longer reach Cesare while a split
+     lane was open (#48). The dock already hides itself when Cesare is
+     expanded/peek/full, so it never competes with an open Cesare surface. */
+  z-index: var(--cesare-drawer-z, 310);
   transition: opacity var(--ds-duration-2) var(--ds-ease);
 }
 

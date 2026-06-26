@@ -145,6 +145,11 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
   const versionsSurface = useRoutedSurface({
     param: "versions",
     companions: ["vstate", "vcur", "compare"],
+    // Opening Versioni supersedes an open Cesare-peek (the two routed surfaces
+    // share the single auxiliary track and must never coexist — Spec 78 A6).
+    // Dropping `?peek` here kills the coexistence that seeds the reconciler
+    // oscillation (#47).
+    conflicts: ["peek"],
   });
   const isVersionsOpen = versionsSurface.value === document.id;
   // Flush a pending autosave before opening Versions so the listed/diffed

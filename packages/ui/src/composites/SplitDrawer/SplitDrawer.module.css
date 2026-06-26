@@ -19,7 +19,7 @@
   --split-bg: var(--ds-surface);
   --split-border: var(--ds-line);
   --split-shadow: var(--ds-shadow-2);
-  --split-z: 305;
+  --split-z: var(--split-host-z, 305);
 
   position: fixed;
   inset-inline-end: 0;
@@ -102,7 +102,11 @@
   max-block-size: 100dvh;
   /* No entrance animation on lane content: navigating between surfaces
      (Cesare ↔ Versioni ↔ Notifiche) must not slide/shift the panel on each
-     click. */
+     click. The base `[data-state="open"]` rule sets `split-slide-from-right`;
+     the lane content REMOUNTS on every surface switch, which re-fires that
+     entrance slide (#48). The lane is an in-flow grid column the parent already
+     sizes, so it must never animate — explicitly cancel the inherited slide. */
+  animation: none;
 }
 
 .root[data-placement="lane"][data-state="full"] {

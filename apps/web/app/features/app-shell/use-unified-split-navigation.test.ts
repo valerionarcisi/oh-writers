@@ -101,6 +101,22 @@ describe("reconcileUrlAction — history → URL projection", () => {
         ),
       ).toEqual({ kind: "open-cesare" });
     });
+
+    it("does NOTHING when a STALE cesare-peek payload lingers but `?versions` now owns the URL — the #47 loop", () => {
+      // THE regression that still looped after the coexistence guard: opening
+      // Versioni drops `?peek` at the source (`useRoutedSurface` conflicts), so
+      // the URL is `?versions=` alone — but the shared-history cursor may still
+      // sit on the old `cesare-peek` entry for a tick. The PREVIOUS code re-asserted
+      // `?peek` here (`open-cesare`), which dropped `?versions`; Effect 1 then
+      // re-mirrored versions and the two ping-ponged forever (243+ navigations
+      // observed live). The fix returns `none`: do NOT touch the URL or history —
+      // Effect 1's versions mirror moves the cursor off the stale Cesare entry
+      // (which STAYS as the A6 back-step). peek absent + versions present + NOT a
+      // ←/→ nav.
+      expect(
+        reconcileUrlAction(cesarePeekPayload, noPeek, versionsUrl(DOC), NO_NAV),
+      ).toEqual({ kind: "none" });
+    });
   });
 
   describe("versions payload", () => {
@@ -115,8 +131,16 @@ describe("reconcileUrlAction — history → URL projection", () => {
       ).toEqual({ kind: "none" });
     });
 
-    it("opens versions (dropping peek) when the URL still shows Cesare", () => {
-      // The classic A6 case: Cesare open, click VERSIONI → navigate the lane.
+    it("does NOTHING when a stale versions payload lingers but `?peek` now owns the URL (symmetric to the #47 loop guard)", () => {
+      // The A6 flow: opening Versioni drops `?peek` AT THE SOURCE
+      // (`useRoutedSurface` `conflicts: ["peek"]`), and opening Cesare drops
+      // `?versions` likewise — the two routed params never coexist in the URL.
+      // So a `versions` payload while `?peek` (not `?versions`) owns the URL means
+      // Cesare SUPERSEDED Versioni, leaving a stale versions entry. The reconciler
+      // returns `none` (URL is the source of truth; Effect 1 moves the cursor off
+      // the stale entry) rather than re-assert `?versions` — re-asserting would
+      // drop `?peek`, Effect 1 would re-mirror Cesare, and the two would ping-pong
+      // (the #47 loop). Not a ←/→ nav.
       const action = reconcileUrlAction(
         versionsPayload(DOC, {
           currentVersionId: "v9",
@@ -125,6 +149,22 @@ describe("reconcileUrlAction — history → URL projection", () => {
         peekActive,
         noVersions,
         NO_NAV,
+      );
+      expect(action).toEqual({ kind: "none" });
+    });
+
+    it("RE-OPENS versions (dropping peek) on a genuine ←/→ back to it while `?peek` lingers", () => {
+      // The OPPOSITE intent from the supersede-cede above: a real history
+      // navigation back to versions must re-assert its param even though the
+      // sibling `?peek` is still in the URL.
+      const action = reconcileUrlAction(
+        versionsPayload(DOC, {
+          currentVersionId: "v9",
+          versionKind: "narrative",
+        }),
+        peekActive,
+        noVersions,
+        NAV,
       );
       expect(action).toEqual({
         kind: "open-versions",
@@ -184,12 +224,12 @@ describe("reconcileUrlAction — history → URL projection", () => {
       ).toMatchObject({ kind: "open-cesare" });
     });
 
-    it("omits companions that are absent", () => {
+    it("omits companions that are absent on a genuine ←/→ re-open", () => {
       const action = reconcileUrlAction(
         versionsPayload(DOC),
         peekActive,
         noVersions,
-        NO_NAV,
+        NAV,
       );
       expect(action).toEqual({
         kind: "open-versions",

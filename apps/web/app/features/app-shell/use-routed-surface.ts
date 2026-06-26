@@ -49,6 +49,18 @@ export interface UseRoutedSurfaceOptions {
   readonly param: string;
   /** Companion params cleared together with the primary on `close`. */
   readonly companions?: readonly string[];
+  /**
+   * Sibling routed params that MUST NOT coexist with this surface — dropped on
+   * `open` / `navigateState` so opening this surface supersedes them. The single
+   * auxiliary split track holds at most one routed surface (Spec 78 A6 / BUG-N64):
+   * opening Versioni (`?versions=`) while Cesare-peek (`?peek=cesare`) owns the
+   * track must REPLACE it, not produce `?peek=cesare&versions=` coexistence. That
+   * coexistence is the seed of the URL ↔ history reconciler oscillation (#47): the
+   * reconciler's coexistence guard and the surface's open handler then fight over
+   * which param to drop, cascading extra navigations. Declaring the conflict here
+   * resolves it ONCE at the source — the freshly-opened surface always wins.
+   */
+  readonly conflicts?: readonly string[];
 }
 
 /**
@@ -69,7 +81,7 @@ function readSearch(search: unknown): Record<string, string> {
 export function useRoutedSurface(
   options: UseRoutedSurfaceOptions,
 ): UseRoutedSurfaceResult {
-  const { param, companions = [] } = options;
+  const { param, companions = [], conflicts = [] } = options;
   const navigate = useNavigate();
   const location = useLocation();
   const { pathname } = location;
@@ -91,15 +103,22 @@ export function useRoutedSurface(
     () => (companionsKey ? companionsKey.split(",") : []),
     [companionsKey],
   );
+  const conflictsKey = conflicts.join(",");
+  const conflictsList = useMemo(
+    () => (conflictsKey ? conflictsKey.split(",") : []),
+    [conflictsKey],
+  );
 
   const open = useCallback(
     (next: string, extra?: Readonly<Record<string, string>>) => {
+      const base = { ...searchRef.current };
+      for (const c of conflictsList) delete base[c];
       void navigate({
         to: pathname,
-        search: { ...searchRef.current, ...extra, [param]: next },
+        search: { ...base, ...extra, [param]: next },
       });
     },
-    [navigate, pathname, param],
+    [navigate, pathname, param, conflictsList],
   );
 
   const close = useCallback(() => {
@@ -125,12 +144,13 @@ export function useRoutedSurface(
     (next: string, extra?: Readonly<Record<string, string>>) => {
       const rest = { ...searchRef.current };
       for (const c of companionsList) delete rest[c];
+      for (const c of conflictsList) delete rest[c];
       void navigate({
         to: pathname,
         search: { ...rest, ...extra, [param]: next },
       });
     },
-    [navigate, pathname, param, companionsList],
+    [navigate, pathname, param, companionsList, conflictsList],
   );
 
   return {

@@ -6,7 +6,7 @@ import {
   useLocation,
   useNavigate,
 } from "@tanstack/react-router";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { createServerFn } from "@tanstack/start";
 import type { Locale, UserId, TranslationKey } from "@oh-writers/domain";
 import { useTranslation } from "~/features/i18n";
@@ -212,6 +212,19 @@ function AppLayout() {
   const projectMatch = matches.find((m) => m.routeId.includes("/projects/$id"));
   const projectId = (projectMatch?.params as { id?: string } | undefined)?.id;
 
+  // These split-surface mutators feed the unified-split reconciler's Effect 2
+  // deps. `search` changes identity on EVERY navigate, so closing over it
+  // directly (the previous shape) gave each callback a fresh identity every
+  // render — re-running Effect 2 on every render and amplifying any residual
+  // URL ↔ history disagreement into the #47 render storm. Read the live
+  // `pathname` / `search` through refs instead so the callbacks stay
+  // REFERENCE-STABLE; the reconciler effect then runs only on a genuine surface
+  // change. (Same ref pattern `useRoutedSurface` already uses internally.)
+  const pathnameRef = useRef(pathname);
+  pathnameRef.current = pathname;
+  const searchRef = useRef(search);
+  searchRef.current = search;
+
   // `?peek=` open/close are pure search-param mutations on the CURRENT host
   // path — we target the live `pathname` so the host page stays mounted (it
   // only compresses) and only the search param changes. Browser-back then
@@ -226,24 +239,26 @@ function AppLayout() {
       vcur: _vc,
       vkind: _vk,
       ...rest
-    } = search;
+    } = searchRef.current;
     void navigate({
-      to: pathname,
+      to: pathnameRef.current,
       search: { ...rest, peek: CESARE_PEEK_TOKEN },
     });
-  }, [navigate, pathname, search]);
+  }, [navigate]);
   const closePeek = useCallback(() => {
-    const { peek: _dropped, ...rest } = search;
-    void navigate({ to: pathname, search: rest });
-  }, [navigate, pathname, search]);
+    const { peek: _dropped, ...rest } = searchRef.current;
+    void navigate({ to: pathnameRef.current, search: rest });
+  }, [navigate]);
 
   // Versions SplitDrawer (Spec 49 routing + Spec 66 master→detail).
   // `useRoutedSurface` owns the URL ↔ surface mapping so this layout never
   // hand-rolls the param mutation. `vstate`/`vcur` are companions cleared
-  // together with `versions` on close.
+  // together with `versions` on close. `conflicts: ["peek"]` makes opening
+  // Versioni drop `?peek` at the source so the two routed surfaces never coexist.
   const versionsSurface = useRoutedSurface({
     param: "versions",
     companions: ["vstate", "vcur", "vkind"],
+    conflicts: ["peek"],
   });
   const closeVersions = versionsSurface.close;
   // Re-open the Versions surface when the shared split history navigates to it
@@ -253,13 +268,13 @@ function AppLayout() {
     (documentId: string, companions: Readonly<Record<string, string>>) => {
       // Mutually exclusive with the Cesare peek: drop `?peek` so the two routed
       // params never coexist in the single auxiliary track (Spec 78 A6).
-      const { peek: _peek, ...rest } = search;
+      const { peek: _peek, ...rest } = searchRef.current;
       void navigate({
-        to: pathname,
+        to: pathnameRef.current,
         search: { ...rest, ...companions, versions: documentId },
       });
     },
-    [navigate, pathname, search],
+    [navigate],
   );
   // `↗` expand → real navigation to the full-screen versions route (new history
   // entry; browser-back / `↙` returns to the split). The doc + baseline + kind are

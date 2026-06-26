@@ -570,6 +570,44 @@ function AppShellInner({
   // in sync (idempotently); the lanes render the same `sharedHistoryNav` below.
   // `isVersionsSplitActive` carries the resolved (split, not full) Versions
   // surface so a full-screen Versions route is NOT mirrored into the track.
+  // The reconciler's Effect 2 lists `actions` (its four callbacks) in its deps,
+  // so a fresh `actions` object — or fresh wrapper closures — every render would
+  // re-run the effect every render and amplify any residual URL ↔ history
+  // disagreement into the #47 render storm. The parent callbacks
+  // (`onOpenCesarePeek` …) are already reference-stable (they read pathname /
+  // search through refs in `_app.tsx`); wrap them in stable `useCallback`s and a
+  // memoised `actions` object so the effect runs only on a genuine surface change.
+  const openCesarePeekAction = useCallback(
+    () => onOpenCesarePeek?.(),
+    [onOpenCesarePeek],
+  );
+  const closeCesarePeekAction = useCallback(
+    () => onClosePeek?.(),
+    [onClosePeek],
+  );
+  const openVersionsAction = useCallback(
+    (documentId: string, companions: Readonly<Record<string, string>>) =>
+      onOpenVersions?.(documentId, companions),
+    [onOpenVersions],
+  );
+  const closeVersionsAction = useCallback(
+    () => onCloseVersions?.(),
+    [onCloseVersions],
+  );
+  const unifiedSplitActions = useMemo(
+    () => ({
+      openCesarePeek: openCesarePeekAction,
+      closeCesarePeek: closeCesarePeekAction,
+      openVersions: openVersionsAction,
+      closeVersions: closeVersionsAction,
+    }),
+    [
+      openCesarePeekAction,
+      closeCesarePeekAction,
+      openVersionsAction,
+      closeVersionsAction,
+    ],
+  );
   useUnifiedSplitNavigation({
     splitDrawer,
     cesarePeek: { isActive: isCesareSplitActiveRaw },
@@ -584,13 +622,7 @@ function AppShellInner({
           : "narrative"
         : null,
     },
-    actions: {
-      openCesarePeek: () => onOpenCesarePeek?.(),
-      closeCesarePeek: () => onClosePeek?.(),
-      openVersions: (documentId, companions) =>
-        onOpenVersions?.(documentId, companions),
-      closeVersions: () => onCloseVersions?.(),
-    },
+    actions: unifiedSplitActions,
   });
 
   // Closing ANY routed lane (Cesare ×, Versions ×/ESC) clears ONLY its URL param.
