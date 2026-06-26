@@ -1,6 +1,6 @@
 // tests/cesare-agentic-audit-f-versions.spec.ts
 //
-// [OHW-audit-F-versions] Three Versions/diff audit fixes (Spec 49 + Spec 47d):
+// [audit-F-versions] Three Versions/diff audit fixes (Spec 49 + Spec 47d):
 //
 //   F-A1 — A bare `?versions=<docId>` deep-link WITHOUT `?vcur=` must still show
 //          the "vs current" diff: the baseline falls back to the document's
@@ -89,7 +89,7 @@ const createSecondVersion = async (
   return id as string;
 };
 
-test.describe("[OHW-audit-F-versions] Versions deep-link + clean diff", () => {
+test.describe("[audit-F-versions] Versions deep-link + clean diff", () => {
   // BUG-N61 (fixme ×8, Valerio's go 2026-06-11): asserts the side-by-side diff
   // that Spec 66 / ADR-0004 removed (master→detail). Realign or retire with N-38.
   test.fixme("[F-A1] a bare ?versions= deep-link (no vcur) shows the vs-current diff", async ({
@@ -166,7 +166,7 @@ test.describe("[OHW-audit-F-versions] Versions deep-link + clean diff", () => {
   });
 });
 
-test.describe("[OHW-audit-F-versions] first-generation Mostra modifiche", () => {
+test.describe("[audit-F-versions] first-generation Mostra modifiche", () => {
   test("[F-M3] a first generation flashes the whole new content as green additions", async ({
     authenticatedPage: page,
   }) => {

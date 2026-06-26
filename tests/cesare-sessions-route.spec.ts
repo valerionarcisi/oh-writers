@@ -1,6 +1,6 @@
 // tests/cesare-sessions-route.spec.ts
 //
-// [OHW-047-A5] LeftRail Cesare entry + central Sessions route.
+// [047-A5] LeftRail Cesare entry + central Sessions route.
 //
 // The rail's dedicated "Cesare" entry opens the sessions landing
 // (`/projects/:id/sessions`); clicking a session opens its full conversation at
@@ -16,7 +16,7 @@ import { TEAM_PROJECT_ID } from "./breakdown/helpers";
 // not-found. Stands in for "foreign / non-existent session".
 const FOREIGN_SESSION_ID = "99999999-9999-4999-a999-999999999999";
 
-test.describe("[OHW-047-A5] Cesare sidebar entry + sessions route", () => {
+test.describe("[047-A5] Cesare sidebar entry + sessions route", () => {
   test("rail Cesare entry → sessions landing → open a session → central conversation", async ({
     authenticatedPage: page,
   }) => {

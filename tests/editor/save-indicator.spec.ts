@@ -94,9 +94,9 @@ const forceSave = (page: Page) =>
     ).__ohWritersForceSave?.(),
   );
 
-// ─── OHW-140  Pill self-hides on a fresh, untouched editor ───────────────────
+// ─── 140  Pill self-hides on a fresh, untouched editor ───────────────────
 
-test("[OHW-140] the indicator is hidden on a fresh, untouched editor", async ({
+test("[140] the indicator is hidden on a fresh, untouched editor", async ({
   page,
 }) => {
   await openScreenplay(page, projectId);
@@ -104,9 +104,9 @@ test("[OHW-140] the indicator is hidden on a fresh, untouched editor", async ({
   await expect(indicator(page)).toHaveCount(0);
 });
 
-// ─── OHW-141  Typing surfaces the indicator (saving) ─────────────────────────
+// ─── 141  Typing surfaces the indicator (saving) ─────────────────────────
 
-test("[OHW-141] typing surfaces the save indicator", async ({ page }) => {
+test("[141] typing surfaces the save indicator", async ({ page }) => {
   await openScreenplay(page, projectId);
   await page.locator(".ProseMirror").first().click();
   await page.keyboard.type("FADE IN:");
@@ -116,9 +116,9 @@ test("[OHW-141] typing surfaces the save indicator", async ({ page }) => {
   await expect(indicator(page)).toHaveAttribute("data-state", /saving|saved/);
 });
 
-// ─── OHW-142  A forced save settles the indicator on 'saved' ─────────────────
+// ─── 142  A forced save settles the indicator on 'saved' ─────────────────
 
-test("[OHW-142] the indicator settles on 'saved' after a save", async ({
+test("[142] the indicator settles on 'saved' after a save", async ({
   page,
 }) => {
   await openScreenplay(page, projectId);
@@ -128,12 +128,12 @@ test("[OHW-142] the indicator settles on 'saved' after a save", async ({
   await expect(savedPill(page)).toBeVisible({ timeout: 10_000 });
 });
 
-// [OHW-144] removed: the shell save-status pill is not clickable (the retired
+// [144] removed: the shell save-status pill is not clickable (the retired
 // in-toolbar pill exposed a "save now" click). Forced save is covered below.
 
-// ─── OHW-143  Cmd/Ctrl+S forces a save ───────────────────────────────────────
+// ─── 143  Cmd/Ctrl+S forces a save ───────────────────────────────────────
 
-test("[OHW-143] Cmd/Ctrl+S forces a save", async ({ page }) => {
+test("[143] Cmd/Ctrl+S forces a save", async ({ page }) => {
   await openScreenplay(page, projectId);
   await page.locator(".ProseMirror").first().click();
   await page.keyboard.type("Another edit");

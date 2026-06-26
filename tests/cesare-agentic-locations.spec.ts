@@ -32,7 +32,7 @@ test.describe("[Spec 34] Cesare Agentic — Locations", () => {
     await resetCesareState(authenticatedPage, LOCATIONS_PROJECT_ID);
   });
 
-  test("[OHW-540] Cesare adds a candidate via add_candidate tool", async ({
+  test("[540] Cesare adds a candidate via add_candidate tool", async ({
     authenticatedPage,
   }) => {
     await navigateToLocations(authenticatedPage, LOCATIONS_PROJECT_ID);

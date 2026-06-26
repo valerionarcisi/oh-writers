@@ -64,7 +64,7 @@ test.describe("[Spec UI] Dialog a11y — native <dialog> focus and keyboard", ()
     return true;
   }
 
-  test("[OHW-410] Bulk archive opens a ConfirmDialog", async ({
+  test("[410] Bulk archive opens a ConfirmDialog", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -84,7 +84,7 @@ test.describe("[Spec UI] Dialog a11y — native <dialog> focus and keyboard", ()
     await expect(page.locator("dialog[open]")).toBeVisible({ timeout: 5_000 });
   });
 
-  test("[OHW-411] Escape key closes the ConfirmDialog", async ({
+  test("[411] Escape key closes the ConfirmDialog", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -109,7 +109,7 @@ test.describe("[Spec UI] Dialog a11y — native <dialog> focus and keyboard", ()
     await expect(page.getByTestId("bulk-action-bar")).toBeVisible();
   });
 
-  test("[OHW-412] Cancel button in ConfirmDialog closes without archiving", async ({
+  test("[412] Cancel button in ConfirmDialog closes without archiving", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -142,7 +142,7 @@ test.describe("[Spec UI] Dialog a11y — native <dialog> focus and keyboard", ()
     expect(rowsAfter).toBe(rowsBefore);
   });
 
-  test("[OHW-413] ConfirmDialog confirm button is focusable and triggers archive", async ({
+  test("[413] ConfirmDialog confirm button is focusable and triggers archive", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;

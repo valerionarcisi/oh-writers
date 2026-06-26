@@ -57,7 +57,7 @@ test.describe("[Spec 47a] Cesare stream round-trip", () => {
     await resetCesareState(authenticatedPage, TEAM_PROJECT_ID);
   });
 
-  test("[OHW-047-A1] user bubble appears under 100ms on submit", async ({
+  test("[047-A1] user bubble appears under 100ms on submit", async ({
     authenticatedPage,
   }) => {
     await authenticatedPage.goto(
@@ -90,7 +90,7 @@ test.describe("[Spec 47a] Cesare stream round-trip", () => {
     expect(elapsed).toBeLessThan(1_000);
   });
 
-  test("[OHW-047-A1] a just-sent bubble survives the full turn (never wiped) and the reply lands", async ({
+  test("[047-A1] a just-sent bubble survives the full turn (never wiped) and the reply lands", async ({
     authenticatedPage,
   }) => {
     // The "session swap never wipes an in-flight bubble" invariant is proved
@@ -126,7 +126,7 @@ test.describe("[Spec 47a] Cesare stream round-trip", () => {
     });
   });
 
-  test("[OHW-047-A1] a failed send marks the bubble (data-status=failed), never silently lost", async ({
+  test("[047-A1] a failed send marks the bubble (data-status=failed), never silently lost", async ({
     authenticatedPage,
   }) => {
     // Sad path: when the transport fails (stream route 500 / aborted), the
@@ -169,7 +169,7 @@ test.describe("[Spec 47a] Cesare stream round-trip", () => {
     });
   });
 
-  test("[OHW-047-A2] a write request streams reading→writing→done before the result card", async ({
+  test("[047-A2] a write request streams reading→writing→done before the result card", async ({
     authenticatedPage,
   }) => {
     await authenticatedPage.goto(
@@ -211,7 +211,7 @@ test.describe("[Spec 47a] Cesare stream round-trip", () => {
     ).toBeVisible({ timeout: 10_000 });
   });
 
-  test("[OHW-047-A2] cross-domain: a request on the Soggetto page that writes the Sinossi streams writing{synopsis}", async ({
+  test("[047-A2] cross-domain: a request on the Soggetto page that writes the Sinossi streams writing{synopsis}", async ({
     authenticatedPage,
   }) => {
     // Cross-domain: the page is the Soggetto, but the request runs the synopsis
@@ -258,7 +258,7 @@ test.describe("[Spec 47a] Cesare stream round-trip", () => {
     ).toBe(true);
   });
 
-  test("[OHW-048-A3] aborting the stream fetch cancels the server run (no wedge: a follow-up turn still streams to done)", async ({
+  test("[048-A3] aborting the stream fetch cancels the server run (no wedge: a follow-up turn still streams to done)", async ({
     authenticatedPage,
   }) => {
     // Spec 48 (W-E2) — structured interruption. The server run is now an Effect
@@ -346,7 +346,7 @@ test.describe("[Spec 47a] Cesare stream round-trip", () => {
     expect(followUp).toContain("done");
   });
 
-  test("[OHW-047-A2] stream transport error degrades gracefully to the askCesare fallback (reply still lands)", async ({
+  test("[047-A2] stream transport error degrades gracefully to the askCesare fallback (reply still lands)", async ({
     authenticatedPage,
   }) => {
     // Sad path for the streamed transport: when the SSE/NDJSON stream route is

@@ -76,7 +76,7 @@ async function sendAndWaitForReply(
 }
 
 test.describe("[Spec 29] Cesare cost foundation — regression guards", () => {
-  test("[OHW-560] Router integration: short Q, imperative, long prompt all reply", async ({
+  test("[560] Router integration: short Q, imperative, long prompt all reply", async ({
     authenticatedPage,
   }) => {
     // Screenplay is not an agentic page — handleAskCesare returns the canned
@@ -103,7 +103,7 @@ test.describe("[Spec 29] Cesare cost foundation — regression guards", () => {
     }
   });
 
-  test("[OHW-561] Read-tool invocation: read_scene returns seeded dialogue", async ({
+  test("[561] Read-tool invocation: read_scene returns seeded dialogue", async ({
     authenticatedPage,
   }) => {
     // Breakdown is an agentic page. The mock scenario for this prompt emits
@@ -131,7 +131,7 @@ test.describe("[Spec 29] Cesare cost foundation — regression guards", () => {
     expect(reply).toContain("Non avrei mai dovuto tornare");
   });
 
-  test("[OHW-562] Multi-turn cached context: 5 consecutive replies arrive", async ({
+  test("[562] Multi-turn cached context: 5 consecutive replies arrive", async ({
     authenticatedPage,
   }) => {
     // Locations is agentic — the system prompt is built from cached blocks

@@ -114,7 +114,7 @@ test.describe("[Spec 78 §A5] Large-edit confirm applies once (no ask-loop)", ()
     await resetCesareState(authenticatedPage, TEST_TEAM_PROJECT_ID);
   });
 
-  test("[OHW-N66] clicking 'Nuova versione' applies the edit ONCE and shows the result", async ({
+  test("[N66] clicking 'Nuova versione' applies the edit ONCE and shows the result", async ({
     authenticatedPage: page,
   }) => {
     test.setTimeout(180_000);

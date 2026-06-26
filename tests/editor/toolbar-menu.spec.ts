@@ -87,9 +87,9 @@ test.beforeEach(async ({ page }) => {
   await page.context().addCookies(authCookies);
 });
 
-// ─── OHW-100  Single TopBar actions menu; no in-editor ⋯ menu ────────────────
+// ─── 100  Single TopBar actions menu; no in-editor ⋯ menu ────────────────
 
-test("[OHW-100] the TopBar actions menu is the single home; no in-editor toolbar menu", async ({
+test("[100] the TopBar actions menu is the single home; no in-editor toolbar menu", async ({
   page,
 }) => {
   await openScreenplay(page, projectId);
@@ -98,9 +98,9 @@ test("[OHW-100] the TopBar actions menu is the single home; no in-editor toolbar
   await expect(page.locator('[data-testid="import-pdf-btn"]')).toHaveCount(0);
 });
 
-// ─── OHW-104  Import PDF item triggers file chooser ──────────────────────────
+// ─── 104  Import PDF item triggers file chooser ──────────────────────────
 
-test("[OHW-104] Import PDF menu item opens the system file picker", async ({
+test("[104] Import PDF menu item opens the system file picker", async ({
   page,
 }) => {
   await openScreenplay(page, projectId);
@@ -111,9 +111,9 @@ test("[OHW-104] Import PDF menu item opens the system file picker", async ({
   expect(chooser).toBeTruthy();
 });
 
-// ─── OHW-105  Importa Fountain item opens the system file picker ─────────────
+// ─── 105  Importa Fountain item opens the system file picker ─────────────
 
-test("[OHW-105] Importa Fountain menu item opens the system file picker", async ({
+test("[105] Importa Fountain menu item opens the system file picker", async ({
   page,
 }) => {
   await openScreenplay(page, projectId);
@@ -124,9 +124,9 @@ test("[OHW-105] Importa Fountain menu item opens the system file picker", async 
   expect(chooser).toBeTruthy();
 });
 
-// ─── OHW-106  Resequence is reachable and enabled ────────────────────────────
+// ─── 106  Resequence is reachable and enabled ────────────────────────────
 
-test("[OHW-106] Ricalcola numerazione is rendered and enabled", async ({
+test("[106] Ricalcola numerazione is rendered and enabled", async ({
   page,
 }) => {
   await openScreenplay(page, projectId);
@@ -136,9 +136,9 @@ test("[OHW-106] Ricalcola numerazione is rendered and enabled", async ({
   await expect(item).toBeEnabled();
 });
 
-// ─── OHW-FP11  Frontespizio is visible to owners ─────────────────────────────
+// ─── FP11  Frontespizio is visible to owners ─────────────────────────────
 
-test("[OHW-FP11] Frontespizio menu item is visible and enabled for project owner", async ({
+test("[FP11] Frontespizio menu item is visible and enabled for project owner", async ({
   page,
 }) => {
   await openScreenplay(page, projectId);

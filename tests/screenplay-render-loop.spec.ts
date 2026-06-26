@@ -30,7 +30,7 @@ function trackUpdateDepthErrors(page: Page): { count: () => number } {
   return { count: () => n };
 }
 
-test.describe("[OHW-audit-1] render loop is gone on editor / sessions/new / ?peek=cesare", () => {
+test.describe("[audit-1] render loop is gone on editor / sessions/new / ?peek=cesare", () => {
   test("screenplay editor mounts without an update-depth loop", async ({
     authenticatedPage,
   }) => {

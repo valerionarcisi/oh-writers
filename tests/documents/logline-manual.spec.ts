@@ -46,7 +46,7 @@ async function readLoglineFromPill(page: Page): Promise<string> {
 }
 
 test.describe("[documents] Logline manual edit — write then modify", () => {
-  test("[OHW-logline-manual-01] write a logline, confirm it persists, then modify it and confirm only the new value persists", async ({
+  test("[logline-manual-01] write a logline, confirm it persists, then modify it and confirm only the new value persists", async ({
     authenticatedPage: page,
   }) => {
     // Shorten the autosave debounce so we don't have to wait 30 s in-test.

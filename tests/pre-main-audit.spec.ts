@@ -62,7 +62,7 @@ function trackHydrationErrors(page: Page): { count: () => number } {
   return { count: () => n };
 }
 
-test.describe("[OHW-audit] pre-main UI audit regressions", () => {
+test.describe("[audit] pre-main UI audit regressions", () => {
   test("every audited route sets a non-empty, sensible document.title", async ({
     authenticatedPage: page,
   }) => {

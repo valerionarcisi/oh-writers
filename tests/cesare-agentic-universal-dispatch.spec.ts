@@ -55,7 +55,7 @@ test.describe("[Spec 47b] Cesare universal dispatch — cross-page write", () =>
     await resetCesareState(authenticatedPage, TEAM_PROJECT_ID);
   });
 
-  test("[OHW-047-A7] a request on the Sceneggiatura page writes the Soggetto (writing{soggetto}, version applied live)", async ({
+  test("[047-A7] a request on the Sceneggiatura page writes the Soggetto (writing{soggetto}, version applied live)", async ({
     authenticatedPage,
   }) => {
     // POST through the authenticated browser context so the session cookie
@@ -125,7 +125,7 @@ test.describe("[Spec 47b] Cesare universal dispatch — cross-page write", () =>
     ).toBeTruthy();
   });
 
-  test("[OHW-047-A7] the stream route still enforces project ownership (foreign project → not 200)", async ({
+  test("[047-A7] the stream route still enforces project ownership (foreign project → not 200)", async ({
     authenticatedPage,
   }) => {
     // Safety guard intact: universal dispatch loosened the per-page TOOL gate,

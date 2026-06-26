@@ -11,18 +11,18 @@ import {
 /**
  * [Spec 41] Cesare inline edits — streaming typewriter highlight
  *
- * - OHW-041a: rewrite_scene → green decoration visible in editor
- * - OHW-041b: Accept → text changes in doc, no version created
- * - OHW-041c: Reject → text unchanged
- * - OHW-041d: Drawer closes during streaming, glow visible on Cesare button
- * - OHW-041e: Cmd+Z while streaming → reject, doc unchanged
+ * - 041a: rewrite_scene → green decoration visible in editor
+ * - 041b: Accept → text changes in doc, no version created
+ * - 041c: Reject → text unchanged
+ * - 041d: Drawer closes during streaming, glow visible on Cesare button
+ * - 041e: Cmd+Z while streaming → reject, doc unchanged
  */
 test.describe("[Spec 41] Cesare Inline Edits", () => {
   test.beforeEach(async ({ authenticatedPage }) => {
     await resetScreenplayState(authenticatedPage, TEAM_PROJECT_ID);
   });
 
-  test("[OHW-041a] rewrite_scene produces a green pending decoration in the editor", async ({
+  test("[041a] rewrite_scene produces a green pending decoration in the editor", async ({
     authenticatedPage,
   }) => {
     await authenticatedPage.goto(
@@ -55,7 +55,7 @@ test.describe("[Spec 41] Cesare Inline Edits", () => {
     await expect(decoration).toBeVisible({ timeout: 10_000 });
   });
 
-  test("[OHW-041b] Accept applies the new text to the doc and no version is created", async ({
+  test("[041b] Accept applies the new text to the doc and no version is created", async ({
     authenticatedPage,
   }) => {
     await authenticatedPage.goto(
@@ -106,7 +106,7 @@ test.describe("[Spec 41] Cesare Inline Edits", () => {
     ).toBeHidden();
   });
 
-  test("[OHW-041c] Reject leaves the doc unchanged", async ({
+  test("[041c] Reject leaves the doc unchanged", async ({
     authenticatedPage,
   }) => {
     await authenticatedPage.goto(
@@ -148,7 +148,7 @@ test.describe("[Spec 41] Cesare Inline Edits", () => {
     expect(afterFountain).toBe(originalFountain);
   });
 
-  test("[OHW-041d] Cesare sheet closes and glow appears on Cesare button during streaming", async ({
+  test("[041d] Cesare sheet closes and glow appears on Cesare button during streaming", async ({
     authenticatedPage,
   }) => {
     await authenticatedPage.goto(
@@ -214,7 +214,7 @@ test.describe("[Spec 41] Cesare Inline Edits", () => {
     void cesarePill; // referenced to avoid unused var lint warning
   });
 
-  test("[OHW-041e] Cmd+Z during streaming rejects the pending edit", async ({
+  test("[041e] Cmd+Z during streaming rejects the pending edit", async ({
     authenticatedPage,
   }) => {
     await authenticatedPage.goto(

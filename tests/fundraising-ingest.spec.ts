@@ -12,14 +12,14 @@ const CRON_PATH = "/api/cron/fundraising-ingest";
  * per-source errors in its summary rather than failing the whole call.
  */
 test.describe("[Spec 35] Fundraising ingest", () => {
-  test("[OHW-358] Cron endpoint rejects requests without the secret header", async ({
+  test("[358] Cron endpoint rejects requests without the secret header", async ({
     request,
   }) => {
     const res = await request.post(`${BASE_URL}${CRON_PATH}`);
     expect(res.status()).toBe(401);
   });
 
-  test("[OHW-358] Cron endpoint rejects requests with a wrong secret", async ({
+  test("[358] Cron endpoint rejects requests with a wrong secret", async ({
     request,
   }) => {
     const res = await request.post(`${BASE_URL}${CRON_PATH}`, {
@@ -28,7 +28,7 @@ test.describe("[Spec 35] Fundraising ingest", () => {
     expect(res.status()).toBe(401);
   });
 
-  test("[OHW-350] Cron endpoint returns a summary when authenticated", async ({
+  test("[350] Cron endpoint returns a summary when authenticated", async ({
     request,
   }) => {
     const res = await request.post(`${BASE_URL}${CRON_PATH}`, {

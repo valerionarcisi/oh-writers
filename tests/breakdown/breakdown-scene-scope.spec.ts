@@ -8,7 +8,7 @@ import { navigateToBreakdown, TEAM_PROJECT_ID } from "./helpers";
 // whole-script run. Before the fix the reader always rendered the entire
 // screenplay while the header claimed a single scene ("spaginato").
 test.describe("[BUG-N68] breakdown Per scena — scene-scope toggle", () => {
-  test("[OHW-N68a] defaults to a single scene; the toggle reveals the full script", async ({
+  test("[N68a] defaults to a single scene; the toggle reveals the full script", async ({
     authenticatedPage: page,
   }) => {
     await navigateToBreakdown(page, TEAM_PROJECT_ID);
@@ -44,7 +44,7 @@ test.describe("[BUG-N68] breakdown Per scena — scene-scope toggle", () => {
     await expect(headings).toHaveCount(1);
   });
 
-  test("[OHW-N68b] single scope exposes the Indice scene switcher; picking a scene re-slices the reader", async ({
+  test("[N68b] single scope exposes the Indice scene switcher; picking a scene re-slices the reader", async ({
     authenticatedPage: page,
   }) => {
     await navigateToBreakdown(page, TEAM_PROJECT_ID);
@@ -74,7 +74,7 @@ test.describe("[BUG-N68] breakdown Per scena — scene-scope toggle", () => {
     expect(newHeading).not.toBe(firstHeading);
   });
 
-  test("[OHW-N68c] element underlines render via text-decoration, not a box border", async ({
+  test("[N68c] element underlines render via text-decoration, not a box border", async ({
     authenticatedPage: page,
   }) => {
     await navigateToBreakdown(page, TEAM_PROJECT_ID);

@@ -94,7 +94,7 @@ test.describe("[Spec 47c] Cesare logline — unify + write/edit", () => {
   });
 
   // ── HAPPY: edit the logline by hand persists across reload ─────────────────
-  test("[OHW-047-A8] editing the logline by hand persists across reload (single source of truth)", async ({
+  test("[047-A8] editing the logline by hand persists across reload (single source of truth)", async ({
     authenticatedPage: page,
   }) => {
     // Shrink the 30s autosave debounce so the edit persists within the test.
@@ -119,7 +119,7 @@ test.describe("[Spec 47c] Cesare logline — unify + write/edit", () => {
   // BUG-N61 (fixme ×8, Valerio's go 2026-06-11): fails only on the final
   // show-changes-btn count(0) assert — the unimplemented ADR-0003 suppression.
   // The live-apply flow itself is covered by the sibling tests. N-38 decides.
-  test.fixme("[OHW-047-A8] Cesare writes a logline from a free prompt: applies live, auto-versions, no inline Annulla", async ({
+  test.fixme("[047-A8] Cesare writes a logline from a free prompt: applies live, auto-versions, no inline Annulla", async ({
     authenticatedPage: page,
   }) => {
     test.setTimeout(120_000);
@@ -158,7 +158,7 @@ test.describe("[Spec 47c] Cesare logline — unify + write/edit", () => {
 
   // ── HAPPY: Cesare EDITS the existing logline → live + version ───────────────
   // BUG-N61 (fixme ×8, Valerio's go 2026-06-11): same suppression assert. N-38.
-  test.fixme("[OHW-047-A8] Cesare edits the existing logline: applies live and auto-versions", async ({
+  test.fixme("[047-A8] Cesare edits the existing logline: applies live and auto-versions", async ({
     authenticatedPage: page,
   }) => {
     test.setTimeout(120_000);
@@ -186,7 +186,7 @@ test.describe("[Spec 47c] Cesare logline — unify + write/edit", () => {
   });
 
   // ── CROSS-PAGE: write_logline works from a NON-document page ────────────────
-  test("[OHW-047-A8] write_logline is universal: a request on the Sceneggiatura page writes the logline (writing{logline}, version applied live)", async ({
+  test("[047-A8] write_logline is universal: a request on the Sceneggiatura page writes the logline (writing{logline}, version applied live)", async ({
     authenticatedPage: page,
   }) => {
     const res = await page.request.post(`${BASE_URL}/api/cesare/stream`, {
@@ -238,7 +238,7 @@ test.describe("[Spec 47c] Cesare logline — unify + write/edit", () => {
   });
 
   // ── SAD: an empty instruction is rejected (no logline written) ──────────────
-  test("[OHW-047-A8] an empty Cesare request is rejected (no logline written)", async ({
+  test("[047-A8] an empty Cesare request is rejected (no logline written)", async ({
     authenticatedPage: page,
   }) => {
     const res = await page.request.post(`${BASE_URL}/api/cesare/stream`, {
@@ -255,7 +255,7 @@ test.describe("[Spec 47c] Cesare logline — unify + write/edit", () => {
   });
 
   // ── SAD: the applied logline never exceeds the 200-char cap (unify) ─────────
-  test("[OHW-047-A8] a Cesare-written logline never exceeds the 200-char cap", async ({
+  test("[047-A8] a Cesare-written logline never exceeds the 200-char cap", async ({
     authenticatedPage: page,
   }) => {
     const res = await page.request.post(`${BASE_URL}/api/cesare/stream`, {

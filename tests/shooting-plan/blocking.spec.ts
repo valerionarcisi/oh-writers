@@ -2,8 +2,8 @@ import { expect } from "@playwright/test";
 import { test } from "../fixtures";
 import { SHOOTING_PLAN_PROJECT_ID, navigateToShootingPlan } from "./helpers";
 
-test.describe("[OHW-022c] 2D Scene Blocking Render", () => {
-  test("[OHW-022c-01] Blocking card renders instead of placeholder on scene select", async ({
+test.describe("[022c] 2D Scene Blocking Render", () => {
+  test("[022c-01] Blocking card renders instead of placeholder on scene select", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -24,7 +24,7 @@ test.describe("[OHW-022c] 2D Scene Blocking Render", () => {
     });
   });
 
-  test("[OHW-022c-02] Cesare precompilato shows SUGGERITO badge on first open", async ({
+  test("[022c-02] Cesare precompilato shows SUGGERITO badge on first open", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -43,7 +43,7 @@ test.describe("[OHW-022c] 2D Scene Blocking Render", () => {
     await expect(page.getByText("SUGGERITO")).toBeVisible({ timeout: 20_000 });
   });
 
-  test("[OHW-022c-03] Blocking card has ⌘B editor button", async ({
+  test("[022c-03] Blocking card has ⌘B editor button", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -52,12 +52,12 @@ test.describe("[OHW-022c] 2D Scene Blocking Render", () => {
     const scenes = page.getByRole("button").filter({ hasText: /SC\.\d+/ });
     await scenes.first().click();
 
-    await expect(
-      page.getByRole("button", { name: /⌘B Editor/ }),
-    ).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("button", { name: /⌘B Editor/ })).toBeVisible({
+      timeout: 15_000,
+    });
   });
 
-  test("[OHW-022c-04] Opening blocking editor via button navigates to /blocking-editor", async ({
+  test("[022c-04] Opening blocking editor via button navigates to /blocking-editor", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -76,7 +76,7 @@ test.describe("[OHW-022c] 2D Scene Blocking Render", () => {
     ).toBeVisible({ timeout: 10_000 });
   });
 
-  test("[OHW-022c-05] Blocking editor close button returns to shooting plan", async ({
+  test("[022c-05] Blocking editor close button returns to shooting plan", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -96,7 +96,7 @@ test.describe("[OHW-022c] 2D Scene Blocking Render", () => {
     await expect(page).not.toHaveURL(/blocking-editor/, { timeout: 10_000 });
   });
 
-  test("[OHW-022c-06] Vista 3D button is disabled", async ({
+  test("[022c-06] Vista 3D button is disabled", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -110,7 +110,7 @@ test.describe("[OHW-022c] 2D Scene Blocking Render", () => {
     await expect(vista3dBtn).toBeDisabled();
   });
 
-  test("[OHW-022c-07] Legend shows Camera, Personaggio, Arredo labels", async ({
+  test("[022c-07] Legend shows Camera, Personaggio, Arredo labels", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -129,7 +129,7 @@ test.describe("[OHW-022c] 2D Scene Blocking Render", () => {
     await expect(legend.getByText("Arredo")).toBeVisible();
   });
 
-  test("[OHW-022c-08] Blocking editor draw tool buttons are visible", async ({
+  test("[022c-08] Blocking editor draw tool buttons are visible", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -145,18 +145,17 @@ test.describe("[OHW-022c] 2D Scene Blocking Render", () => {
     await expect(page).toHaveURL(/blocking-editor/, { timeout: 10_000 });
 
     // BlockingEditorToolbar renders tool buttons with labels from TOOLS array
-    await expect(
-      page.getByRole("button", { name: /Seleziona/ }),
-    ).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByRole("button", { name: /Seleziona/ })).toBeVisible({
+      timeout: 5_000,
+    });
     await expect(page.getByRole("button", { name: /Parete/ })).toBeVisible({
       timeout: 5_000,
     });
     await expect(page.getByRole("button", { name: /Mobile/ })).toBeVisible({
       timeout: 5_000,
     });
-    await expect(
-      page.getByRole("button", { name: /Apertura/ }),
-    ).toBeVisible({ timeout: 5_000,
+    await expect(page.getByRole("button", { name: /Apertura/ })).toBeVisible({
+      timeout: 5_000,
     });
   });
 });

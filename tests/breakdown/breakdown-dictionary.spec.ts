@@ -10,11 +10,11 @@ test.describe("[Spec 10i] Breakdown dictionary pass", () => {
   // (accepted + ghost) over the NON_FA_RIDERE version text — no props/locations
   // decorations are produced, so no "tavolo" data-ghost span ever appears even
   // though the token is present in the text. The inline ghost rendering itself
-  // is covered by the cast path (e.g. inline-tagging OHW-285/286). Re-enable
+  // is covered by the cast path (e.g. inline-tagging 285/286). Re-enable
   // once the IT dictionary/props pass emits inline ghosts for the team version.
-  test.skip("[OHW-10i-1] IT dictionary pass surfaces artifact ghost for scene 1 props", () => {});
+  test.skip("[10i-1] IT dictionary pass surfaces artifact ghost for scene 1 props", () => {});
 
-  test("[OHW-10i-2] project settings shows locale select defaulting to italiano", async ({
+  test("[10i-2] project settings shows locale select defaulting to italiano", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -25,7 +25,7 @@ test.describe("[Spec 10i] Breakdown dictionary pass", () => {
     await expect(select).toHaveValue("it");
   });
 
-  test("[OHW-10i-3] changing locale to english saves and persists", async ({
+  test("[10i-3] changing locale to english saves and persists", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -47,7 +47,7 @@ test.describe("[Spec 10i] Breakdown dictionary pass", () => {
     });
 
     // Restore to 'it' so subsequent tests that depend on the IT dictionary pass
-    // (e.g. re-runs of OHW-10i-1) are not affected.
+    // (e.g. re-runs of 10i-1) are not affected.
     await page.getByTestId("locale-select").selectOption("it");
     await expect(page.getByTestId("locale-select")).toBeEnabled({
       timeout: 5_000,

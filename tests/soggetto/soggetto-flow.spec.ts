@@ -10,20 +10,20 @@ import {
  * Spec 21 — Soggetto Free Editor (E2E flow)
  *
  * Covers:
- *   [OHW-SOG-001] Page renders: logline block + free editor (no Spec 04f
+ *   [SOG-001] Page renders: logline block + free editor (no Spec 04f
  *                 section headings) + cartelle counter + export buttons.
  *                 Soggetto card is reachable from the project dashboard.
- *   [OHW-SOG-002] Editorial template is pre-loaded when the soggetto is empty;
+ *   [SOG-002] Editorial template is pre-loaded when the soggetto is empty;
  *                 the counter shows > 0 cartelle.
- *   [OHW-SOG-003] Typing in the editor increments the cartelle counter.
- *   [OHW-SOG-006] SIAE modal pre-populates fields on second open after a
+ *   [SOG-003] Typing in the editor increments the cartelle counter.
+ *   [SOG-006] SIAE modal pre-populates fields on second open after a
  *                 successful export.
  *
  * soggetto-export.spec.ts covers the actual DOCX + SIAE PDF downloads.
  */
 
 test.describe("[Spec 21] Soggetto free editor — page flow", () => {
-  test("[OHW-SOG-001] renders logline + free editor + counter + export buttons and is reachable from dashboard", async ({
+  test("[SOG-001] renders logline + free editor + counter + export buttons and is reachable from dashboard", async ({
     authenticatedPage: page,
   }) => {
     await navigateToSoggetto(page, TEAM_PROJECT_ID);
@@ -64,7 +64,7 @@ test.describe("[Spec 21] Soggetto free editor — page flow", () => {
     await expect(page.getByTestId("soggetto-page")).toBeVisible();
   });
 
-  test("[OHW-SOG-002] editorial template is visible and counter shows > 0 cartelle", async ({
+  test("[SOG-002] editorial template is visible and counter shows > 0 cartelle", async ({
     authenticatedPage: page,
   }) => {
     await navigateToSoggetto(page, TEAM_PROJECT_ID);
@@ -84,7 +84,7 @@ test.describe("[Spec 21] Soggetto free editor — page flow", () => {
     expect(cartelleCount).toBeGreaterThan(0);
   });
 
-  test("[OHW-SOG-003] typing in the editor increments the cartelle counter", async ({
+  test("[SOG-003] typing in the editor increments the cartelle counter", async ({
     authenticatedPage: page,
   }) => {
     await navigateToSoggetto(page, TEAM_PROJECT_ID);
@@ -130,7 +130,7 @@ test.describe("[Spec 21] Soggetto free editor — page flow", () => {
       .toBeGreaterThan(before);
   });
 
-  test("[OHW-SOG-006] SIAE modal pre-populates fields on second open after a successful export", async ({
+  test("[SOG-006] SIAE modal pre-populates fields on second open after a successful export", async ({
     authenticatedPage: page,
   }) => {
     await navigateToSoggetto(page, TEAM_PROJECT_ID);

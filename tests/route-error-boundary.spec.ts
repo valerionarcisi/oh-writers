@@ -1,6 +1,6 @@
 // tests/route-error-boundary.spec.ts
 //
-// [OHW-060] Spec 60 — app-wide route error boundary.
+// [060] Spec 60 — app-wide route error boundary.
 //
 // A render throw on any routed surface must land on our branded fallback
 // (RouteErrorBoundary → RouteErrorFallback), NOT the framework's bare unstyled

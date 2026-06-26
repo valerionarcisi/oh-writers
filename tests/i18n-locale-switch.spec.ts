@@ -1,14 +1,14 @@
 import { test, expect, BASE_URL } from "./fixtures";
 import type { Page } from "@playwright/test";
 
-// [OHW-i18n-switch] The settings language selector flips the UI locale, which
+// [i18n-switch] The settings language selector flips the UI locale, which
 // is resolved server-side — so after the switch `<html lang>` and the nav
 // labels re-render from the new value (router.invalidate re-runs the loaders).
 
 const htmlLang = (page: Page): Promise<string | null> =>
   page.locator("html").getAttribute("lang");
 
-test.describe("[OHW-i18n-switch] settings language selector", () => {
+test.describe("[i18n-switch] settings language selector", () => {
   test.afterEach(async ({ authenticatedPage }) => {
     // Reset the shared fixture user to Italian for other suites.
     await authenticatedPage.request.post(`${BASE_URL}/api/test/set-locale`, {

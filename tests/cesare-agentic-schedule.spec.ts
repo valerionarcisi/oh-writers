@@ -10,22 +10,22 @@ import {
 /**
  * [Spec 34] Cesare agentic — Schedule
  *
- * - OHW-544: The DayDifficultyBadge for the first shooting day renders a
+ * - 544: The DayDifficultyBadge for the first shooting day renders a
  *   difficulty score and a probability percentage. Deterministic pure-function
  *   output, so MOCK_AI does not affect this.
- * - OHW-545: The user asks Cesare to move a scene to a different day. The
+ * - 545: The user asks Cesare to move a scene to a different day. The
  *   scripted scenario emits a `move_scene_to_day` tool_use; the executor
  *   updates the schedule and Cesare confirms the action in the reply.
  */
 test.describe("[Spec 34] Cesare Agentic — Schedule", () => {
   // Clear persisted Cesare chat (Spec 51) so a prior schedule turn's session
   // does not leave a stale thread selected, which intermittently left the new
-  // turn's reply unrendered (OHW-545 flake in the serial mock-ui run).
+  // turn's reply unrendered (545 flake in the serial mock-ui run).
   test.beforeEach(async ({ authenticatedPage }) => {
     await resetCesareState(authenticatedPage, SCHEDULE_PROJECT_ID);
   });
 
-  test("[OHW-544] DayDifficultyBadge shows difficulty + probability", async ({
+  test("[544] DayDifficultyBadge shows difficulty + probability", async ({
     authenticatedPage,
   }) => {
     await navigateToSchedule(authenticatedPage, SCHEDULE_PROJECT_ID);
@@ -38,7 +38,7 @@ test.describe("[Spec 34] Cesare Agentic — Schedule", () => {
     await expect(badge).toContainText("%");
   });
 
-  test("[OHW-545] Cesare moves a scene via move_scene_to_day tool", async ({
+  test("[545] Cesare moves a scene via move_scene_to_day tool", async ({
     authenticatedPage,
   }) => {
     await navigateToSchedule(authenticatedPage, SCHEDULE_PROJECT_ID);

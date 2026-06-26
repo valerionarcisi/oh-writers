@@ -1,15 +1,15 @@
 // tests/cesare-agentic-version-checkpoints.spec.ts
 //
-// [OHW-N66] Spec 76 — Cesare version checkpoints (overwrite-by-default,
+// [N66] Spec 76 — Cesare version checkpoints (overwrite-by-default,
 // mint-on-large). Runs in the mock-ui project (MOCK_AI=true) so the edit sizes
 // are deterministic (the mock scenarios do scripted find/replace of a known
 // length, see _mocks/cesare-tool-loop.mock.ts).
 //
-//   [OHW-N66] small edit overwrites  — two small edits leave ONE working entry
+//   [N66] small edit overwrites  — two small edits leave ONE working entry
 //                                       under one checkpoint, not new rows.
-//   [OHW-N66] large edit asks         — a large rewrite renders the
+//   [N66] large edit asks         — a large rewrite renders the
 //                                       [Sovrascrivi] [Nuova versione] card.
-//   [OHW-N66] explicit nuova versione — phrasing it as a new version skips the
+//   [N66] explicit nuova versione — phrasing it as a new version skips the
 //                                       ask and mints directly.
 import { test, expect, BASE_URL, TEST_TEAM_PROJECT_ID } from "./fixtures";
 import type { Page } from "@playwright/test";
@@ -90,12 +90,12 @@ const openVersionsViaUi = async (page: Page): Promise<string> => {
 const countVersionRows = async (page: Page): Promise<number> =>
   page.locator('[data-testid^="versions-split-row-"]').count();
 
-test.describe("[OHW-N66] Cesare version checkpoints", () => {
+test.describe("[N66] Cesare version checkpoints", () => {
   test.beforeEach(async ({ authenticatedPage }) => {
     await resetCesareState(authenticatedPage, TEST_TEAM_PROJECT_ID);
   });
 
-  test("[OHW-N66] small edit overwrites the working version (no flood)", async ({
+  test("[N66] small edit overwrites the working version (no flood)", async ({
     authenticatedPage: page,
   }) => {
     test.setTimeout(150_000);
@@ -130,7 +130,7 @@ test.describe("[OHW-N66] Cesare version checkpoints", () => {
     expect(rowsAfter).toBeLessThanOrEqual(rowsBefore + 1);
   });
 
-  test("[OHW-N66] large edit renders the [Sovrascrivi][Nuova versione] card", async ({
+  test("[N66] large edit renders the [Sovrascrivi][Nuova versione] card", async ({
     authenticatedPage: page,
   }) => {
     test.setTimeout(150_000);
@@ -152,7 +152,7 @@ test.describe("[OHW-N66] Cesare version checkpoints", () => {
     await expect(page.getByTestId("cesare-ask-mint")).toBeVisible();
   });
 
-  test("[OHW-N66] explicit 'nuova versione' skips the ask", async ({
+  test("[N66] explicit 'nuova versione' skips the ask", async ({
     authenticatedPage: page,
   }) => {
     test.setTimeout(150_000);

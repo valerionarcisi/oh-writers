@@ -79,7 +79,7 @@ test.describe("[Audit F-A3] honest result card — no fabricated success", () =>
     await resetCesareState(authenticatedPage, FROM_SCRATCH_PROJECT_ID);
   });
 
-  test("[OHW-AUDIT-FA3] a no-op tool shows NO success card and leaves the DB unchanged", async ({
+  test("[AUDIT-FA3] a no-op tool shows NO success card and leaves the DB unchanged", async ({
     authenticatedPage: page,
   }) => {
     test.setTimeout(120_000);
@@ -120,7 +120,7 @@ test.describe("[Audit F-A3] honest result card — no fabricated success", () =>
 
   // BUG-N61: asserts the chat-side Mostra-modifiche suppression, part of the
   // deferred Spec 63 half (backlog N-38). Un-fixme when N-38 ships.
-  test.fixme("[OHW-AUDIT-FM1] a real logline edit shows the card labelled by the edited entity (logline, not Soggetto)", async ({
+  test.fixme("[AUDIT-FM1] a real logline edit shows the card labelled by the edited entity (logline, not Soggetto)", async ({
     authenticatedPage: page,
   }) => {
     test.setTimeout(120_000);

@@ -7,7 +7,7 @@ import {
 } from "./helpers";
 
 test.describe("[Spec 12c] Schedule — day drawer + effort", () => {
-  test("[OHW-366] Click day header → day drawer opens", async ({
+  test("[366] Click day header → day drawer opens", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -22,7 +22,7 @@ test.describe("[Spec 12c] Schedule — day drawer + effort", () => {
     });
   });
 
-  test("[OHW-367] Day drawer shows capacity bar and scene list", async ({
+  test("[367] Day drawer shows capacity bar and scene list", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -42,7 +42,7 @@ test.describe("[Spec 12c] Schedule — day drawer + effort", () => {
     await expect(effortInputs.first()).toBeVisible();
   });
 
-  test("[OHW-368] Edit effort → capacity bar updates", async ({
+  test("[368] Edit effort → capacity bar updates", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -71,7 +71,7 @@ test.describe("[Spec 12c] Schedule — day drawer + effort", () => {
 });
 
 test.describe("[Spec 12b] Schedule — strip board", () => {
-  test("[OHW-361] Generate schedule → strip board renders with at least one shooting day", async ({
+  test("[361] Generate schedule → strip board renders with at least one shooting day", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -86,7 +86,7 @@ test.describe("[Spec 12b] Schedule — strip board", () => {
     await expect(dayColumns.first()).toBeVisible({ timeout: 8_000 });
   });
 
-  test("[OHW-362] Drag strip to different day → page counts update", async ({
+  test("[362] Drag strip to different day → page counts update", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -121,7 +121,7 @@ test.describe("[Spec 12b] Schedule — strip board", () => {
     });
   });
 
-  test("[OHW-363] Add shooting day → new column appears", async ({
+  test("[363] Add shooting day → new column appears", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -140,7 +140,7 @@ test.describe("[Spec 12b] Schedule — strip board", () => {
     );
   });
 
-  test("[OHW-364] Set date on a day → date value persists in input", async ({
+  test("[364] Set date on a day → date value persists in input", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -182,7 +182,7 @@ test.describe("[Spec 12b] Schedule — strip board", () => {
     });
   });
 
-  test("[OHW-365] Lock strip → strip cannot be dragged", async ({
+  test("[365] Lock strip → strip cannot be dragged", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;

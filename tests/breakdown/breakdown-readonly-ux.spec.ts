@@ -4,7 +4,7 @@ import { BASE_URL } from "../helpers";
 import { navigateToBreakdown, TEAM_PROJECT_ID } from "./helpers";
 
 test.describe("[Spec 10h] Breakdown read-only UX", () => {
-  test("[OHW-10h-1] scene heading in breakdown has no menu trigger", async ({
+  test("[10h-1] scene heading in breakdown has no menu trigger", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -17,13 +17,13 @@ test.describe("[Spec 10h] Breakdown read-only UX", () => {
   });
 
   // SKIPPED (removed UI, not a testid rename): same root cause as inline-tagging
-  // OHW-287. v3 removed the SceneTOC sidebar (`breakdown-toc`) and its dedicated
+  // 287. v3 removed the SceneTOC sidebar (`breakdown-toc`) and its dedicated
   // scroll container (`breakdown-script`) — the window now scrolls and there is
   // no visible active-TOC-item to assert. The active-scene-on-scroll logic still
   // runs inside ScriptReader (driving the RecapStrip) but has no TOC surface.
-  test.skip("[OHW-10h-2] reader scroll updates active TOC item", () => {});
+  test.skip("[10h-2] reader scroll updates active TOC item", () => {});
 
-  test("[OHW-10h-3] regression: heading in screenplay editor shows menu trigger", async ({
+  test("[10h-3] regression: heading in screenplay editor shows menu trigger", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;

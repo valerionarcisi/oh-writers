@@ -58,11 +58,12 @@ const signInPage = async (
 const fountainOf = (page: Page): Promise<string> =>
   page.evaluate(
     () =>
-      (window as unknown as { __ohWritersFountain?: () => string })
-        .__ohWritersFountain?.() ?? "",
+      (
+        window as unknown as { __ohWritersFountain?: () => string }
+      ).__ohWritersFountain?.() ?? "",
   );
 
-test.describe("[OHW-09b] realtime collaboration — fallback", () => {
+test.describe("[09b] realtime collaboration — fallback", () => {
   // Always-on guarantee: with or without a ws-server the editor must load and
   // accept input (HTTP autosave is the durable path).
   test("editor loads and is usable", async ({ authenticatedPage: page }) => {
@@ -78,13 +79,17 @@ test.describe("[OHW-09b] realtime collaboration — fallback", () => {
   });
 });
 
-test.describe("[OHW-09b] realtime collaboration — live sync", () => {
+test.describe("[09b] realtime collaboration — live sync", () => {
   test.skip(!REALTIME_ENABLED, "requires VITE_WS_URL + a running ws-server");
 
   test("two editors see each other's edits and the presence count", async ({
     browser,
   }) => {
-    const alice = await signInPage(browser, "test@ohwriters.dev", "testpassword123");
+    const alice = await signInPage(
+      browser,
+      "test@ohwriters.dev",
+      "testpassword123",
+    );
     const bob = await signInPage(browser, COLLAB_EMAIL, COLLAB_PASSWORD);
 
     await alice.goto(SCREENPLAY_URL);

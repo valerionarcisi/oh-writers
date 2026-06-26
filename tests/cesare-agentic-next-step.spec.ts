@@ -64,7 +64,7 @@ test.describe("[Spec 50] Cesare next-step suggestion", () => {
   });
 
   // ── Empty project → the suggestion is "scrivi una logline" ─────────────────
-  test("[OHW-050] an empty project suggests writing a logline", async ({
+  test("[050] an empty project suggests writing a logline", async ({
     authenticatedPage: page,
   }) => {
     await setNarrativeState(page, TEAM_PROJECT_ID, []);
@@ -79,7 +79,7 @@ test.describe("[Spec 50] Cesare next-step suggestion", () => {
   });
 
   // ── Once a logline exists → the suggestion becomes the soggetto ────────────
-  test("[OHW-050] after a logline exists the suggestion becomes the soggetto", async ({
+  test("[050] after a logline exists the suggestion becomes the soggetto", async ({
     authenticatedPage: page,
   }) => {
     await setNarrativeState(page, TEAM_PROJECT_ID, ["logline"]);
@@ -94,7 +94,7 @@ test.describe("[Spec 50] Cesare next-step suggestion", () => {
   });
 
   // ── Clicking runs exactly ONE generation live (version + flash), no chain ──
-  test("[OHW-050] clicking the suggestion runs ONE generation live (trace + version), not a chain", async ({
+  test("[050] clicking the suggestion runs ONE generation live (trace + version), not a chain", async ({
     authenticatedPage: page,
   }) => {
     test.setTimeout(120_000);
@@ -118,9 +118,9 @@ test.describe("[Spec 50] Cesare next-step suggestion", () => {
 
     // Agentic-edit proof: a version is auto-created, surfaced via the transient
     // "Mostra modifiche" flash (Spec 47e — no inline Annulla).
-    await expect(
-      trace.getByTestId("cesare-show-changes-btn"),
-    ).toBeVisible({ timeout: 10_000 });
+    await expect(trace.getByTestId("cesare-show-changes-btn")).toBeVisible({
+      timeout: 10_000,
+    });
     await expect(trace.getByRole("button", { name: "Annulla" })).toHaveCount(0);
 
     // NO auto-chain: exactly ONE change trace exists (one generation), and the
@@ -129,7 +129,7 @@ test.describe("[Spec 50] Cesare next-step suggestion", () => {
   });
 
   // ── The user can ignore the suggestion and type anything freely ────────────
-  test("[OHW-050] the user can ignore the chip and type a free message", async ({
+  test("[050] the user can ignore the chip and type a free message", async ({
     authenticatedPage: page,
   }) => {
     test.setTimeout(120_000);

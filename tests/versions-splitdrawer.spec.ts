@@ -1,6 +1,6 @@
 // tests/versions-splitdrawer.spec.ts
 //
-// [OHW-049] Versions in the routed SplitDrawer — routing + compress (Spec 49
+// [049] Versions in the routed SplitDrawer — routing + compress (Spec 49
 // W1 + W2). The diff/compare behaviour these specs once covered was removed in
 // Spec 66 (master→detail, ADR-0004); the flow itself is covered by
 // versions-master-detail.spec.ts. What remains here is the routing contract.
@@ -88,7 +88,7 @@ const createBlankVersion = async (
   return id as string;
 };
 
-test.describe("[OHW-049] Versions SplitDrawer (routed)", () => {
+test.describe("[049] Versions SplitDrawer (routed)", () => {
   test("routed open compresses the host; ×/ESC/back restore it", async ({
     authenticatedPage: page,
   }) => {
@@ -242,7 +242,7 @@ test.describe("[OHW-049] Versions SplitDrawer (routed)", () => {
     );
   });
 
-  test("[OHW-049] a bare `?versions=` (empty value) does NOT crash the shell", async ({
+  test("[049] a bare `?versions=` (empty value) does NOT crash the shell", async ({
     authenticatedPage: page,
   }) => {
     // Regression (audit iter-4 REG-1): `versionsSearchSchema` used `.min(1)`, so

@@ -1,11 +1,11 @@
 /**
  * Spec 05j — Screenplay PDF Export (Fountain → industry-standard PDF via afterwriting)
  *
- * [OHW-232] Editor clicks Export PDF → modal opens → Genera → PDF + preview tab
- * [OHW-233] PDF rendering rispetta gli standard (INT./EXT. headings, character maiuscolo)
- * [OHW-234] includeCoverPage=true → cover page con "Written by"
- * [OHW-237] Viewer su team project può esportare (read op)
- * [OHW-239] Filename rispetta {project}-{screenplay}-{YYYY-MM-DD}.pdf
+ * [232] Editor clicks Export PDF → modal opens → Genera → PDF + preview tab
+ * [233] PDF rendering rispetta gli standard (INT./EXT. headings, character maiuscolo)
+ * [234] includeCoverPage=true → cover page con "Written by"
+ * [237] Viewer su team project può esportare (read op)
+ * [239] Filename rispetta {project}-{screenplay}-{YYYY-MM-DD}.pdf
  */
 
 import { test, expect, TEST_TEAM_PROJECT_ID } from "../fixtures";
@@ -66,7 +66,7 @@ const openScreenplayExportAndGenerate = async (
 };
 
 test.describe("Screenplay Export — Spec 05j", () => {
-  test("[OHW-232] owner exports via modal → preview tab opens with the PDF", async ({
+  test("[232] owner exports via modal → preview tab opens with the PDF", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {
@@ -85,7 +85,7 @@ test.describe("Screenplay Export — Spec 05j", () => {
     if (!popup.isClosed()) await popup.close();
   });
 
-  test("[OHW-233] PDF contains industry-standard markers", async ({
+  test("[233] PDF contains industry-standard markers", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {
@@ -103,7 +103,7 @@ test.describe("Screenplay Export — Spec 05j", () => {
     expect(parsed.text).toMatch(/INT\.|EXT\./);
   });
 
-  test("[OHW-234] includeCoverPage=true → cover page with Written by", async ({
+  test("[234] includeCoverPage=true → cover page with Written by", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {
@@ -122,7 +122,7 @@ test.describe("Screenplay Export — Spec 05j", () => {
     expect(parsed.text).toMatch(/Scritto da|Written by/);
   });
 
-  test("[OHW-236] Export PDF disabled when screenplay is empty", async ({
+  test("[236] Export PDF disabled when screenplay is empty", async ({
     authenticatedPage: page,
   }) => {
     await page.goto(`${BASE_URL}/projects/new`);
@@ -152,29 +152,29 @@ test.describe("Screenplay Export — Spec 05j", () => {
     await expect(exportItem).toBeDisabled();
   });
 
-  // [OHW-235] Cover-page checkbox disabled when title page not compiled:
+  // [235] Cover-page checkbox disabled when title page not compiled:
   // skipped — current modal accepts the toggle unconditionally and the
   // server falls back to the project title only when author/draftDate are
   // null, so a "soft" empty cover still renders. Wiring the title-page
   // gating belongs to the title-page UX work (Spec 14) once that lands.
-  test.skip("[OHW-235] cover checkbox disabled when title page empty", () => {
+  test.skip("[235] cover checkbox disabled when title page empty", () => {
     void TEST_TEAM_PROJECT_ID;
   });
 
-  // [OHW-238] Non-member ForbiddenError: skipped — same rationale as
-  // OHW-229 (no third-user fixture); guard logic mirrors exportNarrativePdf.
-  test.skip("[OHW-238] non-member: server rejects exportScreenplayPdf", () => {
+  // [238] Non-member ForbiddenError: skipped — same rationale as
+  // 229 (no third-user fixture); guard logic mirrors exportNarrativePdf.
+  test.skip("[238] non-member: server rejects exportScreenplayPdf", () => {
     void TEST_TEAM_PROJECT_ID;
   });
 
-  // [OHW-237] Viewer-on-team-project export: skipped because the seeded
+  // [237] Viewer-on-team-project export: skipped because the seeded
   // team project has no screenplay row (only narrative docs). The same
-  // canRead guard is exercised by exportNarrativePdf's OHW-228 test.
-  test.skip("[OHW-237] viewer on team project exports successfully", () => {
+  // canRead guard is exercised by exportNarrativePdf's 228 test.
+  test.skip("[237] viewer on team project exports successfully", () => {
     void TEST_TEAM_PROJECT_ID;
   });
 
-  test("[OHW-239] filename matches {project}-{screenplay}-{YYYY-MM-DD}.pdf", async ({
+  test("[239] filename matches {project}-{screenplay}-{YYYY-MM-DD}.pdf", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {
@@ -224,7 +224,7 @@ test.describe("Screenplay Export — WYSIWYG formatting (BUG-N63)", () => {
   };
   const firstPagePositions = firstPageItems;
 
-  test("[OHW-N63a] no cover → page 1 starts with content, not a blank page", async ({
+  test("[N63a] no cover → page 1 starts with content, not a blank page", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {
@@ -239,7 +239,7 @@ test.describe("Screenplay Export — WYSIWYG formatting (BUG-N63)", () => {
     expect(items.some((i) => /INT\.|EXT\./.test(i.str))).toBe(true);
   });
 
-  test("[OHW-N63c] scene headings render bold (Courier-Bold embedded)", async ({
+  test("[N63c] scene headings render bold (Courier-Bold embedded)", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {
@@ -264,7 +264,7 @@ test.describe("Screenplay Export — WYSIWYG formatting (BUG-N63)", () => {
     expect(heading!.font).not.toBe(bodyLine!.font);
   });
 
-  test("[OHW-N63d] dialogue is indented, not flush-left action", async ({
+  test("[N63d] dialogue is indented, not flush-left action", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {

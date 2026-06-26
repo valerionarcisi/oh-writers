@@ -2,18 +2,18 @@
  * Spec 33 — User Settings Page E2E
  *
  * Profile section:
- *   [OHW-500] Profile section renders name, email, avatar URL inputs
- *   [OHW-501] Updating name saves successfully
- *   [OHW-502] Invalid avatar URL shows validation error
+ *   [500] Profile section renders name, email, avatar URL inputs
+ *   [501] Updating name saves successfully
+ *   [502] Invalid avatar URL shows validation error
  *
  * Password section:
- *   [OHW-503] Password section renders for email/password accounts
- *   [OHW-504] Wrong current password shows error
- *   [OHW-505] Password mismatch shows validation error
- *   [OHW-506] Valid password change succeeds
+ *   [503] Password section renders for email/password accounts
+ *   [504] Wrong current password shows error
+ *   [505] Password mismatch shows validation error
+ *   [506] Valid password change succeeds
  *
  * Teams section:
- *   [OHW-507] Teams section lists user's teams with role
+ *   [507] Teams section lists user's teams with role
  */
 
 import { test, expect } from "../fixtures";
@@ -25,7 +25,7 @@ import {
 
 // ── Profile section ───────────────────────────────────────────────────────────
 
-test("[OHW-500] Profile section renders name, email, avatar URL inputs", async ({
+test("[500] Profile section renders name, email, avatar URL inputs", async ({
   authenticatedPage: page,
 }) => {
   await navigateToSettings(page);
@@ -37,7 +37,7 @@ test("[OHW-500] Profile section renders name, email, avatar URL inputs", async (
   await expect(page.getByTestId("save-profile-btn")).toBeVisible();
 });
 
-test("[OHW-501] Updating name saves successfully", async ({
+test("[501] Updating name saves successfully", async ({
   authenticatedPage: page,
 }) => {
   await navigateToSettings(page);
@@ -78,7 +78,7 @@ test("[OHW-501] Updating name saves successfully", async ({
   ]);
 });
 
-test("[OHW-502] Invalid avatar URL shows validation error", async ({
+test("[502] Invalid avatar URL shows validation error", async ({
   authenticatedPage: page,
 }) => {
   await navigateToSettings(page);
@@ -95,7 +95,7 @@ test("[OHW-502] Invalid avatar URL shows validation error", async ({
 
 // ── Password section ──────────────────────────────────────────────────────────
 
-test("[OHW-503] Password section renders for email/password accounts", async ({
+test("[503] Password section renders for email/password accounts", async ({
   authenticatedPage: page,
 }) => {
   await navigateToSettings(page);
@@ -110,7 +110,7 @@ test("[OHW-503] Password section renders for email/password accounts", async ({
   await expect(page.getByTestId("save-password-btn")).toBeVisible();
 });
 
-test("[OHW-504] Wrong current password shows error", async ({
+test("[504] Wrong current password shows error", async ({
   authenticatedPage: page,
 }) => {
   await navigateToSettings(page);
@@ -127,7 +127,7 @@ test("[OHW-504] Wrong current password shows error", async ({
   });
 });
 
-test("[OHW-505] Password mismatch shows validation error", async ({
+test("[505] Password mismatch shows validation error", async ({
   authenticatedPage: page,
 }) => {
   await navigateToSettings(page);
@@ -144,7 +144,7 @@ test("[OHW-505] Password mismatch shows validation error", async ({
   });
 });
 
-test("[OHW-506] Valid password change succeeds", async ({
+test("[506] Valid password change succeeds", async ({
   authenticatedPage: page,
 }) => {
   await navigateToSettings(page);
@@ -178,7 +178,7 @@ test("[OHW-506] Valid password change succeeds", async ({
 
 // ── Teams section ─────────────────────────────────────────────────────────────
 
-test("[OHW-507] Teams section lists user's teams with role", async ({
+test("[507] Teams section lists user's teams with role", async ({
   authenticatedPage: page,
 }) => {
   await navigateToSettings(page);

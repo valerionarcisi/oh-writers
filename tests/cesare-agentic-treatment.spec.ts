@@ -83,7 +83,7 @@ const chip = (page: Page) => page.getByTestId("cesare-next-step-chip");
 
 test.describe("[Audit F-A2] write the treatment from the scaletta", () => {
   // BUG-N61 (fixme ×8, Valerio's go 2026-06-11): same suppression assert. N-38.
-  test.fixme("[OHW-audit-F-treatment] the next-step chip ACTUALLY writes the treatment + auto-versions", async ({
+  test.fixme("[audit-F-treatment] the next-step chip ACTUALLY writes the treatment + auto-versions", async ({
     authenticatedPage: page,
   }) => {
     test.setTimeout(120_000);
@@ -135,7 +135,7 @@ test.describe("[Audit F-A2] write the treatment from the scaletta", () => {
       .toBeGreaterThan(0);
   });
 
-  test("[OHW-audit-F-treatment] a free 'scrivi il trattamento' request also writes it", async ({
+  test("[audit-F-treatment] a free 'scrivi il trattamento' request also writes it", async ({
     authenticatedPage: page,
   }) => {
     test.setTimeout(120_000);
@@ -177,7 +177,7 @@ test.describe("[Audit F-A2] write the treatment from the scaletta", () => {
       .toBeGreaterThan(0);
   });
 
-  test("[OHW-audit-F-treatment] no upstream ⇒ fails loudly, treatment stays empty", async ({
+  test("[audit-F-treatment] no upstream ⇒ fails loudly, treatment stays empty", async ({
     authenticatedPage: page,
   }) => {
     test.setTimeout(120_000);

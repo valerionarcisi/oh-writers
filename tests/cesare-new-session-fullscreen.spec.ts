@@ -1,6 +1,6 @@
 // tests/cesare-new-session-fullscreen.spec.ts
 //
-// [OHW-052] Glowy Cesare new-session landing (Notion AI style).
+// [052] Glowy Cesare new-session landing (Notion AI style).
 //
 // Clicking the LeftRail "Nuova sessione" / "+ Nuova" opens the Cesare
 // new-session landing (`/projects/:id/sessions/new`) with a centred glowing
@@ -14,7 +14,7 @@ import { test, expect } from "./fixtures";
 import { BASE_URL } from "./fixtures";
 import { TEAM_PROJECT_ID } from "./breakdown/helpers";
 
-test.describe("[OHW-052] Full-screen glowy Cesare new-session landing", () => {
+test.describe("[052] Full-screen glowy Cesare new-session landing", () => {
   test("rail 'Nuova sessione' → landing INSIDE the shell (rail present) with heading, glowing input, quick prompts", async ({
     authenticatedPage: page,
   }) => {

@@ -8,7 +8,7 @@ import {
 } from "./helpers";
 
 test.describe("[Spec 10c] Inline scene tagging", () => {
-  // The ghost-interaction tests below (OHW-284..286) need pristine pending
+  // The ghost-interaction tests below (284..286) need pristine pending
   // ghosts, but alphabetically-earlier specs (breakdown-bulk-actions confirm /
   // breakdown-dialog-a11y archive) permanently commit them on the shared DB.
   // Reseed once so this file starts from the pristine ghost state.
@@ -16,7 +16,7 @@ test.describe("[Spec 10c] Inline scene tagging", () => {
     reseedTestDb();
   });
 
-  test("[OHW-280] select text → tag as Cast → highlight + chip", async ({
+  test("[280] select text → tag as Cast → highlight + chip", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -72,7 +72,7 @@ test.describe("[Spec 10c] Inline scene tagging", () => {
     ).toBeVisible();
   });
 
-  test("[OHW-281] viewer cannot tag (no toolbar)", async ({
+  test("[281] viewer cannot tag (no toolbar)", async ({
     authenticatedViewerPage,
   }) => {
     const page = authenticatedViewerPage;
@@ -88,7 +88,7 @@ test.describe("[Spec 10c] Inline scene tagging", () => {
     await expect(page.getByTestId("selection-toolbar")).toHaveCount(0);
   });
 
-  test("[OHW-282] clicking a scene heading navigates to that scene", async ({
+  test("[282] clicking a scene heading navigates to that scene", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -107,7 +107,7 @@ test.describe("[Spec 10c] Inline scene tagging", () => {
     expect(box).not.toBeNull();
   });
 
-  test("[OHW-283] stale occurrence renders dimmed", async ({
+  test("[283] stale occurrence renders dimmed", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -123,7 +123,7 @@ test.describe("[Spec 10c] Inline scene tagging", () => {
     }
   });
 
-  test("[OHW-284] ghost suggestion has dashed underline + data-ghost", async ({
+  test("[284] ghost suggestion has dashed underline + data-ghost", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -140,7 +140,7 @@ test.describe("[Spec 10c] Inline scene tagging", () => {
     expect(occId).not.toBeNull();
   });
 
-  test("[OHW-285] ghost click → popover → Accept becomes highlight", async ({
+  test("[285] ghost click → popover → Accept becomes highlight", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -165,7 +165,7 @@ test.describe("[Spec 10c] Inline scene tagging", () => {
     ).toHaveCount(0);
   });
 
-  test("[OHW-286] ghost click → popover → Ignore removes ghost", async ({
+  test("[286] ghost click → popover → Ignore removes ghost", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -196,5 +196,5 @@ test.describe("[Spec 10c] Inline scene tagging", () => {
   // tracking still runs inside ScriptReader (it drives the RecapStrip), but it
   // no longer has a TOC surface to verify. Re-enable if a scene navigator with
   // an active-item indicator is reintroduced.
-  test.skip("[OHW-287] reader scroll updates active TOC item", () => {});
+  test.skip("[287] reader scroll updates active TOC item", () => {});
 });

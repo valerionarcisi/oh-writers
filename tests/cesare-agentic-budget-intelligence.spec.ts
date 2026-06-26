@@ -56,7 +56,7 @@ async function sendAndWaitForReply(
 }
 
 test.describe("[Spec 30] Cesare Agentic — Budget intelligence", () => {
-  test("[OHW-590] set_budget_cap inserts the cap and the bar reflects it", async ({
+  test("[590] set_budget_cap inserts the cap and the bar reflects it", async ({
     authenticatedPage,
   }) => {
     await navigateToBudget(authenticatedPage, BUDGET_PROJECT_ID);
@@ -85,7 +85,7 @@ test.describe("[Spec 30] Cesare Agentic — Budget intelligence", () => {
       .toBe("true");
   });
 
-  test("[OHW-591] evaluate_against_cap returns a textual reply mentioning residual", async ({
+  test("[591] evaluate_against_cap returns a textual reply mentioning residual", async ({
     authenticatedPage,
   }) => {
     await navigateToBudget(authenticatedPage, BUDGET_PROJECT_ID);
@@ -97,7 +97,7 @@ test.describe("[Spec 30] Cesare Agentic — Budget intelligence", () => {
     expect(reply.toLowerCase()).toMatch(/budget|tetto|residu|rimane/);
   });
 
-  test("[OHW-592] propose_excessive_lines_flags returns a list reply", async ({
+  test("[592] propose_excessive_lines_flags returns a list reply", async ({
     authenticatedPage,
   }) => {
     await navigateToBudget(authenticatedPage, BUDGET_PROJECT_ID);
@@ -109,7 +109,7 @@ test.describe("[Spec 30] Cesare Agentic — Budget intelligence", () => {
     expect(reply.toLowerCase()).toMatch(/voci|sopra|categoria|media/);
   });
 
-  test("[OHW-593] Weekly view tab renders the timeline", async ({
+  test("[593] Weekly view tab renders the timeline", async ({
     authenticatedPage,
   }) => {
     await navigateToBudget(authenticatedPage, BUDGET_PROJECT_ID);

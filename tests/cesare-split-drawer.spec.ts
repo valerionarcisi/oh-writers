@@ -1,6 +1,6 @@
 // tests/cesare-split-drawer.spec.ts
 //
-// [OHW-047-A4] Cesare split drawer — page-collapsing side-peek (Spec 46 ?peek=).
+// [047-A4] Cesare split drawer — page-collapsing side-peek (Spec 46 ?peek=).
 //
 // The floating Cesare drawer can become a Notion-style SPLIT column that
 // COLLAPSES the page: when `?peek=cesare` is set the shell grows a third grid
@@ -41,7 +41,7 @@ const openSplitViaDrawer = async (page: import("@playwright/test").Page) => {
   });
 };
 
-test.describe("[OHW-047-A4] Cesare split drawer", () => {
+test.describe("[047-A4] Cesare split drawer", () => {
   test("opening the split collapses the main lane; ×/ESC/back restore it", async ({
     authenticatedPage: page,
   }) => {

@@ -16,7 +16,7 @@ import { test } from "../fixtures";
  * exercised does not. Re-enable if/when an add-element affordance returns.
  */
 test.describe("[Spec 10d] Cast tier on breakdown elements", () => {
-  test.skip("[OHW-300] Aggiungi defaults to Cast and shows the Tier select", () => {});
-  test.skip("[OHW-301] Tier select hides when category is not Cast", () => {});
-  test.skip("[OHW-302] Add a Day Player → Cast section sub-groups by tier", () => {});
+  test.skip("[300] Aggiungi defaults to Cast and shows the Tier select", () => {});
+  test.skip("[301] Tier select hides when category is not Cast", () => {});
+  test.skip("[302] Add a Day Player → Cast section sub-groups by tier", () => {});
 });

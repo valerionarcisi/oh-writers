@@ -10,15 +10,15 @@ const CRON_PATH = "/api/cron/fundraising-ingest";
  * These tests run with MOCK_AI=true. The classify worker uses scripted mock
  * fixtures keyed by title regex instead of calling the real Anthropic API.
  *
- * OHW-353: An ingested item whose title signals a real opportunity is
+ * 353: An ingested item whose title signals a real opportunity is
  *          classified with kind != "other" and confidence > 0.5.
  *
- * OHW-354: An editorial post (title matching the "other" fixture) is
+ * 354: An editorial post (title matching the "other" fixture) is
  *          classified as kind="other" and must NOT appear in the default
  *          opportunity list (which excludes kind=other).
  */
 test.describe("[Spec 35] Fundraising classification", () => {
-  test.fixme("[OHW-353] Opportunity item is classified with correct kind and confidence", async ({
+  test.fixme("[353] Opportunity item is classified with correct kind and confidence", async ({
     request,
   }) => {
     // Seed a fundraising item with a title that matches the bando_pubblico fixture.
@@ -50,7 +50,7 @@ test.describe("[Spec 35] Fundraising classification", () => {
     void oppRes; // suppress unused variable warning
   });
 
-  test.fixme("[OHW-354] Editorial post is classified as other and excluded from default list", async ({
+  test.fixme("[354] Editorial post is classified as other and excluded from default list", async ({
     request,
   }) => {
     // Seed an editorial item that matches the "other" fixture.

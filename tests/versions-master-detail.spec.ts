@@ -1,6 +1,6 @@
 // tests/versions-master-detail.spec.ts
 //
-// [OHW-066] Versions surface — master→detail (Spec 66 / ADR-0004).
+// [066] Versions surface — master→detail (Spec 66 / ADR-0004).
 //
 // The Versions surface is master→detail, no diff: a list of versions, click one
 // to read its full content read-only, with Attiva / Indietro + per-version
@@ -62,7 +62,7 @@ const createBlankVersion = async (
   return id as string;
 };
 
-test.describe("[OHW-066] Versions master→detail", () => {
+test.describe("[066] Versions master→detail", () => {
   test("chip opens the surface; list shows colour dots + current badge; NO diff/segmented", async ({
     authenticatedPage: page,
   }) => {

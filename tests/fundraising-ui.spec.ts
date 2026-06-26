@@ -8,11 +8,11 @@ import { seedFundraising } from "./fundraising-helpers";
  * Opportunities are seeded directly via the extended /api/test/fundraising-seed
  * endpoint (withOpportunity field), bypassing classification.
  *
- * OHW-355: expired deadline → status=expired filter shows/hides correctly
- * OHW-356: save/dismiss/applied state persists per project
+ * 355: expired deadline → status=expired filter shows/hides correctly
+ * 356: save/dismiss/applied state persists per project
  */
 test.describe("[Spec 35] Fundraising UI", () => {
-  test.fixme("[OHW-355] expired item hidden in active filter, visible in expired filter", async ({
+  test.fixme("[355] expired item hidden in active filter, visible in expired filter", async ({
     authenticatedPage: page,
     request,
   }) => {
@@ -55,7 +55,7 @@ test.describe("[Spec 35] Fundraising UI", () => {
     await expect(cardInActive).toBeVisible({ timeout: 10_000 });
   });
 
-  test.fixme("[OHW-356] save state persists after page reload", async ({
+  test.fixme("[356] save state persists after page reload", async ({
     authenticatedPage: page,
     request,
   }) => {

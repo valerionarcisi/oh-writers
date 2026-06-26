@@ -1,11 +1,11 @@
 /**
  * Spec 04b — Outline (Scaletta) drag-and-drop E2E
  *
- * [OHW-04b-1] Owner can add a scene inside a sequence
- * [OHW-04b-2] Owner can drag-reorder scenes within the same sequence
- * [OHW-04b-3] Owner can delete an act (merges its content into previous act)
- * [OHW-04b-4] Viewer sees the outline in read-only mode — no add/delete controls
- * [OHW-04b-5] Act collapses and shows summary when chevron is clicked
+ * [04b-1] Owner can add a scene inside a sequence
+ * [04b-2] Owner can drag-reorder scenes within the same sequence
+ * [04b-3] Owner can delete an act (merges its content into previous act)
+ * [04b-4] Viewer sees the outline in read-only mode — no add/delete controls
+ * [04b-5] Act collapses and shows summary when chevron is clicked
  *
  * Notes:
  * - Drag-and-drop is performed via HTML5 drag events dispatched with
@@ -22,8 +22,8 @@ import { BASE_URL } from "../helpers";
 const outlinePath = (projectId: string) =>
   `${BASE_URL}/projects/${projectId}/outline`;
 
-test.describe("[OHW-04b] Scaletta (Outline) drag-and-drop", () => {
-  test("[OHW-04b-1] Owner can add a scene inside a sequence", async ({
+test.describe("[04b] Scaletta (Outline) drag-and-drop", () => {
+  test("[04b-1] Owner can add a scene inside a sequence", async ({
     authenticatedPage,
     testProjectId,
   }) => {
@@ -55,7 +55,7 @@ test.describe("[OHW-04b] Scaletta (Outline) drag-and-drop", () => {
     ).toBeVisible({ timeout: 5_000 });
   });
 
-  test("[OHW-04b-2] Owner can drag-reorder scenes within a sequence", async ({
+  test("[04b-2] Owner can drag-reorder scenes within a sequence", async ({
     authenticatedPage,
     testProjectId,
   }) => {
@@ -130,7 +130,7 @@ test.describe("[OHW-04b] Scaletta (Outline) drag-and-drop", () => {
     );
   });
 
-  test("[OHW-04b-3] Owner can delete an act and its content merges up", async ({
+  test("[04b-3] Owner can delete an act and its content merges up", async ({
     authenticatedPage,
     testProjectId,
   }) => {
@@ -158,7 +158,7 @@ test.describe("[OHW-04b] Scaletta (Outline) drag-and-drop", () => {
     await expect(actTitles).toHaveCount(countBefore - 1, { timeout: 5_000 });
   });
 
-  test("[OHW-04b-4] Viewer sees read-only outline — no add or delete controls", async ({
+  test("[04b-4] Viewer sees read-only outline — no add or delete controls", async ({
     authenticatedViewerPage,
   }) => {
     const page = authenticatedViewerPage;
@@ -188,7 +188,7 @@ test.describe("[OHW-04b] Scaletta (Outline) drag-and-drop", () => {
     ).toHaveCount(0);
   });
 
-  test("[OHW-04b-5] Act collapses and shows summary when chevron is clicked", async ({
+  test("[04b-5] Act collapses and shows summary when chevron is clicked", async ({
     authenticatedPage,
     testProjectId,
   }) => {

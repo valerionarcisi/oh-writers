@@ -19,7 +19,7 @@ import { navigateToBreakdown, TEAM_PROJECT_ID } from "./helpers";
  * is what these tests anchor on.
  */
 test.describe("[Spec 10e] Breakdown — auto-spoglio", () => {
-  test("[OHW-320] auto-spoglio extracts elements on mount without user action", async ({
+  test("[320] auto-spoglio extracts elements on mount without user action", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -33,7 +33,7 @@ test.describe("[Spec 10e] Breakdown — auto-spoglio", () => {
     ).toBeVisible({ timeout: 15_000 });
   });
 
-  test("[OHW-321] re-opening the breakdown page does not duplicate auto-extracted occurrences", async ({
+  test("[321] re-opening the breakdown page does not duplicate auto-extracted occurrences", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -60,7 +60,7 @@ test.describe("[Spec 10e] Breakdown — auto-spoglio", () => {
     expect(secondCount).toBe(firstCount);
   });
 
-  test("[OHW-322] viewer never triggers auto-spoglio (no banner, mutation requires edit)", async ({
+  test("[322] viewer never triggers auto-spoglio (no banner, mutation requires edit)", async ({
     authenticatedViewerPage,
   }) => {
     const page = authenticatedViewerPage;

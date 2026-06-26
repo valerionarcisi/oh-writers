@@ -1,6 +1,6 @@
 // tests/cesare-session-naming.spec.ts
 //
-// [OHW-053] Session naming from the first request + inline rename + delete modal.
+// [053] Session naming from the first request + inline rename + delete modal.
 //
 // 1. A new session's title is derived (Notion-style) from its FIRST user message
 //    — capped to ~40 chars on a word boundary, no extra LLM call. A SECOND
@@ -63,7 +63,7 @@ async function railTitleText(page: Page, sessionId: string): Promise<string> {
   return label.replace(/^Sessione Cesare:\s*/, "").trim();
 }
 
-test.describe("[OHW-053] Session naming + inline rename + delete", () => {
+test.describe("[053] Session naming + inline rename + delete", () => {
   test("first message derives the title (≤ ~40 chars); a second message does not change it", async ({
     authenticatedPage: page,
   }) => {
@@ -137,9 +137,7 @@ test.describe("[OHW-053] Session naming + inline rename + delete", () => {
     ).toBeVisible({ timeout: 15_000 });
 
     // Esc cancels a subsequent edit (title stays).
-    await railRow(page, sessionId)
-      .getByTestId("session-actions-btn")
-      .click();
+    await railRow(page, sessionId).getByTestId("session-actions-btn").click();
     await page.getByTestId("session-rename-item").click();
     const input2 = page.getByTestId("session-rename-input");
     await expect(input2).toBeVisible();
@@ -177,9 +175,7 @@ test.describe("[OHW-053] Session naming + inline rename + delete", () => {
 
     // Re-open the modal and confirm — the row leaves the list and, because the
     // session is the open one, the route navigates back to the landing.
-    await railRow(page, sessionId)
-      .getByTestId("session-actions-btn")
-      .click();
+    await railRow(page, sessionId).getByTestId("session-actions-btn").click();
     await page.getByTestId("session-delete-item").click();
     const dialog2 = page.getByTestId("session-delete-dialog");
     await expect(dialog2).toBeVisible({ timeout: 5_000 });

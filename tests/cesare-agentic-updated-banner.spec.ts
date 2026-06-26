@@ -1,6 +1,6 @@
 // tests/cesare-agentic-updated-banner.spec.ts
 //
-// [OHW-N38] Entity-page Cesare-updated confirmation line (Spec 78 §A2).
+// [N38] Entity-page Cesare-updated confirmation line (Spec 78 §A2).
 //
 // The agentic-edit pattern (CLAUDE.md): the edit applies LIVE behind the chat, the
 // chat result card is the record, and true revert lives in the Versions
@@ -43,7 +43,7 @@ async function sendSoggettoEdit(page: import("@playwright/test").Page) {
 // Realign to the "no editor banner" contract (assert the offenders are absent,
 // drop the banner-visible precondition) when the banner surface is next touched.
 test.describe
-  .fixme("[OHW-N38] Cesare-updated confirmation line on the entity page", () => {
+  .fixme("[N38] Cesare-updated confirmation line on the entity page", () => {
   test.beforeEach(async ({ authenticatedPage }) => {
     await resetCesareState(authenticatedPage, TEAM_PROJECT_ID);
   });

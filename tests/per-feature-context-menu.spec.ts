@@ -1,6 +1,6 @@
 // tests/per-feature-context-menu.spec.ts
 //
-// [OHW-067] The per-feature TopBar `⋯` menu — uniform across pages, export from
+// [067] The per-feature TopBar `⋯` menu — uniform across pages, export from
 // the existing backends, NO versions on production pages (Spec 67). The menu
 // lives in the TopBar actions slot; each page publishes its own items from the
 // shared registry.
@@ -21,7 +21,7 @@ const openMenuItems = async (page: Page): Promise<string[]> => {
   return items.allTextContents();
 };
 
-test.describe("[OHW-067] per-feature ⋯ menus", () => {
+test.describe("[067] per-feature ⋯ menus", () => {
   test("budget: ⋯ has Esporta, NO Versioni; opens the export modal", async ({
     authenticatedPage: page,
   }) => {

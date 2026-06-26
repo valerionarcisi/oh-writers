@@ -1,6 +1,6 @@
 // tests/route-smoke.spec.ts
 //
-// [OHW-056] Route-coverage smoke (Spec 56, Phase 1).
+// [056] Route-coverage smoke (Spec 56, Phase 1).
 //
 // Visits every public-facing route as an authenticated user and asserts the
 // page is actually reachable: the document response is not a 4xx/5xx and no
@@ -62,7 +62,7 @@ const visit = async (
   return { status: resp?.status() ?? 0, errors };
 };
 
-test.describe("[OHW-056] route-coverage smoke", () => {
+test.describe("[056] route-coverage smoke", () => {
   for (const path of ROUTES) {
     test(`route loads: ${path}`, async ({ authenticatedPage: page }) => {
       const { status, errors } = await visit(page, path);

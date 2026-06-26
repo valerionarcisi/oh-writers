@@ -11,11 +11,11 @@ import {
 /**
  * [Spec 34] Cesare agentic — Screenplay propose/accept
  *
- * - OHW-570: propose_screenplay_edit — verbatim find/replace overlay with
+ * - 570: propose_screenplay_edit — verbatim find/replace overlay with
  *   ✓/✕ buttons. After ✓ the doc is updated.
- * - OHW-571: propose_screenplay_revision — macro rewrite creates a DRAFT
+ * - 571: propose_screenplay_revision — macro rewrite creates a DRAFT
  *   version and renders a banner with "Apri il diff" + Promuovi / Scarta.
- * - OHW-572: propose_rename_entity — whole-word rename across the doc,
+ * - 572: propose_rename_entity — whole-word rename across the doc,
  *   accept-all promotes every occurrence in one transaction.
  */
 test.describe("[Spec 34] Cesare Agentic — Screenplay", () => {
@@ -28,7 +28,7 @@ test.describe("[Spec 34] Cesare Agentic — Screenplay", () => {
     await resetScreenplayState(authenticatedPage, TEAM_PROJECT_ID);
   });
 
-  test("[OHW-570] propose_screenplay_edit shows ✓/✕ overlay and applies on accept", async ({
+  test("[570] propose_screenplay_edit shows ✓/✕ overlay and applies on accept", async ({
     authenticatedPage,
   }) => {
     await authenticatedPage.goto(
@@ -82,7 +82,7 @@ test.describe("[Spec 34] Cesare Agentic — Screenplay", () => {
       .toBe(true);
   });
 
-  test("[OHW-571] propose_screenplay_revision creates a DRAFT and shows the banner", async ({
+  test("[571] propose_screenplay_revision creates a DRAFT and shows the banner", async ({
     authenticatedPage,
   }) => {
     await authenticatedPage.goto(
@@ -118,7 +118,7 @@ test.describe("[Spec 34] Cesare Agentic — Screenplay", () => {
     await expect(authenticatedPage).toHaveURL(/vkind=screenplay/);
   });
 
-  test("[OHW-572] propose_rename_entity decorates every whole-word match", async ({
+  test("[572] propose_rename_entity decorates every whole-word match", async ({
     authenticatedPage,
   }) => {
     await authenticatedPage.goto(
@@ -184,7 +184,7 @@ test.describe("[Spec 34] Cesare Agentic — Screenplay", () => {
   // a per-occurrence edit), the overlay shows ONE card, the turn replies with
   // text (never a mute spinner), and accept mirrors each occurrence's case — the
   // GIULIO cue → LUCIA, the Giulio body mention → Lucia.
-  test("[OHW-572b] a rename shows ONE card, replies, and is case-aware on accept", async ({
+  test("[572b] a rename shows ONE card, replies, and is case-aware on accept", async ({
     authenticatedPage,
   }) => {
     await authenticatedPage.goto(

@@ -19,7 +19,7 @@ import {
  * and by the marker-emission unit test in cesare-tools.test.ts.)
  */
 test.describe("[Spec 34] Cesare Agentic — Budget", () => {
-  test("[OHW-546] a failed budget update shows NO false success toast (F-A3)", async ({
+  test("[546] a failed budget update shows NO false success toast (F-A3)", async ({
     authenticatedPage,
   }) => {
     // Start from a clean conversation so no prior successful turn's card leaks

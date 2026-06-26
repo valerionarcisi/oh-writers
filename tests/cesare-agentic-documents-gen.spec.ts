@@ -19,14 +19,14 @@ import {
  */
 test.describe("[Spec 44] Cesare Agentic — Document generation applies live", () => {
   // Spec 51 persists Cesare sessions + document edits; the mock-ui project runs
-  // serially against one shared DB. OHW-577 asserts the soggetto editor still
+  // serially against one shared DB. 577 asserts the soggetto editor still
   // holds the seed text before the v2 lands, so each test must start from the
   // seed baseline — reset sessions + restore the narrative docs.
   test.beforeEach(async ({ authenticatedPage }) => {
     await resetCesareState(authenticatedPage, TEAM_PROJECT_ID);
   });
 
-  test("[OHW-575] Cesare applies a generated logline live (no draft tray)", async ({
+  test("[575] Cesare applies a generated logline live (no draft tray)", async ({
     authenticatedPage,
   }) => {
     await authenticatedPage.goto(
@@ -48,7 +48,7 @@ test.describe("[Spec 44] Cesare Agentic — Document generation applies live", (
     ).toHaveCount(0);
   });
 
-  test("[OHW-577] Cesare applies a soggetto v2 live to the open editor", async ({
+  test("[577] Cesare applies a soggetto v2 live to the open editor", async ({
     authenticatedPage,
   }) => {
     await authenticatedPage.goto(
@@ -79,13 +79,13 @@ test.describe("[Spec 44] Cesare Agentic — Document generation applies live", (
     // Spec 47e, NO inline "Annulla" (rollback lives in the Versions SplitDrawer).
     const trace = authenticatedPage.getByTestId("cesare-change-trace");
     await expect(trace).toBeVisible({ timeout: 10_000 });
-    await expect(
-      trace.getByTestId("cesare-show-changes-btn"),
-    ).toBeVisible({ timeout: 10_000 });
+    await expect(trace.getByTestId("cesare-show-changes-btn")).toBeVisible({
+      timeout: 10_000,
+    });
     await expect(trace.getByRole("button", { name: "Annulla" })).toHaveCount(0);
   });
 
-  test("[OHW-578] Cesare applies a generated scaletta live (no draft tray)", async ({
+  test("[578] Cesare applies a generated scaletta live (no draft tray)", async ({
     authenticatedPage,
   }) => {
     await authenticatedPage.goto(

@@ -20,15 +20,15 @@ import {
  * (the day view is always reachable now), and the "Produzione — da breakdown"
  * group label.
  *
- *   [OHW-11d-1] Generate → a Scenografia section appears (props in breakdown).
- *   [OHW-11d-2] Edit a Scenografia line rate → it persists across a reload.
- *   [OHW-11d-3] The "By day" / "By category" segmented views are reachable.
- *   [OHW-11d-4] The category view renders the section group labels.
- *   [OHW-11d-5] Scenografia appears as a category card in the overview.
+ *   [11d-1] Generate → a Scenografia section appears (props in breakdown).
+ *   [11d-2] Edit a Scenografia line rate → it persists across a reload.
+ *   [11d-3] The "By day" / "By category" segmented views are reachable.
+ *   [11d-4] The category view renders the section group labels.
+ *   [11d-5] Scenografia appears as a category card in the overview.
  */
 
 test.describe("[Spec 11d] Budget production categories", () => {
-  test("[OHW-11d-1] Generate → Scenografia section appears", async ({
+  test("[11d-1] Generate → Scenografia section appears", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -45,7 +45,7 @@ test.describe("[Spec 11d] Budget production categories", () => {
     });
   });
 
-  test("[OHW-11d-2] Editing a Scenografia line rate survives a regeneration", async ({
+  test("[11d-2] Editing a Scenografia line rate survives a regeneration", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -97,7 +97,7 @@ test.describe("[Spec 11d] Budget production categories", () => {
     );
   });
 
-  test("[OHW-11d-3] The By-day and By-category views are reachable", async ({
+  test("[11d-3] The By-day and By-category views are reachable", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -115,7 +115,7 @@ test.describe("[Spec 11d] Budget production categories", () => {
     await expect(page.getByTestId("budget-page-v2")).toBeVisible();
   });
 
-  test("[OHW-11d-4] The category view renders the section group labels", async ({
+  test("[11d-4] The category view renders the section group labels", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -131,7 +131,7 @@ test.describe("[Spec 11d] Budget production categories", () => {
     }
   });
 
-  test("[OHW-11d-5] Scenografia appears as a category card in the overview", async ({
+  test("[11d-5] Scenografia appears as a category card in the overview", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;

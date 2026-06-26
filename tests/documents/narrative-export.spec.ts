@@ -8,12 +8,12 @@
  * ⋯ menu's "Esporta PDF" item. The export modal itself is unchanged
  * (narrative-export-modal / -generate / -include-title-page).
  *
- * [OHW-225] Owner ⋯ → Esporta PDF → Genera → PDF delivered + preview tab opens
- * [OHW-226] PDF contains LOGLINE / SYNOPSIS / TREATMENT headers + bodies
- * [OHW-227] Export PDF item is disabled on the outline (non-narrative) surface
- * [OHW-228] Viewer on team project can export (read-op)
- * [OHW-229] Server rejects exportNarrativePdf for non-member → ForbiddenError (skipped)
- * [OHW-231] Default (includeTitlePage=false) → PDF has no cover page
+ * [225] Owner ⋯ → Esporta PDF → Genera → PDF delivered + preview tab opens
+ * [226] PDF contains LOGLINE / SYNOPSIS / TREATMENT headers + bodies
+ * [227] Export PDF item is disabled on the outline (non-narrative) surface
+ * [228] Viewer on team project can export (read-op)
+ * [229] Server rejects exportNarrativePdf for non-member → ForbiddenError (skipped)
+ * [231] Default (includeTitlePage=false) → PDF has no cover page
  */
 
 import { test, expect, TEST_TEAM_PROJECT_ID } from "../fixtures";
@@ -78,7 +78,7 @@ const openExportModalAndGenerate = async (
 };
 
 test.describe("Narrative Export — Spec 04c", () => {
-  test("[OHW-225] owner exports via modal → preview tab opens with the PDF", async ({
+  test("[225] owner exports via modal → preview tab opens with the PDF", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {
@@ -101,7 +101,7 @@ test.describe("Narrative Export — Spec 04c", () => {
     if (!popup.isClosed()) await popup.close();
   });
 
-  test("[OHW-226] PDF payload contains the three section markers", async ({
+  test("[226] PDF payload contains the three section markers", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {
@@ -118,7 +118,7 @@ test.describe("Narrative Export — Spec 04c", () => {
     expect(parsed.text).toContain("TREATMENT");
   });
 
-  test("[OHW-227] Esporta PDF is disabled on the outline (non-narrative) surface", async ({
+  test("[227] Esporta PDF is disabled on the outline (non-narrative) surface", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {
@@ -132,7 +132,7 @@ test.describe("Narrative Export — Spec 04c", () => {
     await expect(item).toBeDisabled();
   });
 
-  test("[OHW-228] viewer on team project exports via modal successfully", async ({
+  test("[228] viewer on team project exports via modal successfully", async ({
     authenticatedViewerPage: page,
   }) => {
     await page.goto(SYNOPSIS_PATH(TEST_TEAM_PROJECT_ID));
@@ -144,15 +144,15 @@ test.describe("Narrative Export — Spec 04c", () => {
     expect(body).toMatchObject({ result: { isOk: true } });
   });
 
-  // [OHW-229] Server ForbiddenError for non-member: skipped. We only seed
+  // [229] Server ForbiddenError for non-member: skipped. We only seed
   // owner + viewer (both team members). A third-user fixture would be
   // needed to exercise the reject path. The guard itself is the same
   // canRead check used by getDocument — already proven by other specs.
-  test.skip("[OHW-229] non-member: server rejects exportNarrativePdf", () => {
+  test.skip("[229] non-member: server rejects exportNarrativePdf", () => {
     void FAKE_PROJECT_ID;
   });
 
-  test("[OHW-231] without includeTitlePage the PDF has no cover page", async ({
+  test("[231] without includeTitlePage the PDF has no cover page", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {

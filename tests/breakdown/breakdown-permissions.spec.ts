@@ -22,7 +22,7 @@ import {
  */
 
 test.describe("[Spec 10] Breakdown — permissions", () => {
-  test("[OHW-254] viewer sees read-only breakdown — no inline tagging, CSV export available", async ({
+  test("[254] viewer sees read-only breakdown — no inline tagging, CSV export available", async ({
     authenticatedViewerPage,
   }) => {
     const page = authenticatedViewerPage;
@@ -44,7 +44,7 @@ test.describe("[Spec 10] Breakdown — permissions", () => {
     });
   });
 
-  test("[OHW-255] owner sees write controls", async ({ authenticatedPage }) => {
+  test("[255] owner sees write controls", async ({ authenticatedPage }) => {
     const page = authenticatedPage;
     await navigateToBreakdown(page, TEAM_PROJECT_ID);
 
@@ -65,7 +65,7 @@ test.describe("[Spec 10] Breakdown — permissions", () => {
     });
   });
 
-  test.skip("[OHW-256] non-member gets 403", () => {
+  test.skip("[256] non-member gets 403", () => {
     // Requires a third seeded user with no membership on the team
     // project. The seed currently only ships owner + viewer for the team
     // project; once a `non-member@ohwriters.dev` fixture user lands, this

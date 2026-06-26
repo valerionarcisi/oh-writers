@@ -1,21 +1,21 @@
 /**
  * Spec — Shooting Plan Export (CSV + PDF shot list)
  *
- * [OHW-400] Shooting plan page has an "Esporta" button visible in the dock
- * [OHW-401] Both export actions (CSV via "Esporta", PDF via "Stampa") are
+ * [400] Shooting plan page has an "Esporta" button visible in the dock
+ * [401] Both export actions (CSV via "Esporta", PDF via "Stampa") are
  *           visible in the dock without any additional click
- * [OHW-402] Clicking "Stampa" triggers a PDF download with a .pdf filename
- * [OHW-403] Clicking "Esporta" triggers a CSV download matching *-shot-list-*.csv
- * [OHW-404] "Stampa" downloads a PDF — server response carries a valid base64 PDF
- * [OHW-405] Export on a project with no planned shots completes without error
- * [OHW-406] Viewer on team project can trigger CSV export (read-only action)
+ * [402] Clicking "Stampa" triggers a PDF download with a .pdf filename
+ * [403] Clicking "Esporta" triggers a CSV download matching *-shot-list-*.csv
+ * [404] "Stampa" downloads a PDF — server response carries a valid base64 PDF
+ * [405] Export on a project with no planned shots completes without error
+ * [406] Viewer on team project can trigger CSV export (read-only action)
  */
 
 import { test, expect, TEST_TEAM_PROJECT_ID } from "../fixtures";
 import { SHOOTING_PLAN_PROJECT_ID, navigateToShootingPlan } from "./helpers";
 
 test.describe("Shooting Plan Export", () => {
-  test("[OHW-400] 'Esporta' button is visible in the dock", async ({
+  test("[400] 'Esporta' button is visible in the dock", async ({
     authenticatedPage: page,
   }) => {
     await navigateToShootingPlan(page, SHOOTING_PLAN_PROJECT_ID);
@@ -24,7 +24,7 @@ test.describe("Shooting Plan Export", () => {
     await expect(exportBtn).toBeVisible({ timeout: 15_000 });
   });
 
-  test("[OHW-401] Both 'Esporta' (CSV) and 'Stampa' (PDF) buttons are visible without extra clicks", async ({
+  test("[401] Both 'Esporta' (CSV) and 'Stampa' (PDF) buttons are visible without extra clicks", async ({
     authenticatedPage: page,
   }) => {
     await navigateToShootingPlan(page, SHOOTING_PLAN_PROJECT_ID);
@@ -37,7 +37,7 @@ test.describe("Shooting Plan Export", () => {
     });
   });
 
-  test("[OHW-402] 'Stampa' triggers a PDF download", async ({
+  test("[402] 'Stampa' triggers a PDF download", async ({
     authenticatedPage: page,
   }) => {
     await navigateToShootingPlan(page, SHOOTING_PLAN_PROJECT_ID);
@@ -53,7 +53,7 @@ test.describe("Shooting Plan Export", () => {
     expect(download.suggestedFilename()).toMatch(/\.pdf$/);
   });
 
-  test("[OHW-403] 'Esporta' downloads a CSV matching *-shot-list-*.csv", async ({
+  test("[403] 'Esporta' downloads a CSV matching *-shot-list-*.csv", async ({
     authenticatedPage: page,
   }) => {
     await navigateToShootingPlan(page, SHOOTING_PLAN_PROJECT_ID);
@@ -69,7 +69,7 @@ test.describe("Shooting Plan Export", () => {
     expect(download.suggestedFilename()).toMatch(/shot-list.*\.csv$/);
   });
 
-  test("[OHW-404] 'Stampa' server response carries a valid base64-encoded PDF", async ({
+  test("[404] 'Stampa' server response carries a valid base64-encoded PDF", async ({
     authenticatedPage: page,
   }) => {
     await navigateToShootingPlan(page, SHOOTING_PLAN_PROJECT_ID);
@@ -98,7 +98,7 @@ test.describe("Shooting Plan Export", () => {
     expect(body.result.value.filename).toMatch(/\.pdf$/);
   });
 
-  test("[OHW-405] Export with no planned shots completes gracefully (no crash)", async ({
+  test("[405] Export with no planned shots completes gracefully (no crash)", async ({
     authenticatedPage: page,
   }) => {
     // Navigate to a fresh project that has no shot plans by creating a new one.
@@ -150,7 +150,7 @@ test.describe("Shooting Plan Export", () => {
     expect(body.result.value.filename).toMatch(/shot-list.*\.csv$/);
   });
 
-  test("[OHW-406] Viewer on team project can export the CSV shot list", async ({
+  test("[406] Viewer on team project can export the CSV shot list", async ({
     authenticatedViewerPage: page,
   }) => {
     await navigateToShootingPlan(page, TEST_TEAM_PROJECT_ID);

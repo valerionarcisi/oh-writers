@@ -168,7 +168,7 @@ Co-locate server functions with the feature that owns the domain:
 
 ## Git
 
-Commit format: `[OHW] type: description`
+Commit format: `type: description` (no `[OHW]` prefix — dropped 2026-06-26)
 
 - `feat:` new feature
 - `fix:` bug fix

@@ -50,7 +50,7 @@ test.describe("[Spec 10j] Breakdown per-project — bulk action bar", () => {
     return firstCheckbox.isVisible();
   }
 
-  test("[OHW-420] Bulk action bar is hidden before any row is selected", async ({
+  test("[420] Bulk action bar is hidden before any row is selected", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -60,7 +60,7 @@ test.describe("[Spec 10j] Breakdown per-project — bulk action bar", () => {
     await expect(page.getByTestId("bulk-action-bar")).not.toBeVisible();
   });
 
-  test("[OHW-421] Selecting a row shows the bulk action bar with correct count", async ({
+  test("[421] Selecting a row shows the bulk action bar with correct count", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -84,7 +84,7 @@ test.describe("[Spec 10j] Breakdown per-project — bulk action bar", () => {
     await expect(bar.getByText(/1 selezionat/)).toBeVisible();
   });
 
-  test("[OHW-422] Selecting two rows shows count '2 selezionati'", async ({
+  test("[422] Selecting two rows shows count '2 selezionati'", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -111,7 +111,7 @@ test.describe("[Spec 10j] Breakdown per-project — bulk action bar", () => {
     await expect(bar.getByText(/2 selezionat/)).toBeVisible();
   });
 
-  test("[OHW-423] 'Annulla' button in bulk bar clears selection", async ({
+  test("[423] 'Annulla' button in bulk bar clears selection", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -141,7 +141,7 @@ test.describe("[Spec 10j] Breakdown per-project — bulk action bar", () => {
     });
   });
 
-  test("[OHW-424] Bulk action bar contains Conferma, Rinomina, Esporta CSV, Archivia buttons", async ({
+  test("[424] Bulk action bar contains Conferma, Rinomina, Esporta CSV, Archivia buttons", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -172,7 +172,7 @@ test.describe("[Spec 10j] Breakdown per-project — bulk action bar", () => {
       reseedTestDb();
     });
 
-    test("[OHW-426] Confirming bulk archive persists and never crashes with a render-phase unmount", async ({
+    test("[426] Confirming bulk archive persists and never crashes with a render-phase unmount", async ({
       authenticatedPage,
     }) => {
       const page = authenticatedPage;
@@ -262,7 +262,7 @@ test.describe("[Spec 10j] Breakdown per-project — bulk action bar", () => {
     });
   });
 
-  test("[OHW-425] Bulk confirm changes pending elements to accepted and clears selection", async ({
+  test("[425] Bulk confirm changes pending elements to accepted and clears selection", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;

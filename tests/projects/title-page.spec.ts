@@ -1,12 +1,12 @@
 /**
  * Spec 07b — Title Page (ProseMirror editor) E2E
  *
- * [OHW-FP20] Owner: editor mounts, placeholders visible in empty regions (IT)
- * [OHW-FP21] Owner: type into title syncs to project breadcrumb (autosave)
- * [OHW-FP22] Draft panel is read-only + links to the Versions surface (Spec 66 —
+ * [FP20] Owner: editor mounts, placeholders visible in empty regions (IT)
+ * [FP21] Owner: type into title syncs to project breadcrumb (autosave)
+ * [FP22] Draft panel is read-only + links to the Versions surface (Spec 66 —
  *            draft date/colour are no longer edited inline; FP23 folded in)
- * [OHW-FP24] Owner: type into a footer region → reload persists the doc
- * [OHW-FP25] Viewer: editor is contenteditable=false, draft panel read-only
+ * [FP24] Owner: type into a footer region → reload persists the doc
+ * [FP25] Viewer: editor is contenteditable=false, draft panel read-only
  */
 
 import { test, expect, TEST_TEAM_PROJECT_ID } from "../fixtures";
@@ -18,7 +18,7 @@ const TITLE_PAGE_PATH = (projectId: string) =>
 const SAVE_DEBOUNCE_MS = 800;
 
 test.describe("Title Page — Spec 07b (PM editor)", () => {
-  test("[OHW-FP20] owner sees the editor with placeholders in empty regions", async ({
+  test("[FP20] owner sees the editor with placeholders in empty regions", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {
@@ -42,7 +42,7 @@ test.describe("Title Page — Spec 07b (PM editor)", () => {
     ]);
   });
 
-  test("[OHW-FP21] owner: typing the title autosaves and updates the breadcrumb", async ({
+  test("[FP21] owner: typing the title autosaves and updates the breadcrumb", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {
@@ -86,7 +86,7 @@ test.describe("Title Page — Spec 07b (PM editor)", () => {
     );
   });
 
-  test("[OHW-FP22] the draft panel is read-only and links to the Versions surface", async ({
+  test("[FP22] the draft panel is read-only and links to the Versions surface", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {
@@ -110,7 +110,7 @@ test.describe("Title Page — Spec 07b (PM editor)", () => {
     await expect(link).toHaveAttribute("href", /\/screenplay$/);
   });
 
-  test("[OHW-FP24] owner: typing into a footer region persists across reload", async ({
+  test("[FP24] owner: typing into a footer region persists across reload", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {
@@ -131,7 +131,7 @@ test.describe("Title Page — Spec 07b (PM editor)", () => {
     );
   });
 
-  test("[OHW-FP25] viewer: editor is read-only, draft controls disabled", async ({
+  test("[FP25] viewer: editor is read-only, draft controls disabled", async ({
     authenticatedViewerPage: page,
   }) => {
     await page.goto(TITLE_PAGE_PATH(TEST_TEAM_PROJECT_ID));

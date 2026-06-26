@@ -1,6 +1,6 @@
 // tests/narrative-realtime-no-double-seed.spec.ts
 //
-// [OHW-N41] Narrative realtime editor must NOT double-seed the CRDT (BUG-N41).
+// [N41] Narrative realtime editor must NOT double-seed the CRDT (BUG-N41).
 //
 // Regression for the "Invalid string length" page freeze. The realtime narrative
 // editor used to build its EditorState with a non-empty `doc` while `ySyncPlugin`
@@ -44,7 +44,7 @@ const waitForEditor = async (page: Page): Promise<void> => {
   });
 };
 
-test.describe("[OHW-N41] narrative realtime — no CRDT double-seed", () => {
+test.describe("[N41] narrative realtime — no CRDT double-seed", () => {
   test("editor loads and accepts input (always-on)", async ({
     authenticatedPage: page,
   }) => {

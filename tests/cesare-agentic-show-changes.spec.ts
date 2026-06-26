@@ -79,7 +79,7 @@ test.describe("[Spec 47-A6] Cesare Mostra/Nascondi modifiche end-to-end", () => 
   });
 
   // BUG-N61 (fixme ×8, Valerio's go 2026-06-11): same suppression assert. N-38.
-  test.fixme("[OHW-062] floating: edit applies live; the editor never paints an inline diff; no Annulla", async ({
+  test.fixme("[062] floating: edit applies live; the editor never paints an inline diff; no Annulla", async ({
     authenticatedPage,
   }) => {
     test.setTimeout(150_000);
@@ -121,7 +121,7 @@ test.describe("[Spec 47-A6] Cesare Mostra/Nascondi modifiche end-to-end", () => 
     await expect(editor).toContainText(SOGGETTO_V2_MARKER);
   });
 
-  test("[OHW-047-A6] a chat-only reply (no edit) shows NO Mostra modifiche affordance", async ({
+  test("[047-A6] a chat-only reply (no edit) shows NO Mostra modifiche affordance", async ({
     authenticatedPage,
   }) => {
     // Edge/sad path: "Mostra/Nascondi modifiche" must appear ONLY when an edit

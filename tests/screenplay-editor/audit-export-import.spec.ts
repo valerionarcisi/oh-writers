@@ -8,9 +8,9 @@
  * Spec 55a moved export/import/Versioni into the single TopBar actions menu
  * (`screenplay-actions-menu`), one home for every page action.
  *
- * [OHW-audit-export] The TopBar "Esporta PDF" entry opens the export modal,
+ * [audit-export] The TopBar "Esporta PDF" entry opens the export modal,
  *   with all 5 production formats selectable inside it.
- * [OHW-audit-import] The TopBar import entries are reachable and open a picker.
+ * [audit-import] The TopBar import entries are reachable and open a picker.
  */
 
 import type { Page } from "@playwright/test";
@@ -30,7 +30,7 @@ const openScreenplayActions = async (page: Page): Promise<void> => {
 };
 
 test.describe("Audit ALTO #5/#6 — Export & Import reachable (TopBar)", () => {
-  test("[OHW-audit-export] Esporta opens the export modal with all 5 formats", async ({
+  test("[audit-export] Esporta opens the export modal with all 5 formats", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {
@@ -68,7 +68,7 @@ test.describe("Audit ALTO #5/#6 — Export & Import reachable (TopBar)", () => {
     await expect(page.getByTestId("screenplay-export-generate")).toBeEnabled();
   });
 
-  test("[OHW-audit-import] TopBar exposes the import entries", async ({
+  test("[audit-import] TopBar exposes the import entries", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {
@@ -88,7 +88,7 @@ test.describe("Audit ALTO #5/#6 — Export & Import reachable (TopBar)", () => {
     expect(await fileChooserPromise).toBeTruthy();
   });
 
-  test("[OHW-audit-import] dashboard 'Importa Fountain' is enabled and opens a picker", async ({
+  test("[audit-import] dashboard 'Importa Fountain' is enabled and opens a picker", async ({
     authenticatedPage: page,
   }) => {
     await page.goto(`${BASE_URL}/dashboard`);

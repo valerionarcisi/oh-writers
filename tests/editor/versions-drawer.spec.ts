@@ -14,7 +14,7 @@
  * "(copia)" label / view-mode banner) is gone — its capabilities map onto the
  * shared surface here (no delete on the new surface). The shared surface's
  * generic behaviour is also covered for the soggetto doc in
- * tests/versions-master-detail.spec.ts (OHW-066); this file is the
+ * tests/versions-master-detail.spec.ts (066); this file is the
  * screenplay-flavoured coverage.
  *
  * Note: unlike the narrative docs, the screenplay surface has no "active
@@ -22,15 +22,15 @@
  * so there is no "current" badge and `Attiva` is a *restore* (copies the
  * version's content back onto the live screenplay), not a pointer switch.
  *
- * [OHW-170] ⋯ → Versioni opens the routed surface; list + "+ Nuova versione";
+ * [170] ⋯ → Versioni opens the routed surface; list + "+ Nuova versione";
  *           NO diff/segmented control.
- * [OHW-171] Click a version → read-only detail (script renders) + Indietro.
- * [OHW-172] Duplicate grows the list.
- * [OHW-173] Inline rename persists.
- * [OHW-175] "+ Nuova versione" grows the list (snapshot-then-blank: a new
+ * [171] Click a version → read-only detail (script renders) + Indietro.
+ * [172] Duplicate grows the list.
+ * [173] Inline rename persists.
+ * [175] "+ Nuova versione" grows the list (snapshot-then-blank: a new
  *           version on non-empty content may add the snapshot + the blank one).
- * [OHW-176] Attiva sets the current pointer — the "Attuale" badge moves.
- * [OHW-177] The current version has NO delete button; a non-current one deletes
+ * [176] Attiva sets the current pointer — the "Attuale" badge moves.
+ * [177] The current version has NO delete button; a non-current one deletes
  *           (with a confirm) and the surface stays coherent (regression: a
  *           deleted version must not leave an orphaned detail pane).
  */
@@ -63,7 +63,7 @@ test.describe("Screenplay Versions — master→detail (Spec 66)", () => {
     await waitForEditor(page);
   });
 
-  test("[OHW-170] ⋯ → Versioni opens the surface; list + new affordance; NO diff/segmented", async ({
+  test("[170] ⋯ → Versioni opens the surface; list + new affordance; NO diff/segmented", async ({
     authenticatedPage: page,
   }) => {
     await openVersions(page);
@@ -82,7 +82,7 @@ test.describe("Screenplay Versions — master→detail (Spec 66)", () => {
     ).toBe(false);
   });
 
-  test("[OHW-171] click a version → read-only detail renders the script + Indietro returns", async ({
+  test("[171] click a version → read-only detail renders the script + Indietro returns", async ({
     authenticatedPage: page,
   }) => {
     await openVersions(page);
@@ -95,7 +95,7 @@ test.describe("Screenplay Versions — master→detail (Spec 66)", () => {
     await expect(page.getByTestId("versions-split-list")).toBeVisible();
   });
 
-  test("[OHW-172] duplicate creates a new version (row count grows)", async ({
+  test("[172] duplicate creates a new version (row count grows)", async ({
     authenticatedPage: page,
   }) => {
     await openVersions(page);
@@ -112,9 +112,7 @@ test.describe("Screenplay Versions — master→detail (Spec 66)", () => {
       .toBe(before + 1);
   });
 
-  test("[OHW-173] inline rename persists", async ({
-    authenticatedPage: page,
-  }) => {
+  test("[173] inline rename persists", async ({ authenticatedPage: page }) => {
     await openVersions(page);
     await expect(rows(page).first()).toBeVisible({ timeout: 10_000 });
 
@@ -132,7 +130,7 @@ test.describe("Screenplay Versions — master→detail (Spec 66)", () => {
     ).toContainText(label, { timeout: 8_000 });
   });
 
-  test("[OHW-175] '+ Nuova versione' creates a version (row count grows)", async ({
+  test("[175] '+ Nuova versione' creates a version (row count grows)", async ({
     authenticatedPage: page,
   }) => {
     await openVersions(page);
@@ -149,7 +147,7 @@ test.describe("Screenplay Versions — master→detail (Spec 66)", () => {
       .toBeGreaterThan(before);
   });
 
-  test("[OHW-176] Attiva (restore) succeeds and the surface survives", async ({
+  test("[176] Attiva (restore) succeeds and the surface survives", async ({
     authenticatedPage: page,
   }) => {
     await openVersions(page);
@@ -185,7 +183,7 @@ test.describe("Screenplay Versions — master→detail (Spec 66)", () => {
     ).toHaveCount(1);
   });
 
-  test("[OHW-177] the current version has no delete button; a non-current one deletes", async ({
+  test("[177] the current version has no delete button; a non-current one deletes", async ({
     authenticatedPage: page,
   }) => {
     await openVersions(page);

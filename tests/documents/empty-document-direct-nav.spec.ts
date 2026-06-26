@@ -7,11 +7,11 @@
  * document row for any reachable project; project-level failures (missing /
  * forbidden project) still surface a real not-found body.
  *
- *   [OHW-260] Fresh project → /synopsis shows an empty editor, not the not-found body
- *   [OHW-261] Fresh project → /outline (Scaletta) shows an empty editor
- *   [OHW-262] Fresh project → /treatment shows an empty editor
- *   [OHW-263] Fresh project → /soggetto shows an empty editor
- *   [OHW-264] A genuinely missing project still shows the not-found body
+ *   [260] Fresh project → /synopsis shows an empty editor, not the not-found body
+ *   [261] Fresh project → /outline (Scaletta) shows an empty editor
+ *   [262] Fresh project → /treatment shows an empty editor
+ *   [263] Fresh project → /soggetto shows an empty editor
+ *   [264] A genuinely missing project still shows the not-found body
  */
 
 import { test, expect } from "../fixtures";
@@ -44,7 +44,7 @@ async function createFreshProject(
 }
 
 test.describe("[Spec audit-7] First document of a NEW project", () => {
-  test("[OHW-260] direct nav to Sinossi shows an empty editor, not the not-found body", async ({
+  test("[260] direct nav to Sinossi shows an empty editor, not the not-found body", async ({
     authenticatedPage: page,
   }) => {
     const projectId = await createFreshProject(page);
@@ -60,7 +60,7 @@ test.describe("[Spec audit-7] First document of a NEW project", () => {
     await expect(page.getByText("Documento non trovato")).toHaveCount(0);
   });
 
-  test("[OHW-261] direct nav to Scaletta (outline) shows an empty editor", async ({
+  test("[261] direct nav to Scaletta (outline) shows an empty editor", async ({
     authenticatedPage: page,
   }) => {
     const projectId = await createFreshProject(page);
@@ -73,7 +73,7 @@ test.describe("[Spec audit-7] First document of a NEW project", () => {
     await expect(page.getByText("Documento non trovato")).toHaveCount(0);
   });
 
-  test("[OHW-262] direct nav to Trattamento shows an empty editor", async ({
+  test("[262] direct nav to Trattamento shows an empty editor", async ({
     authenticatedPage: page,
   }) => {
     const projectId = await createFreshProject(page);
@@ -88,7 +88,7 @@ test.describe("[Spec audit-7] First document of a NEW project", () => {
     await expect(page.getByText("Documento non trovato")).toHaveCount(0);
   });
 
-  test("[OHW-263] direct nav to Soggetto shows an empty editor", async ({
+  test("[263] direct nav to Soggetto shows an empty editor", async ({
     authenticatedPage: page,
   }) => {
     const projectId = await createFreshProject(page);
@@ -104,7 +104,7 @@ test.describe("[Spec audit-7] First document of a NEW project", () => {
     );
   });
 
-  test("[OHW-264] a genuinely missing project still shows a not-found body", async ({
+  test("[264] a genuinely missing project still shows a not-found body", async ({
     authenticatedPage: page,
   }) => {
     const missingProjectId = "00000000-0000-4000-a000-000000099999";

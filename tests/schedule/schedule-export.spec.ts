@@ -16,7 +16,7 @@ const clickMenuItem = async (page: Page, name: RegExp) => {
 };
 
 test.describe("[Spec 12e] Schedule — export", () => {
-  test("[OHW-380] Schedule exposes Esporta + Stampa in the TopBar ⋯ menu", async ({
+  test("[380] Schedule exposes Esporta + Stampa in the TopBar ⋯ menu", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -30,7 +30,7 @@ test.describe("[Spec 12e] Schedule — export", () => {
     await expect(page.getByRole("menuitem", { name: /Stampa/ })).toBeVisible();
   });
 
-  test("[OHW-381] Esporta triggers the CSV export (download fires)", async ({
+  test("[381] Esporta triggers the CSV export (download fires)", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -44,7 +44,7 @@ test.describe("[Spec 12e] Schedule — export", () => {
     expect(download.suggestedFilename()).toMatch(/schedule.*\.csv$/);
   });
 
-  test("[OHW-382] Stampa opens the PDF in a new tab", async ({
+  test("[382] Stampa opens the PDF in a new tab", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -74,7 +74,7 @@ test.describe("[Spec 12e] Schedule — export", () => {
     expect(openedUrl).toMatch(/blob:/);
   });
 
-  test("[OHW-383] Esporta downloads a CSV with the correct filename pattern", async ({
+  test("[383] Esporta downloads a CSV with the correct filename pattern", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -88,7 +88,7 @@ test.describe("[Spec 12e] Schedule — export", () => {
     expect(download.suggestedFilename()).toMatch(/schedule.*\.csv$/);
   });
 
-  test("[OHW-384] Export with no schedule generated → export still works (empty CSV)", async ({
+  test("[384] Export with no schedule generated → export still works (empty CSV)", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -118,7 +118,7 @@ test.describe("[Spec 12e] Schedule — export", () => {
     expect(download.suggestedFilename()).toMatch(/\.csv$/);
   });
 
-  test("[OHW-385] Viewer (read-only) can export the schedule — export is a read action", async ({
+  test("[385] Viewer (read-only) can export the schedule — export is a read action", async ({
     authenticatedViewerPage,
   }) => {
     const page = authenticatedViewerPage;

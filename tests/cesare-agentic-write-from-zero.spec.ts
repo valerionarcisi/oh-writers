@@ -79,7 +79,7 @@ test.describe("[Audit ALTO #3] write-from-zero chain", () => {
     await resetCesareState(authenticatedPage, FROM_SCRATCH_PROJECT_ID);
   });
 
-  test("[OHW-AUDIT-3] from-scratch: generating the soggetto from the logline ACTUALLY writes content", async ({
+  test("[AUDIT-3] from-scratch: generating the soggetto from the logline ACTUALLY writes content", async ({
     authenticatedPage: page,
   }) => {
     test.setTimeout(120_000);
@@ -109,9 +109,9 @@ test.describe("[Audit ALTO #3] write-from-zero chain", () => {
     // transient "Mostra modifiche" flash proves a real apply).
     const trace = page.getByTestId("cesare-change-trace");
     await expect(trace).toBeVisible({ timeout: 90_000 });
-    await expect(
-      trace.getByTestId("cesare-show-changes-btn"),
-    ).toBeVisible({ timeout: 10_000 });
+    await expect(trace.getByTestId("cesare-show-changes-btn")).toBeVisible({
+      timeout: 10_000,
+    });
 
     // DB-level proof (Bug #3 core): the soggetto now actually has content — no
     // silent no-op behind a fabricated success.
@@ -128,7 +128,7 @@ test.describe("[Audit ALTO #3] write-from-zero chain", () => {
       .toBeGreaterThan(0);
   });
 
-  test("[OHW-AUDIT-3] truly empty project: the generator FAILS loudly, does not claim success", async ({
+  test("[AUDIT-3] truly empty project: the generator FAILS loudly, does not claim success", async ({
     authenticatedPage: page,
   }) => {
     test.setTimeout(120_000);
@@ -168,7 +168,7 @@ test.describe("[Audit ALTO #3] write-from-zero chain", () => {
 });
 
 test.describe("[Audit ALTO #4] free natural-language dispatch", () => {
-  test("[OHW-AUDIT-4] a free 'scrivimi una logline' request dispatches a tool (not 'no tools to invoke')", async ({
+  test("[AUDIT-4] a free 'scrivimi una logline' request dispatches a tool (not 'no tools to invoke')", async ({
     authenticatedPage: page,
   }) => {
     test.setTimeout(120_000);

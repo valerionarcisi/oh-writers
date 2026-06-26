@@ -1,6 +1,6 @@
 // tests/versions-activate-reseeds-editor.spec.ts
 //
-// [OHW-N72] Activating a narrative version reseeds the CRDT (documents.yjs_state),
+// [N72] Activating a narrative version reseeds the CRDT (documents.yjs_state),
 // not just the `current_version_id` pointer + content.
 //
 // BUG-N72 (the narrative twin of the screenplay BUG-N71): "Attiva" moved the
@@ -68,7 +68,7 @@ const readCrdtText = async (page: Page): Promise<string> => {
   return body.crdtText ?? "";
 };
 
-test.describe("[OHW-N72] Attiva reseeds the narrative CRDT", () => {
+test.describe("[N72] Attiva reseeds the narrative CRDT", () => {
   test("activating a version reseeds the CRDT from its content", async ({
     authenticatedPage: page,
   }) => {

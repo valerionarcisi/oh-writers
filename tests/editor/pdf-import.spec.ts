@@ -223,11 +223,9 @@ test.beforeAll(async ({ browser }) => {
   await page.close();
 });
 
-// ─── OHW-070  Import PDF button is visible in the screenplay toolbar ──────────
+// ─── 070  Import PDF button is visible in the screenplay toolbar ──────────
 
-test("[OHW-070] Import PDF button is visible in toolbar", async ({
-  browser,
-}) => {
+test("[070] Import PDF button is visible in toolbar", async ({ browser }) => {
   const page = await browser.newPage();
   await page.context().addCookies(authCookies);
   await openScreenplay(page);
@@ -236,9 +234,9 @@ test("[OHW-070] Import PDF button is visible in toolbar", async ({
   await page.close();
 });
 
-// ─── OHW-071  File picker opens on button click ───────────────────────────────
+// ─── 071  File picker opens on button click ───────────────────────────────
 
-test("[OHW-071] Clicking Import PDF opens the system file picker", async ({
+test("[071] Clicking Import PDF opens the system file picker", async ({
   browser,
 }) => {
   const page = await browser.newPage();
@@ -254,9 +252,9 @@ test("[OHW-071] Clicking Import PDF opens the system file picker", async ({
   await page.close();
 });
 
-// ─── OHW-072  Importing into an empty screenplay replaces content silently ────
+// ─── 072  Importing into an empty screenplay replaces content silently ────
 
-test("[OHW-072] Import into empty screenplay loads content without confirmation dialog", async ({
+test("[072] Import into empty screenplay loads content without confirmation dialog", async ({
   browser,
 }) => {
   const page = await browser.newPage();
@@ -279,9 +277,9 @@ test("[OHW-072] Import into empty screenplay loads content without confirmation 
   await page.close();
 });
 
-// ─── OHW-073  Importing into a non-empty screenplay shows a confirmation dialog
+// ─── 073  Importing into a non-empty screenplay shows a confirmation dialog
 
-test("[OHW-073] Import into non-empty screenplay shows replace-content confirmation", async ({
+test("[073] Import into non-empty screenplay shows replace-content confirmation", async ({
   browser,
 }) => {
   const page = await browser.newPage();
@@ -301,9 +299,9 @@ test("[OHW-073] Import into non-empty screenplay shows replace-content confirmat
   await page.close();
 });
 
-// ─── OHW-074  Cancelling the confirmation keeps existing content unchanged ────
+// ─── 074  Cancelling the confirmation keeps existing content unchanged ────
 
-test("[OHW-074] Cancelling the replace dialog keeps existing content unchanged", async ({
+test("[074] Cancelling the replace dialog keeps existing content unchanged", async ({
   browser,
 }) => {
   const page = await browser.newPage();
@@ -326,13 +324,13 @@ test("[OHW-074] Cancelling the replace dialog keeps existing content unchanged",
   await page.close();
 });
 
-// ─── OHW-075  Scene headings are parsed correctly ─────────────────────────────
+// ─── 075  Scene headings are parsed correctly ─────────────────────────────
 //
 // Input (page 1):  "2    INT. STRATTON OAKMONT III – BULLPEN – DAY    (FEB '95)    2"
 // Expected node:   scene_heading  prefix="INT."  title="STRATTON OAKMONT III – BULLPEN – DAY"
 // Stripped:        leading scene number "2", trailing scene number "2", date "(FEB '95)"
 
-test("[OHW-075] Scene headings are imported as scene_heading nodes without scene numbers or date annotations", async ({
+test("[075] Scene headings are imported as scene_heading nodes without scene numbers or date annotations", async ({
   browser,
 }) => {
   const page = await browser.newPage();
@@ -353,9 +351,9 @@ test("[OHW-075] Scene headings are imported as scene_heading nodes without scene
   await page.close();
 });
 
-// ─── OHW-076  Character cue — plain name ──────────────────────────────────────
+// ─── 076  Character cue — plain name ──────────────────────────────────────
 
-test("[OHW-076] Plain character cue is imported as character node with no extension", async ({
+test("[076] Plain character cue is imported as character node with no extension", async ({
   browser,
 }) => {
   const page = await browser.newPage();
@@ -372,9 +370,9 @@ test("[OHW-076] Plain character cue is imported as character node with no extens
   await page.close();
 });
 
-// ─── OHW-077  Character cue — with single extension ──────────────────────────
+// ─── 077  Character cue — with single extension ──────────────────────────
 
-test("[OHW-077] Character cue with extension is imported as character node containing the full text", async ({
+test("[077] Character cue with extension is imported as character node containing the full text", async ({
   browser,
 }) => {
   const page = await browser.newPage();
@@ -390,9 +388,9 @@ test("[OHW-077] Character cue with extension is imported as character node conta
   await page.close();
 });
 
-// ─── OHW-078  Character cue — with compound extension (V.O. + CONT'D) ─────────
+// ─── 078  Character cue — with compound extension (V.O. + CONT'D) ─────────
 
-test("[OHW-078] Character cue with compound extensions is one character node containing the full raw text", async ({
+test("[078] Character cue with compound extensions is one character node containing the full raw text", async ({
   browser,
 }) => {
   const page = await browser.newPage();
@@ -410,9 +408,9 @@ test("[OHW-078] Character cue with compound extensions is one character node con
   await page.close();
 });
 
-// ─── OHW-079  Character cue — off-screen extension ────────────────────────────
+// ─── 079  Character cue — off-screen extension ────────────────────────────
 
-test("[OHW-079] Character cue with O.S. extension is imported as character node with full text", async ({
+test("[079] Character cue with O.S. extension is imported as character node with full text", async ({
   browser,
 }) => {
   const page = await browser.newPage();
@@ -428,9 +426,9 @@ test("[OHW-079] Character cue with O.S. extension is imported as character node 
   await page.close();
 });
 
-// ─── OHW-080  Dialogue lines ──────────────────────────────────────────────────
+// ─── 080  Dialogue lines ──────────────────────────────────────────────────
 
-test("[OHW-080] Dialogue lines following a character cue are imported as a single dialogue node", async ({
+test("[080] Dialogue lines following a character cue are imported as a single dialogue node", async ({
   browser,
 }) => {
   const page = await browser.newPage();
@@ -443,9 +441,9 @@ test("[OHW-080] Dialogue lines following a character cue are imported as a singl
   await page.close();
 });
 
-// ─── OHW-081  Parenthetical ───────────────────────────────────────────────────
+// ─── 081  Parenthetical ───────────────────────────────────────────────────
 
-test("[OHW-081] Parenthetical lines (surrounded by parentheses) are imported as parenthetical nodes", async ({
+test("[081] Parenthetical lines (surrounded by parentheses) are imported as parenthetical nodes", async ({
   browser,
 }) => {
   const page = await browser.newPage();
@@ -457,9 +455,9 @@ test("[OHW-081] Parenthetical lines (surrounded by parentheses) are imported as 
   await page.close();
 });
 
-// ─── OHW-082  Action lines ───────────────────────────────────────────────────
+// ─── 082  Action lines ───────────────────────────────────────────────────
 
-test("[OHW-082] Descriptive action lines are imported as action nodes", async ({
+test("[082] Descriptive action lines are imported as action nodes", async ({
   browser,
 }) => {
   const page = await browser.newPage();
@@ -471,9 +469,9 @@ test("[OHW-082] Descriptive action lines are imported as action nodes", async ({
   await page.close();
 });
 
-// ─── OHW-083  Transitions (CUT TO:) ──────────────────────────────────────────
+// ─── 083  Transitions (CUT TO:) ──────────────────────────────────────────
 
-test("[OHW-083] CUT TO: lines are imported as transition nodes with scene numbers stripped", async ({
+test("[083] CUT TO: lines are imported as transition nodes with scene numbers stripped", async ({
   browser,
 }) => {
   const page = await browser.newPage();
@@ -494,9 +492,9 @@ test("[OHW-083] CUT TO: lines are imported as transition nodes with scene number
   await page.close();
 });
 
-// ─── OHW-084  Clicking on an imported transition shows the Transition pill ────
+// ─── 084  Clicking on an imported transition shows the Transition pill ────
 
-test("[OHW-084] Clicking on an imported transition block shows the 'Transition' element pill", async ({
+test("[084] Clicking on an imported transition block shows the 'Transition' element pill", async ({
   browser,
 }) => {
   const page = await browser.newPage();
@@ -520,9 +518,9 @@ test("[OHW-084] Clicking on an imported transition block shows the 'Transition' 
   await page.close();
 });
 
-// ─── OHW-085  Parasitic text stripped — Buff Revised Pages header ─────────────
+// ─── 085  Parasitic text stripped — Buff Revised Pages header ─────────────
 
-test("[OHW-085] 'Buff Revised Pages' header lines are stripped from imported content", async ({
+test("[085] 'Buff Revised Pages' header lines are stripped from imported content", async ({
   browser,
 }) => {
   const page = await browser.newPage();
@@ -536,9 +534,9 @@ test("[OHW-085] 'Buff Revised Pages' header lines are stripped from imported con
   await page.close();
 });
 
-// ─── OHW-086  Parasitic text stripped — bare page numbers ─────────────────────
+// ─── 086  Parasitic text stripped — bare page numbers ─────────────────────
 
-test("[OHW-086] Bare page-number lines (e.g. '2.', '21.') are stripped from imported content", async ({
+test("[086] Bare page-number lines (e.g. '2.', '21.') are stripped from imported content", async ({
   browser,
 }) => {
   const page = await browser.newPage();
@@ -551,9 +549,9 @@ test("[OHW-086] Bare page-number lines (e.g. '2.', '21.') are stripped from impo
   await page.close();
 });
 
-// ─── OHW-087  Parasitic text stripped — revision asterisks ────────────────────
+// ─── 087  Parasitic text stripped — revision asterisks ────────────────────
 
-test("[OHW-087] Revision asterisks at the end of lines are stripped during import", async ({
+test("[087] Revision asterisks at the end of lines are stripped during import", async ({
   browser,
 }) => {
   const page = await browser.newPage();
@@ -567,9 +565,9 @@ test("[OHW-087] Revision asterisks at the end of lines are stripped during impor
   await page.close();
 });
 
-// ─── OHW-088  Edge case — OMITTED scene block ────────────────────────────────
+// ─── 088  Edge case — OMITTED scene block ────────────────────────────────
 
-test("[OHW-088] OMITTED scene blocks are preserved as action nodes with numbers and asterisks stripped", async ({
+test("[088] OMITTED scene blocks are preserved as action nodes with numbers and asterisks stripped", async ({
   browser,
 }) => {
   const page = await browser.newPage();
@@ -599,9 +597,9 @@ test("[OHW-088] OMITTED scene blocks are preserved as action nodes with numbers 
   await page.close();
 });
 
-// ─── OHW-089  Edge case — INSERT PHOTO slug ───────────────────────────────────
+// ─── 089  Edge case — INSERT PHOTO slug ───────────────────────────────────
 
-test("[OHW-089] INSERT ID PHOTO lines are imported as scene_heading nodes", async ({
+test("[089] INSERT ID PHOTO lines are imported as scene_heading nodes", async ({
   browser,
 }) => {
   const page = await browser.newPage();
@@ -619,9 +617,9 @@ test("[OHW-089] INSERT ID PHOTO lines are imported as scene_heading nodes", asyn
   await page.close();
 });
 
-// ─── OHW-090  Post-import interaction — edit scene heading title ──────────────
+// ─── 090  Post-import interaction — edit scene heading title ──────────────
 
-test("[OHW-090] Editing an imported scene heading title keeps the block as scene_heading", async ({
+test("[090] Editing an imported scene heading title keeps the block as scene_heading", async ({
   browser,
 }) => {
   const page = await browser.newPage();
@@ -643,9 +641,9 @@ test("[OHW-090] Editing an imported scene heading title keeps the block as scene
   await page.close();
 });
 
-// ─── OHW-091  Post-import interaction — add character below action ─────────────
+// ─── 091  Post-import interaction — add character below action ─────────────
 
-test("[OHW-091] Alt+c shortcut creates a character block after an imported action block", async ({
+test("[091] Alt+c shortcut creates a character block after an imported action block", async ({
   browser,
 }) => {
   const page = await browser.newPage();
@@ -670,9 +668,9 @@ test("[OHW-091] Alt+c shortcut creates a character block after an imported actio
   await page.close();
 });
 
-// ─── OHW-092  Post-import interaction — element pill on transition ────────────
+// ─── 092  Post-import interaction — element pill on transition ────────────
 
-test("[OHW-092] Element type of an imported transition can be changed via the element selector", async ({
+test("[092] Element type of an imported transition can be changed via the element selector", async ({
   browser,
 }) => {
   const page = await browser.newPage();
@@ -696,9 +694,9 @@ test("[OHW-092] Element type of an imported transition can be changed via the el
   await page.close();
 });
 
-// ─── OHW-093  File too large — error message ──────────────────────────────────
+// ─── 093  File too large — error message ──────────────────────────────────
 
-test("[OHW-093] Importing a PDF larger than 25 MB shows an error message", async ({
+test("[093] Importing a PDF larger than 25 MB shows an error message", async ({
   browser,
 }) => {
   // Create a temporary file just over the import limit (MAX_FILE_BYTES in
@@ -732,9 +730,9 @@ test("[OHW-093] Importing a PDF larger than 25 MB shows an error message", async
   await page.close();
 });
 
-// ─── OHW-094  Encrypted PDF — error message ───────────────────────────────────
+// ─── 094  Encrypted PDF — error message ───────────────────────────────────
 
-test("[OHW-094] Importing a password-protected PDF shows an appropriate error message", async ({
+test("[094] Importing a password-protected PDF shows an appropriate error message", async ({
   browser,
 }) => {
   // Minimal syntactically-valid encrypted PDF that causes pdf-parse to throw with "encrypt"
@@ -777,9 +775,9 @@ startxref
   await page.close();
 });
 
-// ─── OHW-095  Non-PDF file — error message ────────────────────────────────────
+// ─── 095  Non-PDF file — error message ────────────────────────────────────
 
-test("[OHW-095] Uploading a non-PDF file shows 'not a valid PDF' error", async ({
+test("[095] Uploading a non-PDF file shows 'not a valid PDF' error", async ({
   browser,
 }) => {
   const tmpFile = path.join(os.tmpdir(), "not-a-pdf.txt");

@@ -20,19 +20,19 @@ import {
  *
  * Removed vs the old rule-based dashboard: per-resource `resource-row-*`,
  * day-rate / regime (×1.20) cells, and the scene-chip cast filter no longer
- * exist (OHW-353 / OHW-355 dropped).
+ * exist (353 / 355 dropped).
  *
- *   [OHW-351] Generate → Cast + Troupe category cards are populated.
- *   [OHW-352] Edit a line's rate in the flat table → its row total updates.
- *   [OHW-354] Edit shooting days → the toolbar chip reflects the new value.
- *   [OHW-356] Add a custom crew line in the flat table → it appears.
+ *   [351] Generate → Cast + Troupe category cards are populated.
+ *   [352] Edit a line's rate in the flat table → its row total updates.
+ *   [354] Edit shooting days → the toolbar chip reflects the new value.
+ *   [356] Add a custom crew line in the flat table → it appears.
  */
 
 test.describe("[Spec 11b] Budget — flat rate-card dashboard", () => {
   // Each test navigates fresh; budget state persists across tests in this run.
   // Tests are ordered: generate first, then mutate.
 
-  test("[OHW-351] Genera budget → Cast and Troupe cards are populated", async ({
+  test("[351] Genera budget → Cast and Troupe cards are populated", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -56,7 +56,7 @@ test.describe("[Spec 11b] Budget — flat rate-card dashboard", () => {
     ).toBeVisible({ timeout: 10_000 });
   });
 
-  test("[OHW-352] Editing a line's rate updates that line's total", async ({
+  test("[352] Editing a line's rate updates that line's total", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -93,7 +93,7 @@ test.describe("[Spec 11b] Budget — flat rate-card dashboard", () => {
     });
   });
 
-  test("[OHW-354] Editing shooting days updates the toolbar chip", async ({
+  test("[354] Editing shooting days updates the toolbar chip", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -115,7 +115,7 @@ test.describe("[Spec 11b] Budget — flat rate-card dashboard", () => {
     });
   });
 
-  test("[OHW-356] Add a custom crew line → it appears in the flat table", async ({
+  test("[356] Add a custom crew line → it appears in the flat table", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;

@@ -1,6 +1,6 @@
 // tests/cesare-agentic-bell-notifications.spec.ts
 //
-// [OHW-066] Cesare bell (NotificationCenter) — one notification per turn.
+// [066] Cesare bell (NotificationCenter) — one notification per turn.
 //
 // BUG-066: the bell used to flood with duplicated "Cesare sta lavorando…"
 // rows and offered no way to reach the document a turn edited. The contract
@@ -39,7 +39,7 @@ async function openBell(page: import("@playwright/test").Page) {
   });
 }
 
-test.describe("[OHW-066] Cesare bell — one notification per turn", () => {
+test.describe("[066] Cesare bell — one notification per turn", () => {
   test.beforeEach(async ({ authenticatedPage }) => {
     await resetCesareState(authenticatedPage, TEAM_PROJECT_ID);
     await clearMockContext(authenticatedPage);

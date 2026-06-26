@@ -16,7 +16,7 @@ import {
  */
 
 test.describe("[Spec 10j] Breakdown — per-project view", () => {
-  test("[OHW-400] Switching to 'Per progetto' renders the project breakdown table", async ({
+  test("[400] Switching to 'Per progetto' renders the project breakdown table", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -33,7 +33,7 @@ test.describe("[Spec 10j] Breakdown — per-project view", () => {
     });
   });
 
-  test("[OHW-401] Per-progetto KPI strip shows 'Elementi totali' and 'Confermati'", async ({
+  test("[401] Per-progetto KPI strip shows 'Elementi totali' and 'Confermati'", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -55,7 +55,7 @@ test.describe("[Spec 10j] Breakdown — per-project view", () => {
     await expect(kpis.getByText("Obsoleti")).toBeVisible();
   });
 
-  test("[OHW-402] Per-progetto category group expands and shows table rows", async ({
+  test("[402] Per-progetto category group expands and shows table rows", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -101,7 +101,7 @@ test.describe("[Spec 10j] Breakdown — per-project view", () => {
     });
   });
 
-  test("[OHW-403] Per-progetto search filter narrows visible rows", async ({
+  test("[403] Per-progetto search filter narrows visible rows", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -144,7 +144,7 @@ test.describe("[Spec 10j] Breakdown — per-project view", () => {
     expect(rowsRestored).toBeGreaterThanOrEqual(rowsBefore);
   });
 
-  test("[OHW-404] Status filter dropdown is present and changes the select value", async ({
+  test("[404] Status filter dropdown is present and changes the select value", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -166,7 +166,7 @@ test.describe("[Spec 10j] Breakdown — per-project view", () => {
     await statusFilter.selectOption("all");
   });
 
-  test("[OHW-405] Switching back to 'Per scena' hides the project breakdown table", async ({
+  test("[405] Switching back to 'Per scena' hides the project breakdown table", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;

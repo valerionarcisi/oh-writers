@@ -67,7 +67,7 @@ async function waitForCesareReply(
 // ─── describe blocks ──────────────────────────────────────────────────────────
 
 /**
- * [OHW-514] Spec 32 — RAG context: breakdown page
+ * [514] Spec 32 — RAG context: breakdown page
  *
  * Cesare receives the full Fountain body of the active scene (scenes.notes)
  * and can cite specific dialogue and actions without the user pasting the text.
@@ -79,7 +79,7 @@ test.describe("[Spec 32] Cesare RAG — Breakdown", () => {
     await resetCesareState(authenticatedPage, TEAM_PROJECT_ID);
   });
 
-  test("[OHW-514] Cesare cites scene dialogue when asked about active scene", async ({
+  test("[514] Cesare cites scene dialogue when asked about active scene", async ({
     authenticatedPage,
   }) => {
     await navigateToBreakdown(authenticatedPage, TEAM_PROJECT_ID);
@@ -106,7 +106,7 @@ test.describe("[Spec 32] Cesare RAG — Breakdown", () => {
   // entry, so the mock returns its generic "no specific tool to invoke" fallback
   // and the assertion can't pass under MOCK_AI. Real-AI verification is required;
   // marked fixme until a mock scenario is added or it moves to a real-AI lane.
-  test.fixme("[OHW-514b] Cesare window includes adjacent scenes (n-2 / n+2)", async ({
+  test.fixme("[514b] Cesare window includes adjacent scenes (n-2 / n+2)", async ({
     authenticatedPage,
   }) => {
     await navigateToBreakdown(authenticatedPage, TEAM_PROJECT_ID);
@@ -123,12 +123,12 @@ test.describe("[Spec 32] Cesare RAG — Breakdown", () => {
     expect(reply).toMatch(/scena (1|2|4|5)/i);
   });
 
-  // KNOWN GAP: same MOCK_AI limitation as OHW-514b — "how many scenes does this
+  // KNOWN GAP: same MOCK_AI limitation as 514b — "how many scenes does this
   // project have?" has no mock tool scenario, so the generic fallback reply does
   // not satisfy the content assertion. (The view-mode toggle is also a react-aria
   // SegmentedControl radio now, not a plain "Per progetto" button.) Needs a mock
   // scenario or a real-AI lane; fixme until then.
-  test.fixme("[OHW-514c] Scene context resets to null when no scene is active", async ({
+  test.fixme("[514c] Scene context resets to null when no scene is active", async ({
     authenticatedPage,
   }) => {
     await navigateToBreakdown(authenticatedPage, TEAM_PROJECT_ID);
@@ -149,7 +149,7 @@ test.describe("[Spec 32] Cesare RAG — Breakdown", () => {
 });
 
 /**
- * [OHW-514d] Spec 32 — RAG context: screenplay editor
+ * [514d] Spec 32 — RAG context: screenplay editor
  *
  * Scrolling to a scene publishes sceneNumber via ActiveSceneContext.
  * Cesare receives the ±2 window even though the scene UUID is unknown
@@ -164,7 +164,7 @@ test.describe("[Spec 32] Cesare RAG — Screenplay editor", () => {
   // scenario, so the mock returns its short generic fallback (< 80 chars) and the
   // RAG content assertion can't pass under MOCK_AI. Needs a mock scenario or a
   // real-AI lane; fixme until then.
-  test.fixme("[OHW-514d] Cesare knows active scene after scroll in editor", async ({
+  test.fixme("[514d] Cesare knows active scene after scroll in editor", async ({
     authenticatedPage,
   }) => {
     await authenticatedPage.goto(
@@ -188,7 +188,7 @@ test.describe("[Spec 32] Cesare RAG — Screenplay editor", () => {
 });
 
 /**
- * [OHW-520] Spec 32 — RAG context: locations page
+ * [520] Spec 32 — RAG context: locations page
  *
  * When a requirement is active, Cesare receives the scenes linked to it
  * (not a number window) and can reason about their narrative content.
@@ -200,7 +200,7 @@ test.describe("[Spec 32] Cesare RAG — Locations", () => {
     await resetCesareState(authenticatedPage, LOCATIONS_PROJECT_ID);
   });
 
-  test("[OHW-520] Cesare cites linked scene content for active requirement", async ({
+  test("[520] Cesare cites linked scene content for active requirement", async ({
     authenticatedPage,
   }) => {
     await navigateToLocations(authenticatedPage, LOCATIONS_PROJECT_ID);
@@ -224,7 +224,7 @@ test.describe("[Spec 32] Cesare RAG — Locations", () => {
 });
 
 /**
- * [OHW-521] Spec 31 — Cesare agentic scouting: search_places tool
+ * [521] Spec 31 — Cesare agentic scouting: search_places tool
  *
  * Asking Cesare to find a location triggers the search_places tool call,
  * which hits the Google Places API and creates real locationCandidates in
@@ -248,7 +248,7 @@ test.describe("[Spec 31] Cesare Agentic Scouting — search_places", () => {
     await clearMockContext(authenticatedPage);
   });
 
-  test("[OHW-521] Cesare finds real candidates when asked to scout a location", async ({
+  test("[521] Cesare finds real candidates when asked to scout a location", async ({
     authenticatedPage,
   }) => {
     await navigateToLocations(authenticatedPage, LOCATIONS_PROJECT_ID);
@@ -269,7 +269,7 @@ test.describe("[Spec 31] Cesare Agentic Scouting — search_places", () => {
     expect(reply).toMatch(/trovato|aggiunto|candidat/i);
   });
 
-  test("[OHW-521b] Candidates added by Cesare appear on the locations map", async ({
+  test("[521b] Candidates added by Cesare appear on the locations map", async ({
     authenticatedPage,
   }) => {
     await navigateToLocations(authenticatedPage, LOCATIONS_PROJECT_ID);
@@ -300,7 +300,7 @@ test.describe("[Spec 31] Cesare Agentic Scouting — search_places", () => {
       .toBeGreaterThan(cardsBefore);
   });
 
-  test("[OHW-521c] add_candidate rejects gracefully for non-existent requirement", async ({
+  test("[521c] add_candidate rejects gracefully for non-existent requirement", async ({
     authenticatedPage,
   }) => {
     // Security guard: server rejects candidates attached to unknown/foreign
@@ -319,7 +319,7 @@ test.describe("[Spec 31] Cesare Agentic Scouting — search_places", () => {
 });
 
 /**
- * [OHW-522] Quick prompts contextual update
+ * [522] Quick prompts contextual update
  *
  * Prompts switch INITIAL → FOLLOWUP after Cesare's first reply.
  * On locations, switch to AFTER_SEARCH when Cesare confirms it found candidates.
@@ -335,7 +335,7 @@ test.describe("[Spec 31/32] Cesare — dynamic quick prompts", () => {
     await resetCesareState(authenticatedPage, TEAM_PROJECT_ID);
   });
 
-  test("[OHW-522] Quick prompts show in the empty state and clear once the conversation starts", async ({
+  test("[522] Quick prompts show in the empty state and clear once the conversation starts", async ({
     authenticatedPage,
   }) => {
     // The INITIAL → FOLLOWUP quick-prompt text swap was retired: the per-page
@@ -360,7 +360,7 @@ test.describe("[Spec 31/32] Cesare — dynamic quick prompts", () => {
     await expect(initialPrompt).toBeHidden({ timeout: 5_000 });
   });
 
-  test("[OHW-522b] Locations page shows its empty-state quick prompts, which clear after the first reply", async ({
+  test("[522b] Locations page shows its empty-state quick prompts, which clear after the first reply", async ({
     authenticatedPage,
   }) => {
     // The dynamic AFTER_SEARCH prompt set was retired together with the
@@ -392,7 +392,7 @@ test.describe("[Spec 31/32] Cesare — dynamic quick prompts", () => {
 });
 
 /**
- * [OHW-523] Cesare context across all pages — smoke tests
+ * [523] Cesare context across all pages — smoke tests
  *
  * Verifies that Cesare opens and returns a non-empty response on every page
  * that has a trigger. Catches wiring regressions (server fn, prompt assembly,
@@ -408,7 +408,7 @@ test.describe("[Spec 32] Cesare — context smoke tests per page", () => {
     ["outline", `${BASE_URL}/projects/${TEAM_PROJECT_ID}/outline`],
     ["treatment", `${BASE_URL}/projects/${TEAM_PROJECT_ID}/treatment`],
   ] as const) {
-    test(`[OHW-523-${pageName}] Cesare opens and responds on ${pageName} page`, async ({
+    test(`[523-${pageName}] Cesare opens and responds on ${pageName} page`, async ({
       authenticatedPage,
     }) => {
       await authenticatedPage.goto(path);

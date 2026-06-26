@@ -2,11 +2,11 @@
  * Spec 04e — Narrative editor regressions covered by spec 04e
  * (Tiptap → vanilla ProseMirror, same pattern as the screenplay editor).
  *
- *   [OHW-EDR-01] Enter at end of document creates a new visible paragraph,
+ *   [EDR-01] Enter at end of document creates a new visible paragraph,
  *                caret moves into it. Reproduces BUG-001.
- *   [OHW-EDR-02] Toolbar "• List" toggles the current block into a bullet
+ *   [EDR-02] Toolbar "• List" toggles the current block into a bullet
  *                list and back. Reproduces BUG-003.
- *   [OHW-EDR-03] removed — the doc-stats char/page counter footer was dropped
+ *   [EDR-03] removed — the doc-stats char/page counter footer was dropped
  *                from the narrative PM surfaces (see body for detail).
  *
  * These tests must FAIL on HEAD prior to spec 04e implementation, and pass
@@ -37,7 +37,7 @@ const focusEditor = async (page: import("@playwright/test").Page) => {
 };
 
 test.describe("Narrative editor — spec 04e regressions", () => {
-  test("[OHW-EDR-01] Enter at end of treatment creates a new paragraph", async ({
+  test("[EDR-01] Enter at end of treatment creates a new paragraph", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {
@@ -85,7 +85,7 @@ test.describe("Narrative editor — spec 04e regressions", () => {
     await expect(editor.locator("p").nth(0)).toHaveText("primo paragrafo");
   });
 
-  test("[OHW-EDR-02] '• List' toolbar toggles a bullet list in treatment", async ({
+  test("[EDR-02] '• List' toolbar toggles a bullet list in treatment", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {
@@ -119,9 +119,9 @@ test.describe("Narrative editor — spec 04e regressions", () => {
     await expect(editor.locator("p").first()).toHaveText("voce di lista");
   });
 
-  // [OHW-EDR-03] removed: the narrative editor no longer renders a `doc-stats`
+  // [EDR-03] removed: the narrative editor no longer renders a `doc-stats`
   // char/page counter footer on the synopsis/treatment PM surfaces (the
   // shell-level chrome dropped it). The only remaining counter is the logline
-  // pill char count (covered by narrative-editor OHW-205). There is no longer a
+  // pill char count (covered by narrative-editor 205). There is no longer a
   // counter element to assert "in the viewport" for these surfaces.
 });

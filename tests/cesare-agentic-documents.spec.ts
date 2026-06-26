@@ -65,10 +65,10 @@ test.describe("[Spec 34] Cesare Agentic — Documents", () => {
     await clearMockContext(authenticatedPage);
   });
 
-  test("[OHW-541] Cesare expands a section via expand_section tool", async ({
+  test("[541] Cesare expands a section via expand_section tool", async ({
     authenticatedPage,
   }) => {
-    // KNOWN BUG (OHW-541b): on a slow CI runner the `expand_section` executor
+    // KNOWN BUG (541b): on a slow CI runner the `expand_section` executor
     // reads a document context that does not yet contain the seeded "## Atto II"
     // section, so it no-ops while the scripted mock still returns a success
     // reply — the durable content-growth assertion below correctly catches the
@@ -78,7 +78,7 @@ test.describe("[Spec 34] Cesare Agentic — Documents", () => {
     // (passes deterministically) so the happy path stays covered.
     test.skip(
       !!process.env["CI"],
-      "OHW-541b: expand_section CI context-read race — executor no-ops on slow runner; tracked separately",
+      "541b: expand_section CI context-read race — executor no-ops on slow runner; tracked separately",
     );
     await seedSynopsisWithSections(authenticatedPage);
 

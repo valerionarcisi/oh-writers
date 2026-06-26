@@ -189,11 +189,9 @@ test.describe("Screenplay Authoring [E2E user story]", () => {
     return waitForEditor(page);
   }
 
-  // ─── OHW-S01 — Editor loads empty for a new project ──────────────────────
+  // ─── S01 — Editor loads empty for a new project ──────────────────────
 
-  test("[OHW-S01] editor loads empty for a new project", async ({
-    browser,
-  }) => {
+  test("[S01] editor loads empty for a new project", async ({ browser }) => {
     const page = await openAuthenticatedPage(browser);
     await goToScreenplay(page);
 
@@ -205,11 +203,11 @@ test.describe("Screenplay Authoring [E2E user story]", () => {
     await page.context().close();
   });
 
-  // ─── OHW-S02 — Write Scene 1: INT. CUCINA - NOTTE ────────────────────────
+  // ─── S02 — Write Scene 1: INT. CUCINA - NOTTE ────────────────────────
   //
   // Scene 1 tests: heading prefix+title, action, two characters with dialogue
 
-  test("[OHW-S02] write Scene 1 — INT. CUCINA - NOTTE with dialogue", async ({
+  test("[S02] write Scene 1 — INT. CUCINA - NOTTE with dialogue", async ({
     browser,
   }) => {
     const page = await openAuthenticatedPage(browser);
@@ -317,9 +315,9 @@ test.describe("Screenplay Authoring [E2E user story]", () => {
     await page.context().close();
   });
 
-  // ─── OHW-S03 — Write Scene 2: INT. CAMERA - NOTTE with parenthetical ─────
+  // ─── S03 — Write Scene 2: INT. CAMERA - NOTTE with parenthetical ─────
 
-  test("[OHW-S03] write Scene 2 — INT. CAMERA - NOTTE with parenthetical", async ({
+  test("[S03] write Scene 2 — INT. CAMERA - NOTTE with parenthetical", async ({
     browser,
   }) => {
     const page = await openAuthenticatedPage(browser);
@@ -409,9 +407,9 @@ test.describe("Screenplay Authoring [E2E user story]", () => {
     await page.context().close();
   });
 
-  // ─── OHW-S04 — Write Scene 3: INT. CUCINA - MATTINO with autocomplete ────
+  // ─── S04 — Write Scene 3: INT. CUCINA - MATTINO with autocomplete ────
 
-  test("[OHW-S04] write Scene 3 — INT. CUCINA - MATTINO, verify autocomplete", async ({
+  test("[S04] write Scene 3 — INT. CUCINA - MATTINO, verify autocomplete", async ({
     browser,
   }) => {
     const page = await openAuthenticatedPage(browser);
@@ -566,9 +564,9 @@ test.describe("Screenplay Authoring [E2E user story]", () => {
     await page.context().close();
   });
 
-  // ─── OHW-S05 — Full Fountain round-trip: all 3 scenes present ────────────
+  // ─── S05 — Full Fountain round-trip: all 3 scenes present ────────────
 
-  test("[OHW-S05] full Fountain round-trip — all 3 scenes present", async ({
+  test("[S05] full Fountain round-trip — all 3 scenes present", async ({
     browser,
   }) => {
     const page = await openAuthenticatedPage(browser);
@@ -607,9 +605,9 @@ test.describe("Screenplay Authoring [E2E user story]", () => {
     await page.context().close();
   });
 
-  // ─── OHW-S06 — Scene heading rendering: prefix ≠ title in DOM ────────────
+  // ─── S06 — Scene heading rendering: prefix ≠ title in DOM ────────────
 
-  test("[OHW-S06] heading renders prefix and title as separate spans", async ({
+  test("[S06] heading renders prefix and title as separate spans", async ({
     browser,
   }) => {
     const page = await openAuthenticatedPage(browser);

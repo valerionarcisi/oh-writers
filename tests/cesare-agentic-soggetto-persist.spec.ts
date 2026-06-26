@@ -1,6 +1,6 @@
 // tests/cesare-soggetto-apply-persists.spec.ts
 //
-// [OHW-061] Cesare soggetto apply persists — no flash-then-revert.
+// [061] Cesare soggetto apply persists — no flash-then-revert.
 //
 // Regression for Spec 61: a Cesare agentic edit stores PLAIN text in the DB while
 // the rich narrative editor serialises to HTML. The autosave dirty-check used a
@@ -24,7 +24,7 @@ import {
 // opens with this sentence; a small unique suffix is appended per generation.
 const MOCK_V2_MARKER = "Marco torna a Falerone";
 
-test.describe("[OHW-061] Cesare soggetto apply persists (no flash-then-revert)", () => {
+test.describe("[061] Cesare soggetto apply persists (no flash-then-revert)", () => {
   test.beforeEach(async ({ authenticatedPage }) => {
     await resetCesareState(authenticatedPage, TEAM_PROJECT_ID);
   });

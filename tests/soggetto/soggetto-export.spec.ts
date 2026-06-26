@@ -11,8 +11,8 @@ import { navigateToSoggetto, TEAM_PROJECT_ID } from "./helpers";
  * and "Esporta SIAE" (ExportSiaeModal). The modal/form field testids are
  * unchanged; only the launch path moved.
  *
- *   [OHW-SOG-004] ⋯ → Esporta DOCX → modal → Genera → .docx download.
- *   [OHW-SOG-005] ⋯ → Esporta SIAE → form validates (empty author → submit
+ *   [SOG-004] ⋯ → Esporta DOCX → modal → Genera → .docx download.
+ *   [SOG-005] ⋯ → Esporta SIAE → form validates (empty author → submit
  *                 disabled) → fill + submit → .pdf download.
  *
  * Requires the dev server to run with MOCK_AI=true.
@@ -24,7 +24,7 @@ const openSoggettoMenu = async (page: Page) => {
 };
 
 test.describe("[Spec 04f] Soggetto — export flows", () => {
-  test("[OHW-SOG-004] ⋯ → Esporta DOCX opens the modal and downloads DOCX", async ({
+  test("[SOG-004] ⋯ → Esporta DOCX opens the modal and downloads DOCX", async ({
     authenticatedPage: page,
   }) => {
     await navigateToSoggetto(page, TEAM_PROJECT_ID);
@@ -52,7 +52,7 @@ test.describe("[Spec 04f] Soggetto — export flows", () => {
     expect(name.toLowerCase()).toMatch(/\.docx$/);
   });
 
-  test("[OHW-SOG-005] ⋯ → Esporta SIAE validates required fields and downloads a PDF", async ({
+  test("[SOG-005] ⋯ → Esporta SIAE validates required fields and downloads a PDF", async ({
     authenticatedPage: page,
   }) => {
     await navigateToSoggetto(page, TEAM_PROJECT_ID);

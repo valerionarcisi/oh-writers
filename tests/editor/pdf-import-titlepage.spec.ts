@@ -134,10 +134,10 @@ test.beforeAll(async () => {
   authCookies = await signInViaApi(TEST_EMAIL, TEST_PASSWORD);
 });
 
-// ─── OHW-FP30 ────────────────────────────────────────────────────────────────
+// ─── FP30 ────────────────────────────────────────────────────────────────
 // Empty project + PDF with title page → applied silently, no modal.
 
-test("[OHW-FP30] PDF with title page into empty project applies the front page silently", async ({
+test("[FP30] PDF with title page into empty project applies the front page silently", async ({
   browser,
 }) => {
   const context = await browser.newContext();
@@ -160,10 +160,10 @@ test("[OHW-FP30] PDF with title page into empty project applies the front page s
   await context.close();
 });
 
-// ─── OHW-FP31 ────────────────────────────────────────────────────────────────
+// ─── FP31 ────────────────────────────────────────────────────────────────
 // Project already has a title page + new PDF with title page → confirm modal.
 
-test("[OHW-FP31] Importing a PDF with a title page over an existing one prompts to overwrite", async ({
+test("[FP31] Importing a PDF with a title page over an existing one prompts to overwrite", async ({
   browser,
 }) => {
   const context = await browser.newContext();
@@ -196,10 +196,10 @@ test("[OHW-FP31] Importing a PDF with a title page over an existing one prompts 
   await context.close();
 });
 
-// ─── OHW-FP32 ────────────────────────────────────────────────────────────────
+// ─── FP32 ────────────────────────────────────────────────────────────────
 // PDF without a title page → modal never appears.
 
-test("[OHW-FP32] Importing a PDF that has no title page never shows the front-page confirm", async ({
+test("[FP32] Importing a PDF that has no title page never shows the front-page confirm", async ({
   browser,
 }) => {
   const context = await browser.newContext();

@@ -63,7 +63,7 @@ const CLUSTER_SELECTOR = "[class*=marker-cluster]";
 const DENSE_RADIUS_M = 9999;
 
 test.describe("[Spec 37] Location area discovery", () => {
-  test("[OHW-372] Drawing an area discovers places as hollow pins, adding one persists a candidate", async ({
+  test("[372] Drawing an area discovers places as hollow pins, adding one persists a candidate", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -123,7 +123,7 @@ test.describe("[Spec 37] Location area discovery", () => {
       .toBeGreaterThan(cardsBefore);
   });
 
-  test("[OHW-374] Dense discovery results collapse into a cluster icon", async ({
+  test("[374] Dense discovery results collapse into a cluster icon", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -160,7 +160,7 @@ test.describe("[Spec 37] Location area discovery", () => {
       .toBeGreaterThan(0);
   });
 
-  test("[OHW-377] A non-searchable scene (a street) yields no discovery pins", async ({
+  test("[377] A non-searchable scene (a street) yields no discovery pins", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -180,7 +180,7 @@ test.describe("[Spec 37] Location area discovery", () => {
     expect(await page.locator(CLUSTER_SELECTOR).count()).toBe(0);
   });
 
-  test("[OHW-379] The clear-area pill removes the boundary and the pins", async ({
+  test("[379] The clear-area pill removes the boundary and the pins", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -213,7 +213,7 @@ test.describe("[Spec 37] Location area discovery", () => {
       .toBe(0);
   });
 
-  test("[OHW-381] 'Ordina per scena' ranks the discovered places (atmosphere)", async ({
+  test("[381] 'Ordina per scena' ranks the discovered places (atmosphere)", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;

@@ -1,18 +1,18 @@
 /**
  * Spec 05i — Inline Scene Number Edit + Resequence E2E Tests
  *
- * [OHW-236] Click scene number → inline input opens
- * [OHW-237] Edit + Enter → number applied, locked styling appears
- * [OHW-238] Invalid input shows inline error, input stays open
- * [OHW-239] Escape cancels edit, number unchanged
- * [OHW-240] Editing to a number already in use opens the conflict modal
- * [OHW-241] Conflict → "Keep locked" applies to self even though duplicate
- * [OHW-242] Conflict → "Resequence from here" resolves the duplicate
- * [OHW-243] Conflict → "Cancel" leaves doc untouched
- * [OHW-244] Scene menu trigger opens the popover with all items
- * [OHW-245] Menu → "Unlock number" clears the locked flag
- * [OHW-246] Toolbar "Resequence scenes" → confirm → numbers recomputed
- * [OHW-247] Toolbar confirm "Cancel" leaves doc untouched
+ * [236] Click scene number → inline input opens
+ * [237] Edit + Enter → number applied, locked styling appears
+ * [238] Invalid input shows inline error, input stays open
+ * [239] Escape cancels edit, number unchanged
+ * [240] Editing to a number already in use opens the conflict modal
+ * [241] Conflict → "Keep locked" applies to self even though duplicate
+ * [242] Conflict → "Resequence from here" resolves the duplicate
+ * [243] Conflict → "Cancel" leaves doc untouched
+ * [244] Scene menu trigger opens the popover with all items
+ * [245] Menu → "Unlock number" clears the locked flag
+ * [246] Toolbar "Resequence scenes" → confirm → numbers recomputed
+ * [247] Toolbar confirm "Cancel" leaves doc untouched
  */
 
 import { test, expect } from "../fixtures";
@@ -46,7 +46,7 @@ function sceneMenuTrigger(page: TestPage, idx: number) {
   return page.locator('[data-testid="scene-menu-trigger"]').nth(idx);
 }
 
-test.describe("Inline Scene Number Edit [OHW-23x / 24x]", () => {
+test.describe("Inline Scene Number Edit [23x / 24x]", () => {
   test.beforeEach(async ({ authenticatedPage: page, testProjectId }) => {
     await page.goto(`${BASE_URL}/projects/${testProjectId}/screenplay`);
     await waitForPmEditor(page);
@@ -61,9 +61,9 @@ test.describe("Inline Scene Number Edit [OHW-23x / 24x]", () => {
     ).toBeVisible({ timeout: 10_000 });
   });
 
-  // ─── OHW-236 ──────────────────────────────────────────────────────────────
+  // ─── 236 ──────────────────────────────────────────────────────────────
 
-  test("[OHW-236] clicking scene number opens inline input", async ({
+  test("[236] clicking scene number opens inline input", async ({
     authenticatedPage: page,
   }) => {
     await sceneNumberBtn(page, 0).click();
@@ -72,9 +72,9 @@ test.describe("Inline Scene Number Edit [OHW-23x / 24x]", () => {
     await expect(input).toBeFocused();
   });
 
-  // ─── OHW-237 ──────────────────────────────────────────────────────────────
+  // ─── 237 ──────────────────────────────────────────────────────────────
 
-  test("[OHW-237] edit + Enter applies number and locks it", async ({
+  test("[237] edit + Enter applies number and locks it", async ({
     authenticatedPage: page,
   }) => {
     const heading = page.locator("h2.pm-heading").nth(0);
@@ -89,9 +89,9 @@ test.describe("Inline Scene Number Edit [OHW-23x / 24x]", () => {
     await expect(sceneNumberBtn(page, 0)).toHaveClass(/is-locked/);
   });
 
-  // ─── OHW-238 ──────────────────────────────────────────────────────────────
+  // ─── 238 ──────────────────────────────────────────────────────────────
 
-  test("[OHW-238] invalid input shows error, stays open", async ({
+  test("[238] invalid input shows error, stays open", async ({
     authenticatedPage: page,
   }) => {
     await sceneNumberBtn(page, 0).click();
@@ -108,9 +108,9 @@ test.describe("Inline Scene Number Edit [OHW-23x / 24x]", () => {
     await expect(input).toBeHidden();
   });
 
-  // ─── OHW-239 ──────────────────────────────────────────────────────────────
+  // ─── 239 ──────────────────────────────────────────────────────────────
 
-  test("[OHW-239] Escape cancels edit", async ({ authenticatedPage: page }) => {
+  test("[239] Escape cancels edit", async ({ authenticatedPage: page }) => {
     const heading = page.locator("h2.pm-heading").nth(0);
     const before = await heading.getAttribute("data-number");
 
@@ -123,9 +123,9 @@ test.describe("Inline Scene Number Edit [OHW-23x / 24x]", () => {
     await expect(heading).toHaveAttribute("data-number", before ?? "");
   });
 
-  // ─── OHW-240 + 243 ────────────────────────────────────────────────────────
+  // ─── 240 + 243 ────────────────────────────────────────────────────────
 
-  test("[OHW-240/243] duplicate opens conflict modal; Cancel leaves doc intact", async ({
+  test("[240/243] duplicate opens conflict modal; Cancel leaves doc intact", async ({
     authenticatedPage: page,
   }) => {
     const count = await page.locator("h2.pm-heading").count();
@@ -159,9 +159,9 @@ test.describe("Inline Scene Number Edit [OHW-23x / 24x]", () => {
     );
   });
 
-  // ─── OHW-241 ──────────────────────────────────────────────────────────────
+  // ─── 241 ──────────────────────────────────────────────────────────────
 
-  test("[OHW-241] conflict → Keep locked applies duplicate + locks", async ({
+  test("[241] conflict → Keep locked applies duplicate + locks", async ({
     authenticatedPage: page,
   }) => {
     const count = await page.locator("h2.pm-heading").count();
@@ -188,9 +188,9 @@ test.describe("Inline Scene Number Edit [OHW-23x / 24x]", () => {
     await expect(heading).toHaveAttribute("data-locked", "true");
   });
 
-  // ─── OHW-242 ──────────────────────────────────────────────────────────────
+  // ─── 242 ──────────────────────────────────────────────────────────────
 
-  test("[OHW-242] conflict → Resequence from here resolves duplicate", async ({
+  test("[242] conflict → Resequence from here resolves duplicate", async ({
     authenticatedPage: page,
   }) => {
     const count = await page.locator("h2.pm-heading").count();
@@ -226,9 +226,9 @@ test.describe("Inline Scene Number Edit [OHW-23x / 24x]", () => {
     expect(second).not.toBe(first);
   });
 
-  // ─── OHW-244 ──────────────────────────────────────────────────────────────
+  // ─── 244 ──────────────────────────────────────────────────────────────
 
-  test("[OHW-244] menu trigger opens popover with items", async ({
+  test("[244] menu trigger opens popover with items", async ({
     authenticatedPage: page,
   }) => {
     await sceneMenuTrigger(page, 0).click();
@@ -250,9 +250,9 @@ test.describe("Inline Scene Number Edit [OHW-23x / 24x]", () => {
     await expect(menu).toBeHidden();
   });
 
-  // ─── OHW-245 ──────────────────────────────────────────────────────────────
+  // ─── 245 ──────────────────────────────────────────────────────────────
 
-  test("[OHW-245] menu → Unlock number clears locked flag", async ({
+  test("[245] menu → Unlock number clears locked flag", async ({
     authenticatedPage: page,
   }) => {
     // First lock it via inline edit.
@@ -274,9 +274,9 @@ test.describe("Inline Scene Number Edit [OHW-23x / 24x]", () => {
     await expect(heading).toHaveAttribute("data-locked", "false");
   });
 
-  // ─── OHW-246 ──────────────────────────────────────────────────────────────
+  // ─── 246 ──────────────────────────────────────────────────────────────
 
-  test("[OHW-246] ⋯ → Resequence scenes renumbers around a locked number", async ({
+  test("[246] ⋯ → Resequence scenes renumbers around a locked number", async ({
     authenticatedPage: page,
   }) => {
     // Lock heading 0 to a number that isn't already used so no conflict
@@ -303,7 +303,7 @@ test.describe("Inline Scene Number Edit [OHW-23x / 24x]", () => {
     );
   });
 
-  // [OHW-247] removed: the toolbar resequence-confirm modal (with a Cancel
+  // [247] removed: the toolbar resequence-confirm modal (with a Cancel
   // button) no longer exists — "Resequence scenes" lives in the ⋯ menu and runs
   // immediately, so there is no cancel-leaves-doc-untouched path to assert.
 });

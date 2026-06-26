@@ -22,7 +22,7 @@ import {
  */
 test.describe("[Spec 43] Cesare universal tool layer", () => {
   // Two sources of cross-test bleed in this serial suite, both cleared per test:
-  //  1. The mock-context setter persists server-side across requests; OHW-043-A
+  //  1. The mock-context setter persists server-side across requests; 043-A
   //     seeds REQ_ID and never clears it — a leaked context steers the
   //     dispatcher in later tests.
   //  2. Since Spec 51 the Cesare chat persists sessions/messages; a prior test's
@@ -37,7 +37,7 @@ test.describe("[Spec 43] Cesare universal tool layer", () => {
     await clearMockContext(authenticatedPage);
   });
 
-  test("[OHW-043-A] from locations page, Cesare resolves requirement_id itself + adds a candidate", async ({
+  test("[043-A] from locations page, Cesare resolves requirement_id itself + adds a candidate", async ({
     authenticatedPage,
   }) => {
     await navigateToLocations(authenticatedPage, LOCATIONS_PROJECT_ID);
@@ -55,8 +55,8 @@ test.describe("[Spec 43] Cesare universal tool layer", () => {
       .count();
 
     await openCesareSheet(authenticatedPage);
-    // No "trova" / "cerca" keywords: we want to hit the OHW-043-A scenario
-    // (aggiungi candidati per la scena 1), not the legacy OHW-540 one.
+    // No "trova" / "cerca" keywords: we want to hit the 043-A scenario
+    // (aggiungi candidati per la scena 1), not the legacy 540 one.
     await sendCesareMessage(
       authenticatedPage,
       "Aggiungimi candidati per la scena 1",
@@ -76,13 +76,13 @@ test.describe("[Spec 43] Cesare universal tool layer", () => {
       .toBeGreaterThan(cardsBefore);
   });
 
-  test("[OHW-043-B] from locations page, rewrite_scene buffers a pending rewrite in sessionStorage", async ({
+  test("[043-B] from locations page, rewrite_scene buffers a pending rewrite in sessionStorage", async ({
     authenticatedPage,
   }) => {
     await navigateToLocations(authenticatedPage, LOCATIONS_PROJECT_ID);
     await openCesareSheet(authenticatedPage);
-    // Use a phrase unique to the OHW-043-B cross-page scenario. "riscrivi la
-    // scena 1 …" also matches the broader, earlier OHW-041 rewrite scenario
+    // Use a phrase unique to the 043-B cross-page scenario. "riscrivi la
+    // scena 1 …" also matches the broader, earlier 041 rewrite scenario
     // (which wins by array order and produces a different scene body + reply);
     // "rifai la scena 1" hits only the 043-B scenario that buffers the cross-page
     // hand-off and emits the "vai sulla pagina Sceneggiatura" hint.
@@ -114,7 +114,7 @@ test.describe("[Spec 43] Cesare universal tool layer", () => {
     ).toBeVisible({ timeout: 5_000 });
   });
 
-  test("[OHW-043-C] from locations page, Cesare describes cross-domain tools when asked", async ({
+  test("[043-C] from locations page, Cesare describes cross-domain tools when asked", async ({
     authenticatedPage,
   }) => {
     await navigateToLocations(authenticatedPage, LOCATIONS_PROJECT_ID);

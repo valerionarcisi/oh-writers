@@ -1,6 +1,6 @@
 // tests/l10n-leaks.spec.ts
 //
-// [OHW-l10n] Italian localisation guard — IT-LOCALE SCOPED.
+// [l10n] Italian localisation guard — IT-LOCALE SCOPED.
 //
 // This suite asserts the IT rendering of the UI: it walks the pages flagged in
 // docs/audits/2026-05-31/audit-C-l10n-bugs.md (L1–L23) and asserts that none of
@@ -46,7 +46,7 @@ const expectNoLeaks = (text: string, leaks: string[]): void => {
   }
 };
 
-test.describe("[OHW-l10n] no leaked English on user-facing pages", () => {
+test.describe("[l10n] no leaked English on user-facing pages", () => {
   test("dashboard role filter + badges are Italian (L14–L16)", async ({
     authenticatedPage: page,
   }) => {

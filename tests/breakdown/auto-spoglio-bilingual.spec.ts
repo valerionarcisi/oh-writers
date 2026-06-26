@@ -31,18 +31,18 @@ test.describe("[Spec 10e] Auto-spoglio — bilingual", () => {
   // rendering itself is still exercised by the cast-ghost path (CAPS character
   // cues do appear inline). Re-enable once a seed lands whose version text
   // contains the props/locations the IT extractor targets.
-  test.skip("[OHW-323] IT new props extractor adds 'Bottiglia' ghost on scene 1 of team project", () => {});
+  test.skip("[323] IT new props extractor adds 'Bottiglia' ghost on scene 1 of team project", () => {});
 
-  // SKIPPED (same stale-seed root cause as OHW-323): this required the scene-1
+  // SKIPPED (same stale-seed root cause as 323): this required the scene-1
   // location "Appartamento" to render as an inline highlight, but the team
   // version text (NON_FA_RIDERE) contains neither "Appartamento" nor any
   // FADE/CUT/THE END transition token, so both the positive precondition and
   // the transition-leak guard are untestable against the current seed (the
   // negative would pass vacuously). Re-enable with a seed whose version text
   // carries these tokens.
-  test.skip("[OHW-324] cast extractor does not emit FADE OUT./THE END. as characters", () => {});
+  test.skip("[324] cast extractor does not emit FADE OUT./THE END. as characters", () => {});
 
-  test.skip("[OHW-325] EN — cast/locations/V.O. extracted from English screenplay", () => {
+  test.skip("[325] EN — cast/locations/V.O. extracted from English screenplay", () => {
     // Pending: seed an English fixture project (clean-short.fountain,
     // ~75 lines, "THE LAST KEY"). When that lands:
     //   await navigateToBreakdown(page, EN_PROJECT_ID);

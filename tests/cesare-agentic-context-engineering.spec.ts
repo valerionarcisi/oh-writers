@@ -1,5 +1,5 @@
 /**
- * [OHW-038f] Spec 38 — Context Engineering: Film Bible + scene summaries
+ * [038f] Spec 38 — Context Engineering: Film Bible + scene summaries
  *
  * Verifies the three observable side effects of spec 38 in MOCK_AI mode:
  * 1. Saving the screenplay populates scene_summary on at least one scene.
@@ -67,8 +67,8 @@ async function signInViaApi(browser: Browser) {
   return { page, context };
 }
 
-test.describe("[OHW-038f] Spec 38 — Context Engineering", () => {
-  test("[OHW-038f-1] Scene summary is populated after saving the screenplay", async ({
+test.describe("[038f] Spec 38 — Context Engineering", () => {
+  test("[038f-1] Scene summary is populated after saving the screenplay", async ({
     browser,
   }) => {
     const { page, context } = await signInViaApi(browser);
@@ -93,7 +93,7 @@ test.describe("[OHW-038f] Spec 38 — Context Engineering", () => {
     await context.close();
   });
 
-  test("[OHW-038f-2] Cesare responds with non-Rome setting when asked about film location", async ({
+  test("[038f-2] Cesare responds with non-Rome setting when asked about film location", async ({
     browser,
   }) => {
     const { page, context } = await signInViaApi(browser);
@@ -135,7 +135,7 @@ test.describe("[OHW-038f] Spec 38 — Context Engineering", () => {
     await context.close();
   });
 
-  test("[OHW-038f-3] Film Bible groups restaurant aliases into one recurring location", async ({
+  test("[038f-3] Film Bible groups restaurant aliases into one recurring location", async ({
     browser,
   }) => {
     const { page, context } = await signInViaApi(browser);

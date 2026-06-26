@@ -1,6 +1,6 @@
 // tests/cesare-floating-arrow-routes.spec.ts
 //
-// [OHW-046] Cesare floating drawer — the ↗ affordance routes to the session
+// [046] Cesare floating drawer — the ↗ affordance routes to the session
 // detail page, it does NOT open a floating fullscreen overlay.
 //
 // Previously the floating drawer's ↗ cycled into an in-place "full" overlay.
@@ -25,7 +25,7 @@ const openFloatingDrawer = async (page: import("@playwright/test").Page) => {
   }).toPass({ timeout: 15_000 });
 };
 
-test.describe("[OHW-046] Cesare floating ↗ routes to session detail", () => {
+test.describe("[046] Cesare floating ↗ routes to session detail", () => {
   test("↗ navigates to /sessions/:id and dismisses the floating drawer", async ({
     authenticatedPage: page,
   }) => {

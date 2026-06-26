@@ -2,29 +2,29 @@
  * Spec 05e — Screenplay Editor UX (keyboard flow, shortcuts, toolbar, autocomplete)
  *
  * Tab/Enter flow matrix:
- * [OHW-410] Scene Heading → Enter → produces Action element
- * [OHW-411] Character → Enter → produces Dialogue element
- * [OHW-412] Dialogue → Enter → produces Character element (next speaker)
- * [OHW-413] Parenthetical → Enter → produces Dialogue
- * [OHW-414] Transition → Enter → produces Scene Heading
- * [OHW-415] Action → Tab → switches to Character
- * [OHW-416] Character → Tab → switches to Parenthetical
- * [OHW-417] Dialogue → Tab → exits to Action
+ * [410] Scene Heading → Enter → produces Action element
+ * [411] Character → Enter → produces Dialogue element
+ * [412] Dialogue → Enter → produces Character element (next speaker)
+ * [413] Parenthetical → Enter → produces Dialogue
+ * [414] Transition → Enter → produces Scene Heading
+ * [415] Action → Tab → switches to Character
+ * [416] Character → Tab → switches to Parenthetical
+ * [417] Dialogue → Tab → exits to Action
  *
  * ⌘+Number shortcuts:
- * [OHW-420] ⌘+1 → Scene Heading
- * [OHW-421] ⌘+3 → Character
- * [OHW-422] ⌘+4 → Dialogue
- * [OHW-423] ⌘+6 → Transition
+ * [420] ⌘+1 → Scene Heading
+ * [421] ⌘+3 → Character
+ * [422] ⌘+4 → Dialogue
+ * [423] ⌘+6 → Transition
  *
  * Toolbar:
- * [OHW-430] Toolbar has 6 element buttons visible (scene, action, character, dialogue, parenthetical, transition)
- * [OHW-431] Active element button has aria-pressed="true"
- * [OHW-432] Clicking toolbar Character button → line switches to Character
+ * [430] Toolbar has 6 element buttons visible (scene, action, character, dialogue, parenthetical, transition)
+ * [431] Active element button has aria-pressed="true"
+ * [432] Clicking toolbar Character button → line switches to Character
  *
  * Autocomplete:
- * [OHW-440] On Character line, typing "(" → extension dropdown appears with V.O. option
- * [OHW-441] On Transition line → common transitions suggested
+ * [440] On Character line, typing "(" → extension dropdown appears with V.O. option
+ * [441] On Transition line → common transitions suggested
  */
 
 import { test, expect } from "../fixtures";
@@ -64,7 +64,7 @@ const AUTOCOMPLETE_DROPDOWN = 'ul[role="listbox"]:not([data-picker-slot])';
 // ─── Tab/Enter flow matrix ────────────────────────────────────────────────────
 
 test.describe("Tab/Enter flow matrix — Spec 05e", () => {
-  test("[OHW-410] Scene Heading → Enter → produces Action element", async ({
+  test("[410] Scene Heading → Enter → produces Action element", async ({
     authenticatedPage: page,
   }) => {
     await openScreenplay(page, TEST_PROJECT_ID);
@@ -87,7 +87,7 @@ test.describe("Tab/Enter flow matrix — Spec 05e", () => {
     expect(await focusedBlockType(page)).toBe("action");
   });
 
-  test("[OHW-411] Character → Enter → produces Dialogue element", async ({
+  test("[411] Character → Enter → produces Dialogue element", async ({
     authenticatedPage: page,
   }) => {
     await openScreenplay(page, TEST_PROJECT_ID);
@@ -105,7 +105,7 @@ test.describe("Tab/Enter flow matrix — Spec 05e", () => {
     expect(await focusedBlockType(page)).toBe("dialogue");
   });
 
-  test("[OHW-412] Dialogue → Enter (with text) → produces Character element", async ({
+  test("[412] Dialogue → Enter (with text) → produces Character element", async ({
     authenticatedPage: page,
   }) => {
     await openScreenplay(page, TEST_PROJECT_ID);
@@ -128,7 +128,7 @@ test.describe("Tab/Enter flow matrix — Spec 05e", () => {
     expect(await focusedBlockType(page)).toBe("character");
   });
 
-  test("[OHW-413] Parenthetical → Enter → produces Dialogue element", async ({
+  test("[413] Parenthetical → Enter → produces Dialogue element", async ({
     authenticatedPage: page,
   }) => {
     await openScreenplay(page, TEST_PROJECT_ID);
@@ -153,7 +153,7 @@ test.describe("Tab/Enter flow matrix — Spec 05e", () => {
     expect(await focusedBlockType(page)).toBe("dialogue");
   });
 
-  test("[OHW-414] Transition → Enter → produces Scene Heading", async ({
+  test("[414] Transition → Enter → produces Scene Heading", async ({
     authenticatedPage: page,
   }) => {
     await openScreenplay(page, TEST_PROJECT_ID);
@@ -172,7 +172,7 @@ test.describe("Tab/Enter flow matrix — Spec 05e", () => {
     expect(["prefix", "title", "heading"]).toContain(blockType);
   });
 
-  test("[OHW-415] Action → Tab → switches to Character", async ({
+  test("[415] Action → Tab → switches to Character", async ({
     authenticatedPage: page,
   }) => {
     await openScreenplay(page, TEST_PROJECT_ID);
@@ -187,7 +187,7 @@ test.describe("Tab/Enter flow matrix — Spec 05e", () => {
     expect(await focusedBlockType(page)).toBe("character");
   });
 
-  test("[OHW-416] Character → Tab → switches to Parenthetical", async ({
+  test("[416] Character → Tab → switches to Parenthetical", async ({
     authenticatedPage: page,
   }) => {
     await openScreenplay(page, TEST_PROJECT_ID);
@@ -203,7 +203,7 @@ test.describe("Tab/Enter flow matrix — Spec 05e", () => {
     expect(await focusedBlockType(page)).toBe("parenthetical");
   });
 
-  test("[OHW-417] Dialogue → Tab → exits to Action", async ({
+  test("[417] Dialogue → Tab → exits to Action", async ({
     authenticatedPage: page,
   }) => {
     await openScreenplay(page, TEST_PROJECT_ID);
@@ -223,7 +223,7 @@ test.describe("Tab/Enter flow matrix — Spec 05e", () => {
 // ─── ⌘+Number shortcuts ───────────────────────────────────────────────────────
 
 test.describe("Cmd+Number shortcuts — Spec 05e", () => {
-  test("[OHW-420] ⌘+1 on any line → switches to Scene Heading", async ({
+  test("[420] ⌘+1 on any line → switches to Scene Heading", async ({
     authenticatedPage: page,
   }) => {
     await openScreenplay(page, TEST_PROJECT_ID);
@@ -239,7 +239,7 @@ test.describe("Cmd+Number shortcuts — Spec 05e", () => {
     expect(["prefix", "title", "heading"]).toContain(blockType);
   });
 
-  test("[OHW-421] ⌘+3 on any line → switches to Character", async ({
+  test("[421] ⌘+3 on any line → switches to Character", async ({
     authenticatedPage: page,
   }) => {
     await openScreenplay(page, TEST_PROJECT_ID);
@@ -252,7 +252,7 @@ test.describe("Cmd+Number shortcuts — Spec 05e", () => {
     expect(await focusedBlockType(page)).toBe("character");
   });
 
-  test("[OHW-422] ⌘+4 on any line → switches to Dialogue", async ({
+  test("[422] ⌘+4 on any line → switches to Dialogue", async ({
     authenticatedPage: page,
   }) => {
     await openScreenplay(page, TEST_PROJECT_ID);
@@ -265,7 +265,7 @@ test.describe("Cmd+Number shortcuts — Spec 05e", () => {
     expect(await focusedBlockType(page)).toBe("dialogue");
   });
 
-  test("[OHW-423] ⌘+6 on any line → switches to Transition", async ({
+  test("[423] ⌘+6 on any line → switches to Transition", async ({
     authenticatedPage: page,
   }) => {
     await openScreenplay(page, TEST_PROJECT_ID);
@@ -282,7 +282,7 @@ test.describe("Cmd+Number shortcuts — Spec 05e", () => {
 // ─── Toolbar ──────────────────────────────────────────────────────────────────
 
 test.describe("Element toolbar — Spec 05e", () => {
-  test("[OHW-430] Toolbar has 6 element buttons visible", async ({
+  test("[430] Toolbar has 6 element buttons visible", async ({
     authenticatedPage: page,
   }) => {
     await openScreenplay(page, TEST_PROJECT_ID);
@@ -298,7 +298,7 @@ test.describe("Element toolbar — Spec 05e", () => {
     await expect(buttons).toHaveCount(6);
   });
 
-  test("[OHW-431] Active element button has aria-pressed='true'", async ({
+  test("[431] Active element button has aria-pressed='true'", async ({
     authenticatedPage: page,
   }) => {
     await openScreenplay(page, TEST_PROJECT_ID);
@@ -321,7 +321,7 @@ test.describe("Element toolbar — Spec 05e", () => {
     expect(dataElement).toBe("action");
   });
 
-  test("[OHW-432] Clicking toolbar Character button → line switches to Character", async ({
+  test("[432] Clicking toolbar Character button → line switches to Character", async ({
     authenticatedPage: page,
   }) => {
     await openScreenplay(page, TEST_PROJECT_ID);
@@ -348,7 +348,7 @@ test.describe("Element toolbar — Spec 05e", () => {
 // ─── Autocomplete ─────────────────────────────────────────────────────────────
 
 test.describe("Autocomplete — Spec 05e", () => {
-  test("[OHW-440] On Character line, typing '(' shows extension dropdown with V.O. option", async ({
+  test("[440] On Character line, typing '(' shows extension dropdown with V.O. option", async ({
     authenticatedPage: page,
   }) => {
     await openScreenplay(page, TEST_PROJECT_ID);
@@ -373,7 +373,7 @@ test.describe("Autocomplete — Spec 05e", () => {
     await expect(voOption).toBeVisible({ timeout: 3_000 });
   });
 
-  test("[OHW-441] On Transition line, common transitions are suggested", async ({
+  test("[441] On Transition line, common transitions are suggested", async ({
     authenticatedPage: page,
   }) => {
     await openScreenplay(page, TEST_PROJECT_ID);

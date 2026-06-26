@@ -10,9 +10,9 @@ import { navigateToShootingPlan, SHOOTING_PLAN_PROJECT_ID } from "./helpers";
 const railShootingPlanItem = (page: import("@playwright/test").Page) =>
   page.locator('[data-rail-item="shooting-plan"]');
 
-test.describe("[OHW-22-nav] Piano di Ripresa — sidebar navigation", () => {
-  // [OHW-22-nav-1] The shooting-plan rail entry appears in project nav
-  test("[OHW-22-nav-1] Inquadrature nav item is visible in project sidebar", async ({
+test.describe("[22-nav] Piano di Ripresa — sidebar navigation", () => {
+  // [22-nav-1] The shooting-plan rail entry appears in project nav
+  test("[22-nav-1] Inquadrature nav item is visible in project sidebar", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -22,8 +22,8 @@ test.describe("[OHW-22-nav] Piano di Ripresa — sidebar navigation", () => {
     await expect(railShootingPlanItem(page)).toBeVisible({ timeout: 10_000 });
   });
 
-  // [OHW-22-nav-2] Clicking the nav item navigates to the shooting plan page
-  test("[OHW-22-nav-2] Clicking Inquadrature navigates to the shooting-plan route", async ({
+  // [22-nav-2] Clicking the nav item navigates to the shooting plan page
+  test("[22-nav-2] Clicking Inquadrature navigates to the shooting-plan route", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -41,8 +41,8 @@ test.describe("[OHW-22-nav] Piano di Ripresa — sidebar navigation", () => {
     expect(page.url()).toContain("/shooting-plan");
   });
 
-  // [OHW-22-nav-3] Shooting plan page loads with scene list sidebar
-  test("[OHW-22-nav-3] Shooting plan page renders scene list sidebar after navigation", async ({
+  // [22-nav-3] Shooting plan page loads with scene list sidebar
+  test("[22-nav-3] Shooting plan page renders scene list sidebar after navigation", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -60,7 +60,7 @@ test.describe("[OHW-22-nav] Piano di Ripresa — sidebar navigation", () => {
   });
 
   // Supplementary: the nav item is marked active (aria-current) on the route.
-  test("[OHW-22-nav-4] Inquadrature nav item is marked active on the shooting-plan page", async ({
+  test("[22-nav-4] Inquadrature nav item is marked active on the shooting-plan page", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;

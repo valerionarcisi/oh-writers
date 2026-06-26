@@ -1,13 +1,13 @@
 /**
  * Spec 07c — E2E Editor Tests (against real DB with seeded "Non fa ridere")
  *
- * [OHW-078] Editor loads with seeded content
- * [OHW-079] Page indicator shows correct count
- * [OHW-082] Tab cycles action → character → dialogue → action
- * [OHW-083] Smart Enter: character → dialogue
- * [OHW-084] Smart Enter: dialogue → action
- * [OHW-085] Focus mode toggle
- * [OHW-086] Content persists after edit + auto-save
+ * [078] Editor loads with seeded content
+ * [079] Page indicator shows correct count
+ * [082] Tab cycles action → character → dialogue → action
+ * [083] Smart Enter: character → dialogue
+ * [084] Smart Enter: dialogue → action
+ * [085] Focus mode toggle
+ * [086] Content persists after edit + auto-save
  */
 
 import { test, expect } from "../fixtures";
@@ -19,7 +19,7 @@ import {
 } from "../helpers";
 
 test.describe("Screenplay Editor", () => {
-  test("[OHW-078] editor loads with seeded content", async ({
+  test("[078] editor loads with seeded content", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {
@@ -34,7 +34,7 @@ test.describe("Screenplay Editor", () => {
     expect(content).toMatch(/INT|EST|EXT/);
   });
 
-  test("[OHW-079] page indicator shows page count", async ({
+  test("[079] page indicator shows page count", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {
@@ -46,7 +46,7 @@ test.describe("Screenplay Editor", () => {
     await expect(pages.locator("dd")).toHaveText(/\d+/);
   });
 
-  test("[OHW-082] Tab cycles action → character → dialogue → action", async ({
+  test("[082] Tab cycles action → character → dialogue → action", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {
@@ -84,7 +84,7 @@ test.describe("Screenplay Editor", () => {
     await expect(editor).toBeVisible();
   });
 
-  test("[OHW-083] Smart Enter: character → dialogue", async ({
+  test("[083] Smart Enter: character → dialogue", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {
@@ -111,7 +111,7 @@ test.describe("Screenplay Editor", () => {
     expect(content).toContain("Ma che stai a di");
   });
 
-  test("[OHW-084] Smart Enter: dialogue → action", async ({
+  test("[084] Smart Enter: dialogue → action", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {
@@ -140,7 +140,7 @@ test.describe("Screenplay Editor", () => {
     expect(content).toContain("Tea esce dalla cucina.");
   });
 
-  test("[OHW-085] focus mode toggle", async ({
+  test("[085] focus mode toggle", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {
@@ -163,7 +163,7 @@ test.describe("Screenplay Editor", () => {
     await expect(focusBtn).toBeVisible();
   });
 
-  test("[OHW-086] content persists after edit + save", async ({
+  test("[086] content persists after edit + save", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {

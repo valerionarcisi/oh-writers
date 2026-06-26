@@ -1,6 +1,6 @@
 // tests/cesare-session-conversation.spec.ts
 //
-// [OHW-047-A5-session] The full-page session route renders the REAL
+// [047-A5-session] The full-page session route renders the REAL
 // conversation.
 //
 // Spec 47b FIX 2: `/projects/:id/sessions/:sessionId` must render the actual
@@ -43,7 +43,7 @@ async function sendCesare(page: Page, text: string): Promise<void> {
   await sendBtn.click();
 }
 
-test.describe("[OHW-047-A5-session] Full-page session renders the real conversation", () => {
+test.describe("[047-A5-session] Full-page session renders the real conversation", () => {
   // Reset the shared Cesare chat store between tests so a thread left by a prior
   // turn (or a prior spec in the same run) can't bleed in and make the bubble
   // assertions flaky.

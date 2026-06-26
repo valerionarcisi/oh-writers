@@ -25,7 +25,7 @@ import {
  */
 
 test.describe("[Spec 13] Locations Manager", () => {
-  test("[OHW-480] Locations page renders with seeded requirements", async ({
+  test("[480] Locations page renders with seeded requirements", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -40,7 +40,7 @@ test.describe("[Spec 13] Locations Manager", () => {
     ).toBeVisible();
   });
 
-  test("[OHW-481] Clicking a requirement shows its detail panel", async ({
+  test("[481] Clicking a requirement shows its detail panel", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -57,7 +57,7 @@ test.describe("[Spec 13] Locations Manager", () => {
     );
   });
 
-  test("[OHW-482] Seeded candidates appear in the detail panel", async ({
+  test("[482] Seeded candidates appear in the detail panel", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -74,7 +74,7 @@ test.describe("[Spec 13] Locations Manager", () => {
     ).toBeVisible();
   });
 
-  test("[OHW-483] Add candidate form creates a new candidate", async ({
+  test("[483] Add candidate form creates a new candidate", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -89,9 +89,7 @@ test.describe("[Spec 13] Locations Manager", () => {
     await page.getByTestId("add-candidate-btn").click();
 
     await expect(page.getByTestId("add-candidate-form")).toBeVisible();
-    await page
-      .getByTestId("candidate-name-input")
-      .fill("Cortile Ansaldo");
+    await page.getByTestId("candidate-name-input").fill("Cortile Ansaldo");
     await page
       .getByTestId("candidate-address-input")
       .fill("Via Bergognone 34, Milano");
@@ -105,7 +103,7 @@ test.describe("[Spec 13] Locations Manager", () => {
     });
   });
 
-  test("[OHW-484] Marking a candidate as visited updates its status badge", async ({
+  test("[484] Marking a candidate as visited updates its status badge", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -133,7 +131,7 @@ test.describe("[Spec 13] Locations Manager", () => {
     await expect(card.getByText("Visitata")).toBeVisible({ timeout: 8_000 });
   });
 
-  test("[OHW-485] Confirming a candidate marks the requirement as confirmed", async ({
+  test("[485] Confirming a candidate marks the requirement as confirmed", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -170,7 +168,7 @@ test.describe("[Spec 13] Locations Manager", () => {
     });
   });
 
-  test("[OHW-486] Removing a candidate hides it from the list", async ({
+  test("[486] Removing a candidate hides it from the list", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -203,7 +201,7 @@ test.describe("[Spec 13] Locations Manager", () => {
     });
   });
 
-  test("[OHW-487] Sync from breakdown imports location elements as new requirements", async ({
+  test("[487] Sync from breakdown imports location elements as new requirements", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -222,7 +220,7 @@ test.describe("[Spec 13] Locations Manager", () => {
     ).toBeVisible({ timeout: 10_000 });
   });
 
-  test("[OHW-488] Empty state shown when no requirements exist (viewer access)", async ({
+  test("[488] Empty state shown when no requirements exist (viewer access)", async ({
     authenticatedViewerPage,
   }) => {
     // The viewer has read-only access; navigate to a fresh project that has no locations.
@@ -241,7 +239,7 @@ test.describe("[Spec 13] Locations Manager", () => {
     ).toBeVisible({ timeout: 10_000 });
   });
 
-  test("[OHW-489] Selecting a different requirement updates the detail panel", async ({
+  test("[489] Selecting a different requirement updates the detail panel", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;

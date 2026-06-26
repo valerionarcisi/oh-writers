@@ -1,13 +1,13 @@
 /**
  * Spec 05g — Structured Scene Heading E2E Tests
  *
- * [OHW-090] Heading renders as prefix + title slots
- * [OHW-091] Tab inside prefix → cursor moves to title
- * [OHW-092] Space inside prefix → cursor moves to title (no space inserted)
- * [OHW-093] Backspace at start of title → cursor to end of prefix (no delete)
- * [OHW-094] Enter inside title → action block created below
- * [OHW-095] Alt+S on body block → new scene, cursor in prefix
- * [OHW-096] Prefix picker shows vocabulary from doc
+ * [090] Heading renders as prefix + title slots
+ * [091] Tab inside prefix → cursor moves to title
+ * [092] Space inside prefix → cursor moves to title (no space inserted)
+ * [093] Backspace at start of title → cursor to end of prefix (no delete)
+ * [094] Enter inside title → action block created below
+ * [095] Alt+S on body block → new scene, cursor in prefix
+ * [096] Prefix picker shows vocabulary from doc
  */
 
 import { test, expect } from "../fixtures";
@@ -70,15 +70,15 @@ async function firstFullHeadingIndex(page: TestPage): Promise<number> {
   return -1;
 }
 
-test.describe("Structured Scene Heading [OHW-09x]", () => {
+test.describe("Structured Scene Heading [09x]", () => {
   test.beforeEach(async ({ authenticatedPage: page, testProjectId }) => {
     await page.goto(`${BASE_URL}/projects/${testProjectId}/screenplay`);
     await waitForPmEditor(page);
   });
 
-  // ─── OHW-090 ────────────────────────────────────────────────────────────────
+  // ─── 090 ────────────────────────────────────────────────────────────────
 
-  test("[OHW-090] heading renders prefix + title spans", async ({
+  test("[090] heading renders prefix + title spans", async ({
     authenticatedPage: page,
   }) => {
     // Scroll to first numbered heading to make it visible
@@ -106,9 +106,9 @@ test.describe("Structured Scene Heading [OHW-09x]", () => {
     expect(await numbered.count()).toBeGreaterThan(0);
   });
 
-  // ─── OHW-091 ────────────────────────────────────────────────────────────────
+  // ─── 091 ────────────────────────────────────────────────────────────────
 
-  test("[OHW-091] Tab inside prefix → cursor moves to title", async ({
+  test("[091] Tab inside prefix → cursor moves to title", async ({
     authenticatedPage: page,
   }) => {
     const idx = await firstFullHeadingIndex(page);
@@ -122,9 +122,9 @@ test.describe("Structured Scene Heading [OHW-09x]", () => {
     expect(await focusedSlot(page)).toContain("pm-heading-title");
   });
 
-  // ─── OHW-092 ────────────────────────────────────────────────────────────────
+  // ─── 092 ────────────────────────────────────────────────────────────────
 
-  test("[OHW-092] Space inside prefix → cursor moves to title (no space inserted)", async ({
+  test("[092] Space inside prefix → cursor moves to title (no space inserted)", async ({
     authenticatedPage: page,
   }) => {
     const idx = await firstFullHeadingIndex(page);
@@ -151,9 +151,9 @@ test.describe("Structured Scene Heading [OHW-09x]", () => {
     expect(prefixAfter).toBe(prefixBefore);
   });
 
-  // ─── OHW-093 ────────────────────────────────────────────────────────────────
+  // ─── 093 ────────────────────────────────────────────────────────────────
 
-  test("[OHW-093] Backspace at start of title → cursor to prefix (no delete)", async ({
+  test("[093] Backspace at start of title → cursor to prefix (no delete)", async ({
     authenticatedPage: page,
   }) => {
     const idx = await firstFullHeadingIndex(page);
@@ -193,9 +193,9 @@ test.describe("Structured Scene Heading [OHW-09x]", () => {
     expect(newTitle).toBe(originalTitle);
   });
 
-  // ─── OHW-094 ────────────────────────────────────────────────────────────────
+  // ─── 094 ────────────────────────────────────────────────────────────────
 
-  test("[OHW-094] Enter inside title → action block created below", async ({
+  test("[094] Enter inside title → action block created below", async ({
     authenticatedPage: page,
   }) => {
     const idx = await firstFullHeadingIndex(page);
@@ -222,9 +222,9 @@ test.describe("Structured Scene Heading [OHW-09x]", () => {
     await page.keyboard.press("ControlOrMeta+z");
   });
 
-  // ─── OHW-095 ────────────────────────────────────────────────────────────────
+  // ─── 095 ────────────────────────────────────────────────────────────────
 
-  test("[OHW-095] Alt+S on body block → new scene, cursor in prefix", async ({
+  test("[095] Alt+S on body block → new scene, cursor in prefix", async ({
     authenticatedPage: page,
   }) => {
     // Navigate into an action block that is definitely inside a numbered scene.
@@ -256,9 +256,9 @@ test.describe("Structured Scene Heading [OHW-09x]", () => {
     await page.keyboard.press("ControlOrMeta+z");
   });
 
-  // ─── OHW-096 ────────────────────────────────────────────────────────────────
+  // ─── 096 ────────────────────────────────────────────────────────────────
 
-  test("[OHW-096] prefix picker opens with doc vocabulary on input", async ({
+  test("[096] prefix picker opens with doc vocabulary on input", async ({
     authenticatedPage: page,
   }) => {
     // Create a fresh scene with an empty prefix to type into.

@@ -1,6 +1,6 @@
 // tests/shell-cesare-states.spec.ts
 //
-// [OHW-044-A] Cesare floating-drawer state transitions + editor pixel-stability.
+// [044-A] Cesare floating-drawer state transitions + editor pixel-stability.
 //
 // The floating Cesare drawer cycles closed → expanded → peek (→ expanded) →
 // closed. The editor's bounding rect width MUST remain identical at every
@@ -17,7 +17,7 @@ import { TEAM_PROJECT_ID } from "./breakdown/helpers";
 import { BASE_URL } from "./fixtures";
 import { openCesareSheet } from "./helpers/cesare";
 
-test.describe("[OHW-044-A] Cesare floating-drawer state transitions", () => {
+test.describe("[044-A] Cesare floating-drawer state transitions", () => {
   test("transitions through every state without reflowing the editor; ↗ routes to the session detail", async ({
     authenticatedPage: page,
   }) => {

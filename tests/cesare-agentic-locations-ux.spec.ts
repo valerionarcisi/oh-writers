@@ -23,7 +23,7 @@ import {
  */
 
 test.describe("[Spec 29] Locations UX — modal + lightbox + area search", () => {
-  test("[OHW-585] Detail modal: pin popup 'Vedi dettagli' opens the modal with photos grid", async ({
+  test("[585] Detail modal: pin popup 'Vedi dettagli' opens the modal with photos grid", async ({
     authenticatedPage,
   }) => {
     await navigateToLocations(authenticatedPage, LOCATIONS_PROJECT_ID);
@@ -62,7 +62,7 @@ test.describe("[Spec 29] Locations UX — modal + lightbox + area search", () =>
     ).toBeVisible();
   });
 
-  test("[OHW-586] Photo lightbox: clicking a photo opens the lightbox, ESC closes it", async ({
+  test("[586] Photo lightbox: clicking a photo opens the lightbox, ESC closes it", async ({
     authenticatedPage,
   }) => {
     await navigateToLocations(authenticatedPage, LOCATIONS_PROJECT_ID);
@@ -94,7 +94,7 @@ test.describe("[Spec 29] Locations UX — modal + lightbox + area search", () =>
     await expect(lightbox).not.toBeVisible();
   });
 
-  test("[OHW-587] Area search: draw a circle, search returns mocked results, 'Aggiungi' creates a candidate", async ({
+  test("[587] Area search: draw a circle, search returns mocked results, 'Aggiungi' creates a candidate", async ({
     authenticatedPage,
   }) => {
     await navigateToLocations(authenticatedPage, LOCATIONS_PROJECT_ID);

@@ -1,6 +1,6 @@
 // tests/shell-dock.spec.ts
 //
-// [OHW-044-E] BottomDock visibility rules + single-source notification drawer.
+// [044-E] BottomDock visibility rules + single-source notification drawer.
 //
 // Per Spec 44 the BottomDock is the Cesare launcher pill (Spec 47b FIX 1 slimmed
 // it to just that). When Cesare ≠ closed, the dock hides. Per Spec 55 the bell /
@@ -30,7 +30,7 @@ const waitForShellHydrated = async (page: Page): Promise<void> => {
     .not.toBeNull();
 };
 
-test.describe("[OHW-044-E] BottomDock + single notification source", () => {
+test.describe("[044-E] BottomDock + single notification source", () => {
   test("BottomDock is visible when Cesare is closed and hidden when expanded", async ({
     authenticatedPage: page,
   }) => {

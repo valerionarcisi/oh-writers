@@ -1,6 +1,6 @@
 // tests/cesare-header-minimal.spec.ts
 //
-// [OHW-047-A3 / Spec 55] Cesare header command trim (Notion-minimal) + account
+// [047-A3 / Spec 55] Cesare header command trim (Notion-minimal) + account
 // zone home.
 //
 // Spec 55 supersedes Spec 47b FIX 1: the Cesare drawer header is truly minimal —
@@ -12,7 +12,7 @@ import { test, expect } from "./fixtures";
 import { TEAM_PROJECT_ID } from "./breakdown/helpers";
 import { BASE_URL } from "./fixtures";
 
-test.describe("[OHW-047-A3] Cesare header is Notion-minimal; account zone in TopBar", () => {
+test.describe("[047-A3] Cesare header is Notion-minimal; account zone in TopBar", () => {
   test("header has no overflow; bell/avatar/gear live in the TopBar zone, not the dock or header", async ({
     authenticatedPage: page,
   }) => {

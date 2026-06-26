@@ -1,6 +1,6 @@
 // tests/shell-collapse.spec.ts
 //
-// [OHW-044-B] Shell 3-state transitions + Focus mode + hamburger overlay.
+// [044-B] Shell 3-state transitions + Focus mode + hamburger overlay.
 //
 // Shell states: full | collapsed | focus. Toggled via `⌘\` (Notion shortcut)
 // for full↔collapsed and `⌃⌥F` for focus. In `collapsed` (Notion model) the
@@ -12,7 +12,7 @@ import { test, expect } from "./fixtures";
 import { TEAM_PROJECT_ID } from "./breakdown/helpers";
 import { BASE_URL } from "./fixtures";
 
-test.describe("[OHW-044-B] Shell collapse / focus transitions", () => {
+test.describe("[044-B] Shell collapse / focus transitions", () => {
   test("toggles full ↔ collapsed via `⌘\\` and lock-open chip", async ({
     authenticatedPage: page,
   }) => {

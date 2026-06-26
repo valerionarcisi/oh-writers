@@ -13,7 +13,7 @@ import { test } from "../fixtures";
 const TEST_TEAM_SLUG = "test-team";
 
 test.describe("[Spec 02] Teams — creation and dashboard", () => {
-  test("[OHW-510] team creation page renders and form creates team", async ({
+  test("[510] team creation page renders and form creates team", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -38,7 +38,7 @@ test.describe("[Spec 02] Teams — creation and dashboard", () => {
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   });
 
-  test("[OHW-511] team dashboard shows members list", async ({
+  test("[511] team dashboard shows members list", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -53,7 +53,7 @@ test.describe("[Spec 02] Teams — creation and dashboard", () => {
     ).toBeVisible();
   });
 
-  test("[OHW-512] owner can invite a member — invitation row appears", async ({
+  test("[512] owner can invite a member — invitation row appears", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -69,7 +69,7 @@ test.describe("[Spec 02] Teams — creation and dashboard", () => {
     ).toBeVisible({ timeout: 8_000 });
   });
 
-  test("[OHW-513] non-owner (viewer) cannot manage members — forbidden message shown", async ({
+  test("[513] non-owner (viewer) cannot manage members — forbidden message shown", async ({
     authenticatedViewerPage,
   }) => {
     const page = authenticatedViewerPage;
@@ -81,7 +81,7 @@ test.describe("[Spec 02] Teams — creation and dashboard", () => {
     ).toBeVisible({ timeout: 8_000 });
   });
 
-  test("[OHW-514] invitation acceptance page renders for valid token", async ({
+  test("[514] invitation acceptance page renders for valid token", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;

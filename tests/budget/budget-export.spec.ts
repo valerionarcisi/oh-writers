@@ -11,9 +11,9 @@ const openExportModal = async (page: Page) => {
 };
 
 test.describe("[Spec 11b] Budget — export (PDF + CSV)", () => {
-  // ─── OHW-390 ─────────────────────────────────────────────────────────────────
+  // ─── 390 ─────────────────────────────────────────────────────────────────
 
-  test("[OHW-390] Budget exposes Esporta in the TopBar ⋯ menu", async ({
+  test("[390] Budget exposes Esporta in the TopBar ⋯ menu", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -25,9 +25,9 @@ test.describe("[Spec 11b] Budget — export (PDF + CSV)", () => {
     });
   });
 
-  // ─── OHW-391 ─────────────────────────────────────────────────────────────────
+  // ─── 391 ─────────────────────────────────────────────────────────────────
 
-  test("[OHW-391] Clicking Esporta → export modal appears with PDF and CSV options", async ({
+  test("[391] Clicking Esporta → export modal appears with PDF and CSV options", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -47,9 +47,9 @@ test.describe("[Spec 11b] Budget — export (PDF + CSV)", () => {
     await expect(formatSelect.locator("option[value='csv']")).toHaveText("CSV");
   });
 
-  // ─── OHW-392 ─────────────────────────────────────────────────────────────────
+  // ─── 392 ─────────────────────────────────────────────────────────────────
 
-  test("[OHW-392] Clicking Esporta PDF → PDF preview opens in new tab", async ({
+  test("[392] Clicking Esporta PDF → PDF preview opens in new tab", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -87,9 +87,9 @@ test.describe("[Spec 11b] Budget — export (PDF + CSV)", () => {
     expect(openedUrl).toMatch(/blob:/);
   });
 
-  // ─── OHW-393 ─────────────────────────────────────────────────────────────────
+  // ─── 393 ─────────────────────────────────────────────────────────────────
 
-  test("[OHW-393] Clicking Esporta CSV → CSV file downloaded, filename matches *-budget-*.csv", async ({
+  test("[393] Clicking Esporta CSV → CSV file downloaded, filename matches *-budget-*.csv", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -109,9 +109,9 @@ test.describe("[Spec 11b] Budget — export (PDF + CSV)", () => {
     expect(download.suggestedFilename()).toMatch(/budget.*\.csv$/);
   });
 
-  // ─── OHW-394 ─────────────────────────────────────────────────────────────────
+  // ─── 394 ─────────────────────────────────────────────────────────────────
 
-  test("[OHW-394] CSV contains expected column headers: Category, Line Item, Amount", async ({
+  test("[394] CSV contains expected column headers: Category, Line Item, Amount", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -141,9 +141,9 @@ test.describe("[Spec 11b] Budget — export (PDF + CSV)", () => {
     expect(headerLine).toMatch(/Amount/);
   });
 
-  // ─── OHW-395 ─────────────────────────────────────────────────────────────────
+  // ─── 395 ─────────────────────────────────────────────────────────────────
 
-  test("[OHW-395] Export with no budget generated → CSV download still works (empty rows)", async ({
+  test("[395] Export with no budget generated → CSV download still works (empty rows)", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -183,9 +183,9 @@ test.describe("[Spec 11b] Budget — export (PDF + CSV)", () => {
     expect(content).toContain("Category");
   });
 
-  // ─── OHW-396 ─────────────────────────────────────────────────────────────────
+  // ─── 396 ─────────────────────────────────────────────────────────────────
 
-  test("[OHW-396] Viewer can export budget (read action)", async ({
+  test("[396] Viewer can export budget (read action)", async ({
     authenticatedViewerPage,
   }) => {
     const page = authenticatedViewerPage;

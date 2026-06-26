@@ -2,8 +2,8 @@ import { expect } from "@playwright/test";
 import { test } from "../fixtures";
 import { SHOOTING_PLAN_PROJECT_ID, navigateToShootingPlan } from "./helpers";
 
-test.describe("[OHW-022b] Piano di Ripresa v2 — parallel plans", () => {
-  test("[OHW-022b] Auto-populate creates Piano A with shots on first scene open", async ({
+test.describe("[022b] Piano di Ripresa v2 — parallel plans", () => {
+  test("[022b] Auto-populate creates Piano A with shots on first scene open", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -38,7 +38,7 @@ test.describe("[OHW-022b] Piano di Ripresa v2 — parallel plans", () => {
     await expect(page.getByText("SUGGERITO")).toBeVisible({ timeout: 5_000 });
   });
 
-  test("[OHW-022b] Quick-add toolbar adds shot to active plan", async ({
+  test("[022b] Quick-add toolbar adds shot to active plan", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -72,7 +72,7 @@ test.describe("[OHW-022b] Piano di Ripresa v2 — parallel plans", () => {
       .toBeGreaterThan(initialShotCount);
   });
 
-  test("[OHW-022b] Pattern menu shows recommended badge", async ({
+  test("[022b] Pattern menu shows recommended badge", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -94,7 +94,7 @@ test.describe("[OHW-022b] Piano di Ripresa v2 — parallel plans", () => {
     });
   });
 
-  test("[OHW-022b] Script panel toggles open and persists", async ({
+  test("[022b] Script panel toggles open and persists", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -132,7 +132,7 @@ test.describe("[OHW-022b] Piano di Ripresa v2 — parallel plans", () => {
     });
   });
 
-  test("[OHW-022b] PlanPicker creates a second plan", async ({
+  test("[022b] PlanPicker creates a second plan", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;

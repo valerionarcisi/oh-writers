@@ -2,12 +2,12 @@
  * Spec 05k — Production export formats (Standard, Sides, AD copy,
  * Reading copy, One scene per page).
  *
- * [OHW-310] Export menu opens with all 5 voices
- * [OHW-311] Sides modal: scene checkboxes shown, Genera disabled until selection
- * [OHW-312] Sides with 2 scenes selected → PDF generated, filename slug "sides"
- * [OHW-313] AD copy → filename slug "ad-copy"
- * [OHW-314] Reading copy → filename slug "reading"
- * [OHW-315] One scene per page → filename slug "scene-per-page"
+ * [310] Export menu opens with all 5 voices
+ * [311] Sides modal: scene checkboxes shown, Genera disabled until selection
+ * [312] Sides with 2 scenes selected → PDF generated, filename slug "sides"
+ * [313] AD copy → filename slug "ad-copy"
+ * [314] Reading copy → filename slug "reading"
+ * [315] One scene per page → filename slug "scene-per-page"
  */
 
 import { test, expect } from "../fixtures";
@@ -65,7 +65,7 @@ const generateAndCapture = async (
 };
 
 test.describe("Screenplay Export Formats — Spec 05k", () => {
-  test("[OHW-310] Export modal shows all 5 production formats", async ({
+  test("[310] Export modal shows all 5 production formats", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {
@@ -86,7 +86,7 @@ test.describe("Screenplay Export Formats — Spec 05k", () => {
     }
   });
 
-  test("[OHW-311] Sides modal: Genera disabled until at least one scene is picked", async ({
+  test("[311] Sides modal: Genera disabled until at least one scene is picked", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {
@@ -107,7 +107,7 @@ test.describe("Screenplay Export Formats — Spec 05k", () => {
     await expect(generate).toBeEnabled();
   });
 
-  test("[OHW-312] Sides with 2 scenes → filename slug 'sides'", async ({
+  test("[312] Sides with 2 scenes → filename slug 'sides'", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {
@@ -131,7 +131,7 @@ test.describe("Screenplay Export Formats — Spec 05k", () => {
     expect(body.result.value.format).toBe("sides");
   });
 
-  test("[OHW-313] AD copy → filename slug 'ad-copy'", async ({
+  test("[313] AD copy → filename slug 'ad-copy'", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {
@@ -148,7 +148,7 @@ test.describe("Screenplay Export Formats — Spec 05k", () => {
     expect(body.result.value.format).toBe("ad_copy");
   });
 
-  test("[OHW-314] Reading copy → filename slug 'reading'", async ({
+  test("[314] Reading copy → filename slug 'reading'", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {
@@ -165,7 +165,7 @@ test.describe("Screenplay Export Formats — Spec 05k", () => {
     expect(body.result.value.format).toBe("reading_copy");
   });
 
-  test("[OHW-315] One scene per page → filename slug 'scene-per-page'", async ({
+  test("[315] One scene per page → filename slug 'scene-per-page'", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {

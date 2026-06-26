@@ -10,7 +10,7 @@ import { openCesareSheet } from "./helpers/cesare";
  * didn't match the English route segment and fell back to the default page.
  */
 test.describe("[Spec 44] Cesare context chip reacts to the active route", () => {
-  test("[OHW-044-CTX] chip updates when navigating soggetto → synopsis", async ({
+  test("[044-CTX] chip updates when navigating soggetto → synopsis", async ({
     authenticatedPage,
   }) => {
     await authenticatedPage.goto(
@@ -33,7 +33,7 @@ test.describe("[Spec 44] Cesare context chip reacts to the active route", () => 
     ).toHaveText(/SINOSSI/, { timeout: 10_000 });
   });
 
-  test("[OHW-044-CTX] chip updates when navigating soggetto → locations", async ({
+  test("[044-CTX] chip updates when navigating soggetto → locations", async ({
     authenticatedPage,
   }) => {
     await authenticatedPage.goto(

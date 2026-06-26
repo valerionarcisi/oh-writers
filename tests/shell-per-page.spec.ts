@@ -1,6 +1,6 @@
 // tests/shell-per-page.spec.ts
 //
-// [OHW-044-D] Per-page chrome rules from Spec 44.
+// [044-D] Per-page chrome rules from Spec 44.
 //
 // Sceneggiatura keeps an Element Legend row in the Top Strip.
 // Breakdown shows a RecapStrip above the editor and dropped the legacy
@@ -12,7 +12,7 @@ import { test, expect } from "./fixtures";
 import { TEAM_PROJECT_ID } from "./breakdown/helpers";
 import { BASE_URL } from "./fixtures";
 
-test.describe("[OHW-044-D] Per-page chrome", () => {
+test.describe("[044-D] Per-page chrome", () => {
   test("Breakdown surfaces the RecapStrip and drops the legacy right panel", async ({
     authenticatedPage: page,
   }) => {

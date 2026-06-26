@@ -10,7 +10,7 @@ import { openCesareSheet } from "./helpers/cesare";
  * was closed.
  */
 test.describe("[Spec 44 F1] Sessioni Cesare always visible in LeftRail", () => {
-  test("[OHW-044-F1] sessions section is visible with Cesare CLOSED", async ({
+  test("[044-F1] sessions section is visible with Cesare CLOSED", async ({
     authenticatedPage,
   }) => {
     await authenticatedPage.goto(
@@ -33,7 +33,7 @@ test.describe("[Spec 44 F1] Sessioni Cesare always visible in LeftRail", () => {
     ).toBeVisible();
   });
 
-  test("[OHW-044-F1] sessions section stays visible after opening AND closing Cesare", async ({
+  test("[044-F1] sessions section stays visible after opening AND closing Cesare", async ({
     authenticatedPage,
   }) => {
     await authenticatedPage.goto(

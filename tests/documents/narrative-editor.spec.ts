@@ -8,26 +8,26 @@
  * run on the real PM surfaces (Synopsis/Treatment).
  *
  * Blocco 1 — content caps:
- *   [OHW-205] Logline pill textarea refuses input past 200 chars (HTML maxLength)
+ *   [205] Logline pill textarea refuses input past 200 chars (HTML maxLength)
  *
  * Blocco 2 — role guard (team projects, on the Synopsis PM surface):
- *   [OHW-211] Viewer sees read-only UI: PM surface non-editable, badge visible
- *   [OHW-212] Viewer raw save hits the server and gets rejected (ForbiddenError)
- *   [OHW-213] Owner on the same team project can save normally
+ *   [211] Viewer sees read-only UI: PM surface non-editable, badge visible
+ *   [212] Viewer raw save hits the server and gets rejected (ForbiddenError)
+ *   [213] Owner on the same team project can save normally
  *
  * Blocco 3 — happy paths & navigation:
- *   [OHW-200] Unauthenticated user on a narrative doc is redirected to login
- *   [OHW-201] Owner opens a narrative doc → SaveStatus = "Saved" (not dirty)
- *   [OHW-202] Owner types → after debounce, autosave persists across reload
- *   [OHW-207] Synopsis: content round-trip after reload
- *   [OHW-208] Treatment: content round-trip after reload
- *   [OHW-209] Navigation between synopsis and treatment preserves both docs
- *   [OHW-214] SKIPPED — narrative Versions drawer is part of Spec 06b, not yet
+ *   [200] Unauthenticated user on a narrative doc is redirected to login
+ *   [201] Owner opens a narrative doc → SaveStatus = "Saved" (not dirty)
+ *   [202] Owner types → after debounce, autosave persists across reload
+ *   [207] Synopsis: content round-trip after reload
+ *   [208] Treatment: content round-trip after reload
+ *   [209] Navigation between synopsis and treatment preserves both docs
+ *   [214] SKIPPED — narrative Versions drawer is part of Spec 06b, not yet
  *             integrated into NarrativeEditor.
  *
- * Removed in the Spec 66/67 realignment: [OHW-204] (charCount warn class gone),
- * [OHW-206] + [OHW-210] (no "Error saving" SaveState — saved|saving|offline),
- * [OHW-203] (no manual Cmd/Ctrl+S flush — narrative docs are autosave-only).
+ * Removed in the Spec 66/67 realignment: [204] (charCount warn class gone),
+ * [206] + [210] (no "Error saving" SaveState — saved|saving|offline),
+ * [203] (no manual Cmd/Ctrl+S flush — narrative docs are autosave-only).
  */
 
 import { test, expect, TEST_TEAM_PROJECT_ID } from "../fixtures";
@@ -110,7 +110,7 @@ test.describe("Narrative Editor — content caps", () => {
     return editor;
   };
 
-  test("[OHW-205] logline editor refuses input past 200 chars", async ({
+  test("[205] logline editor refuses input past 200 chars", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {
@@ -127,10 +127,10 @@ test.describe("Narrative Editor — content caps", () => {
     expect(await editor.getAttribute("maxlength")).toBe("200");
   });
 
-  // [OHW-206] removed: it asserted a "Error saving" SaveStatus state that no
+  // [206] removed: it asserted a "Error saving" SaveStatus state that no
   // longer exists (SaveState is saved|saving|offline — SavePill), and relied on a
   // raw-save hook not present on the Soggetto logline surface. The server-side
-  // LOGLINE_MAX validation is covered by unit tests; the client cap is OHW-205.
+  // LOGLINE_MAX validation is covered by unit tests; the client cap is 205.
 });
 
 test.describe("Narrative Editor — role guard", () => {
@@ -141,7 +141,7 @@ test.describe("Narrative Editor — role guard", () => {
   // role guard is exercised on a real NarrativeEditor surface: Synopsis.
   const TEAM_SYNOPSIS_PATH = `${BASE_URL}/projects/${TEST_TEAM_PROJECT_ID}/synopsis`;
 
-  test("[OHW-211] viewer sees read-only UI on a team project", async ({
+  test("[211] viewer sees read-only UI on a team project", async ({
     authenticatedViewerPage: page,
   }) => {
     await page.goto(TEAM_SYNOPSIS_PATH);
@@ -162,7 +162,7 @@ test.describe("Narrative Editor — role guard", () => {
     await expect(editor).toHaveAttribute("contenteditable", "false");
   });
 
-  test("[OHW-212] viewer raw save is rejected by the server", async ({
+  test("[212] viewer raw save is rejected by the server", async ({
     authenticatedViewerPage: page,
   }) => {
     await page.goto(TEAM_SYNOPSIS_PATH);
@@ -218,7 +218,7 @@ test.describe("Narrative Editor — role guard", () => {
     expect(shape!.error?._tag).toBe("ForbiddenError");
   });
 
-  test("[OHW-213] owner can save on the same team project", async ({
+  test("[213] owner can save on the same team project", async ({
     authenticatedPage: page,
   }) => {
     await page.addInitScript(FAST_AUTOSAVE_SCRIPT);
@@ -247,7 +247,7 @@ test.describe("Narrative Editor — role guard", () => {
 });
 
 test.describe("Narrative Editor — happy paths & navigation", () => {
-  test("[OHW-200] unauthenticated user on a narrative doc is redirected to login", async ({
+  test("[200] unauthenticated user on a narrative doc is redirected to login", async ({
     browser,
     testProjectId,
   }) => {
@@ -263,7 +263,7 @@ test.describe("Narrative Editor — happy paths & navigation", () => {
     }
   });
 
-  test("[OHW-201] after an edit + save the SaveStatus reaches 'Saved'", async ({
+  test("[201] after an edit + save the SaveStatus reaches 'Saved'", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {
@@ -282,7 +282,7 @@ test.describe("Narrative Editor — happy paths & navigation", () => {
     await expect(savedStatus(page)).toBeVisible({ timeout: 10_000 });
   });
 
-  test("[OHW-202] typing triggers autosave after the debounce, persists on reload", async ({
+  test("[202] typing triggers autosave after the debounce, persists on reload", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {
@@ -316,11 +316,11 @@ test.describe("Narrative Editor — happy paths & navigation", () => {
     expect(await readPmEditorText(page)).toContain(marker);
   });
 
-  // [OHW-203] removed: there is no manual Cmd/Ctrl+S flush on the narrative PM
+  // [203] removed: there is no manual Cmd/Ctrl+S flush on the narrative PM
   // surface — narrative docs are autosave-only (Spec 04e). The autosave path is
-  // covered by OHW-202; the "saved" pill transition by OHW-201.
+  // covered by 202; the "saved" pill transition by 201.
 
-  test("[OHW-207] synopsis round-trips across reload", async ({
+  test("[207] synopsis round-trips across reload", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {
@@ -341,7 +341,7 @@ test.describe("Narrative Editor — happy paths & navigation", () => {
     expect(await readPmEditorText(page)).toContain(marker);
   });
 
-  test("[OHW-208] treatment round-trips across reload", async ({
+  test("[208] treatment round-trips across reload", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {
@@ -370,7 +370,7 @@ test.describe("Narrative Editor — happy paths & navigation", () => {
     for (const p of paragraphs) expect(text).toContain(p);
   });
 
-  test("[OHW-209] navigating between synopsis and treatment preserves each", async ({
+  test("[209] navigating between synopsis and treatment preserves each", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {
@@ -405,11 +405,11 @@ test.describe("Narrative Editor — happy paths & navigation", () => {
     expect(await readPmEditorText(page)).toContain(treatMarker);
   });
 
-  // [OHW-210] removed: SaveStatus no longer has an "Error saving" state
+  // [210] removed: SaveStatus no longer has an "Error saving" state
   // (SaveState is saved|saving|offline — SavePill). Failed saves surface
   // through the offline/retry path, not a distinct error pill.
 
-  test("[OHW-N55] soggetto: the save pill survives a manual flush (stays 'saved', never unpublishes)", async ({
+  test("[N55] soggetto: the save pill survives a manual flush (stays 'saved', never unpublishes)", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {
@@ -448,7 +448,7 @@ test.describe("Narrative Editor — happy paths & navigation", () => {
     await expect(pill).toHaveAttribute("data-state", "saved");
   });
 
-  test.skip("[OHW-214] versions drawer opens for a narrative doc — pending Spec 06b integration", async () => {
+  test.skip("[214] versions drawer opens for a narrative doc — pending Spec 06b integration", async () => {
     // The narrative editor does not yet render a Versions button. The
     // universal drawer (Spec 06b) is wired for screenplays only. Re-enable
     // this test when the drawer is plugged into NarrativeEditor's toolbar.

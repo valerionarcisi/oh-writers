@@ -1,7 +1,7 @@
 import { test, expect, BASE_URL, TEST_TEAM_PROJECT_ID } from "./fixtures";
 import type { Page } from "@playwright/test";
 
-// [OHW-market-gate] Feature flags (Spec 54) — Italy-only features are detached
+// [market-gate] Feature flags (Spec 54) — Italy-only features are detached
 // on the international (EN) market. The fundraising/Opportunità route is the
 // strongest, race-free signal: a server-side beforeLoad redirect in EN, the
 // page in IT. The default `test` fixture user is IT; we flip its locale via the
@@ -18,7 +18,7 @@ const setLocale = async (page: Page, locale: "it" | "en"): Promise<void> => {
   expect(res.ok(), `set-locale ${locale}`).toBe(true);
 };
 
-test.describe("[OHW-market-gate] Italy-only features", () => {
+test.describe("[market-gate] Italy-only features", () => {
   test.afterEach(async ({ authenticatedPage }) => {
     // Restore the shared fixture user to Italian so other suites are unaffected.
     await setLocale(authenticatedPage, "it");

@@ -23,7 +23,7 @@ import { navigateToBreakdown, TEAM_PROJECT_ID } from "./helpers";
  */
 
 test.describe("[Spec 10] Breakdown — versioning import", () => {
-  test("[OHW-260] new version auto-clones breakdown and shows L3 banner", async ({
+  test("[260] new version auto-clones breakdown and shows L3 banner", async ({
     authenticatedPage,
   }) => {
     await navigateToBreakdown(authenticatedPage, TEAM_PROJECT_ID);
@@ -43,7 +43,7 @@ test.describe("[Spec 10] Breakdown — versioning import", () => {
       });
   });
 
-  test.skip("[OHW-261] auto-clone flags stale occurrences when scene text diverges", () => {
+  test.skip("[261] auto-clone flags stale occurrences when scene text diverges", () => {
     // Pending: requires a programmatic scene-edit hook on the seeded v1
     // followed by createManualVersion → assert the cloned occurrence for
     // the removed element renders with `data-stale="true"` in v2.

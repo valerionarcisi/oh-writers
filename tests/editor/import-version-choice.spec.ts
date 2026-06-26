@@ -1,14 +1,14 @@
 /**
- * Spec 12 — Import dialog: overwrite vs. new version (OHW-178 / OHW-179)
+ * Spec 12 — Import dialog: overwrite vs. new version (178 / 179)
  *
  * When a PDF is imported into a screenplay that already has content AND
  * at least one existing version, the confirmation dialog must offer two
  * distinct actions instead of the plain "Replace" button:
  *
- *   [OHW-178] "Salva come Versione N e importa" — creates a new version
+ *   [178] "Salva come Versione N e importa" — creates a new version
  *             from the current content before replacing with the import.
  *
- *   [OHW-179] "Sovrascrivi" — replaces content directly without creating
+ *   [179] "Sovrascrivi" — replaces content directly without creating
  *             a new version.
  *
  * The "Cancel" button must always be present and must leave content unchanged.
@@ -81,7 +81,7 @@ test.describe("Import PDF — version choice dialog", () => {
 
   // ─────────────────────────────────────────────────────────────────────────────
 
-  test("[OHW-178] importing into a screenplay with versions shows the 'save as new version then import' button", async ({
+  test("[178] importing into a screenplay with versions shows the 'save as new version then import' button", async ({
     authenticatedPage: page,
   }) => {
     await startImport(page);
@@ -105,7 +105,7 @@ test.describe("Import PDF — version choice dialog", () => {
 
   // ─────────────────────────────────────────────────────────────────────────────
 
-  test("[OHW-179] 'Sovrascrivi' replaces content without creating a new version", async ({
+  test("[179] 'Sovrascrivi' replaces content without creating a new version", async ({
     authenticatedPage: page,
   }) => {
     // Count versions before import (on the routed surface), then close it.
@@ -131,21 +131,21 @@ test.describe("Import PDF — version choice dialog", () => {
   // ─────────────────────────────────────────────────────────────────────────────
 
   /**
-   * [OHW-071] Spec 71 — "Salva come Versione N e importa" must create a NEW
+   * [071] Spec 71 — "Salva come Versione N e importa" must create a NEW
    * version that becomes IMMEDIATELY ACTIVE, carrying the imported content. The
    * regression this guards: the imported version used to activate but render
    * EMPTY (the version-scoped CRDT seeded empty and an autosave clobbered the
    * imported content). The fix seeds the version's CRDT snapshot server-side, so
    * after activation the editor must still show content (a non-empty doc).
    *
-   * BLOCKED (.fixme) by the same pre-existing breakage that reds OHW-178/179 in
+   * BLOCKED (.fixme) by the same pre-existing breakage that reds 178/179 in
    * this file: the seeded test screenplay renders EMPTY in the editor (content
    * lives in pm_doc/scenes but the version row's `content` is empty and the
    * realtime room seeds from an empty fragment), so `hasContent` is false and
    * the import-confirm dialog never opens. The Spec 71 behaviour is verified
    * live with real content present (see BUG-N53 for the seed-render blocker).
    */
-  test.fixme("[OHW-071] 'Salva come nuova versione e importa' activates a new version that keeps the imported content", async ({
+  test.fixme("[071] 'Salva come nuova versione e importa' activates a new version that keeps the imported content", async ({
     authenticatedPage: page,
   }) => {
     const rowSel = '[data-testid^="versions-split-row-"]';

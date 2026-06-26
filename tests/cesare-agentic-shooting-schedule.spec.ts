@@ -13,17 +13,17 @@ import {
 /**
  * Agent D — Shooting 2D blocking propose + Schedule polish
  *
- * - OHW-580: User on shooting-plan asks Cesare to suggest blocking. Cesare
+ * - 580: User on shooting-plan asks Cesare to suggest blocking. Cesare
  *   invokes propose_blocking_for_scene; the executor returns a payload that
  *   surfaces as ghost overlays + a "Suggerimento Cesare" proposal panel.
- * - OHW-581: Schedule page renders DayLocationWarningBanner when a strip in
+ * - 581: Schedule page renders DayLocationWarningBanner when a strip in
  *   the day references a location requirement still in pending/scouting state.
- * - OHW-582: DayDifficultyBadge readability (uses the upgraded aria-label
+ * - 582: DayDifficultyBadge readability (uses the upgraded aria-label
  *   and bumped typography). Smoke check: badge is visible, mentions both
  *   difficulty and "%" probability.
  */
 test.describe("[Spec Agent-D] Cesare Agentic — Shooting blocking + Schedule polish", () => {
-  test("[OHW-580] Cesare propose_blocking_for_scene shows ghost panel", async ({
+  test("[580] Cesare propose_blocking_for_scene shows ghost panel", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -63,7 +63,7 @@ test.describe("[Spec Agent-D] Cesare Agentic — Shooting blocking + Schedule po
     await expect(panel).not.toBeVisible({ timeout: 10_000 });
   });
 
-  test("[OHW-581] Schedule warns when a strip has a pending location", async ({
+  test("[581] Schedule warns when a strip has a pending location", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -88,7 +88,7 @@ test.describe("[Spec Agent-D] Cesare Agentic — Shooting blocking + Schedule po
     await expect(first).toContainText(/location non ancora confermat/i);
   });
 
-  test("[OHW-582] DayDifficultyBadge has readable typography + rich aria-label", async ({
+  test("[582] DayDifficultyBadge has readable typography + rich aria-label", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;

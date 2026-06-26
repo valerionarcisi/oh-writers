@@ -1,6 +1,6 @@
 // tests/cesare-history-markdown.spec.ts
 //
-// [OHW-051] Cesare history as derived markdown.
+// [051] Cesare history as derived markdown.
 //
 // Step 1 (the headline gap): a session's conversation is PERSISTED, so it
 // survives a full page reload — both a plain turn and an agentic edit turn (with
@@ -28,7 +28,7 @@ async function ensureCesareOpen(page: Page): Promise<void> {
   await openCesareSheet(page);
 }
 
-test.describe("[OHW-051] Cesare history — derived markdown", () => {
+test.describe("[051] Cesare history — derived markdown", () => {
   test("a session's conversation survives a full reload", async ({
     authenticatedPage: page,
   }) => {
@@ -77,7 +77,9 @@ test.describe("[OHW-051] Cesare history — derived markdown", () => {
     // The agentic-edit trace renders the "Aggiornato Soggetto" step + a
     // Mostra modifiche affordance — the persisted edit marker is what the
     // changelog markdown derives from.
-    await expect(conversation.getByTestId("cesare-show-changes-btn")).toBeVisible({
+    await expect(
+      conversation.getByTestId("cesare-show-changes-btn"),
+    ).toBeVisible({
       timeout: 15_000,
     });
 
@@ -93,7 +95,9 @@ test.describe("[OHW-051] Cesare history — derived markdown", () => {
         "Riscrivi il soggetto rendendolo più intenso",
       ),
     ).toBeVisible({ timeout: 15_000 });
-    await expect(conversationAfter.getByTestId("cesare-show-changes-btn")).toBeVisible({
+    await expect(
+      conversationAfter.getByTestId("cesare-show-changes-btn"),
+    ).toBeVisible({
       timeout: 15_000,
     });
   });

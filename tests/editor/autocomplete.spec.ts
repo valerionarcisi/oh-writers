@@ -1,9 +1,9 @@
 /**
  * Spec 07c — E2E Autocomplete Tests (ProseMirror)
  *
- * [OHW-080] Character autocomplete suggests FILIPPO
- * [OHW-081] Character autocomplete suggests TEA
- * [OHW-070] Autocomplete dropdown has rounded corners (border-radius: 4px)
+ * [080] Character autocomplete suggests FILIPPO
+ * [081] Character autocomplete suggests TEA
+ * [070] Autocomplete dropdown has rounded corners (border-radius: 4px)
  *
  * The autocomplete dropdown is a plain `ul[role="listbox"]` rendered by
  * buildAutocompletePlugin. It appears automatically when typing in a character
@@ -21,7 +21,7 @@ import { BASE_URL, waitForEditor, goToNewLine } from "../helpers";
 const AUTOCOMPLETE_DROPDOWN = 'ul[role="listbox"]:not([data-picker-slot])';
 
 test.describe("Character Autocomplete", () => {
-  test("[OHW-080] autocomplete suggests FILIPPO when typing F", async ({
+  test("[080] autocomplete suggests FILIPPO when typing F", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {
@@ -41,7 +41,7 @@ test.describe("Character Autocomplete", () => {
     await expect(suggestion).toBeVisible({ timeout: 3_000 });
   });
 
-  test("[OHW-081] autocomplete suggests TEA when typing T", async ({
+  test("[081] autocomplete suggests TEA when typing T", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {
@@ -61,7 +61,7 @@ test.describe("Character Autocomplete", () => {
     await expect(suggestion).toBeVisible({ timeout: 3_000 });
   });
 
-  test("[OHW-070] autocomplete dropdown has rounded corners", async ({
+  test("[070] autocomplete dropdown has rounded corners", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {

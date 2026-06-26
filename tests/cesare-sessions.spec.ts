@@ -1,6 +1,6 @@
 // tests/cesare-sessions.spec.ts
 //
-// [OHW-044-C] Cesare sessions CRUD + cross-page thread persistence.
+// [044-C] Cesare sessions CRUD + cross-page thread persistence.
 //
 // One project can hold many Cesare sessions; the active session is the one
 // whose thread shows in the drawer. Switching sessions hot-swaps the message
@@ -11,7 +11,7 @@ import { TEAM_PROJECT_ID } from "./breakdown/helpers";
 import { BASE_URL } from "./fixtures";
 import { openCesareSheet } from "./helpers/cesare";
 
-test.describe("[OHW-044-C] Cesare sessions", () => {
+test.describe("[044-C] Cesare sessions", () => {
   test("opens the session selector inside the drawer header", async ({
     authenticatedPage: page,
   }) => {
