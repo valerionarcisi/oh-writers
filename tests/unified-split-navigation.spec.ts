@@ -1,6 +1,6 @@
 // tests/unified-split-navigation.spec.ts
 //
-// [OHW-N78-A6] Unified navigable SplitDrawer host (Spec 78 §A6).
+// [N78-A6] Unified navigable SplitDrawer host (Spec 78 §A6).
 //
 // The single auxiliary split track is a NAVIGABLE host shared by the Cesare
 // peek, the Versions lane and the Notifiche lane, with browser-like history
@@ -87,7 +87,7 @@ const clickHistoryArrowUntil = async (
   await expect(lane).toBeVisible({ timeout: 5_000 });
 };
 
-test.describe("[OHW-N78-A6] unified navigable split host", () => {
+test.describe("[N78-A6] unified navigable split host", () => {
   test("Cesare peek → Versioni shares the lane; ←/→ navigate the shared history", async ({
     authenticatedPage: page,
   }) => {
@@ -462,5 +462,133 @@ test.describe("[OHW-N78-A6] unified navigable split host", () => {
       /Maximum update depth/i.test(t),
     );
     expect(loopErrors).toEqual([]);
+  });
+
+  // ── BUG-rimbalzo regression: Versioni must NOT bounce back to Cesare ─────────
+  // Opening Versioni over an open Cesare peek leaves a render tick where BOTH
+  // routed params coexist (`?versions` set before `?peek` clears, or vice-versa).
+  // The coexistence guard in `reconcileUrlAction` used to resolve that overlap
+  // UNCONDITIONALLY toward Cesare, so the lane flashed Versioni then snapped back
+  // to Cesare (`?peek` re-asserted, `?versions` dropped). A plain chip click does
+  // NOT open that window (the router batches the param flip atomically), so we
+  // drive the exact coexistence state DETERMINISTICALLY via a deep-link carrying
+  // BOTH params — the in-flight URL the real gesture produced — and assert the
+  // shell converges to Versioni (the active surface), never bouncing to Cesare.
+  test("BUG-rimbalzo: opening Versioni over Cesare settles on Versioni, never snaps back to ?peek", async ({
+    authenticatedPage: page,
+  }) => {
+    const consoleErrors: string[] = [];
+    page.on("console", (msg) => {
+      if (msg.type() === "error") consoleErrors.push(msg.text());
+    });
+    page.on("pageerror", (err) => consoleErrors.push(err.message));
+
+    // First reach a real Versions surface to learn this page's `?versions=<id>`
+    // (DB-agnostic: the chip opens versions for whatever document the page owns).
+    await page.goto(`${SOGGETTO_PATH}?peek=cesare`);
+    await expect(page.getByTestId("soggetto-page")).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByTestId("cesare-peek-lane")).toBeVisible({
+      timeout: 5_000,
+    });
+    await page.getByTestId("topbar-version-chip").click();
+    await expect(page.getByTestId("versions-split-lane")).toBeVisible({
+      timeout: 5_000,
+    });
+    await expect.poll(() => versionsParam(page)).not.toBeNull();
+    const versionsId = versionsParam(page)!;
+    const vcur = new URL(page.url()).searchParams.get("vcur");
+
+    // Now FORCE the coexistence window: deep-link BOTH `?peek=cesare` AND
+    // `?versions=<id>` together — the exact in-flight URL the bounce came from.
+    const coexistenceUrl = new URL(`${SOGGETTO_PATH}`);
+    coexistenceUrl.searchParams.set("peek", "cesare");
+    coexistenceUrl.searchParams.set("versions", versionsId);
+    if (vcur) coexistenceUrl.searchParams.set("vcur", vcur);
+    await page.goto(coexistenceUrl.toString());
+    await expect(page.getByTestId("soggetto-page")).toBeVisible({
+      timeout: 15_000,
+    });
+
+    // The reconciler must converge to ONE surface and STAY there. Versions is the
+    // explicit, destructive-adjacent surface the resolver favours when both are
+    // deep-linked, so the lane settles on Versioni — and crucially `?peek` does
+    // NOT linger or re-appear (the bounce). Either way, never BOTH params at once.
+    await expect(page.getByTestId("versions-split-lane")).toBeVisible({
+      timeout: 8_000,
+    });
+    await expect(page.getByTestId("cesare-peek-lane")).toBeHidden({
+      timeout: 5_000,
+    });
+    await expect.poll(() => peekParam(page)).toBeNull();
+    await expect.poll(() => versionsParam(page)).not.toBeNull();
+    // N64: exactly one auxiliary lane, main editor track survives.
+    expect(await activeSplitFlags(page)).toEqual(["versions-split"]);
+    expect(await readMainWidth(page)).toBeGreaterThan(200);
+
+    // The surface must be STABLE — no flash-then-revert. Sample the lane + params
+    // across a settle window: `?peek` must never reappear and Versioni must stay.
+    const urlAfter = page.url();
+    await page.waitForTimeout(1_500);
+    await expect(page.getByTestId("versions-split-lane")).toBeVisible();
+    expect(peekParam(page)).toBeNull();
+    expect(versionsParam(page)).toBe(versionsId);
+    expect(page.url()).toBe(urlAfter);
+
+    const loopErrors = consoleErrors.filter((t) =>
+      /Maximum update depth/i.test(t),
+    );
+    expect(loopErrors).toEqual([]);
+  });
+
+  // ── Hydration regression: the Cesare resize handle must be SSR-stable ────────
+  // `readPersistedSize` used to read localStorage during render, so the resize
+  // handle's `aria-valuenow` differed between the server (no localStorage →
+  // fallback) and the first client render (restored value), tripping a React
+  // hydration mismatch + a size flash on every reload with a peek open. We seed a
+  // DIVERGENT persisted size, load `?peek=cesare` fresh, and assert no hydration
+  // warning fires.
+  test("Cesare peek hydrates cleanly with a divergent persisted drawer size", async ({
+    authenticatedPage: page,
+  }) => {
+    const hydrationWarnings: string[] = [];
+    page.on("console", (msg) => {
+      // Match the ACTUAL React hydration-mismatch warning, not the SSR payload
+      // (`__TSR_SSR__.dehydrated` contains the substring "hydrated"). React phrases
+      // it "A tree hydrated but some attributes…didn't match" / "Hydration failed".
+      const text = msg.text();
+      if (
+        (msg.type() === "error" || msg.type() === "warning") &&
+        (/tree hydrated but some attributes/i.test(text) ||
+          /hydration failed/i.test(text) ||
+          /didn't match.*server-rendered/i.test(text) ||
+          /aria-valuenow/i.test(text))
+      ) {
+        hydrationWarnings.push(text);
+      }
+    });
+
+    // Seed a split drawer size that differs from the 480 SSR fallback, so the
+    // restored client value would mismatch the server-rendered handle if the fix
+    // regressed. Visit once to get an origin we can write localStorage on.
+    await page.goto(`${SOGGETTO_PATH}`);
+    await expect(page.getByTestId("soggetto-page")).toBeVisible({
+      timeout: 15_000,
+    });
+    await page.evaluate(() => {
+      localStorage.setItem("ohw.drawer.size.split", "573.75");
+      localStorage.setItem("ohw.drawer.size.expanded", "640");
+    });
+
+    // Hard reload straight into the peek so the handle renders during hydration.
+    await page.goto(`${SOGGETTO_PATH}?peek=cesare`);
+    await expect(page.getByTestId("cesare-peek-lane")).toBeVisible({
+      timeout: 8_000,
+    });
+    // Give hydration a beat to surface any mismatch warning.
+    await page.waitForTimeout(800);
+
+    expect(hydrationWarnings).toEqual([]);
   });
 });

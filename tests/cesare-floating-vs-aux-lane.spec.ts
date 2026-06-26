@@ -196,3 +196,120 @@ test.describe("[BUG · #49] new Cesare session does not loop the shell", () => {
     expect(new URL(page.url()).pathname).not.toContain("/undefined/");
   });
 });
+
+// ── Promote Cesare into the shared host while an aux lane is open ─────────────
+// When Versioni / Notifiche already owns the single auxiliary track, the
+// floating Cesare drawer is suppressed (it would blanket the lane — #49). The
+// launcher must still REACH Cesare: pressing it PROMOTES Cesare INTO the shared
+// navigable host as a NEW history entry, so the previous surface survives as a
+// ←back-step instead of the whole host collapsing (Bug 4b). This locks that the
+// promotion navigates the shared lane (Cesare shows, the previous surface is one
+// ← away) and never loops.
+test.describe("[N78-A6] promote Cesare into the shared host", () => {
+  const versionsParam = (page: Page): string | null =>
+    new URL(page.url()).searchParams.get("versions");
+  const peekParam = (page: Page): string | null =>
+    new URL(page.url()).searchParams.get("peek");
+
+  test("launcher promotes Cesare into the host while Versioni owns the lane; ← returns to Versioni", async ({
+    authenticatedPage: page,
+  }) => {
+    const updateDepthErrors = collectUpdateDepthErrors(page);
+
+    // Open Versioni as the lane owner (via the chip from a fresh page).
+    await page.goto(SOGGETTO_PATH);
+    await expect(page.getByTestId("soggetto-page")).toBeVisible({
+      timeout: 15_000,
+    });
+    await page.getByTestId("topbar-version-chip").click();
+    await expect(page.getByTestId("versions-split-lane")).toBeVisible({
+      timeout: 5_000,
+    });
+    await expect.poll(() => versionsParam(page)).not.toBeNull();
+    expect(await activeSplitFlags(page)).toEqual(["versions-split"]);
+
+    // The floating drawer is suppressed, but the launcher dock stays reachable.
+    await expect(page.getByTestId("cesare-drawer")).toBeHidden({
+      timeout: 5_000,
+    });
+    const launcher = page
+      .getByTestId("bottom-dock")
+      .getByTestId("cesare-open-btn");
+    await expect(launcher).toBeVisible({ timeout: 5_000 });
+
+    // ── Press the launcher — Cesare PROMOTES into the shared host ─────────────
+    await launcher.click();
+    // Cesare now owns the track (peek lane visible, `?peek=cesare`); Versioni
+    // ceded the URL but stays in the shared history as a ←back-step.
+    await expect(page.getByTestId("cesare-peek-lane")).toBeVisible({
+      timeout: 5_000,
+    });
+    await expect(page.getByTestId("versions-split-lane")).toBeHidden({
+      timeout: 5_000,
+    });
+    await expect.poll(() => peekParam(page)).toBe("cesare");
+    await expect.poll(() => versionsParam(page)).toBeNull();
+    expect(await activeSplitFlags(page)).toEqual(["cesare-split"]);
+
+    // ── ← returns to Versioni: the previous surface was NOT stranded ──────────
+    await expect(page.getByTestId("split-drawer-back")).toBeVisible({
+      timeout: 5_000,
+    });
+    await page
+      .getByTestId("split-drawer-back")
+      .click({ force: true })
+      .catch(() => undefined);
+    await expect(page.getByTestId("versions-split-lane")).toBeVisible({
+      timeout: 5_000,
+    });
+    await expect.poll(() => versionsParam(page)).not.toBeNull();
+    await expect.poll(() => peekParam(page)).toBeNull();
+
+    expect(
+      updateDepthErrors,
+      `expected no React render-loop errors, got:\n${updateDepthErrors.join("\n")}`,
+    ).toHaveLength(0);
+  });
+});
+
+// ── Lazy session: opening Cesare must NOT persist a NEW session ───────────────
+// Spec 51 made Cesare persistent, but a session row is created LAZILY — only at
+// the FIRST sent message, never merely by opening the drawer / column (an earlier
+// shell loop spawned phantom sessions on open). The seed already ships one
+// session, so the contract is a DELTA: the persisted session count must be
+// UNCHANGED after opening Cesare floating AND as a column without sending. The
+// count is read from the rail rows, each a real `cesare_sessions` row surfaced by
+// the DB-backed `listSessions`.
+test.describe("[Spec 51] lazy Cesare session creation", () => {
+  const sessionRowCount = async (page: Page): Promise<number> =>
+    page.getByLabel(/^Sessione Cesare:/).count();
+
+  test("opening Cesare (floating + column) without sending creates no new session", async ({
+    authenticatedPage: page,
+  }) => {
+    await page.goto(SOGGETTO_PATH);
+    await expect(page.getByTestId("soggetto-page")).toBeVisible({
+      timeout: 15_000,
+    });
+
+    // Baseline count (seed ships at least one session).
+    const baseline = await sessionRowCount(page);
+
+    // ── Open the floating drawer — no send ───────────────────────────────────
+    await openCesareSheet(page);
+    await expect(page.getByTestId("cesare-drawer")).toBeVisible({
+      timeout: 5_000,
+    });
+    await page.waitForTimeout(800);
+    expect(await sessionRowCount(page)).toBe(baseline);
+
+    // ── Promote to the split column — still no send ──────────────────────────
+    await page.goto(`${SOGGETTO_PATH}?peek=cesare`);
+    await expect(page.getByTestId("cesare-peek-lane")).toBeVisible({
+      timeout: 8_000,
+    });
+    await page.waitForTimeout(800);
+    // Unchanged — the column is just a surface; no message has been sent.
+    expect(await sessionRowCount(page)).toBe(baseline);
+  });
+});
