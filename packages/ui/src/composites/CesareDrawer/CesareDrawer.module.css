@@ -24,7 +24,7 @@
   --drawer-border: var(--ds-line);
   --drawer-shadow: var(--ds-shadow-4);
   --drawer-bg: var(--ds-surface);
-  --drawer-z: 310;
+  --drawer-z: var(--cesare-drawer-z, 310);
 
   position: fixed;
   inset-inline-end: 18px;

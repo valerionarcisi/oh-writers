@@ -159,6 +159,11 @@ interface SplitDrawerContextValue {
    *  surface" (re-assert its URL param) from "the param was cleared externally"
    *  (close the host). Consumed exactly once per navigation (Spec 78 A6). */
   consumeNavIntent: () => boolean;
+  /** Read the nav-intent flag WITHOUT resetting it. The reconciler peeks first
+   *  so a no-op reconcile tick (a transient render that resolves to `none`)
+   *  cannot swallow the intent before the real transition consumes it — that
+   *  swallow broke ←/→ back to Cesare while a sibling routed param lingered. */
+  peekNavIntent: () => boolean;
   /** Collapse the lane but KEEP the history, so the ⊟ toggle can re-open the last
    *  content. (vs `close`, which destroys the history.) */
   hide: () => void;
@@ -269,6 +274,8 @@ export function SplitDrawerProvider({ children }: { children: ReactNode }) {
     return was;
   }, []);
 
+  const peekNavIntent = useCallback(() => navIntentRef.current, []);
+
   // Content shows only when the lane is open AND the cursor points at an entry.
   // While hidden (`state === "closed"`) the history survives but `payload` is
   // null, so the lane unmounts and the page un-compresses.
@@ -289,6 +296,7 @@ export function SplitDrawerProvider({ children }: { children: ReactNode }) {
       canGoBack,
       canGoForward,
       consumeNavIntent,
+      peekNavIntent,
       hide,
       reopen,
       hasContent,
@@ -304,6 +312,7 @@ export function SplitDrawerProvider({ children }: { children: ReactNode }) {
       canGoBack,
       canGoForward,
       consumeNavIntent,
+      peekNavIntent,
       hide,
       reopen,
       hasContent,
@@ -328,6 +337,7 @@ const INERT_SPLIT_DRAWER: SplitDrawerContextValue = {
   canGoBack: false,
   canGoForward: false,
   consumeNavIntent: () => false,
+  peekNavIntent: () => false,
   hide: () => undefined,
   reopen: () => undefined,
   hasContent: false,

@@ -189,6 +189,11 @@ function SoggettoPageReady({
   const versionsSurface = useRoutedSurface({
     param: "versions",
     companions: ["vstate", "vcur"],
+    // Opening Versioni supersedes an open Cesare-peek: the two routed surfaces
+    // share the single auxiliary track and must never coexist in the URL
+    // (Spec 78 A6). Dropping `?peek` here kills the coexistence that seeds the
+    // URL ↔ history reconciler oscillation (#47).
+    conflicts: ["peek"],
   });
   const isVersionsOpen = versionsSurface.value === soggettoDoc.id;
   const versionsOpen = versionsSurface.open;

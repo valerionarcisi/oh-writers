@@ -124,6 +124,14 @@
   --z-modal: 1000;
   --z-toast: 2000;
 
+  /* Shell floating-surface band (bottom-right Cesare + the SplitDrawer host).
+     Ordered so the split host sits below the floating Cesare drawer and its
+     launcher dock — a split lane must never bury the only affordance that opens
+     Cesare (#48). Kept as a small explicit cluster the shell composites share so
+     the ordering lives in ONE place instead of scattered magic numbers. */
+  --split-host-z: 305;
+  --cesare-drawer-z: 310;
+
   /* ─── Diff ──────────────────────────────────────────────── */
   --color-diff-insert-bg: rgba(34, 197, 94, 0.12);
   --color-diff-insert-fg: #22c55e;

@@ -385,4 +385,82 @@ test.describe("[OHW-N78-A6] unified navigable split host", () => {
     );
     expect(loopErrors).toEqual([]);
   });
+
+  // ── #47 regression: opening Versioni while Cesare-split owns the track must
+  // not spin the URL ↔ history reconciler. Before the fix, the page-level
+  // Versioni toggle preserved `?peek`, creating `?peek=cesare&versions=`
+  // coexistence; the reconciler then ping-ponged `?peek=cesare` ⇄ `?versions=`
+  // FOREVER (243–383 history mutations + a runaway versions/narrative refetch).
+  // A clean console alone did NOT catch it (the churn was history.pushState, not
+  // always a surfaced React error in the sample window), so this test INSTRUMENTS
+  // the history-mutation count and asserts it settles to a tiny number.
+  test("opening Versioni while Cesare-split is active settles (no URL ↔ history ping-pong)", async ({
+    authenticatedPage: page,
+  }) => {
+    const consoleErrors: string[] = [];
+    page.on("console", (msg) => {
+      if (msg.type() === "error") consoleErrors.push(msg.text());
+    });
+    page.on("pageerror", (err) => consoleErrors.push(err.message));
+
+    await page.goto(`${SOGGETTO_PATH}?peek=cesare`);
+    await expect(page.getByTestId("soggetto-page")).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByTestId("cesare-peek-lane")).toBeVisible({
+      timeout: 5_000,
+    });
+
+    // Instrument history mutations from this point on.
+    await page.evaluate(() => {
+      const w = window as unknown as { __navCount: number };
+      w.__navCount = 0;
+      const ps = history.pushState;
+      const rs = history.replaceState;
+      history.pushState = function (...a: Parameters<typeof ps>) {
+        w.__navCount += 1;
+        return ps.apply(this, a);
+      };
+      history.replaceState = function (...a: Parameters<typeof rs>) {
+        w.__navCount += 1;
+        return rs.apply(this, a);
+      };
+    });
+
+    // Click VERSIONI — the exact click that looped.
+    await page.getByTestId("topbar-version-chip").click();
+
+    // Versions wins the single track; Cesare ceded its param at the SOURCE
+    // (`useRoutedSurface` `conflicts: ["peek"]`), so the two never coexist.
+    await expect(page.getByTestId("versions-split-lane")).toBeVisible({
+      timeout: 5_000,
+    });
+    await expect.poll(() => versionsParam(page)).not.toBeNull();
+    await expect.poll(() => peekParam(page)).toBeNull();
+    expect(await activeSplitFlags(page)).toEqual(["versions-split"]);
+    expect(await readMainWidth(page)).toBeGreaterThan(200);
+
+    // Let any residual reconciler ticks drain, then assert the URL has STOPPED
+    // mutating. A healthy transition is a handful of navigations; the loop was
+    // hundreds. The URL must be stable across a settle window.
+    const navAfterClick = await page.evaluate(
+      () => (window as unknown as { __navCount: number }).__navCount,
+    );
+    const urlAfterClick = page.url();
+    await page.waitForTimeout(1_500);
+    const navAfterSettle = await page.evaluate(
+      () => (window as unknown as { __navCount: number }).__navCount,
+    );
+    // No further navigations after the transition settled.
+    expect(navAfterSettle).toBe(navAfterClick);
+    // And the transition itself was a handful of steps, never the runaway loop.
+    expect(navAfterSettle).toBeLessThan(15);
+    // The URL is stable on the Versions surface.
+    expect(page.url()).toBe(urlAfterClick);
+
+    const loopErrors = consoleErrors.filter((t) =>
+      /Maximum update depth/i.test(t),
+    );
+    expect(loopErrors).toEqual([]);
+  });
 });
