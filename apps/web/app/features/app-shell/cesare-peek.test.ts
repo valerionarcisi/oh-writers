@@ -112,6 +112,18 @@ describe("parseCesarePeek — fail closed (sad paths)", () => {
     expect(r.isErr()).toBe(true);
     expect(r._unsafeUnwrapErr().reason).toBe("cross-project");
   });
+
+  it("rejects the bare cesare token with no current project (#49 loop guard)", () => {
+    // A Cesare peek is always scoped to a project; without one the token is
+    // meaningless. Failing CLOSED here is what stops the URL ↔ split-history
+    // reconciler from spinning on a project-less / mid-transition route.
+    expect(parseCesarePeek("cesare", null).isErr()).toBe(true);
+    expect(parseCesarePeek("cesare", null)._unsafeUnwrapErr().reason).toBe(
+      "cross-project",
+    );
+    expect(parseCesarePeek("cesare", undefined).isErr()).toBe(true);
+    expect(parseCesarePeek("cesare", "").isErr()).toBe(true);
+  });
 });
 
 describe("isCesarePeek", () => {
@@ -120,6 +132,14 @@ describe("isCesarePeek", () => {
     expect(isCesarePeek(`/projects/${PROJECT}/synopsis`, PROJECT)).toBe(false);
     expect(isCesarePeek("nope", PROJECT)).toBe(false);
     expect(isCesarePeek(null, PROJECT)).toBe(false);
+  });
+
+  it("is false for the cesare token without a current project (#49)", () => {
+    // The render loop seed: `?peek=cesare` lit `isCesareSplitActive` even when
+    // projectId was undefined, then the reconciler re-navigated every render.
+    expect(isCesarePeek("cesare", null)).toBe(false);
+    expect(isCesarePeek("cesare", undefined)).toBe(false);
+    expect(isCesarePeek("cesare", "")).toBe(false);
   });
 });
 
