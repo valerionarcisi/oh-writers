@@ -16,6 +16,7 @@ import {
 import {
   DRAWER_SIZE_STORAGE_KEYS,
   readPersistedSize,
+  usePersistedSize,
 } from "./use-drawer-resize";
 
 afterEach(() => {
@@ -201,6 +202,27 @@ describe("readPersistedSize", () => {
   it("falls back when value is non-positive", () => {
     window.localStorage.setItem("ohw.test.zero", "0");
     expect(readPersistedSize("ohw.test.zero", 480)).toBe(480);
+  });
+});
+
+describe("usePersistedSize (hydration-safe)", () => {
+  beforeEach(() => {
+    installMockLocalStorage();
+  });
+
+  it("returns the fallback on first render, then adopts the stored value after mount", () => {
+    window.localStorage.setItem("ohw.test.hydrate", "640");
+    // The very first render must match what the server produced (no localStorage):
+    // the fallback. The effect then swaps in the persisted value. This is what
+    // keeps the resize handle's aria-valuenow from mismatching on hydration.
+    let firstRender: number | null = null;
+    const { result } = renderHook(() => {
+      const v = usePersistedSize("ohw.test.hydrate", 480);
+      if (firstRender === null) firstRender = v;
+      return v;
+    });
+    expect(firstRender).toBe(480);
+    expect(result.current).toBe(640);
   });
 });
 

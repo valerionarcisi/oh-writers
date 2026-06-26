@@ -142,6 +142,20 @@ export function useDrawerResize(
     clamp(initialSize, min, resolveMaxSsr(max)),
   );
   const [isResizing, setIsResizing] = useState(false);
+  // Adopt a post-mount change to `initialSize` exactly once. The caller restores
+  // the persisted size only AFTER hydration (`usePersistedSize`) so SSR and the
+  // first client render agree (no `aria-valuenow` mismatch); when the restored
+  // value arrives we clamp it in as the new size. A ref guards against the user's
+  // own drags later re-feeding `initialSize` — we only honour the restore once.
+  const initialSizeRef = useRef(initialSize);
+  const hasAdoptedInitialRef = useRef(false);
+  useEffect(() => {
+    if (hasAdoptedInitialRef.current) return;
+    if (initialSize === initialSizeRef.current) return;
+    hasAdoptedInitialRef.current = true;
+    initialSizeRef.current = initialSize;
+    setSize((current) => clamp(initialSize, min, Math.max(maxPx, current)));
+  }, [initialSize, min, maxPx]);
   // `dragStartSizeRef` keeps the size at drag-start so each move event
   // computes a delta from the same anchor, regardless of intermediate state.
   const dragStartSizeRef = useRef<number>(size);
@@ -237,6 +251,22 @@ export function readPersistedSize(key: string, fallback: number): number {
   } catch {
     return fallback;
   }
+}
+
+/**
+ * Hydration-safe persisted size: returns `fallback` on the server AND the first
+ * client render (so the SSR HTML and the first hydrated render agree), then
+ * swaps in the localStorage value after mount. Pairing this with
+ * `useDrawerResize`'s post-mount `initialSize` adoption removes the
+ * `aria-valuenow` hydration mismatch the synchronous `readPersistedSize` caused
+ * (server has no localStorage → 480, client restored → e.g. 573.75).
+ */
+export function usePersistedSize(key: string, fallback: number): number {
+  const [size, setSize] = useState(fallback);
+  useEffect(() => {
+    setSize(readPersistedSize(key, fallback));
+  }, [key, fallback]);
+  return size;
 }
 
 /** Storage keys are part of the public API; centralized so callers stay aligned. */

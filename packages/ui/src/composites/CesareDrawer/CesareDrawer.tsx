@@ -42,7 +42,7 @@ import styles from "./CesareDrawer.module.css";
 import type { CesareDrawerState } from "./use-drawer-state";
 import {
   useDrawerResize,
-  readPersistedSize,
+  usePersistedSize,
   DRAWER_SIZE_STORAGE_KEYS,
 } from "./use-drawer-resize";
 
@@ -325,13 +325,16 @@ export function CesareDrawer({
   const isExpanded = state === "expanded";
   const isSplit = state === "expanded-split";
 
-  const initialExpandedSize = useMemo(
-    () => readPersistedSize(DRAWER_SIZE_STORAGE_KEYS.expanded, 480),
-    [],
+  // Restored AFTER hydration (server has no localStorage) so the first client
+  // render matches the SSR HTML — no `aria-valuenow` mismatch on the resize
+  // handle. `useDrawerResize` adopts the restored size once it arrives.
+  const initialExpandedSize = usePersistedSize(
+    DRAWER_SIZE_STORAGE_KEYS.expanded,
+    480,
   );
-  const initialSplitSize = useMemo(
-    () => readPersistedSize(DRAWER_SIZE_STORAGE_KEYS.split, 480),
-    [],
+  const initialSplitSize = usePersistedSize(
+    DRAWER_SIZE_STORAGE_KEYS.split,
+    480,
   );
 
   const persistExpanded = useCallback((px: number) => {

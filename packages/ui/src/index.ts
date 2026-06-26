@@ -238,6 +238,7 @@ export type {
 export {
   useDrawerResize,
   readPersistedSize,
+  usePersistedSize,
   DRAWER_SIZE_STORAGE_KEYS,
 } from "./composites/CesareDrawer/use-drawer-resize";
 export type {
