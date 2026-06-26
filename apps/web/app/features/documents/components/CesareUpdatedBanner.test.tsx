@@ -12,10 +12,7 @@ import { describe, expect, it, afterEach, vi } from "vitest";
 import { render, cleanup, screen, act } from "@testing-library/react";
 import { DocumentTypes } from "@oh-writers/domain";
 import { CesareUpdatedBanner } from "./CesareUpdatedBanner";
-import {
-  publishLiveEdits,
-  clearLiveEdits,
-} from "~/features/app-shell/cesare-live-edit-store";
+import { publishLiveEdits, clearLiveEdits } from "~/features/app-shell";
 import { LocaleProvider } from "~/features/i18n";
 
 const publishSoggetto = (summary: string) =>

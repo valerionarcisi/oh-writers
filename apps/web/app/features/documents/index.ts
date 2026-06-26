@@ -13,6 +13,10 @@ export {
   discardDocumentDraft,
 } from "./server/drafts.server";
 export { switchToVersion } from "./server/versions.server";
+export {
+  isPmRoomDocType,
+  yjsStateFromNarrativeContent,
+} from "./server/yjs-seed.server";
 export { DocumentRoutePage } from "./components/DocumentRoutePage";
 export { emptyNarrativeDocument } from "./lib/empty-narrative-document";
 export { canonicalNarrativeHtml } from "./lib/narrative-html";

@@ -13,7 +13,7 @@ import { DbService, toResultAsync } from "~/server/effect";
 import {
   isPmRoomDocType,
   yjsStateFromNarrativeContent,
-} from "~/features/documents/server/yjs-seed.server";
+} from "~/features/documents";
 import { notifyRoomReseed } from "~/features/realtime/server/notify-room-reseed";
 import { CesareError } from "./cesare.errors";
 import { resolveVersionAction } from "./resolve-version-action";
