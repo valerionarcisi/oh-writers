@@ -33,6 +33,7 @@ import {
 import {
   useSessions,
   useCreateSession,
+  resolveSessionSendTarget,
   type CesareSession,
 } from "~/features/predictions/sessions";
 import type { TranslationKey } from "@oh-writers/domain";
@@ -361,13 +362,28 @@ export function CesareSheet({
   const messages = chat.messages;
   const isLoading = chat.isLoading;
 
-  // Spec 47-A5 — adopt the central route's focused session as active.
+  // Spec 47-A5 — the shell's `focusedSessionId` and this drawer's
+  // `activeSessionId` form a TWO-WAY binding: the central `/sessions/:id` route
+  // sets `focusedSessionId` and the drawer adopts it (below); the drawer
+  // publishes its own selection back up (`onActiveSessionChange`). That feedback
+  // loop only converges if each side ignores the ECHO of its own write. Without
+  // it, switching sessions in the split made `focusedSessionId` and
+  // `activeSessionId` chase each other forever — "Maximum update depth exceeded"
+  // (Bug 3a). `lastPublishedRef` records the id this drawer last pushed upward;
+  // when it bounces back as `focusedSessionId` we DON'T re-adopt it (it is our
+  // own echo, not an external route-driven focus change).
+  const lastPublishedRef = useRef<string | null>(null);
+  // Depend on `chat.selectSession` (referentially stable, store-ref-bound) NOT
+  // the whole `chat` object: `chat`'s identity changes every render, so listing
+  // it re-fires this effect every commit.
+  const selectChatSession = chat.selectSession;
   useEffect(() => {
     if (!focusedSessionId || focusedSessionId === activeSessionId) return;
+    if (focusedSessionId === lastPublishedRef.current) return;
     setActiveSessionId(focusedSessionId);
-    chat.selectSession(focusedSessionId);
+    selectChatSession(focusedSessionId);
     setInput("");
-  }, [focusedSessionId, activeSessionId, chat]);
+  }, [focusedSessionId, activeSessionId, selectChatSession]);
 
   // Auto-send a seeded prompt (margin "start a session on this suggestion") once
   // per nonce, when the floating sheet is open. It always starts a FRESH session
@@ -401,6 +417,9 @@ export function CesareSheet({
   }, [seedNonce, isOpen]);
 
   useEffect(() => {
+    // Record what we publish so the adoption effect above can recognise — and
+    // ignore — the echo that returns as `focusedSessionId` (Bug 3a loop guard).
+    lastPublishedRef.current = activeSessionId;
     onActiveSessionChange?.(activeSessionId);
   }, [activeSessionId, onActiveSessionChange]);
 
@@ -414,12 +433,18 @@ export function CesareSheet({
     [activeSessionId, chat],
   );
 
-  const handleSessionNew = useCallback(async () => {
-    const result = await createSession.mutateAsync(undefined);
-    setActiveSessionId(result.id);
-    chat.selectSession(result.id);
+  // A session row is minted ONLY when the first real message is sent
+  // (`sendInSession` below). "Nuova sessione" therefore does NOT hit the server:
+  // it drops the drawer into the fresh/empty pending state (the landing +
+  // composer). Eagerly creating the row here produced a flood of untitled
+  // "Nuova sessione" rows with zero turns — a session must persist only once it
+  // has ≥1 turn (a title is derived from the first message). Clearing
+  // `activeSessionId` selects the synthetic pending thread in the chat store
+  // (`useCesareChat` maps a null id to `__pending__`).
+  const handleSessionNew = useCallback(() => {
+    setActiveSessionId(null);
     setInput("");
-  }, [createSession, chat]);
+  }, []);
 
   // Every send must target a REAL (DB-backed) session. When none is active yet
   // (a fresh project, or before the first session row exists), the floating
@@ -431,11 +456,13 @@ export function CesareSheet({
   // drawer's send paths now share it.
   const sendInSession = useCallback(
     async (text: string) => {
-      const existing = activeSessionId;
-      if (existing) {
-        void chat.send(text, existing);
+      const target = resolveSessionSendTarget(activeSessionId);
+      if (target.kind === "existing") {
+        void chat.send(text, target.sessionId);
         return;
       }
+      // `create`: mint the row NOW, with this first message, so it is born with a
+      // turn + a derived title (never an empty placeholder — Bug 3b).
       const session = await createSession.mutateAsync(undefined);
       setActiveSessionId(session.id);
       chat.selectSession(session.id);
@@ -461,8 +488,8 @@ export function CesareSheet({
     },
     [handleSessionSelect],
   );
-  const handleNewSessionClick = useCallback(async () => {
-    await handleSessionNew();
+  const handleNewSessionClick = useCallback(() => {
+    handleSessionNew();
     setSessionPopoverOpen(false);
   }, [handleSessionNew]);
 

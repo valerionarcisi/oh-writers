@@ -1084,10 +1084,19 @@ function AppShellInner({
     // the lane's input (#49). The launcher must still REACH Cesare, so opening it
     // here promotes Cesare INTO the shared navigable host (Spec 78 A6): the open
     // lane becomes a back-step rather than being overlapped by a floating box.
+    //
+    // PUSH the `cesare-peek` record onto the shared history directly (don't just
+    // set `?peek` via `onOpenCesarePeek`): with a HOST payload (notifications /
+    // preview) still the active history entry, the URL→history reconciler would
+    // see a host kind + a fresh routed param and fire `clear-both` — dropping
+    // `?peek` and collapsing the WHOLE host (Bug 4b: Notifiche → Cesare closed
+    // everything). Pushing the payload makes `cesare-peek` the active cursor
+    // entry first; Effect 2 then projects `?peek=cesare`, and the previous host
+    // surface survives as a ←back-step. The previous lane is never lost.
     if (cesareState === "closed" && isAnyAuxLaneActive) {
       setCesareState("closed");
       setCesareOpen(false);
-      onOpenCesarePeek?.();
+      splitDrawer.promoteRoutedSurface({ kind: "cesare-peek" });
       markAllSeen();
       return;
     }
@@ -1099,7 +1108,7 @@ function AppShellInner({
       setCesareState("closed");
       setCesareOpen(false);
     }
-  }, [cesareState, isAnyAuxLaneActive, onOpenCesarePeek, markAllSeen]);
+  }, [cesareState, isAnyAuxLaneActive, splitDrawer, markAllSeen]);
 
   // Promote the floating chat into the split column. The split lane is the
   // authoritative surface for `?peek=cesare`, so we close the floating sheet

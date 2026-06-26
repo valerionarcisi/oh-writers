@@ -19,6 +19,7 @@ import {
   CESARE_PEEK_TOKEN,
   versionsSearchSchema,
   useRoutedSurface,
+  resolveProjectIdForNav,
 } from "~/features/app-shell";
 import type { CesarePage } from "~/features/predictions";
 import {
@@ -348,10 +349,11 @@ function AppLayout() {
   // central, deep-linkable route (NOT a peek). The shell-level session focus
   // context (read by CesareSheet) then aligns the authoritative floating drawer.
   const handleCesareSessionSelect = (sessionId: string) => {
-    if (!projectId) return;
+    const id = resolveProjectIdForNav(projectId);
+    if (!id) return;
     void navigate({
       to: "/projects/$id/sessions/$sessionId",
-      params: { id: projectId, sessionId },
+      params: { id, sessionId },
     });
   };
 
@@ -389,10 +391,11 @@ function AppLayout() {
       onSuccess: () => {
         // The deleted row leaves the list on invalidation. When it was the open
         // session, drop the now-dangling route back to the sessions landing.
-        if (wasOpen && projectId) {
+        const id = resolveProjectIdForNav(projectId);
+        if (wasOpen && id) {
           void navigate({
             to: "/projects/$id/sessions",
-            params: { id: projectId },
+            params: { id },
           });
         }
       },
@@ -402,10 +405,11 @@ function AppLayout() {
 
   // The rail's dedicated "Cesare" entry opens the sessions landing.
   const handleCesareSessionsOpen = () => {
-    if (!projectId) return;
+    const id = resolveProjectIdForNav(projectId);
+    if (!id) return;
     void navigate({
       to: "/projects/$id/sessions",
-      params: { id: projectId },
+      params: { id },
     });
   };
 
@@ -413,10 +417,11 @@ function AppLayout() {
   // (`/sessions/new`). The session row is created only when the user sends their
   // first message there, so the rail never spawns empty throwaway sessions.
   const handleCesareSessionNew = () => {
-    if (!projectId) return;
+    const id = resolveProjectIdForNav(projectId);
+    if (!id) return;
     void navigate({
       to: "/projects/$id/sessions/new",
-      params: { id: projectId },
+      params: { id },
     });
   };
 

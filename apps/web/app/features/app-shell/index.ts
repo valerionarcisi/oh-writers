@@ -1,4 +1,5 @@
 export { AppShell } from "./components/AppShell";
+export { resolveProjectIdForNav } from "./nav";
 export { RouteErrorBoundary } from "./components/RouteErrorBoundary";
 export { SaveStatusIndicator } from "./components/SaveStatusIndicator";
 export { CesareLiveDiff } from "./components/CesareLiveDiff";
