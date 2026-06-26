@@ -155,7 +155,14 @@ describe("reconcileUrlAction — history → URL projection", () => {
       expect(action).toMatchObject({ kind: "open-versions", documentId: DOC });
     });
 
-    it("re-opens (mutual exclusion) when peek still coexists with the right version", () => {
+    it("resolves param coexistence to Cesare (open-cesare), never ping-ponging to versions", () => {
+      // The #47/#48/#49 split-lane loop: both routed params briefly coexist
+      // while a flip is in flight. A `versions` payload must NOT fire
+      // `open-versions` (which would drop `?peek` and let a `cesare-peek`
+      // payload fire `open-cesare` right back — the infinite ping-pong). The
+      // coexistence guard resolves it ONCE, the same way the AppShell single-lane
+      // resolver does: an explicit `?peek=cesare` wins the track, so drop
+      // `?versions` and converge on Cesare.
       expect(
         reconcileUrlAction(
           versionsPayload(DOC),
@@ -163,7 +170,18 @@ describe("reconcileUrlAction — history → URL projection", () => {
           versionsUrl(DOC),
           NO_NAV,
         ),
-      ).toMatchObject({ kind: "open-versions", documentId: DOC });
+      ).toMatchObject({ kind: "open-cesare" });
+    });
+
+    it("resolves coexistence to Cesare from a cesare-peek payload too (symmetric, no flip)", () => {
+      expect(
+        reconcileUrlAction(
+          cesarePeekPayload,
+          peekActive,
+          versionsUrl(DOC),
+          NO_NAV,
+        ),
+      ).toMatchObject({ kind: "open-cesare" });
     });
 
     it("omits companions that are absent", () => {

@@ -199,15 +199,31 @@ export function reconcileUrlAction(
     return { kind: "close-host" };
   }
 
+  // COEXISTENCE GUARD (the split-lane render loop, #47/#48/#49). Both routed
+  // params can briefly coexist in the URL while a flip is in flight (e.g. opening
+  // Cesare-split over an open Versions lane: `?peek` is set before `?versions` is
+  // dropped). With both present, the two payload branches below "win" in OPPOSITE
+  // directions — a `cesare-peek` payload sees `versions.documentId !== null` and
+  // fires `open-cesare` (drops `?versions`), while a `versions` payload sees
+  // `cesarePeek.isActive` and fires `open-versions` (drops `?peek`) — so the
+  // effects ping-pong the URL forever ("Maximum update depth"). Resolve the
+  // coexistence ONCE, deterministically, the SAME way the AppShell single-lane
+  // resolver does: an explicit `?peek=cesare` WINS the track, so drop `?versions`
+  // and let Cesare own the lane. This converges to a single routed param.
+  if (cesarePeek.isActive && versions.documentId !== null) {
+    return { kind: "open-cesare" };
+  }
+
   if (payload.kind === "cesare-peek") {
-    // Cesare wins the single track only when its param is set AND Versions has
-    // ceded (the resolver gives Versions precedence over an explicit `?peek`).
-    const matches = cesarePeek.isActive && versions.documentId === null;
+    // Cesare's param is set and Versions has ceded (coexistence handled above):
+    // the URL already matches a Cesare-owned track ⇒ nothing to do. If the param
+    // is absent we re-assert it (a ←/→ back to Cesare from a host kind).
+    const matches = cesarePeek.isActive;
     return matches ? { kind: "none" } : { kind: "open-cesare" };
   }
   if (payload.kind === "versions") {
     // Versions wins only when its param matches AND Cesare has ceded (the two
-    // routed params must never coexist).
+    // routed params must never coexist — coexistence is resolved above).
     const matches =
       versions.documentId === payload.documentId && !cesarePeek.isActive;
     if (matches) return { kind: "none" };
