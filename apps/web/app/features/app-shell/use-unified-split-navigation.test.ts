@@ -54,26 +54,44 @@ const DOC = "doc-1";
 // NO_NAV = the URL changed externally (an external close, not a navigation).
 const NAV = true;
 const NO_NAV = false;
+// hostSupersede: SUP = the active HOST payload was just opened OVER a routed
+// surface and may evict the now-stale routed param (`clear-both` authorised);
+// NO_SUP = the host payload is merely the lingering cursor entry while a routed
+// param is being mirrored in — clear-both must NOT fire (defer to Effect 1).
+const SUP = true;
+const NO_SUP = false;
 
 describe("reconcileUrlAction — history → URL projection", () => {
   describe("cesare-peek payload", () => {
     it("does nothing when the URL already shows Cesare alone", () => {
       expect(
-        reconcileUrlAction(cesarePeekPayload, peekActive, noVersions, NO_NAV),
+        reconcileUrlAction(
+          cesarePeekPayload,
+          peekActive,
+          noVersions,
+          NO_NAV,
+          NO_SUP,
+        ),
       ).toEqual({ kind: "none" });
     });
 
     it("closes the host when Cesare is active, no routed param remains, and it was NOT a navigation (× / ESC / back)", () => {
       // NEITHER param set + no nav intent → the surface was closed externally.
       expect(
-        reconcileUrlAction(cesarePeekPayload, noPeek, noVersions, NO_NAV),
+        reconcileUrlAction(
+          cesarePeekPayload,
+          noPeek,
+          noVersions,
+          NO_NAV,
+          NO_SUP,
+        ),
       ).toEqual({ kind: "close-host" });
     });
 
     it("RE-OPENS Cesare when ←/→ navigated to it and its param is currently absent (e.g. back from the notifications host)", () => {
       // The notifications host dropped `?peek`; navigating back must re-assert it.
       expect(
-        reconcileUrlAction(cesarePeekPayload, noPeek, noVersions, NAV),
+        reconcileUrlAction(cesarePeekPayload, noPeek, noVersions, NAV, NO_SUP),
       ).toEqual({ kind: "open-cesare" });
     });
 
@@ -85,6 +103,7 @@ describe("reconcileUrlAction — history → URL projection", () => {
           noPeek,
           versionsUrl("other"),
           NAV,
+          NO_SUP,
         ),
       ).toEqual({ kind: "open-cesare" });
     });
@@ -98,6 +117,7 @@ describe("reconcileUrlAction — history → URL projection", () => {
           peekActive,
           versionsUrl(DOC),
           NO_NAV,
+          NO_SUP,
         ),
       ).toEqual({ kind: "open-cesare" });
     });
@@ -114,7 +134,13 @@ describe("reconcileUrlAction — history → URL projection", () => {
       // (which STAYS as the A6 back-step). peek absent + versions present + NOT a
       // ←/→ nav.
       expect(
-        reconcileUrlAction(cesarePeekPayload, noPeek, versionsUrl(DOC), NO_NAV),
+        reconcileUrlAction(
+          cesarePeekPayload,
+          noPeek,
+          versionsUrl(DOC),
+          NO_NAV,
+          NO_SUP,
+        ),
       ).toEqual({ kind: "none" });
     });
   });
@@ -127,6 +153,7 @@ describe("reconcileUrlAction — history → URL projection", () => {
           noPeek,
           versionsUrl(DOC),
           NO_NAV,
+          NO_SUP,
         ),
       ).toEqual({ kind: "none" });
     });
@@ -149,6 +176,7 @@ describe("reconcileUrlAction — history → URL projection", () => {
         peekActive,
         noVersions,
         NO_NAV,
+        NO_SUP,
       );
       expect(action).toEqual({ kind: "none" });
     });
@@ -165,6 +193,7 @@ describe("reconcileUrlAction — history → URL projection", () => {
         peekActive,
         noVersions,
         NAV,
+        NO_SUP,
       );
       expect(action).toEqual({
         kind: "open-versions",
@@ -175,13 +204,25 @@ describe("reconcileUrlAction — history → URL projection", () => {
 
     it("closes the host when versions is active, no routed param remains, and it was NOT a navigation (× / ESC / back)", () => {
       expect(
-        reconcileUrlAction(versionsPayload(DOC), noPeek, noVersions, NO_NAV),
+        reconcileUrlAction(
+          versionsPayload(DOC),
+          noPeek,
+          noVersions,
+          NO_NAV,
+          NO_SUP,
+        ),
       ).toEqual({ kind: "close-host" });
     });
 
     it("RE-OPENS versions when ←/→ navigated to it and its param is currently absent", () => {
       expect(
-        reconcileUrlAction(versionsPayload(DOC), noPeek, noVersions, NAV),
+        reconcileUrlAction(
+          versionsPayload(DOC),
+          noPeek,
+          noVersions,
+          NAV,
+          NO_SUP,
+        ),
       ).toMatchObject({ kind: "open-versions", documentId: DOC });
     });
 
@@ -191,6 +232,7 @@ describe("reconcileUrlAction — history → URL projection", () => {
         noPeek,
         versionsUrl("other-doc"),
         NO_NAV,
+        NO_SUP,
       );
       expect(action).toMatchObject({ kind: "open-versions", documentId: DOC });
     });
@@ -209,6 +251,7 @@ describe("reconcileUrlAction — history → URL projection", () => {
           peekActive,
           versionsUrl(DOC),
           NO_NAV,
+          NO_SUP,
         ),
       ).toMatchObject({ kind: "open-cesare" });
     });
@@ -220,6 +263,7 @@ describe("reconcileUrlAction — history → URL projection", () => {
           peekActive,
           versionsUrl(DOC),
           NO_NAV,
+          NO_SUP,
         ),
       ).toMatchObject({ kind: "open-cesare" });
     });
@@ -230,6 +274,7 @@ describe("reconcileUrlAction — history → URL projection", () => {
         peekActive,
         noVersions,
         NAV,
+        NO_SUP,
       );
       expect(action).toEqual({
         kind: "open-versions",
@@ -250,7 +295,7 @@ describe("reconcileUrlAction — history → URL projection", () => {
     // as the ←back-step.
     it("re-opens Cesare (open-cesare) when promoted as a navigation with its param not yet set", () => {
       expect(
-        reconcileUrlAction(cesarePeekPayload, noPeek, noVersions, NAV),
+        reconcileUrlAction(cesarePeekPayload, noPeek, noVersions, NAV, NO_SUP),
       ).toEqual({ kind: "open-cesare" });
     });
 
@@ -259,50 +304,121 @@ describe("reconcileUrlAction — history → URL projection", () => {
       // reads as an external close. `promoteRoutedSurface` sets navIntent so this
       // branch is never taken for a promote.
       expect(
-        reconcileUrlAction(cesarePeekPayload, noPeek, noVersions, NO_NAV),
+        reconcileUrlAction(
+          cesarePeekPayload,
+          noPeek,
+          noVersions,
+          NO_NAV,
+          NO_SUP,
+        ),
       ).toEqual({ kind: "close-host" });
     });
   });
 
   describe("host kinds / null payload", () => {
-    it("clears both routed params when a notifications payload owns the track over Cesare", () => {
+    it("clears both routed params when a notifications payload SUPERSEDED Cesare (hostSupersede armed)", () => {
+      // The bell opened OVER Cesare: `open({notifications})` arms hostSupersede,
+      // so the stale `?peek` is legitimately evicted.
       expect(
         reconcileUrlAction(
           notificationsPayload,
           peekActive,
           noVersions,
           NO_NAV,
+          SUP,
         ),
       ).toEqual({ kind: "clear-both" });
     });
 
-    it("clears both when a host payload owns the track over Versions", () => {
+    it("clears both when a host payload SUPERSEDED Versions (hostSupersede armed)", () => {
       expect(
         reconcileUrlAction(
           notificationsPayload,
           noPeek,
           versionsUrl(DOC),
           NO_NAV,
+          SUP,
+        ),
+      ).toEqual({ kind: "clear-both" });
+    });
+
+    it("DEFERS (none) when a STALE host payload lingers and `?versions` is being mirrored in — Bug 2 (Notifiche → Versioni must NOT collapse the host)", () => {
+      // THE Bug 2 root: an older notifications entry is still the cursor when the
+      // user clicks Versioni in the doc header. `useRoutedSurface.open` sets
+      // `?versions=` directly; Effect 1 is about to mirror it into a versions
+      // entry. On the transient tick the payload is STILL notifications and
+      // `?versions` is already in the URL. The PREVIOUS code returned `clear-both`
+      // here (host kind + routed param) → it yanked `?versions` before Effect 1
+      // pushed the versions entry, collapsing the WHOLE host. With hostSupersede
+      // DOWN (the host was not just opened over a routed surface — it is merely
+      // stale), the reconciler now DEFERS to Effect 1 (`none`): the cursor moves
+      // onto the freshly-mirrored versions entry and the host navigates correctly.
+      expect(
+        reconcileUrlAction(
+          notificationsPayload,
+          noPeek,
+          versionsUrl(DOC),
+          NO_NAV,
+          NO_SUP,
+        ),
+      ).toEqual({ kind: "none" });
+    });
+
+    it("DEFERS (none) when a STALE host payload lingers and `?peek` is being mirrored in (symmetric to Bug 2)", () => {
+      expect(
+        reconcileUrlAction(
+          notificationsPayload,
+          peekActive,
+          noVersions,
+          NO_NAV,
+          NO_SUP,
+        ),
+      ).toEqual({ kind: "none" });
+    });
+
+    it("clears both when ←/→ NAVIGATED to a host entry while a sibling routed param lingers (back to Notifiche from the Versions lane)", () => {
+      // Back-stepping to the notifications host from the versions lane: the cursor
+      // lands on the host entry but `?versions` (the surface we left) is still in
+      // the URL. navIntent authorises dropping it so the host body shows alone —
+      // without this the versions lane and the host body would BOTH render
+      // (a BUG-N64 two-lane violation).
+      expect(
+        reconcileUrlAction(
+          notificationsPayload,
+          noPeek,
+          versionsUrl(DOC),
+          NAV,
+          NO_SUP,
         ),
       ).toEqual({ kind: "clear-both" });
     });
 
     it("does nothing for a host payload when no routed param is set", () => {
       expect(
-        reconcileUrlAction(notificationsPayload, noPeek, noVersions, NO_NAV),
+        reconcileUrlAction(
+          notificationsPayload,
+          noPeek,
+          noVersions,
+          NO_NAV,
+          NO_SUP,
+        ),
       ).toEqual({ kind: "none" });
     });
 
     it("does nothing when the history is empty and a routed param lingers (effect-1 will mirror it)", () => {
       // A fresh `?peek=cesare` deep-link: payload is still null while effect-1
       // pushes the mirror. The reconciler must NOT clear the param here.
-      expect(reconcileUrlAction(null, peekActive, noVersions, NO_NAV)).toEqual({
+      expect(
+        reconcileUrlAction(null, peekActive, noVersions, NO_NAV, NO_SUP),
+      ).toEqual({
         kind: "none",
       });
     });
 
     it("does nothing when the history is empty and no routed param is set", () => {
-      expect(reconcileUrlAction(null, noPeek, noVersions, NO_NAV)).toEqual({
+      expect(
+        reconcileUrlAction(null, noPeek, noVersions, NO_NAV, NO_SUP),
+      ).toEqual({
         kind: "none",
       });
     });

@@ -172,6 +172,15 @@ interface SplitDrawerContextValue {
    *  cannot swallow the intent before the real transition consumes it — that
    *  swallow broke ←/→ back to Cesare while a sibling routed param lingered. */
   peekNavIntent: () => boolean;
+  /** Read-and-reset whether the active HOST payload was opened OVER a routed
+   *  surface and so may evict the now-stale routed param (`clear-both`). The
+   *  reconciler consumes this exactly once, when it issues `clear-both`, so a
+   *  merely-stale host payload (cursor lingering while a routed param is being
+   *  mirrored) never collapses the host (Bug 2). */
+  consumeHostSupersede: () => boolean;
+  /** Peek the host-supersede flag without resetting it (same peek-then-consume
+   *  discipline as `peekNavIntent`). */
+  peekHostSupersede: () => boolean;
   /** Collapse the lane but KEEP the history, so the ⊟ toggle can re-open the last
    *  content. (vs `close`, which destroys the history.) */
   hide: () => void;
@@ -200,6 +209,42 @@ function payloadKey(p: SplitDrawerPayload): string {
   return p.kind;
 }
 
+/** A routed surface is one MIRRORED into the history from a URL param (its body
+ *  is rendered by the URL-driven lane, not the host). `cesare-peek` / `versions`
+ *  are routed; `preview` / `notifications` are HOST kinds (rendered in-place). */
+function isRoutedKind(p: SplitDrawerPayload): boolean {
+  return p.kind === "cesare-peek" || p.kind === "versions";
+}
+
+/**
+ * Pure history-stack transition shared by `open` and `promoteRoutedSurface`
+ * (DRY: one place owns "bring an existing entry forward, else push and drop the
+ * forward tail"). Returns the NEXT history array and the cursor it should point
+ * at — always a valid index into the returned array, so the cursor can never
+ * drift out of range (Bug 4). Re-targeting an existing entry refreshes it in
+ * place and jumps the cursor to it (no duplicate keys); a genuinely new entry is
+ * appended after the live cursor, dropping any forward ("redo") entries.
+ */
+export function nextHistory(
+  prev: ReadonlyArray<SplitDrawerPayload>,
+  cursor: number,
+  next: SplitDrawerPayload,
+): { history: ReadonlyArray<SplitDrawerPayload>; cursor: number } {
+  const key = payloadKey(next);
+  const existingIdx = prev.findIndex((p) => payloadKey(p) === key);
+  if (existingIdx !== -1) {
+    const updated = prev.slice();
+    updated[existingIdx] = next;
+    return { history: updated, cursor: existingIdx };
+  }
+  // Clamp the splice point into range so a stale/out-of-range cursor can't
+  // silently drop the whole stack (Bug 4 — degenerate history → collapse).
+  const safeCursor = Math.min(Math.max(cursor, -1), prev.length - 1);
+  const base = prev.slice(0, safeCursor + 1);
+  const pushed = [...base, next];
+  return { history: pushed, cursor: pushed.length - 1 };
+}
+
 export function SplitDrawerProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<SplitDrawerState>("closed");
   // History stack of contents shown in the drawer + the cursor into it. Only one
@@ -213,32 +258,40 @@ export function SplitDrawerProvider({ children }: { children: ReactNode }) {
   // the active payload to its old index — snapping a forward navigation back.
   const cursorRef = useRef(cursor);
   cursorRef.current = cursor;
+  // Latest history length, mirrored into a ref so `forward` can clamp the cursor
+  // without depending on `history` state (which would change its identity).
+  const historyLengthRef = useRef(history.length);
+  historyLengthRef.current = history.length;
   // Records that the LAST history mutation was a ←/→ navigation (vs an `open`).
   // The unified-split reconciler reads this to tell "navigated back to a routed
   // surface whose URL param is currently absent" (re-open it) apart from "the
   // surface's param was cleared externally" (close the host). `consumeNavIntent`
   // reads-and-resets it so each navigation is honoured exactly once (Spec 78 A6).
   const navIntentRef = useRef(false);
+  // Records that the active HOST payload (notifications / preview) was just
+  // opened OVER a routed surface and so legitimately owns the track — the URL→
+  // history reconciler may drop a now-stale routed param (`clear-both`). Without
+  // this, a host payload that is merely STALE (e.g. an older notifications entry
+  // still the cursor while Versioni is being opened from a header button and its
+  // `?versions` param is mid-mirror) would be MISREAD as "host owns the track,
+  // drop the routed param" — `clear-both` then yanks the fresh param before
+  // Effect 1 mirrors it, collapsing the whole host (Bug 2). So `open` ARMS this
+  // flag only when it pushes a host kind; every routed mutation (`open` of a
+  // routed kind, `promoteRoutedSurface`, ←/→) disarms it, and the reconciler
+  // defers to Effect 1 (`none`) for any routed param it sees with the flag down.
+  const hostSupersedeRef = useRef(false);
 
   const open = useCallback(
     (next: SplitDrawerPayload, target: SplitDrawerState = "open") => {
+      // A host kind opened here OWNS the track and may evict a stale routed param;
+      // a routed kind (mirrored from the URL by Effect 1) must NOT — it is the
+      // param's destination, not its evictor. This is the seed of the Bug 2 fix.
       navIntentRef.current = false;
+      hostSupersedeRef.current = !isRoutedKind(next);
       setHistory((prev) => {
-        const key = payloadKey(next);
-        const existingIdx = prev.findIndex((p) => payloadKey(p) === key);
-        if (existingIdx !== -1) {
-          // Same content already in history — refresh it in place and jump to it
-          // (bring it forward) rather than pushing a duplicate.
-          const updated = prev.slice();
-          updated[existingIdx] = next;
-          setCursor(existingIdx);
-          return updated;
-        }
-        // New content: drop any "forward" entries past the cursor, then push.
-        const base = prev.slice(0, cursorRef.current + 1);
-        const pushed = [...base, next];
-        setCursor(pushed.length - 1);
-        return pushed;
+        const result = nextHistory(prev, cursorRef.current, next);
+        setCursor(result.cursor);
+        return result.history;
       });
       setState(target);
     },
@@ -251,27 +304,21 @@ export function SplitDrawerProvider({ children }: { children: ReactNode }) {
   // close → `close-host`, which collapsed the whole host). Mirrors the ←/→ intent.
   const promoteRoutedSurface = useCallback((next: SplitDrawerPayload) => {
     setHistory((prev) => {
-      const key = payloadKey(next);
-      const existingIdx = prev.findIndex((p) => payloadKey(p) === key);
-      if (existingIdx !== -1) {
-        const updated = prev.slice();
-        updated[existingIdx] = next;
-        setCursor(existingIdx);
-        return updated;
-      }
-      const base = prev.slice(0, cursorRef.current + 1);
-      const pushed = [...base, next];
-      setCursor(pushed.length - 1);
-      return pushed;
+      const result = nextHistory(prev, cursorRef.current, next);
+      setCursor(result.cursor);
+      return result.history;
     });
     setState("open");
     // Set AFTER the history mutation so it survives into the reconcile tick that
-    // reads it (the setState calls above don't reset it).
+    // reads it (the setState calls above don't reset it). A promote is a routed
+    // navigation, never a host supersede — disarm the clear-both authorisation.
     navIntentRef.current = true;
+    hostSupersedeRef.current = false;
   }, []);
 
   const close = useCallback(() => {
     navIntentRef.current = false;
+    hostSupersedeRef.current = false;
     setState("closed");
     setHistory([]);
     setCursor(-1);
@@ -290,13 +337,20 @@ export function SplitDrawerProvider({ children }: { children: ReactNode }) {
     setCursor((c) => {
       if (c <= 0) return c;
       navIntentRef.current = true;
+      hostSupersedeRef.current = false;
       return c - 1;
     });
   }, []);
 
   const forward = useCallback(() => {
+    // Clamp at the end so a forward past the last entry can never push the cursor
+    // out of range (Bug 4 — an out-of-range cursor nulls the payload and collapses
+    // the host). `historyLengthRef` reads the LATEST length without re-creating the
+    // callback (it must stay reference-stable for the unified-split effect deps).
     setCursor((c) => {
+      if (c >= historyLengthRef.current - 1) return c;
       navIntentRef.current = true;
+      hostSupersedeRef.current = false;
       return c + 1;
     });
   }, []);
@@ -308,6 +362,17 @@ export function SplitDrawerProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const peekNavIntent = useCallback(() => navIntentRef.current, []);
+
+  // The reconciler PEEKS the host-supersede flag (like nav-intent) so a no-op
+  // reconcile tick can't swallow it before the clear-both transition reads it,
+  // and CONSUMES it only when it actually issues `clear-both`.
+  const consumeHostSupersede = useCallback(() => {
+    const was = hostSupersedeRef.current;
+    hostSupersedeRef.current = false;
+    return was;
+  }, []);
+
+  const peekHostSupersede = useCallback(() => hostSupersedeRef.current, []);
 
   // Content shows only when the lane is open AND the cursor points at an entry.
   // While hidden (`state === "closed"`) the history survives but `payload` is
@@ -331,6 +396,8 @@ export function SplitDrawerProvider({ children }: { children: ReactNode }) {
       canGoForward,
       consumeNavIntent,
       peekNavIntent,
+      consumeHostSupersede,
+      peekHostSupersede,
       hide,
       reopen,
       hasContent,
@@ -348,6 +415,8 @@ export function SplitDrawerProvider({ children }: { children: ReactNode }) {
       canGoForward,
       consumeNavIntent,
       peekNavIntent,
+      consumeHostSupersede,
+      peekHostSupersede,
       hide,
       reopen,
       hasContent,
@@ -374,6 +443,8 @@ const INERT_SPLIT_DRAWER: SplitDrawerContextValue = {
   canGoForward: false,
   consumeNavIntent: () => false,
   peekNavIntent: () => false,
+  consumeHostSupersede: () => false,
+  peekHostSupersede: () => false,
   hide: () => undefined,
   reopen: () => undefined,
   hasContent: false,

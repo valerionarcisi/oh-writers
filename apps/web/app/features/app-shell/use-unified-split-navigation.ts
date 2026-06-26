@@ -171,6 +171,7 @@ export function reconcileUrlAction(
   cesarePeek: RoutedCesarePeekState,
   versions: RoutedVersionsState,
   navIntent: boolean,
+  hostSupersede: boolean,
 ): UrlReconcileAction {
   const noRoutedParam = !cesarePeek.isActive && versions.documentId === null;
 
@@ -259,9 +260,24 @@ export function reconcileUrlAction(
       companions,
     };
   }
-  // Host kind (preview / notifications) or no payload: the track must carry no
-  // routed param. Already clear → nothing to do.
-  return noRoutedParam ? { kind: "none" } : { kind: "clear-both" };
+  // Host kind (preview / notifications): the track must carry no routed param.
+  // Whether a lingering routed param is EVICTED (`clear-both`) or LEFT for Effect
+  // 1 to mirror (`none`) turns on WHY this host payload is active:
+  //   - `hostSupersede` — the host was just opened OVER a routed surface (bell /
+  //     preview over Cesare / Versioni): it owns the track, the param is stale →
+  //     drop it.
+  //   - `navIntent` — the user ←/→ NAVIGATED to this host entry while a sibling
+  //     routed param still owned the URL (e.g. back to notifications from the
+  //     versions lane): the param belongs to the surface we left → drop it so the
+  //     host body shows alone.
+  //   - neither — the host payload is merely the STILL-ACTIVE cursor entry while a
+  //     routed param is being MIRRORED in (Versioni opened from a header button
+  //     over the notifications host; Effect 1 has not yet moved the cursor). Here
+  //     `clear-both` would yank the fresh param before Effect 1 pushes the routed
+  //     entry, collapsing the whole host (Bug 2). DEFER (`none`): Effect 1 moves
+  //     the cursor onto the freshly-mirrored routed entry, then this settles.
+  if (noRoutedParam) return { kind: "none" };
+  return hostSupersede || navIntent ? { kind: "clear-both" } : { kind: "none" };
 }
 
 export function useUnifiedSplitNavigation({
@@ -270,7 +286,15 @@ export function useUnifiedSplitNavigation({
   versions,
   actions,
 }: UseUnifiedSplitNavigationArgs): void {
-  const { open, payload, close, consumeNavIntent, peekNavIntent } = splitDrawer;
+  const {
+    open,
+    payload,
+    close,
+    consumeNavIntent,
+    peekNavIntent,
+    consumeHostSupersede,
+    peekHostSupersede,
+  } = splitDrawer;
   const { openCesarePeek, closeCesarePeek, openVersions, closeVersions } =
     actions;
 
@@ -368,11 +392,17 @@ export function useUnifiedSplitNavigation({
     // broke ←/→ back to Cesare while a sibling routed param lingered. So peek here
     // and consume ONLY when we actually issue a navigation below.
     const navIntent = peekNavIntent();
+    // PEEK (do not reset) the host-supersede flag too: it authorises `clear-both`
+    // ONLY for a host payload that was just opened over a routed surface. Peeking
+    // (not consuming) here means a no-op reconcile tick can't swallow it before
+    // the real clear-both transition reads it — same discipline as nav-intent.
+    const hostSupersede = peekHostSupersede();
     const action = reconcileUrlAction(
       payload,
       stableCesarePeek,
       stableVersions,
       navIntent,
+      hostSupersede,
     );
     if (action.kind === "none") {
       lastReconciledRef.current = null;
@@ -403,6 +433,9 @@ export function useUnifiedSplitNavigation({
         openVersions(documentId, companions),
       )
       .with({ kind: "clear-both" }, () => {
+        // The host genuinely superseded a routed surface — consume the
+        // authorisation so the next stale-host tick can't re-fire clear-both.
+        consumeHostSupersede();
         if (peekActive) closeCesarePeek();
         if (versionsDocumentId !== null) closeVersions();
       })
@@ -419,6 +452,8 @@ export function useUnifiedSplitNavigation({
     versionsDocumentId,
     consumeNavIntent,
     peekNavIntent,
+    consumeHostSupersede,
+    peekHostSupersede,
     openCesarePeek,
     closeCesarePeek,
     openVersions,
