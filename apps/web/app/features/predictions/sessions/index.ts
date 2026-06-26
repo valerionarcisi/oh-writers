@@ -16,6 +16,10 @@ export {
 } from "./sessions.schema";
 export type { CesareSession } from "./sessions.schema";
 export { deriveSessionTitle, DERIVED_TITLE_MAX } from "./derive-session-title";
+export {
+  resolveSessionSendTarget,
+  type SessionSendTarget,
+} from "./session-send-target";
 export { CesareSessionNotFoundError } from "./sessions.errors";
 export {
   sessionsQueryKey,

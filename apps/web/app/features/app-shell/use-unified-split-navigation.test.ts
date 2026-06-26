@@ -239,6 +239,31 @@ describe("reconcileUrlAction — history → URL projection", () => {
     });
   });
 
+  describe("promote-into-host (Bug 4b: Notifiche → Cesare must NOT collapse the host)", () => {
+    // Clicking Cesare while a HOST surface (notifications) owns the lane PUSHES
+    // the `cesare-peek` payload onto the shared history AS A NAVIGATION
+    // (`promoteRoutedSurface` sets the nav-intent flag). On the reconcile tick the
+    // new payload is `cesare-peek`, its `?peek` param is not set yet, and
+    // navIntent is TRUE — so the reconciler RE-ASSERTS `?peek` (`open-cesare`)
+    // instead of reading the absent param as an external close (`close-host`,
+    // which collapsed the whole host). The previous notifications entry survives
+    // as the ←back-step.
+    it("re-opens Cesare (open-cesare) when promoted as a navigation with its param not yet set", () => {
+      expect(
+        reconcileUrlAction(cesarePeekPayload, noPeek, noVersions, NAV),
+      ).toEqual({ kind: "open-cesare" });
+    });
+
+    it("would WRONGLY close the host without the nav intent (documents why promote MUST set navIntent)", () => {
+      // The exact failure: a `cesare-peek` payload + no `?peek` + NOT a navigation
+      // reads as an external close. `promoteRoutedSurface` sets navIntent so this
+      // branch is never taken for a promote.
+      expect(
+        reconcileUrlAction(cesarePeekPayload, noPeek, noVersions, NO_NAV),
+      ).toEqual({ kind: "close-host" });
+    });
+  });
+
   describe("host kinds / null payload", () => {
     it("clears both routed params when a notifications payload owns the track over Cesare", () => {
       expect(

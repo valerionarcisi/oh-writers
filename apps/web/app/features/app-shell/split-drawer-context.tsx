@@ -139,6 +139,14 @@ interface SplitDrawerContextValue {
    *  it. A content identical (by `dedupeKey`) to one already in the history is
    *  brought forward instead of duplicated. */
   open: (payload: SplitDrawerPayload, target?: SplitDrawerState) => void;
+  /** Push a ROUTED-kind surface (`cesare-peek` / `versions`) onto the shared
+   *  history AS A NAVIGATION — like ←/→, it sets the nav-intent flag so the
+   *  unified-split reconciler RE-ASSERTS the surface's URL param instead of
+   *  reading the (transiently absent) param as an external close. Used to promote
+   *  a routed surface INTO the host while a host kind (notifications / preview)
+   *  is showing, so the previous surface survives as a ←back-step rather than the
+   *  whole host collapsing (Bug 4b). For host kinds use `open`. */
+  promoteRoutedSurface: (payload: SplitDrawerPayload) => void;
   /** Close the drawer and clear the whole history. */
   close: () => void;
   /** Current state. */
@@ -237,6 +245,31 @@ export function SplitDrawerProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  // Promote a routed surface into the host AS A NAVIGATION (Bug 4b). Same history
+  // push as `open`, but it SETS `navIntentRef` so the reconciler re-asserts the
+  // surface's URL param (rather than reading the not-yet-set param as an external
+  // close → `close-host`, which collapsed the whole host). Mirrors the ←/→ intent.
+  const promoteRoutedSurface = useCallback((next: SplitDrawerPayload) => {
+    setHistory((prev) => {
+      const key = payloadKey(next);
+      const existingIdx = prev.findIndex((p) => payloadKey(p) === key);
+      if (existingIdx !== -1) {
+        const updated = prev.slice();
+        updated[existingIdx] = next;
+        setCursor(existingIdx);
+        return updated;
+      }
+      const base = prev.slice(0, cursorRef.current + 1);
+      const pushed = [...base, next];
+      setCursor(pushed.length - 1);
+      return pushed;
+    });
+    setState("open");
+    // Set AFTER the history mutation so it survives into the reconcile tick that
+    // reads it (the setState calls above don't reset it).
+    navIntentRef.current = true;
+  }, []);
+
   const close = useCallback(() => {
     navIntentRef.current = false;
     setState("closed");
@@ -287,6 +320,7 @@ export function SplitDrawerProvider({ children }: { children: ReactNode }) {
   const value = useMemo<SplitDrawerContextValue>(
     () => ({
       open,
+      promoteRoutedSurface,
       close,
       state,
       setState,
@@ -303,6 +337,7 @@ export function SplitDrawerProvider({ children }: { children: ReactNode }) {
     }),
     [
       open,
+      promoteRoutedSurface,
       close,
       state,
       setState,
@@ -328,6 +363,7 @@ export function SplitDrawerProvider({ children }: { children: ReactNode }) {
 
 const INERT_SPLIT_DRAWER: SplitDrawerContextValue = {
   open: () => undefined,
+  promoteRoutedSurface: () => undefined,
   close: () => undefined,
   state: "closed",
   setState: () => undefined,

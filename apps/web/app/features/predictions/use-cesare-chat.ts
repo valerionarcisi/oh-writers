@@ -84,29 +84,49 @@ export const useCesareChat = (args: UseCesareChatArgs): UseCesareChat => {
   const sendDepsRef = useRef(sendDeps);
   sendDepsRef.current = sendDeps;
   const pageContextKey = JSON.stringify(pageContext);
+  // The store object's IDENTITY changes on every state change (its memo depends
+  // on the reducer state). Depending on `store` here would re-fire the publish
+  // effect on every store mutation — and `setSendDeps` calls `setActivePage`,
+  // which re-renders the provider, which re-creates `store`, which re-fires this
+  // effect: an infinite "Maximum update depth" loop (Bug 3a — surfaced when
+  // switching sessions in the Cesare split, store.tsx:158 ← use-cesare-chat:88).
+  // `setSendDeps` is a stable `useCallback([])`, so read it through a ref and
+  // depend ONLY on the serialised page-context values. The effect then fires once
+  // per genuine page-context change, never on store-identity churn.
+  const storeRef = useRef(store);
+  storeRef.current = store;
   useEffect(() => {
-    store?.setSendDeps(sendDepsRef.current);
+    storeRef.current?.setSendDeps(sendDepsRef.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [store, pageContextKey]);
+  }, [pageContextKey]);
 
-  // Keep the store's active session in sync with this surface's selection.
+  // Keep the store's active session in sync with this surface's selection. Read
+  // the store through the ref for the same reason as above: depending on `store`
+  // would re-run this on every store-identity churn. `selectSession` short-
+  // circuits when the store is already on `desiredSession`, so the only trigger
+  // we care about is a genuine change of THIS surface's desired session.
   const desiredSession = args.activeSessionId ?? "__pending__";
   useEffect(() => {
-    if (!store) return;
-    if (store.activeSessionId !== desiredSession) {
-      store.selectSession(desiredSession);
+    const s = storeRef.current;
+    if (!s) return;
+    if (s.activeSessionId !== desiredSession) {
+      s.selectSession(desiredSession);
     }
-  }, [store, desiredSession]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [desiredSession]);
 
-  const storeSend = useCallback(
-    async (text: string, sessionId?: string) => {
-      await store?.send(text, sessionId);
-    },
-    [store],
-  );
+  // `send` / `selectSession` are returned to consumers that list them in effect
+  // dependency arrays (e.g. CesareSheet's focused-session adoption effect). They
+  // MUST be referentially STABLE across renders, or every store-identity churn
+  // re-fires those effects — re-entering the same loop family. Bind through the
+  // store ref so the identity never changes while the methods always reach the
+  // freshest store.
+  const storeSend = useCallback(async (text: string, sessionId?: string) => {
+    await storeRef.current?.send(text, sessionId);
+  }, []);
   const storeSelect = useCallback(
-    (sessionId: string) => store?.selectSession(sessionId),
-    [store],
+    (sessionId: string) => storeRef.current?.selectSession(sessionId),
+    [],
   );
 
   if (store) {

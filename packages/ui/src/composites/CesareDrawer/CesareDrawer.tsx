@@ -257,31 +257,33 @@ function PeekRow({
     { onPress: onClose, "aria-label": closeLabel },
     closeRef,
   );
+  // The row is a non-interactive flex CONTAINER. The expand affordance and the
+  // close affordance are SIBLING buttons inside it — a button can never be a
+  // descendant of another button (invalid HTML → React hydration mismatch →
+  // unstable re-render). react-aria drives both for keyboard a11y.
   return (
-    <button
-      ref={expandRef}
-      {...expandProps}
-      type="button"
-      className={styles.peekRow}
-      data-testid="cesare-peek-expand-btn"
-    >
-      <span className={styles.peekGlow} aria-hidden="true" />
-      <span className={styles.peekLabel}>Cesare</span>
-      <span className={styles.peekSub}>· {subtitle}</span>
+    <div className={styles.peekRow}>
+      <button
+        ref={expandRef}
+        {...expandProps}
+        type="button"
+        className={styles.peekExpand}
+        data-testid="cesare-peek-expand-btn"
+      >
+        <span className={styles.peekGlow} aria-hidden="true" />
+        <span className={styles.peekLabel}>Cesare</span>
+        <span className={styles.peekSub}>· {subtitle}</span>
+      </button>
       <button
         ref={closeRef}
         {...closeProps}
         type="button"
         className={styles.peekClose}
         data-testid="cesare-peek-close-btn"
-        onClick={(e) => {
-          e.stopPropagation();
-          onClose();
-        }}
       >
         ×
       </button>
-    </button>
+    </div>
   );
 }
 

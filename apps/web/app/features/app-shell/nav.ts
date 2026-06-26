@@ -117,3 +117,27 @@ export const ALL_RAIL_SEGMENTS: ReadonlyArray<string> = [
   ...DEV_ENTRIES.map((e) => e.segment),
   ...PROD_ENTRIES.map((e) => e.segment),
 ];
+
+/**
+ * Guard every `/projects/$id/...` navigation against a missing project id.
+ *
+ * Building a project route from a possibly-undefined id yields the literal
+ * `/projects/undefined/...`, which matches no route and sends the router into a
+ * re-match storm ("Maximum update depth" + repeated `/projects/undefined/*`
+ * matches — the Bug 2 / 3a loop family). This pure predicate is the single check
+ * the shell's session-navigation handlers use BEFORE calling `router.navigate`,
+ * so a project route is never built from an absent id.
+ *
+ * Returns the trimmed id when it is a usable project id, else `null` (callers
+ * `if (!resolveProjectIdForNav(id)) return;`).
+ */
+export function resolveProjectIdForNav(
+  projectId: string | null | undefined,
+): string | null {
+  if (projectId == null) return null;
+  const trimmed = projectId.trim();
+  if (trimmed.length === 0 || trimmed === "undefined" || trimmed === "null") {
+    return null;
+  }
+  return trimmed;
+}
