@@ -218,12 +218,23 @@ function isRoutedKind(p: SplitDrawerPayload): boolean {
 
 /**
  * Pure history-stack transition shared by `open` and `promoteRoutedSurface`
- * (DRY: one place owns "bring an existing entry forward, else push and drop the
- * forward tail"). Returns the NEXT history array and the cursor it should point
- * at — always a valid index into the returned array, so the cursor can never
- * drift out of range (Bug 4). Re-targeting an existing entry refreshes it in
- * place and jumps the cursor to it (no duplicate keys); a genuinely new entry is
- * appended after the live cursor, dropping any forward ("redo") entries.
+ * (DRY: one place owns "move an existing surface to the front, else push and
+ * drop the forward tail"). Returns the NEXT history array and the cursor it
+ * should point at — always a valid index into the returned array, so the cursor
+ * can never drift out of range (Bug 4).
+ *
+ * Re-opening a surface ALREADY in the stack MOVES IT TO THE FRONT (most-recent
+ * position): it is removed from its old index and appended at the end, with the
+ * cursor set to that last index. It does NOT jump the cursor BACKWARD to the
+ * stale index — that backward jump (the old behaviour) stranded the surfaces in
+ * between as forward-only entries that a single ←/→ walk could never reach
+ * (BUG-N67: open Cesare→Versioni→Notifiche→Versioni→Cesare left Notifiche
+ * unreachable in BOTH directions). Move-to-front keeps every distinct surface
+ * present AND reachable by walking back, and matches the user's mental model:
+ * "I just re-opened it, it's the current one, the others are behind me."
+ *
+ * A genuinely NEW entry is appended after the live cursor, dropping any forward
+ * ("redo") entries. Either path never produces duplicate keys.
  */
 export function nextHistory(
   prev: ReadonlyArray<SplitDrawerPayload>,
@@ -233,9 +244,13 @@ export function nextHistory(
   const key = payloadKey(next);
   const existingIdx = prev.findIndex((p) => payloadKey(p) === key);
   if (existingIdx !== -1) {
-    const updated = prev.slice();
-    updated[existingIdx] = next;
-    return { history: updated, cursor: existingIdx };
+    // Move-to-front: drop the stale entry and re-append the refreshed payload as
+    // the most-recent surface. The surfaces formerly after it slide down by one
+    // but stay present, so walking ← from the new cursor visits every distinct
+    // surface — none stranded (BUG-N67).
+    const withoutExisting = prev.filter((_, i) => i !== existingIdx);
+    const moved = [...withoutExisting, next];
+    return { history: moved, cursor: moved.length - 1 };
   }
   // Clamp the splice point into range so a stale/out-of-range cursor can't
   // silently drop the whole stack (Bug 4 — degenerate history → collapse).
