@@ -58,6 +58,36 @@ describe("[OHW-N66] classifyEditSize", () => {
     expect(classifyEditSize(base, next)).toBe("small");
   });
 
+  it("#36: a full rewrite of a tiny doc (logline) stays small — ratio is disabled below the min-words floor", () => {
+    // A logline is ~12 words. "Rendi più corta" rewrites most of it → ratio
+    // well over 0.4, but a handful of changed words is not a "large edit".
+    // Before the fix this tripped the ASK card on every short-doc edit (#36).
+    const base = words(12);
+    const next = words(8).replace(/w/g, "x");
+    expect(classifyEditSize(base, next)).toBe("small");
+  });
+
+  it("#36: the same big-ratio edit on a doc at the floor IS large", () => {
+    // At exactly the min-words floor the ratio branch is back in play, so a
+    // large relative change classifies as large — the floor only spares docs
+    // too short for a percentage to be meaningful.
+    const base = words(40);
+    let next = base;
+    for (let i = 0; i < 15; i++) {
+      next = next.replace(new RegExp(`\\bw${i}\\b`), `z${i}`);
+    }
+    // ~30 changed / 40 = 0.75 ≥ 0.4, and prevWords (40) ≥ the floor.
+    expect(classifyEditSize(base, next)).toBe("large");
+  });
+
+  it("#36: a huge append to a tiny doc is still large (absolute floor survives)", () => {
+    // The floor disables only the RATIO branch; a genuinely big absolute change
+    // to a short doc still asks.
+    const base = words(5);
+    const next = base + " " + words(LARGE_EDIT_WORDS + 10);
+    expect(classifyEditSize(base, next)).toBe("large");
+  });
+
   it("a replacement of half the words trips the ratio (replacement = del+add)", () => {
     const base = words(100);
     let next = base;
