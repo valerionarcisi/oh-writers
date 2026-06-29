@@ -2350,7 +2350,11 @@ export const askCesare = createServerFn({ method: "POST" })
   .validator(CesareInputSchema)
   .handler(async ({ data }) =>
     toShape(
-      await withProjectAccess(data.projectId, "view", ({ db, access }) =>
+      // "edit": a Cesare turn can fire mutating tools (persistDocumentContent,
+      // breakdown/budget/location/schedule/screenplay writers), so a read-only
+      // VIEWER must not reach the turn. Gating here also makes commitOrAsk /
+      // applyVersionLive unreachable by viewers. See issue #60.
+      await withProjectAccess(data.projectId, "edit", ({ db, access }) =>
         handleAskCesareV2(data, db, access),
       ),
     ),
@@ -2380,7 +2384,8 @@ export const resolveCesareStreamAccess = (
   CesareStreamAccess,
   import("~/server/access").ProjectAccessError
 > =>
-  withProjectAccessHeaders(projectId, "view", headers, (ctx) =>
+  // "edit" — same reason as askCesare (#60): streaming turns mutate too.
+  withProjectAccessHeaders(projectId, "edit", headers, (ctx) =>
     ResultAsync.fromSafePromise(Promise.resolve(ctx)),
   );
 
