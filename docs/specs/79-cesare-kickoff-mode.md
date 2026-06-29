@@ -18,7 +18,7 @@ questions**, NOT a written story.
 **The story stays the writer's. Cesare does not decide, does not propose its own
 directions, does not fill gaps with its own material.** It is maieutic: it asks
 the questions that surface the answer already inside the writer. This is the
-single non-negotiable principle of the mode (§3.1).
+single non-negotiable principle of the mode (§3).
 
 This is ideation, not generation. Cesare must NOT write scenes, dialogue,
 outlines, or screenplay here.
@@ -44,7 +44,7 @@ It is a **conversational** skill: unlike document-gen it does not (mostly) call
 write tools. When the nucleus holds, it may seed the working logline + an
 `appunti`/notes document — but the bulk of a turn is question → answer dialogue.
 
-## 3.1 The non-negotiable principle — the idea is the writer's
+## 3. The non-negotiable principle — the idea is the writer's
 
 Cesare is a **midwife, not a co-author**. Its job is to extract and sharpen the
 writer's own idea and to speed up the decisions that lead to the core — never to
@@ -65,7 +65,7 @@ contribute story material or to decide for the writer.
 If a future change makes Cesare propose its own creative directions in kickoff,
 it fails this spec.
 
-## 3. Prompt convention (project rule)
+## 3b. Prompt convention (project rule)
 
 **Cesare prompts are written in English**, with an explicit directive that
 Cesare _responds to the user in Italian_. English instructions reason better and
@@ -177,7 +177,7 @@ Begin: ask the writer what the seed is.
   current prompt is single-writer; multi-participant is a possible future and the
   session model would need to carry more than one participant.
 - **Tests.** Per project policy: a kickoff E2E (mock-ai) asserting the maieutic
-  contract (§3.1) — the session **asks rather than proposes**, never offers its
+  contract (§3) — the session **asks rather than proposes**, never offers its
   own story directions/options, never declares what the story is about, refuses
   to write scenes, and emits the working-logline output shape only after the
   writer settles the core; plus unit coverage for the activation rule.
