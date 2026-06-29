@@ -125,6 +125,10 @@ jobs:
   e2e-chromium:
     name: E2E (Full, Playwright chromium)
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     services:
       postgres:
         image: postgres:16
@@ -168,8 +172,11 @@ jobs:
       # The full chromium project (every non-mock-ui spec). CI applies
       # retries=2 (playwright.config.ts) so the handful of state/timing-flaky
       # specs that pass on retry don't fail the run.
-      - name: Full E2E (--project=chromium)
-        run: pnpm exec playwright test --project=chromium
+      # Sharded across 4 parallel runners (matrix.shard) so the full suite
+      # finishes in ~1/4 the wall-clock. Playwright splits specs deterministically
+      # by --shard; retries=2 (playwright.config.ts) still applies per shard.
+      - name: Full E2E (--project=chromium, shard ${{ matrix.shard }}/4)
+        run: pnpm exec playwright test --project=chromium --shard=${{ matrix.shard }}/4
       - name: Dump failing-test details on failure
         if: failure()
         run: |
@@ -186,7 +193,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report-chromium
+          name: playwright-report-chromium-shard-${{ matrix.shard }}
           path: playwright-report/
           retention-days: 7
 
