@@ -50,6 +50,28 @@ function readDocMarker(result: string): DocMarker | null {
   return JSON.parse(match[1]!) as DocMarker;
 }
 
+// A large edit (Spec 76) does NOT apply silently — it streams an ask card and
+// stops the turn, emitting `ohw:ask-new-version` (carries document_type, but no
+// version_id since nothing was written yet). A small edit applies live and emits
+// `ohw:doc-applied`. Both are valid dispatch outcomes; this reads whichever the
+// turn produced so the assertion checks "Cesare dispatched a write of the right
+// entity", not the apply-vs-ask branch (which depends on edit size).
+function readDispatchMarker(
+  result: string,
+): { documentType?: string; applied: boolean } | null {
+  const applied = /<!--ohw:doc-applied:(.*?)-->/.exec(result);
+  if (applied) {
+    const m = JSON.parse(applied[1]!) as DocMarker;
+    return { documentType: m.document_type, applied: true };
+  }
+  const asked = /<!--ohw:ask-new-version:(.*?)-->/.exec(result);
+  if (asked) {
+    const m = JSON.parse(asked[1]!) as { document_type?: string };
+    return { documentType: m.document_type, applied: false };
+  }
+  return null;
+}
+
 async function postToCesare(
   request: import("@playwright/test").APIRequestContext,
   message: string,
@@ -91,16 +113,16 @@ function assertWroteEntity(
     )}`,
   ).toBe(true);
 
-  const marker = readDocMarker(done.result ?? "");
+  // Cesare must dispatch a write of the right entity. The terminal marker is
+  // doc-applied (small edit → live apply) OR ask-new-version (large edit →
+  // Spec 76 asks before minting); either proves the dispatch reached the
+  // executor for the right document_type.
+  const marker = readDispatchMarker(done.result ?? "");
   expect(
     marker,
-    `expected an ohw:doc-applied marker for "${message}"; got ${done.result}`,
+    `expected a doc-applied or ask-new-version marker for "${message}"; got ${done.result}`,
   ).not.toBeNull();
-  expect(marker!.document_type).toBe(documentType);
-  expect(
-    marker!.version_id,
-    `a new ${documentType} version id must be present (content written) for "${message}"`,
-  ).toBeTruthy();
+  expect(marker!.documentType).toBe(documentType);
 }
 
 test.describe("[R3] Free natural-language dispatch is reliable", () => {

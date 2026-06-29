@@ -46,7 +46,14 @@ test.describe("[061] Cesare soggetto apply persists (no flash-then-revert)", () 
       page,
       "Fammi un v2 del soggetto più asciutto.",
     );
-    expect(reply.toLowerCase()).toMatch(/soggetto|aggiornat|applicat/);
+    expect(reply.toLowerCase()).toMatch(/soggetto|aggiornat|applicat|modifica/);
+
+    // The seeded soggetto is ~180 words, so a full v2 rewrite is a LARGE edit:
+    // per Spec 76 (#36) Cesare ASKS before minting. Confirm "Nuova versione" →
+    // the edit then applies live.
+    const askCard = page.getByTestId("cesare-ask-new-version");
+    await expect(askCard).toBeVisible({ timeout: 30_000 });
+    await page.getByTestId("cesare-ask-mint").click();
 
     // The v2 lands live in the open editor (the live-doc contract).
     await expect(editor).toContainText(MOCK_V2_MARKER, { timeout: 15_000 });
