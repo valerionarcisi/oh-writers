@@ -37,8 +37,14 @@ import {
   type EffortLevel,
 } from "@oh-writers/domain";
 import { toShape, type ResultShape } from "@oh-writers/utils";
-import { requireUser } from "~/server/context";
 import { getDb, type Db } from "~/server/db";
+import { withProjectAccess } from "~/server/pipeline";
+import type { ProjectAccessError } from "~/server/access";
+import {
+  projectIdFromScenarioId,
+  projectIdFromShot,
+  projectIdFromScene,
+} from "./resolve-project-id";
 import {
   ForbiddenError,
   DbError,
@@ -302,7 +308,10 @@ const buildShotPlanView = async (
   const scenarioIds = scenarios.map((s) => s.id);
   const [rawShots, rawTransitions] =
     scenarioIds.length === 0
-      ? [[] as (typeof shots.$inferSelect)[], [] as (typeof transitionSlots.$inferSelect)[]]
+      ? [
+          [] as (typeof shots.$inferSelect)[],
+          [] as (typeof transitionSlots.$inferSelect)[],
+        ]
       : await Promise.all([
           db
             .select()
@@ -340,22 +349,20 @@ export const getShotPlan = createServerFn({ method: "GET" })
   .handler(
     async ({
       data,
-    }): Promise<ResultShape<ShotPlanView | null, ForbiddenError | DbError>> => {
-      await requireUser();
-      const db = await getDb();
-
-      const result = await ResultAsync.fromPromise(
-        db.query.shotPlans
-          .findFirst({ where: eq(shotPlans.sceneId, data.sceneId) })
-          .then((r) => r ?? null),
-        (e) => new DbError("getShotPlan/loadPlan", e),
-      ).andThen((plan) => {
-        if (!plan) return okAsync<ShotPlanView | null, DbError>(null);
-        return ResultAsync.fromPromise(
-          buildShotPlanView(db, plan.id),
-          (e) => (e instanceof DbError ? e : new DbError("getShotPlan/build", e)),
-        );
-      });
+    }): Promise<ResultShape<ShotPlanView | null, ProjectAccessError>> => {
+      const result = await withProjectAccess(data.projectId, "view", ({ db }) =>
+        ResultAsync.fromPromise(
+          db.query.shotPlans
+            .findFirst({ where: eq(shotPlans.sceneId, data.sceneId) })
+            .then((r) => r ?? null),
+          (e) => new DbError("getShotPlan/loadPlan", e),
+        ).andThen((plan) => {
+          if (!plan) return okAsync<ShotPlanView | null, DbError>(null);
+          return ResultAsync.fromPromise(buildShotPlanView(db, plan.id), (e) =>
+            e instanceof DbError ? e : new DbError("getShotPlan/build", e),
+          );
+        }),
+      );
 
       return toShape(result);
     },
@@ -370,11 +377,12 @@ export const shotPlanQueryOptions = (sceneId: string, projectId: string) =>
 export const getEffortWeights = createServerFn({ method: "GET" })
   .validator(z.object({ projectId: z.string().uuid() }))
   .handler(
-    async ({ data }): Promise<ResultShape<ShotEffortWeights, DbError>> => {
-      await requireUser();
-      const db = await getDb();
-
-      const result = await resolveWeights(db, data.projectId);
+    async ({
+      data,
+    }): Promise<ResultShape<ShotEffortWeights, ProjectAccessError>> => {
+      const result = await withProjectAccess(data.projectId, "view", ({ db }) =>
+        resolveWeights(db, data.projectId),
+      );
 
       return toShape(result);
     },
@@ -399,12 +407,9 @@ export const createShotPlanAndScenario = createServerFn({ method: "POST" })
   .handler(
     async ({
       data,
-    }): Promise<ResultShape<ShotPlanView, ForbiddenError | DbError>> => {
-      await requireUser();
-      const db = await getDb();
-
-      const result = await resolveWeights(db, data.projectId).andThen(
-        (weights) =>
+    }): Promise<ResultShape<ShotPlanView, ProjectAccessError>> => {
+      const result = await withProjectAccess(data.projectId, "edit", ({ db }) =>
+        resolveWeights(db, data.projectId).andThen((weights) =>
           ResultAsync.fromPromise(
             db.transaction(async (tx) => {
               // Upsert shot plan
@@ -465,6 +470,7 @@ export const createShotPlanAndScenario = createServerFn({ method: "POST" })
             }),
             (e) => new DbError("createShotPlanAndScenario/transaction", e),
           ),
+        ),
       );
 
       return toShape(result);
@@ -483,32 +489,35 @@ export const setActiveScenario = createServerFn({ method: "POST" })
     async ({
       data,
     }): Promise<
-      ResultShape<void, ForbiddenError | ScenarioNotFoundError | DbError>
+      ResultShape<void, ScenarioNotFoundError | ProjectAccessError>
     > => {
-      await requireUser();
-      const db = await getDb();
-
-      const result = await ResultAsync.fromPromise(
-        db.query.shotPlanScenarios
-          .findFirst({ where: eq(shotPlanScenarios.id, data.scenarioId) })
-          .then((r) => r ?? null),
-        (e) => new DbError("setActiveScenario/load", e),
-      )
-        .andThen((scenario) => {
-          if (!scenario) return err(new ScenarioNotFoundError(data.scenarioId));
-          if (scenario.shotPlanId !== data.shotPlanId)
-            return err(new ForbiddenError("set active scenario"));
-          return ok(scenario);
-        })
-        .andThen(() =>
-          ResultAsync.fromPromise(
-            db
-              .update(shotPlans)
-              .set({ activeScenarioId: data.scenarioId, updatedAt: new Date() })
-              .where(eq(shotPlans.id, data.shotPlanId)),
-            (e) => new DbError("setActiveScenario/update", e),
-          ).map(() => undefined),
-        );
+      const result = await withProjectAccess(data.projectId, "edit", ({ db }) =>
+        ResultAsync.fromPromise(
+          db.query.shotPlanScenarios
+            .findFirst({ where: eq(shotPlanScenarios.id, data.scenarioId) })
+            .then((r) => r ?? null),
+          (e) => new DbError("setActiveScenario/load", e),
+        )
+          .andThen((scenario) => {
+            if (!scenario)
+              return err(new ScenarioNotFoundError(data.scenarioId));
+            if (scenario.shotPlanId !== data.shotPlanId)
+              return err(new ForbiddenError("set active scenario"));
+            return ok(scenario);
+          })
+          .andThen(() =>
+            ResultAsync.fromPromise(
+              db
+                .update(shotPlans)
+                .set({
+                  activeScenarioId: data.scenarioId,
+                  updatedAt: new Date(),
+                })
+                .where(eq(shotPlans.id, data.shotPlanId)),
+              (e) => new DbError("setActiveScenario/update", e),
+            ).map(() => undefined),
+          ),
+      );
 
       return toShape(result);
     },
@@ -548,12 +557,9 @@ export const addShot = createServerFn({ method: "POST" })
       notes: z.string().nullable().optional(),
     }),
   )
-  .handler(
-    async ({ data }): Promise<ResultShape<void, ForbiddenError | DbError>> => {
-      await requireUser();
-      const db = await getDb();
-
-      const result = await ResultAsync.fromPromise(
+  .handler(async ({ data }): Promise<ResultShape<void, ProjectAccessError>> => {
+    const result = await withProjectAccess(data.projectId, "edit", ({ db }) =>
+      ResultAsync.fromPromise(
         db.transaction(async (tx) => {
           const existingShots = await tx
             .select()
@@ -597,11 +603,11 @@ export const addShot = createServerFn({ method: "POST" })
           );
         }),
         (e) => new DbError("addShot/transaction", e),
-      );
+      ),
+    );
 
-      return toShape(result);
-    },
-  );
+    return toShape(result);
+  });
 
 export const updateShot = createServerFn({ method: "POST" })
   .validator(
@@ -646,34 +652,33 @@ export const updateShot = createServerFn({ method: "POST" })
   .handler(
     async ({
       data,
-    }): Promise<
-      ResultShape<void, ForbiddenError | ShotNotFoundError | DbError>
-    > => {
-      await requireUser();
-      const db = await getDb();
-
-      const result = await ResultAsync.fromPromise(
-        db.query.shots
-          .findFirst({ where: eq(shots.id, data.shotId) })
-          .then((r) => r ?? null),
-        (e) => new DbError("updateShot/load", e),
-      )
-        .andThen((shot) => {
-          if (!shot) return err(new ShotNotFoundError(data.shotId));
-          return ok(shot);
-        })
-        .andThen((shot) =>
-          ResultAsync.fromPromise(
-            (async () => {
-              await db
-                .update(shots)
-                .set({ ...data.patch, updatedAt: new Date() })
-                .where(eq(shots.id, data.shotId));
-              await db.execute(sql`UPDATE shot_plan_scenarios SET is_suggested = false WHERE id = ${shot.scenarioId}`);
-            })(),
-            (e) => new DbError("updateShot/update", e),
-          ).map(() => undefined),
-        );
+    }): Promise<ResultShape<void, ShotNotFoundError | ProjectAccessError>> => {
+      const result = await withProjectAccess(data.projectId, "edit", ({ db }) =>
+        ResultAsync.fromPromise(
+          db.query.shots
+            .findFirst({ where: eq(shots.id, data.shotId) })
+            .then((r) => r ?? null),
+          (e) => new DbError("updateShot/load", e),
+        )
+          .andThen((shot) => {
+            if (!shot) return err(new ShotNotFoundError(data.shotId));
+            return ok(shot);
+          })
+          .andThen((shot) =>
+            ResultAsync.fromPromise(
+              (async () => {
+                await db
+                  .update(shots)
+                  .set({ ...data.patch, updatedAt: new Date() })
+                  .where(eq(shots.id, data.shotId));
+                await db.execute(
+                  sql`UPDATE shot_plan_scenarios SET is_suggested = false WHERE id = ${shot.scenarioId}`,
+                );
+              })(),
+              (e) => new DbError("updateShot/update", e),
+            ).map(() => undefined),
+          ),
+      );
 
       return toShape(result);
     },
@@ -691,31 +696,28 @@ export const updateShotTimeOffset = createServerFn({ method: "POST" })
   .handler(
     async ({
       data,
-    }): Promise<
-      ResultShape<void, ForbiddenError | ShotNotFoundError | DbError>
-    > => {
-      await requireUser();
-      const db = await getDb();
-
-      const result = await ResultAsync.fromPromise(
-        db.query.shots
-          .findFirst({ where: eq(shots.id, data.shotId) })
-          .then((r) => r ?? null),
-        (e) => new DbError("updateShotTimeOffset/load", e),
-      )
-        .andThen((shot) => {
-          if (!shot) return err(new ShotNotFoundError(data.shotId));
-          return ok(shot);
-        })
-        .andThen(() =>
-          ResultAsync.fromPromise(
-            db
-              .update(shots)
-              .set({ timeOffset: data.timeOffset, updatedAt: new Date() })
-              .where(eq(shots.id, data.shotId)),
-            (e) => new DbError("updateShotTimeOffset/update", e),
-          ).map(() => undefined),
-        );
+    }): Promise<ResultShape<void, ShotNotFoundError | ProjectAccessError>> => {
+      const result = await withProjectAccess(data.projectId, "edit", ({ db }) =>
+        ResultAsync.fromPromise(
+          db.query.shots
+            .findFirst({ where: eq(shots.id, data.shotId) })
+            .then((r) => r ?? null),
+          (e) => new DbError("updateShotTimeOffset/load", e),
+        )
+          .andThen((shot) => {
+            if (!shot) return err(new ShotNotFoundError(data.shotId));
+            return ok(shot);
+          })
+          .andThen(() =>
+            ResultAsync.fromPromise(
+              db
+                .update(shots)
+                .set({ timeOffset: data.timeOffset, updatedAt: new Date() })
+                .where(eq(shots.id, data.shotId)),
+              (e) => new DbError("updateShotTimeOffset/update", e),
+            ).map(() => undefined),
+          ),
+      );
 
       return toShape(result);
     },
@@ -730,27 +732,30 @@ export const compactScenario = createServerFn({ method: "POST" })
     }),
   )
   .handler(
-    async ({ data }): Promise<ResultShape<void, ForbiddenError | ScenarioNotFoundError | DbError>> => {
-      await requireUser();
-      const db = await getDb();
+    async ({
+      data,
+    }): Promise<
+      ResultShape<void, ScenarioNotFoundError | ProjectAccessError>
+    > => {
+      const result = await withProjectAccess(data.projectId, "edit", ({ db }) =>
+        ResultAsync.fromPromise(
+          (async () => {
+            const scenario = await db.query.shotPlanScenarios.findFirst({
+              where: eq(shotPlanScenarios.id, data.scenarioId),
+            });
+            if (!scenario) throw new ScenarioNotFoundError(data.scenarioId);
 
-      const result = await ResultAsync.fromPromise(
-        (async () => {
-          const scenario = await db.query.shotPlanScenarios.findFirst({
-            where: eq(shotPlanScenarios.id, data.scenarioId),
-          });
-          if (!scenario) throw new ScenarioNotFoundError(data.scenarioId);
-
-          // Clear all time offsets so shots pack left from zero
-          await db
-            .update(shots)
-            .set({ timeOffset: null, updatedAt: new Date() })
-            .where(eq(shots.scenarioId, data.scenarioId));
-        })(),
-        (e) => {
-          if (e instanceof ScenarioNotFoundError) return e;
-          return new DbError("compactScenario", e);
-        },
+            // Clear all time offsets so shots pack left from zero
+            await db
+              .update(shots)
+              .set({ timeOffset: null, updatedAt: new Date() })
+              .where(eq(shots.scenarioId, data.scenarioId));
+          })(),
+          (e) => {
+            if (e instanceof ScenarioNotFoundError) return e;
+            return new DbError("compactScenario", e);
+          },
+        ),
       );
 
       return toShape(result);
@@ -768,31 +773,30 @@ export const deleteShot = createServerFn({ method: "POST" })
   .handler(
     async ({
       data,
-    }): Promise<
-      ResultShape<void, ForbiddenError | ShotNotFoundError | DbError>
-    > => {
-      await requireUser();
-      const db = await getDb();
-
-      const result = await ResultAsync.fromPromise(
-        db.query.shots
-          .findFirst({ where: eq(shots.id, data.shotId) })
-          .then((r) => r ?? null),
-        (e) => new DbError("deleteShot/load", e),
-      )
-        .andThen((shot) => {
-          if (!shot) return err(new ShotNotFoundError(data.shotId));
-          return ok(shot);
-        })
-        .andThen((shot) =>
-          ResultAsync.fromPromise(
-            (async () => {
-              await db.execute(sql`UPDATE shot_plan_scenarios SET is_suggested = false WHERE id = ${shot.scenarioId}`);
-              await db.delete(shots).where(eq(shots.id, shot.id));
-            })(),
-            (e) => new DbError("deleteShot/delete", e),
-          ).map(() => undefined),
-        );
+    }): Promise<ResultShape<void, ShotNotFoundError | ProjectAccessError>> => {
+      const result = await withProjectAccess(data.projectId, "edit", ({ db }) =>
+        ResultAsync.fromPromise(
+          db.query.shots
+            .findFirst({ where: eq(shots.id, data.shotId) })
+            .then((r) => r ?? null),
+          (e) => new DbError("deleteShot/load", e),
+        )
+          .andThen((shot) => {
+            if (!shot) return err(new ShotNotFoundError(data.shotId));
+            return ok(shot);
+          })
+          .andThen((shot) =>
+            ResultAsync.fromPromise(
+              (async () => {
+                await db.execute(
+                  sql`UPDATE shot_plan_scenarios SET is_suggested = false WHERE id = ${shot.scenarioId}`,
+                );
+                await db.delete(shots).where(eq(shots.id, shot.id));
+              })(),
+              (e) => new DbError("deleteShot/delete", e),
+            ).map(() => undefined),
+          ),
+      );
 
       return toShape(result);
     },
@@ -807,12 +811,9 @@ export const reorderShots = createServerFn({ method: "POST" })
       orderedShotIds: z.array(z.string().uuid()),
     }),
   )
-  .handler(
-    async ({ data }): Promise<ResultShape<void, ForbiddenError | DbError>> => {
-      await requireUser();
-      const db = await getDb();
-
-      const result = await ResultAsync.fromPromise(
+  .handler(async ({ data }): Promise<ResultShape<void, ProjectAccessError>> => {
+    const result = await withProjectAccess(data.projectId, "edit", ({ db }) =>
+      ResultAsync.fromPromise(
         db.transaction(async (tx) => {
           for (let i = 0; i < data.orderedShotIds.length; i++) {
             await tx
@@ -821,7 +822,9 @@ export const reorderShots = createServerFn({ method: "POST" })
               .where(eq(shots.id, data.orderedShotIds[i]!));
           }
 
-          await tx.execute(sql`UPDATE shot_plan_scenarios SET is_suggested = false WHERE id = ${data.scenarioId}`);
+          await tx.execute(
+            sql`UPDATE shot_plan_scenarios SET is_suggested = false WHERE id = ${data.scenarioId}`,
+          );
 
           await rebuildAutoTransitions(
             tx as unknown as Db,
@@ -830,11 +833,11 @@ export const reorderShots = createServerFn({ method: "POST" })
           );
         }),
         (e) => new DbError("reorderShots/transaction", e),
-      );
+      ),
+    );
 
-      return toShape(result);
-    },
-  );
+    return toShape(result);
+  });
 
 export const addManualTransition = createServerFn({ method: "POST" })
   .validator(
@@ -848,12 +851,9 @@ export const addManualTransition = createServerFn({ method: "POST" })
       label: z.string().nullable().optional(),
     }),
   )
-  .handler(
-    async ({ data }): Promise<ResultShape<void, ForbiddenError | DbError>> => {
-      await requireUser();
-      const db = await getDb();
-
-      const result = await ResultAsync.fromPromise(
+  .handler(async ({ data }): Promise<ResultShape<void, ProjectAccessError>> => {
+    const result = await withProjectAccess(data.projectId, "edit", ({ db }) =>
+      ResultAsync.fromPromise(
         (async () => {
           await db.insert(transitionSlots).values({
             scenarioId: data.scenarioId,
@@ -863,14 +863,16 @@ export const addManualTransition = createServerFn({ method: "POST" })
             isManual: true,
             label: data.label ?? null,
           });
-          await db.execute(sql`UPDATE shot_plan_scenarios SET is_suggested = false WHERE id = ${data.scenarioId}`);
+          await db.execute(
+            sql`UPDATE shot_plan_scenarios SET is_suggested = false WHERE id = ${data.scenarioId}`,
+          );
         })(),
         (e) => new DbError("addManualTransition/insert", e),
-      ).map(() => undefined);
+      ).map(() => undefined),
+    );
 
-      return toShape(result);
-    },
-  );
+    return toShape(result);
+  });
 
 export const updateTransition = createServerFn({ method: "POST" })
   .validator(
@@ -887,12 +889,9 @@ export const updateTransition = createServerFn({ method: "POST" })
       }),
     }),
   )
-  .handler(
-    async ({ data }): Promise<ResultShape<void, ForbiddenError | DbError>> => {
-      await requireUser();
-      const db = await getDb();
-
-      const result = await ResultAsync.fromPromise(
+  .handler(async ({ data }): Promise<ResultShape<void, ProjectAccessError>> => {
+    const result = await withProjectAccess(data.projectId, "edit", ({ db }) =>
+      ResultAsync.fromPromise(
         (async () => {
           const existing = await db.query.transitionSlots.findFirst({
             where: eq(transitionSlots.id, data.transitionId),
@@ -902,15 +901,17 @@ export const updateTransition = createServerFn({ method: "POST" })
             .set({ ...data.patch, updatedAt: new Date() })
             .where(eq(transitionSlots.id, data.transitionId));
           if (existing) {
-            await db.execute(sql`UPDATE shot_plan_scenarios SET is_suggested = false WHERE id = ${existing.scenarioId}`);
+            await db.execute(
+              sql`UPDATE shot_plan_scenarios SET is_suggested = false WHERE id = ${existing.scenarioId}`,
+            );
           }
         })(),
         (e) => new DbError("updateTransition/update", e),
-      ).map(() => undefined);
+      ).map(() => undefined),
+    );
 
-      return toShape(result);
-    },
-  );
+    return toShape(result);
+  });
 
 export const deleteTransition = createServerFn({ method: "POST" })
   .validator(
@@ -920,105 +921,101 @@ export const deleteTransition = createServerFn({ method: "POST" })
       projectId: z.string().uuid(),
     }),
   )
-  .handler(
-    async ({ data }): Promise<ResultShape<void, ForbiddenError | DbError>> => {
-      await requireUser();
-      const db = await getDb();
-
-      const result = await ResultAsync.fromPromise(
+  .handler(async ({ data }): Promise<ResultShape<void, ProjectAccessError>> => {
+    const result = await withProjectAccess(data.projectId, "edit", ({ db }) =>
+      ResultAsync.fromPromise(
         (async () => {
           const existing = await db.query.transitionSlots.findFirst({
             where: eq(transitionSlots.id, data.transitionId),
           });
           if (existing) {
-            await db.execute(sql`UPDATE shot_plan_scenarios SET is_suggested = false WHERE id = ${existing.scenarioId}`);
+            await db.execute(
+              sql`UPDATE shot_plan_scenarios SET is_suggested = false WHERE id = ${existing.scenarioId}`,
+            );
           }
           await db
             .delete(transitionSlots)
             .where(eq(transitionSlots.id, data.transitionId));
         })(),
         (e) => new DbError("deleteTransition/delete", e),
-      ).map(() => undefined);
+      ).map(() => undefined),
+    );
 
-      return toShape(result);
-    },
-  );
+    return toShape(result);
+  });
 
 export const listScenesWithPlanSummary = createServerFn({ method: "GET" })
   .validator(z.object({ projectId: z.string().uuid() }))
   .handler(
     async ({
       data,
-    }): Promise<
-      ResultShape<SceneWithPlanSummary[], ForbiddenError | DbError>
-    > => {
-      await requireUser();
-      const db = await getDb();
-
-      const result = await ResultAsync.fromPromise(
-        (async () => {
-          const screenplay = await db.query.screenplays.findFirst({
-            where: (s, { eq: e }) => e(s.projectId, data.projectId),
-            orderBy: (s, { desc }) => [desc(s.updatedAt)],
-          });
-          if (!screenplay) return [] as SceneWithPlanSummary[];
-
-          const sceneRows = await db.query.scenes.findMany({
-            where: (sc, { eq: e }) => e(sc.screenplayId, screenplay.id),
-            orderBy: (sc, { asc: a }) => [a(sc.number)],
-          });
-          if (sceneRows.length === 0) return [] as SceneWithPlanSummary[];
-
-          const sceneIds = sceneRows.map((s) => s.id);
-
-          const planRows = await db.query.shotPlans.findMany({
-            where: (p, { inArray: ia }) => ia(p.sceneId, sceneIds),
-          });
-
-          const activeScenarioIds = planRows
-            .map((p) => p.activeScenarioId)
-            .filter((id): id is string => id !== null);
-
-          const shotsByScenario = new Map<
-            string,
-            { count: number; minutes: number }
-          >();
-          if (activeScenarioIds.length > 0) {
-            const allShots = await db.query.shots.findMany({
-              where: (sh, { inArray: ia }) =>
-                ia(sh.scenarioId, activeScenarioIds),
+    }): Promise<ResultShape<SceneWithPlanSummary[], ProjectAccessError>> => {
+      const result = await withProjectAccess(data.projectId, "view", ({ db }) =>
+        ResultAsync.fromPromise(
+          (async () => {
+            const screenplay = await db.query.screenplays.findFirst({
+              where: (s, { eq: e }) => e(s.projectId, data.projectId),
+              orderBy: (s, { desc }) => [desc(s.updatedAt)],
             });
-            for (const sh of allShots) {
-              const entry = shotsByScenario.get(sh.scenarioId) ?? {
-                count: 0,
-                minutes: 0,
-              };
-              entry.count += 1;
-              entry.minutes += sh.estimatedMinutes ?? 0;
-              shotsByScenario.set(sh.scenarioId, entry);
+            if (!screenplay) return [] as SceneWithPlanSummary[];
+
+            const sceneRows = await db.query.scenes.findMany({
+              where: (sc, { eq: e }) => e(sc.screenplayId, screenplay.id),
+              orderBy: (sc, { asc: a }) => [a(sc.number)],
+            });
+            if (sceneRows.length === 0) return [] as SceneWithPlanSummary[];
+
+            const sceneIds = sceneRows.map((s) => s.id);
+
+            const planRows = await db.query.shotPlans.findMany({
+              where: (p, { inArray: ia }) => ia(p.sceneId, sceneIds),
+            });
+
+            const activeScenarioIds = planRows
+              .map((p) => p.activeScenarioId)
+              .filter((id): id is string => id !== null);
+
+            const shotsByScenario = new Map<
+              string,
+              { count: number; minutes: number }
+            >();
+            if (activeScenarioIds.length > 0) {
+              const allShots = await db.query.shots.findMany({
+                where: (sh, { inArray: ia }) =>
+                  ia(sh.scenarioId, activeScenarioIds),
+              });
+              for (const sh of allShots) {
+                const entry = shotsByScenario.get(sh.scenarioId) ?? {
+                  count: 0,
+                  minutes: 0,
+                };
+                entry.count += 1;
+                entry.minutes += sh.estimatedMinutes ?? 0;
+                shotsByScenario.set(sh.scenarioId, entry);
+              }
             }
-          }
 
-          const planBySceneId = new Map(planRows.map((p) => [p.sceneId, p]));
+            const planBySceneId = new Map(planRows.map((p) => [p.sceneId, p]));
 
-          return sceneRows.map((sc): SceneWithPlanSummary => {
-            const plan = planBySceneId.get(sc.id);
-            const activeId = plan?.activeScenarioId ?? null;
-            const summary = activeId ? shotsByScenario.get(activeId) : null;
-            return {
-              sceneId: sc.id,
-              sceneNumber: sc.number,
-              sceneHeading: sc.heading,
-              intExt: sc.intExt as "INT" | "EXT" | "INT/EXT",
-              location: sc.location,
-              shotCount: summary?.count ?? 0,
-              totalMinutes: summary ? summary.minutes : null,
-              notes: sc.notes ?? null,
-              effort: (sc.effort ?? 2) as EffortLevel,
-            };
-          });
-        })(),
-        (e) => new DbError("listScenesWithPlanSummary", e),
+            return sceneRows.map((sc): SceneWithPlanSummary => {
+              const plan = planBySceneId.get(sc.id);
+              const activeId = plan?.activeScenarioId ?? null;
+              const summary = activeId ? shotsByScenario.get(activeId) : null;
+              return {
+                sceneId: sc.id,
+                sceneNumber: sc.number,
+                sceneHeading: sc.heading,
+                intExt: sc.intExt as "INT" | "EXT" | "INT/EXT",
+                location: sc.location,
+                shotCount: summary?.count ?? 0,
+                totalMinutes: summary ? summary.minutes : null,
+                notes: sc.notes ?? null,
+                effort: (sc.effort ?? 2) as EffortLevel,
+              };
+            });
+          })(),
+          (e) => new DbError("listScenesWithPlanSummary", e),
+        ),
       );
 
       return toShape(result);
@@ -1032,14 +1029,23 @@ export const scenesWithPlanSummaryQueryOptions = (projectId: string) =>
   });
 
 export const updateSceneNotes = createServerFn({ method: "POST" })
-  .validator(z.object({ sceneId: z.string().uuid(), notes: z.string().nullable() }))
-  .handler(async ({ data }): Promise<ResultShape<null, ForbiddenError | DbError>> => {
-    await requireUser();
+  .validator(
+    z.object({ sceneId: z.string().uuid(), notes: z.string().nullable() }),
+  )
+  .handler(async ({ data }): Promise<ResultShape<null, ProjectAccessError>> => {
     const db = await getDb();
-    const result = await ResultAsync.fromPromise(
-      db.update(scenes).set({ notes: data.notes }).where(eq(scenes.id, data.sceneId)),
-      (e) => new DbError("updateSceneNotes", e),
-    ).map(() => null);
+    const result = await projectIdFromScene(db, data.sceneId).andThen(
+      (projectId) =>
+        withProjectAccess(projectId, "edit", ({ db }) =>
+          ResultAsync.fromPromise(
+            db
+              .update(scenes)
+              .set({ notes: data.notes })
+              .where(eq(scenes.id, data.sceneId)),
+            (e) => new DbError("updateSceneNotes", e),
+          ).map(() => null),
+        ),
+    );
     return toShape(result);
   });
 
@@ -1060,21 +1066,27 @@ export const updateSceneEffort = createServerFn({ method: "POST" })
   .handler(
     async ({
       data,
-    }): Promise<ResultShape<{ sceneId: string; effort: EffortLevel }, ForbiddenError | DbError>> => {
-      await requireUser();
-      const db = await getDb();
-      const result = await ResultAsync.fromPromise(
-        db
-          .update(scenes)
-          .set({ effort: data.effort })
-          .where(eq(scenes.id, data.sceneId))
-          .returning({ sceneId: scenes.id, effort: scenes.effort }),
-        (e) => new DbError("updateSceneEffort", e),
-      ).andThen((rows) => {
-        const row = rows[0];
-        if (!row) return err(new DbError("updateSceneEffort", "no row returned"));
-        return ok({ sceneId: row.sceneId, effort: row.effort as EffortLevel });
-      });
+    }): Promise<
+      ResultShape<{ sceneId: string; effort: EffortLevel }, ProjectAccessError>
+    > => {
+      const result = await withProjectAccess(data.projectId, "edit", ({ db }) =>
+        ResultAsync.fromPromise(
+          db
+            .update(scenes)
+            .set({ effort: data.effort })
+            .where(eq(scenes.id, data.sceneId))
+            .returning({ sceneId: scenes.id, effort: scenes.effort }),
+          (e) => new DbError("updateSceneEffort", e),
+        ).andThen((rows) => {
+          const row = rows[0];
+          if (!row)
+            return err(new DbError("updateSceneEffort", "no row returned"));
+          return ok({
+            sceneId: row.sceneId,
+            effort: row.effort as EffortLevel,
+          });
+        }),
+      );
       return toShape(result);
     },
   );
@@ -1084,45 +1096,51 @@ export const getBreakdownSummary = createServerFn({ method: "GET" })
   .handler(
     async ({
       data,
-    }): Promise<ResultShape<BreakdownSummary, ForbiddenError | DbError>> => {
-      await requireUser();
+    }): Promise<ResultShape<BreakdownSummary, ProjectAccessError>> => {
       const db = await getDb();
 
-      const result = await ResultAsync.fromPromise(
-        (async () => {
-          const rows = await db
-            .select({
-              category: breakdownElements.category,
-              name: breakdownElements.name,
-            })
-            .from(breakdownOccurrences)
-            .innerJoin(
-              breakdownElements,
-              eq(breakdownOccurrences.elementId, breakdownElements.id),
-            )
-            .where(eq(breakdownOccurrences.sceneId, data.sceneId));
+      const result = await projectIdFromScene(db, data.sceneId).andThen(
+        (projectId) =>
+          withProjectAccess(projectId, "view", ({ db }) =>
+            ResultAsync.fromPromise(
+              (async () => {
+                const rows = await db
+                  .select({
+                    category: breakdownElements.category,
+                    name: breakdownElements.name,
+                  })
+                  .from(breakdownOccurrences)
+                  .innerJoin(
+                    breakdownElements,
+                    eq(breakdownOccurrences.elementId, breakdownElements.id),
+                  )
+                  .where(eq(breakdownOccurrences.sceneId, data.sceneId));
 
-          // Schema has no `hasDialogue` column; per spec fallback, every cast
-          // element occurring in the scene is treated as a speaking character.
-          const castWithDialogue = Array.from(
-            new Set(
-              rows.filter((r) => r.category === "cast").map((r) => r.name),
+                // Schema has no `hasDialogue` column; per spec fallback, every cast
+                // element occurring in the scene is treated as a speaking character.
+                const castWithDialogue = Array.from(
+                  new Set(
+                    rows
+                      .filter((r) => r.category === "cast")
+                      .map((r) => r.name),
+                  ),
+                );
+
+                const actionNoteCount = rows.filter(
+                  (r) =>
+                    r.category === "stunts" ||
+                    r.category === "sfx" ||
+                    r.category === "vfx",
+                ).length;
+
+                return {
+                  castWithDialogue,
+                  actionNoteCount,
+                } satisfies BreakdownSummary;
+              })(),
+              (e) => new DbError("getBreakdownSummary", e),
             ),
-          );
-
-          const actionNoteCount = rows.filter(
-            (r) =>
-              r.category === "stunts" ||
-              r.category === "sfx" ||
-              r.category === "vfx",
-          ).length;
-
-          return {
-            castWithDialogue,
-            actionNoteCount,
-          } satisfies BreakdownSummary;
-        })(),
-        (e) => new DbError("getBreakdownSummary", e),
+          ),
       );
 
       return toShape(result);
@@ -1147,73 +1165,79 @@ export const applyPattern = createServerFn({ method: "POST" })
     async ({
       data,
     }): Promise<
-      ResultShape<void, ScenarioNotFoundError | ForbiddenError | DbError>
+      ResultShape<void, ScenarioNotFoundError | ProjectAccessError>
     > => {
-      await requireUser();
       const db = await getDb();
 
-      const result = await ResultAsync.fromPromise(
-        (async () => {
-          const scenario = await db.query.shotPlanScenarios.findFirst({
-            where: eq(shotPlanScenarios.id, data.scenarioId),
-          });
-          if (!scenario) {
-            throw new ScenarioNotFoundError(data.scenarioId);
-          }
+      const result = await projectIdFromScenarioId(db, data.scenarioId).andThen(
+        (projectId) =>
+          withProjectAccess(projectId, "edit", ({ db }) =>
+            ResultAsync.fromPromise(
+              (async () => {
+                const scenario = await db.query.shotPlanScenarios.findFirst({
+                  where: eq(shotPlanScenarios.id, data.scenarioId),
+                });
+                if (!scenario) {
+                  throw new ScenarioNotFoundError(data.scenarioId);
+                }
 
-          const shotPlan = await db.query.shotPlans.findFirst({
-            where: eq(shotPlans.id, scenario.shotPlanId),
-          });
-          if (!shotPlan) {
-            throw new ScenarioNotFoundError(data.scenarioId);
-          }
+                const shotPlan = await db.query.shotPlans.findFirst({
+                  where: eq(shotPlans.id, scenario.shotPlanId),
+                });
+                if (!shotPlan) {
+                  throw new ScenarioNotFoundError(data.scenarioId);
+                }
 
-          const pattern = COVERAGE_PATTERNS[data.patternId];
-          const existingShots = await db
-            .select()
-            .from(shots)
-            .where(eq(shots.scenarioId, data.scenarioId))
-            .orderBy(asc(shots.position));
+                const pattern = COVERAGE_PATTERNS[data.patternId];
+                const existingShots = await db
+                  .select()
+                  .from(shots)
+                  .where(eq(shots.scenarioId, data.scenarioId))
+                  .orderBy(asc(shots.position));
 
-          const startPosition = data.atPosition ?? existingShots.length;
+                const startPosition = data.atPosition ?? existingShots.length;
 
-          if (startPosition < existingShots.length) {
-            await db
-              .update(shots)
-              .set({
-                position: sql`${shots.position} + ${pattern.shots.length}`,
-              })
-              .where(
-                and(
-                  eq(shots.scenarioId, data.scenarioId),
-                  sql`${shots.position} >= ${startPosition}`,
-                ),
-              );
-          }
+                if (startPosition < existingShots.length) {
+                  await db
+                    .update(shots)
+                    .set({
+                      position: sql`${shots.position} + ${pattern.shots.length}`,
+                    })
+                    .where(
+                      and(
+                        eq(shots.scenarioId, data.scenarioId),
+                        sql`${shots.position} >= ${startPosition}`,
+                      ),
+                    );
+                }
 
-          const newShots = pattern.shots.map((s, i) => ({
-            scenarioId: data.scenarioId,
-            position: startPosition + i,
-            shotSize: s.shotSize,
-            cameraMovement: s.cameraMovement,
-            estimatedMinutes: null,
-            notes: s.notesHint,
-            cameraLabel: "A" as const,
-          }));
-          await db.insert(shots).values(newShots);
+                const newShots = pattern.shots.map((s, i) => ({
+                  scenarioId: data.scenarioId,
+                  position: startPosition + i,
+                  shotSize: s.shotSize,
+                  cameraMovement: s.cameraMovement,
+                  estimatedMinutes: null,
+                  notes: s.notesHint,
+                  cameraLabel: "A" as const,
+                }));
+                await db.insert(shots).values(newShots);
 
-          await db.execute(sql`UPDATE shot_plan_scenarios SET is_suggested = false WHERE id = ${data.scenarioId}`);
+                await db.execute(
+                  sql`UPDATE shot_plan_scenarios SET is_suggested = false WHERE id = ${data.scenarioId}`,
+                );
 
-          await rebuildAutoTransitions(
-            db,
-            data.scenarioId,
-            shotPlan.projectId,
-          );
-        })(),
-        (e) => {
-          if (e instanceof ScenarioNotFoundError) return e;
-          return new DbError("applyPattern", e);
-        },
+                await rebuildAutoTransitions(
+                  db,
+                  data.scenarioId,
+                  shotPlan.projectId,
+                );
+              })(),
+              (e) => {
+                if (e instanceof ScenarioNotFoundError) return e;
+                return new DbError("applyPattern", e);
+              },
+            ),
+          ),
       );
 
       return toShape(result);
@@ -1230,110 +1254,109 @@ export const getOrCreateInitialPlan = createServerFn({ method: "POST" })
   .handler(
     async ({
       data,
-    }): Promise<ResultShape<ShotPlanView, ForbiddenError | DbError>> => {
-      await requireUser();
-      const db = await getDb();
+    }): Promise<ResultShape<ShotPlanView, ProjectAccessError>> => {
+      const result = await withProjectAccess(data.projectId, "edit", ({ db }) =>
+        ResultAsync.fromPromise(
+          (async () => {
+            const existing = await db.query.shotPlans.findFirst({
+              where: eq(shotPlans.sceneId, data.sceneId),
+            });
+            if (existing) {
+              return await buildShotPlanView(db, existing.id);
+            }
 
-      const result = await ResultAsync.fromPromise(
-        (async () => {
-          const existing = await db.query.shotPlans.findFirst({
-            where: eq(shotPlans.sceneId, data.sceneId),
-          });
-          if (existing) {
-            return await buildShotPlanView(db, existing.id);
-          }
+            const planRows = await db
+              .insert(shotPlans)
+              .values({
+                projectId: data.projectId,
+                sceneId: data.sceneId,
+                activeScenarioId: null,
+              })
+              .returning();
+            const plan = planRows[0]!;
 
-          const planRows = await db
-            .insert(shotPlans)
-            .values({
-              projectId: data.projectId,
-              sceneId: data.sceneId,
-              activeScenarioId: null,
-            })
-            .returning();
-          const plan = planRows[0]!;
+            const scenarioRows = await db
+              .insert(shotPlanScenarios)
+              .values({
+                shotPlanId: plan.id,
+                name: "Piano A",
+                position: 0,
+                isSuggested: true,
+              })
+              .returning();
+            const scenario = scenarioRows[0]!;
 
-          const scenarioRows = await db
-            .insert(shotPlanScenarios)
-            .values({
-              shotPlanId: plan.id,
-              name: "Piano A",
-              position: 0,
-              isSuggested: true,
-            })
-            .returning();
-          const scenario = scenarioRows[0]!;
+            await db
+              .update(shotPlans)
+              .set({ activeScenarioId: scenario.id, updatedAt: new Date() })
+              .where(eq(shotPlans.id, plan.id));
 
-          await db
-            .update(shotPlans)
-            .set({ activeScenarioId: scenario.id, updatedAt: new Date() })
-            .where(eq(shotPlans.id, plan.id));
+            const scene = await db.query.scenes.findFirst({
+              where: eq(scenes.id, data.sceneId),
+            });
+            if (!scene) {
+              throw new DbError(
+                "getOrCreateInitialPlan",
+                new Error(`Scene ${data.sceneId} not found`),
+              );
+            }
 
-          const scene = await db.query.scenes.findFirst({
-            where: eq(scenes.id, data.sceneId),
-          });
-          if (!scene) {
-            throw new DbError(
-              "getOrCreateInitialPlan",
-              new Error(`Scene ${data.sceneId} not found`),
-            );
-          }
+            let breakdownSummary: BreakdownSummary | null = null;
+            const breakdownRows = await db
+              .select({
+                category: breakdownElements.category,
+                name: breakdownElements.name,
+              })
+              .from(breakdownOccurrences)
+              .innerJoin(
+                breakdownElements,
+                eq(breakdownOccurrences.elementId, breakdownElements.id),
+              )
+              .where(eq(breakdownOccurrences.sceneId, data.sceneId));
 
-          let breakdownSummary: BreakdownSummary | null = null;
-          const breakdownRows = await db
-            .select({
-              category: breakdownElements.category,
-              name: breakdownElements.name,
-            })
-            .from(breakdownOccurrences)
-            .innerJoin(
-              breakdownElements,
-              eq(breakdownOccurrences.elementId, breakdownElements.id),
-            )
-            .where(eq(breakdownOccurrences.sceneId, data.sceneId));
-
-          if (breakdownRows.length > 0) {
-            breakdownSummary = {
-              castWithDialogue: Array.from(
-                new Set(
-                  breakdownRows
-                    .filter((r) => r.category === "cast")
-                    .map((r) => r.name),
+            if (breakdownRows.length > 0) {
+              breakdownSummary = {
+                castWithDialogue: Array.from(
+                  new Set(
+                    breakdownRows
+                      .filter((r) => r.category === "cast")
+                      .map((r) => r.name),
+                  ),
                 ),
-              ),
-              actionNoteCount: breakdownRows.filter(
-                (r) =>
-                  r.category === "stunts" ||
-                  r.category === "sfx" ||
-                  r.category === "vfx",
-              ).length,
-            };
-          }
+                actionNoteCount: breakdownRows.filter(
+                  (r) =>
+                    r.category === "stunts" ||
+                    r.category === "sfx" ||
+                    r.category === "vfx",
+                ).length,
+              };
+            }
 
-          const patternId = recommendPattern(breakdownSummary, {
-            pageStart: scene.pageStart,
-            pageEnd: scene.pageEnd,
-            hasSpecialEffect: scene.hasSpecialEffect,
-          });
+            const patternId = recommendPattern(breakdownSummary, {
+              pageStart: scene.pageStart,
+              pageEnd: scene.pageEnd,
+              hasSpecialEffect: scene.hasSpecialEffect,
+            });
 
-          const pattern = COVERAGE_PATTERNS[patternId];
-          const newShots = pattern.shots.map((s, i) => ({
-            scenarioId: scenario.id,
-            position: i,
-            shotSize: s.shotSize,
-            cameraMovement: s.cameraMovement,
-            estimatedMinutes: null,
-            notes: s.notesHint,
-            cameraLabel: "A" as const,
-          }));
-          await db.insert(shots).values(newShots);
+            const pattern = COVERAGE_PATTERNS[patternId];
+            const newShots = pattern.shots.map((s, i) => ({
+              scenarioId: scenario.id,
+              position: i,
+              shotSize: s.shotSize,
+              cameraMovement: s.cameraMovement,
+              estimatedMinutes: null,
+              notes: s.notesHint,
+              cameraLabel: "A" as const,
+            }));
+            await db.insert(shots).values(newShots);
 
-          await rebuildAutoTransitions(db, scenario.id, plan.projectId);
+            await rebuildAutoTransitions(db, scenario.id, plan.projectId);
 
-          return await buildShotPlanView(db, plan.id);
-        })(),
-        (e) =>
-          e instanceof DbError ? e : new DbError("getOrCreateInitialPlan", e),
+            return await buildShotPlanView(db, plan.id);
+          })(),
+          (e) =>
+            e instanceof DbError ? e : new DbError("getOrCreateInitialPlan", e),
+        ),
       );
 
       return toShape(result);
@@ -1350,34 +1373,33 @@ export const updateEffortWeights = createServerFn({ method: "POST" })
   .handler(
     async ({
       data,
-    }): Promise<ResultShape<ShotEffortWeights, ForbiddenError | DbError>> => {
-      await requireUser();
-      const db = await getDb();
+    }): Promise<ResultShape<ShotEffortWeights, ProjectAccessError>> => {
+      const result = await withProjectAccess(data.projectId, "edit", ({ db }) =>
+        ResultAsync.fromPromise(
+          db.query.schedules
+            .findFirst({ where: eq(schedules.projectId, data.projectId) })
+            .then((r) => r ?? null),
+          (e) => new DbError("updateEffortWeights/loadSchedule", e),
+        ).andThen((schedule) => {
+          if (!schedule)
+            return ResultAsync.fromPromise(
+              Promise.resolve(data.weights),
+              (e) => new DbError("updateEffortWeights/noSchedule", e),
+            );
 
-      const result = await ResultAsync.fromPromise(
-        db.query.schedules
-          .findFirst({ where: eq(schedules.projectId, data.projectId) })
-          .then((r) => r ?? null),
-        (e) => new DbError("updateEffortWeights/loadSchedule", e),
-      ).andThen((schedule) => {
-        if (!schedule)
           return ResultAsync.fromPromise(
-            Promise.resolve(data.weights),
-            (e) => new DbError("updateEffortWeights/noSchedule", e),
+            db
+              .update(schedules)
+              .set({
+                effortWeights: data.weights as Record<string, number>,
+                updatedAt: new Date(),
+              })
+              .where(eq(schedules.id, schedule.id))
+              .then(() => data.weights),
+            (e) => new DbError("updateEffortWeights/update", e),
           );
-
-        return ResultAsync.fromPromise(
-          db
-            .update(schedules)
-            .set({
-              effortWeights: data.weights as Record<string, number>,
-              updatedAt: new Date(),
-            })
-            .where(eq(schedules.id, schedule.id))
-            .then(() => data.weights),
-          (e) => new DbError("updateEffortWeights/update", e),
-        );
-      });
+        }),
+      );
 
       return toShape(result);
     },
@@ -1397,112 +1419,129 @@ export const moveShot = createServerFn({ method: "POST" })
     }): Promise<
       ResultShape<
         void,
-        ShotNotFoundError | ScenarioNotFoundError | ForbiddenError | DbError
+        ShotNotFoundError | ScenarioNotFoundError | ProjectAccessError
       >
     > => {
-      await requireUser();
       const db = await getDb();
 
-      const result = await ResultAsync.fromPromise(
-        (async () => {
-          const shot = await db.query.shots.findFirst({
-            where: eq(shots.id, data.shotId),
-          });
-          if (!shot) throw new ShotNotFoundError(data.shotId);
+      // Gate on the source shot's project; the target scenario must belong to
+      // the same project (a cross-project move is forbidden).
+      const result = await projectIdFromShot(db, data.shotId).andThen(
+        (sourceProjectId) =>
+          withProjectAccess(sourceProjectId, "edit", ({ db }) =>
+            ResultAsync.fromPromise(
+              (async () => {
+                const shot = await db.query.shots.findFirst({
+                  where: eq(shots.id, data.shotId),
+                });
+                if (!shot) throw new ShotNotFoundError(data.shotId);
 
-          const target = await db.query.shotPlanScenarios.findFirst({
-            where: eq(shotPlanScenarios.id, data.targetScenarioId),
-          });
-          if (!target) throw new ScenarioNotFoundError(data.targetScenarioId);
+                const target = await db.query.shotPlanScenarios.findFirst({
+                  where: eq(shotPlanScenarios.id, data.targetScenarioId),
+                });
+                if (!target)
+                  throw new ScenarioNotFoundError(data.targetScenarioId);
 
-          const targetPlan = await db.query.shotPlans.findFirst({
-            where: eq(shotPlans.id, target.shotPlanId),
-          });
-          if (!targetPlan)
-            throw new ScenarioNotFoundError(data.targetScenarioId);
-          const projectId = targetPlan.projectId;
+                const targetPlan = await db.query.shotPlans.findFirst({
+                  where: eq(shotPlans.id, target.shotPlanId),
+                });
+                if (!targetPlan)
+                  throw new ScenarioNotFoundError(data.targetScenarioId);
+                const projectId = targetPlan.projectId;
 
-          const sourceScenarioId = shot.scenarioId;
+                if (projectId !== sourceProjectId) {
+                  throw new ForbiddenError("move shot across projects");
+                }
 
-          if (sourceScenarioId === data.targetScenarioId) {
-            const all = await db
-              .select()
-              .from(shots)
-              .where(eq(shots.scenarioId, sourceScenarioId))
-              .orderBy(asc(shots.position));
-            const filtered = all.filter((s) => s.id !== data.shotId);
-            const clampedPos = Math.min(data.position, filtered.length);
-            const newOrder = [
-              ...filtered.slice(0, clampedPos),
-              shot,
-              ...filtered.slice(clampedPos),
-            ];
-            for (let i = 0; i < newOrder.length; i++) {
-              if (newOrder[i]!.position !== i) {
-                await db
-                  .update(shots)
-                  .set({ position: i })
-                  .where(eq(shots.id, newOrder[i]!.id));
-              }
-            }
-          } else {
-            const targetShots = await db
-              .select()
-              .from(shots)
-              .where(eq(shots.scenarioId, data.targetScenarioId))
-              .orderBy(asc(shots.position));
-            const clampedPos = Math.min(data.position, targetShots.length);
+                const sourceScenarioId = shot.scenarioId;
 
-            await db
-              .update(shots)
-              .set({ position: sql`${shots.position} + 1` })
-              .where(
-                and(
-                  eq(shots.scenarioId, data.targetScenarioId),
-                  sql`${shots.position} >= ${clampedPos}`,
-                ),
-              );
+                if (sourceScenarioId === data.targetScenarioId) {
+                  const all = await db
+                    .select()
+                    .from(shots)
+                    .where(eq(shots.scenarioId, sourceScenarioId))
+                    .orderBy(asc(shots.position));
+                  const filtered = all.filter((s) => s.id !== data.shotId);
+                  const clampedPos = Math.min(data.position, filtered.length);
+                  const newOrder = [
+                    ...filtered.slice(0, clampedPos),
+                    shot,
+                    ...filtered.slice(clampedPos),
+                  ];
+                  for (let i = 0; i < newOrder.length; i++) {
+                    if (newOrder[i]!.position !== i) {
+                      await db
+                        .update(shots)
+                        .set({ position: i })
+                        .where(eq(shots.id, newOrder[i]!.id));
+                    }
+                  }
+                } else {
+                  const targetShots = await db
+                    .select()
+                    .from(shots)
+                    .where(eq(shots.scenarioId, data.targetScenarioId))
+                    .orderBy(asc(shots.position));
+                  const clampedPos = Math.min(
+                    data.position,
+                    targetShots.length,
+                  );
 
-            await db
-              .update(shots)
-              .set({
-                scenarioId: data.targetScenarioId,
-                position: clampedPos,
-              })
-              .where(eq(shots.id, data.shotId));
+                  await db
+                    .update(shots)
+                    .set({ position: sql`${shots.position} + 1` })
+                    .where(
+                      and(
+                        eq(shots.scenarioId, data.targetScenarioId),
+                        sql`${shots.position} >= ${clampedPos}`,
+                      ),
+                    );
 
-            const remaining = await db
-              .select()
-              .from(shots)
-              .where(eq(shots.scenarioId, sourceScenarioId))
-              .orderBy(asc(shots.position));
-            for (let i = 0; i < remaining.length; i++) {
-              if (remaining[i]!.position !== i) {
-                await db
-                  .update(shots)
-                  .set({ position: i })
-                  .where(eq(shots.id, remaining[i]!.id));
-              }
-            }
-          }
+                  await db
+                    .update(shots)
+                    .set({
+                      scenarioId: data.targetScenarioId,
+                      position: clampedPos,
+                    })
+                    .where(eq(shots.id, data.shotId));
 
-          const scenariosToClear =
-            sourceScenarioId === data.targetScenarioId
-              ? [data.targetScenarioId]
-              : [sourceScenarioId, data.targetScenarioId];
-          for (const id of scenariosToClear) {
-            await db.execute(sql`UPDATE shot_plan_scenarios SET is_suggested = false WHERE id = ${id}`);
-          }
+                  const remaining = await db
+                    .select()
+                    .from(shots)
+                    .where(eq(shots.scenarioId, sourceScenarioId))
+                    .orderBy(asc(shots.position));
+                  for (let i = 0; i < remaining.length; i++) {
+                    if (remaining[i]!.position !== i) {
+                      await db
+                        .update(shots)
+                        .set({ position: i })
+                        .where(eq(shots.id, remaining[i]!.id));
+                    }
+                  }
+                }
 
-          for (const id of scenariosToClear) {
-            await rebuildAutoTransitions(db, id, projectId);
-          }
-        })(),
-        (e) => {
-          if (e instanceof ShotNotFoundError) return e;
-          if (e instanceof ScenarioNotFoundError) return e;
-          return new DbError("moveShot", e);
-        },
+                const scenariosToClear =
+                  sourceScenarioId === data.targetScenarioId
+                    ? [data.targetScenarioId]
+                    : [sourceScenarioId, data.targetScenarioId];
+                for (const id of scenariosToClear) {
+                  await db.execute(
+                    sql`UPDATE shot_plan_scenarios SET is_suggested = false WHERE id = ${id}`,
+                  );
+                }
+
+                for (const id of scenariosToClear) {
+                  await rebuildAutoTransitions(db, id, projectId);
+                }
+              })(),
+              (e) => {
+                if (e instanceof ShotNotFoundError) return e;
+                if (e instanceof ScenarioNotFoundError) return e;
+                if (e instanceof ForbiddenError) return e;
+                return new DbError("moveShot", e);
+              },
+            ),
+          ),
       );
 
       return toShape(result);
@@ -1517,79 +1556,92 @@ export const addReverseShot = createServerFn({ method: "POST" })
     }): Promise<
       ResultShape<
         void,
-        ShotNotFoundError | InvalidReverseShotError | ForbiddenError | DbError
+        ShotNotFoundError | InvalidReverseShotError | ProjectAccessError
       >
     > => {
-      await requireUser();
       const db = await getDb();
 
-      const result = await ResultAsync.fromPromise(
-        (async () => {
-          const shot = await db.query.shots.findFirst({
-            where: eq(shots.id, data.shotId),
-          });
-          if (!shot) throw new ShotNotFoundError(data.shotId);
+      const result = await projectIdFromShot(db, data.shotId).andThen(
+        (projectId) =>
+          withProjectAccess(projectId, "edit", ({ db }) =>
+            ResultAsync.fromPromise(
+              (async () => {
+                const shot = await db.query.shots.findFirst({
+                  where: eq(shots.id, data.shotId),
+                });
+                if (!shot) throw new ShotNotFoundError(data.shotId);
 
-          if (shot.shotSize !== "OTS" && shot.shotSize !== "MS") {
-            throw new InvalidReverseShotError(
-              "reverse shots only apply to OTS or MS",
-            );
-          }
+                if (shot.shotSize !== "OTS" && shot.shotSize !== "MS") {
+                  throw new InvalidReverseShotError(
+                    "reverse shots only apply to OTS or MS",
+                  );
+                }
 
-          const scenario = await db.query.shotPlanScenarios.findFirst({
-            where: eq(shotPlanScenarios.id, shot.scenarioId),
-          });
-          if (!scenario) throw new ShotNotFoundError(data.shotId);
+                const scenario = await db.query.shotPlanScenarios.findFirst({
+                  where: eq(shotPlanScenarios.id, shot.scenarioId),
+                });
+                if (!scenario) throw new ShotNotFoundError(data.shotId);
 
-          const plan = await db.query.shotPlans.findFirst({
-            where: eq(shotPlans.id, scenario.shotPlanId),
-          });
-          if (!plan) throw new ShotNotFoundError(data.shotId);
+                const plan = await db.query.shotPlans.findFirst({
+                  where: eq(shotPlans.id, scenario.shotPlanId),
+                });
+                if (!plan) throw new ShotNotFoundError(data.shotId);
 
-          const originalNote = shot.notes ?? "";
-          const lower = originalNote.toLowerCase();
-          let reverseNote: string;
-          if (lower.includes("contro")) {
-            reverseNote = originalNote.replace(/contro\s*campo/i, "campo");
-          } else if (lower.includes("campo")) {
-            reverseNote = "controcampo";
-          } else if (originalNote) {
-            reverseNote = `controcampo ${originalNote}`;
-          } else {
-            reverseNote = "controcampo";
-          }
+                const originalNote = shot.notes ?? "";
+                const lower = originalNote.toLowerCase();
+                let reverseNote: string;
+                if (lower.includes("contro")) {
+                  reverseNote = originalNote.replace(
+                    /contro\s*campo/i,
+                    "campo",
+                  );
+                } else if (lower.includes("campo")) {
+                  reverseNote = "controcampo";
+                } else if (originalNote) {
+                  reverseNote = `controcampo ${originalNote}`;
+                } else {
+                  reverseNote = "controcampo";
+                }
 
-          const insertPosition = shot.position + 1;
+                const insertPosition = shot.position + 1;
 
-          await db
-            .update(shots)
-            .set({ position: sql`${shots.position} + 1` })
-            .where(
-              and(
-                eq(shots.scenarioId, shot.scenarioId),
-                sql`${shots.position} >= ${insertPosition}`,
-              ),
-            );
+                await db
+                  .update(shots)
+                  .set({ position: sql`${shots.position} + 1` })
+                  .where(
+                    and(
+                      eq(shots.scenarioId, shot.scenarioId),
+                      sql`${shots.position} >= ${insertPosition}`,
+                    ),
+                  );
 
-          await db.insert(shots).values({
-            scenarioId: shot.scenarioId,
-            position: insertPosition,
-            shotSize: shot.shotSize,
-            cameraMovement: shot.cameraMovement,
-            estimatedMinutes: shot.estimatedMinutes,
-            notes: reverseNote,
-            cameraLabel: shot.cameraLabel,
-          });
+                await db.insert(shots).values({
+                  scenarioId: shot.scenarioId,
+                  position: insertPosition,
+                  shotSize: shot.shotSize,
+                  cameraMovement: shot.cameraMovement,
+                  estimatedMinutes: shot.estimatedMinutes,
+                  notes: reverseNote,
+                  cameraLabel: shot.cameraLabel,
+                });
 
-          await db.execute(sql`UPDATE shot_plan_scenarios SET is_suggested = false WHERE id = ${shot.scenarioId}`);
+                await db.execute(
+                  sql`UPDATE shot_plan_scenarios SET is_suggested = false WHERE id = ${shot.scenarioId}`,
+                );
 
-          await rebuildAutoTransitions(db, shot.scenarioId, plan.projectId);
-        })(),
-        (e) => {
-          if (e instanceof ShotNotFoundError) return e;
-          if (e instanceof InvalidReverseShotError) return e;
-          return new DbError("addReverseShot", e);
-        },
+                await rebuildAutoTransitions(
+                  db,
+                  shot.scenarioId,
+                  plan.projectId,
+                );
+              })(),
+              (e) => {
+                if (e instanceof ShotNotFoundError) return e;
+                if (e instanceof InvalidReverseShotError) return e;
+                return new DbError("addReverseShot", e);
+              },
+            ),
+          ),
       );
 
       return toShape(result);
@@ -1602,56 +1654,61 @@ export const getSceneFountainText = createServerFn({ method: "GET" })
   .validator(
     z.object({ sceneId: z.string().uuid(), projectId: z.string().uuid() }),
   )
-  .handler(async ({ data }): Promise<ResultShape<string, ForbiddenError | DbError>> => {
-    await requireUser();
-    const db = await getDb();
+  .handler(
+    async ({ data }): Promise<ResultShape<string, ProjectAccessError>> => {
+      const result = await withProjectAccess(data.projectId, "view", ({ db }) =>
+        ResultAsync.fromPromise(
+          (async () => {
+            const scene = await db.query.scenes.findFirst({
+              where: eq(scenes.id, data.sceneId),
+            });
+            if (!scene) return "";
 
-    const result = await ResultAsync.fromPromise(
-      (async () => {
-        const scene = await db.query.scenes.findFirst({
-          where: eq(scenes.id, data.sceneId),
-        });
-        if (!scene) return "";
+            const screenplay = await db.query.screenplays.findFirst({
+              where: eq(screenplays.id, scene.screenplayId),
+            });
+            if (!screenplay) return "";
 
-        const screenplay = await db.query.screenplays.findFirst({
-          where: eq(screenplays.id, scene.screenplayId),
-        });
-        if (!screenplay) return "";
+            // Use current version content if set, otherwise fall back to screenplay body
+            let content = screenplay.content;
+            if (screenplay.currentVersionId) {
+              const version = await db.query.screenplayVersions.findFirst({
+                where: eq(screenplayVersions.id, screenplay.currentVersionId),
+              });
+              if (version) content = version.content;
+            }
 
-        // Use current version content if set, otherwise fall back to screenplay body
-        let content = screenplay.content;
-        if (screenplay.currentVersionId) {
-          const version = await db.query.screenplayVersions.findFirst({
-            where: eq(screenplayVersions.id, screenplay.currentVersionId),
-          });
-          if (version) content = version.content;
-        }
+            const allScenes = listScenesInFountain(content);
+            const match = allScenes.find(
+              (s) => parseInt(s.number) === scene.number,
+            );
+            if (!match) return "";
 
-        const allScenes = listScenesInFountain(content);
-        const match = allScenes.find((s) => parseInt(s.number) === scene.number);
-        if (!match) return "";
+            const extracted = extractScenesFromFountain(content, [
+              match.number,
+            ]);
 
-        const extracted = extractScenesFromFountain(content, [match.number]);
+            // If the heading has no explicit #N# marker, the extracted text will
+            // be re-numbered as scene 1 by fountainToDoc (since it's the only
+            // scene in the slice). Inject the scene number so the read-only view
+            // shows the correct number regardless of whether the screenplay uses
+            // explicit scene number markers.
+            const hasExplicitMarker = /\s*#[^#\n]+#\s*$/.test(
+              extracted.split("\n")[0] ?? "",
+            );
+            if (hasExplicitMarker) return extracted;
 
-        // If the heading has no explicit #N# marker, the extracted text will
-        // be re-numbered as scene 1 by fountainToDoc (since it's the only
-        // scene in the slice). Inject the scene number so the read-only view
-        // shows the correct number regardless of whether the screenplay uses
-        // explicit scene number markers.
-        const hasExplicitMarker = /\s*#[^#\n]+#\s*$/.test(
-          extracted.split("\n")[0] ?? "",
-        );
-        if (hasExplicitMarker) return extracted;
+            const lines = extracted.split("\n");
+            lines[0] = `${lines[0]} #${scene.number}#`;
+            return lines.join("\n");
+          })(),
+          (e) => new DbError("getSceneFountainText", e),
+        ),
+      );
 
-        const lines = extracted.split("\n");
-        lines[0] = `${lines[0]} #${scene.number}#`;
-        return lines.join("\n");
-      })(),
-      (e) => new DbError("getSceneFountainText", e),
-    );
-
-    return toShape(result);
-  });
+      return toShape(result);
+    },
+  );
 
 export const sceneFountainQueryOptions = (sceneId: string, projectId: string) =>
   queryOptions({
@@ -1684,170 +1741,172 @@ export const generateShotPlansFromEffort = createServerFn({ method: "POST" })
   .handler(
     async ({
       data,
-    }): Promise<ResultShape<GeneratePlanResult, ForbiddenError | DbError>> => {
-      await requireUser();
-      const db = await getDb();
-
-      const result = await ResultAsync.fromPromise(
-        (async () => {
-          // Find the project's screenplay
-          const screenplay = await db.query.screenplays.findFirst({
-            where: (s, { eq: e }) => e(s.projectId, data.projectId),
-            orderBy: (s, { desc }) => [desc(s.updatedAt)],
-          });
-          if (!screenplay) {
-            return {
-              sceneCount: 0,
-              createdCount: 0,
-              skippedCount: 0,
-              estimatedDays: 0,
-            } satisfies GeneratePlanResult;
-          }
-
-          const sceneRows = await db.query.scenes.findMany({
-            where: (sc, { eq: e }) => e(sc.screenplayId, screenplay.id),
-            orderBy: (sc, { asc: a }) => [a(sc.number)],
-          });
-          if (sceneRows.length === 0) {
-            return {
-              sceneCount: 0,
-              createdCount: 0,
-              skippedCount: 0,
-              estimatedDays: 0,
-            } satisfies GeneratePlanResult;
-          }
-
-          // Find scenes that already have a shot plan
-          const sceneIds = sceneRows.map((s) => s.id);
-          const existingPlans = await db.query.shotPlans.findMany({
-            where: (p, { inArray: ia }) => ia(p.sceneId, sceneIds),
-          });
-          const existingPlanSceneIds = new Set(
-            existingPlans.map((p) => p.sceneId),
-          );
-
-          const weights = (
-            await resolveWeights(db, data.projectId)
-          )._unsafeUnwrap();
-
-          let createdCount = 0;
-          const skippedCount = existingPlanSceneIds.size;
-          let totalMinutes = 0;
-
-          for (const scene of sceneRows) {
-            const effortLevel = (scene.effort ?? 2) as EffortLevel;
-            totalMinutes += EFFORT_MINUTES[effortLevel];
-
-            if (existingPlanSceneIds.has(scene.id)) {
-              // Scene already has a plan — skip, do not overwrite
-              continue;
+    }): Promise<ResultShape<GeneratePlanResult, ProjectAccessError>> => {
+      const result = await withProjectAccess(data.projectId, "edit", ({ db }) =>
+        ResultAsync.fromPromise(
+          (async () => {
+            // Find the project's screenplay
+            const screenplay = await db.query.screenplays.findFirst({
+              where: (s, { eq: e }) => e(s.projectId, data.projectId),
+              orderBy: (s, { desc }) => [desc(s.updatedAt)],
+            });
+            if (!screenplay) {
+              return {
+                sceneCount: 0,
+                createdCount: 0,
+                skippedCount: 0,
+                estimatedDays: 0,
+              } satisfies GeneratePlanResult;
             }
 
-            // Load breakdown to pick the right coverage pattern
-            const breakdownRows = await db
-              .select({
-                category: breakdownElements.category,
-                name: breakdownElements.name,
-              })
-              .from(breakdownOccurrences)
-              .innerJoin(
-                breakdownElements,
-                eq(breakdownOccurrences.elementId, breakdownElements.id),
-              )
-              .where(eq(breakdownOccurrences.sceneId, scene.id));
-
-            const breakdownSummary: BreakdownSummary | null =
-              breakdownRows.length > 0
-                ? {
-                    castWithDialogue: Array.from(
-                      new Set(
-                        breakdownRows
-                          .filter((r) => r.category === "cast")
-                          .map((r) => r.name),
-                      ),
-                    ),
-                    actionNoteCount: breakdownRows.filter(
-                      (r) =>
-                        r.category === "stunts" ||
-                        r.category === "sfx" ||
-                        r.category === "vfx",
-                    ).length,
-                  }
-                : null;
-
-            const patternId = recommendPattern(breakdownSummary, {
-              pageStart: scene.pageStart,
-              pageEnd: scene.pageEnd,
-              hasSpecialEffect: scene.hasSpecialEffect,
+            const sceneRows = await db.query.scenes.findMany({
+              where: (sc, { eq: e }) => e(sc.screenplayId, screenplay.id),
+              orderBy: (sc, { asc: a }) => [a(sc.number)],
             });
+            if (sceneRows.length === 0) {
+              return {
+                sceneCount: 0,
+                createdCount: 0,
+                skippedCount: 0,
+                estimatedDays: 0,
+              } satisfies GeneratePlanResult;
+            }
 
-            const pattern = COVERAGE_PATTERNS[patternId];
+            // Find scenes that already have a shot plan
+            const sceneIds = sceneRows.map((s) => s.id);
+            const existingPlans = await db.query.shotPlans.findMany({
+              where: (p, { inArray: ia }) => ia(p.sceneId, sceneIds),
+            });
+            const existingPlanSceneIds = new Set(
+              existingPlans.map((p) => p.sceneId),
+            );
 
-            await db.transaction(async (tx) => {
-              const planRows = await tx
-                .insert(shotPlans)
-                .values({
-                  projectId: data.projectId,
-                  sceneId: scene.id,
-                  activeScenarioId: null,
-                })
-                .returning();
-              const plan = planRows[0]!;
+            const weights = (
+              await resolveWeights(db, data.projectId)
+            )._unsafeUnwrap();
 
-              const scenarioRows = await tx
-                .insert(shotPlanScenarios)
-                .values({
-                  shotPlanId: plan.id,
-                  name: "Piano A",
-                  position: 0,
-                  isSuggested: true,
-                })
-                .returning();
-              const scenario = scenarioRows[0]!;
+            let createdCount = 0;
+            const skippedCount = existingPlanSceneIds.size;
+            let totalMinutes = 0;
 
-              await tx
-                .update(shotPlans)
-                .set({ activeScenarioId: scenario.id, updatedAt: new Date() })
-                .where(eq(shotPlans.id, plan.id));
+            for (const scene of sceneRows) {
+              const effortLevel = (scene.effort ?? 2) as EffortLevel;
+              totalMinutes += EFFORT_MINUTES[effortLevel];
 
-              if (pattern.shots.length > 0) {
-                await tx.insert(shots).values(
-                  pattern.shots.map((s, i) => ({
-                    scenarioId: scenario.id,
-                    position: i,
-                    shotSize: s.shotSize,
-                    cameraMovement: s.cameraMovement,
-                    estimatedMinutes: null,
-                    notes: s.notesHint,
-                    cameraLabel: "A" as const,
-                  })),
-                );
-
-                await rebuildAutoTransitions(
-                  tx as unknown as Db,
-                  scenario.id,
-                  data.projectId,
-                );
+              if (existingPlanSceneIds.has(scene.id)) {
+                // Scene already has a plan — skip, do not overwrite
+                continue;
               }
-            });
 
-            createdCount++;
-          }
+              // Load breakdown to pick the right coverage pattern
+              const breakdownRows = await db
+                .select({
+                  category: breakdownElements.category,
+                  name: breakdownElements.name,
+                })
+                .from(breakdownOccurrences)
+                .innerJoin(
+                  breakdownElements,
+                  eq(breakdownOccurrences.elementId, breakdownElements.id),
+                )
+                .where(eq(breakdownOccurrences.sceneId, scene.id));
 
-          // Estimate shooting days: sum of effort minutes grouped by 480-min capacity
-          const estimatedDays = totalMinutes > 0
-            ? Math.ceil(totalMinutes / SHOOTING_DAY_MINUTES)
-            : 0;
+              const breakdownSummary: BreakdownSummary | null =
+                breakdownRows.length > 0
+                  ? {
+                      castWithDialogue: Array.from(
+                        new Set(
+                          breakdownRows
+                            .filter((r) => r.category === "cast")
+                            .map((r) => r.name),
+                        ),
+                      ),
+                      actionNoteCount: breakdownRows.filter(
+                        (r) =>
+                          r.category === "stunts" ||
+                          r.category === "sfx" ||
+                          r.category === "vfx",
+                      ).length,
+                    }
+                  : null;
 
-          return {
-            sceneCount: sceneRows.length,
-            createdCount,
-            skippedCount,
-            estimatedDays,
-          } satisfies GeneratePlanResult;
-        })(),
-        (e) =>
-          e instanceof DbError ? e : new DbError("generateShotPlansFromEffort", e),
+              const patternId = recommendPattern(breakdownSummary, {
+                pageStart: scene.pageStart,
+                pageEnd: scene.pageEnd,
+                hasSpecialEffect: scene.hasSpecialEffect,
+              });
+
+              const pattern = COVERAGE_PATTERNS[patternId];
+
+              await db.transaction(async (tx) => {
+                const planRows = await tx
+                  .insert(shotPlans)
+                  .values({
+                    projectId: data.projectId,
+                    sceneId: scene.id,
+                    activeScenarioId: null,
+                  })
+                  .returning();
+                const plan = planRows[0]!;
+
+                const scenarioRows = await tx
+                  .insert(shotPlanScenarios)
+                  .values({
+                    shotPlanId: plan.id,
+                    name: "Piano A",
+                    position: 0,
+                    isSuggested: true,
+                  })
+                  .returning();
+                const scenario = scenarioRows[0]!;
+
+                await tx
+                  .update(shotPlans)
+                  .set({ activeScenarioId: scenario.id, updatedAt: new Date() })
+                  .where(eq(shotPlans.id, plan.id));
+
+                if (pattern.shots.length > 0) {
+                  await tx.insert(shots).values(
+                    pattern.shots.map((s, i) => ({
+                      scenarioId: scenario.id,
+                      position: i,
+                      shotSize: s.shotSize,
+                      cameraMovement: s.cameraMovement,
+                      estimatedMinutes: null,
+                      notes: s.notesHint,
+                      cameraLabel: "A" as const,
+                    })),
+                  );
+
+                  await rebuildAutoTransitions(
+                    tx as unknown as Db,
+                    scenario.id,
+                    data.projectId,
+                  );
+                }
+              });
+
+              createdCount++;
+            }
+
+            // Estimate shooting days: sum of effort minutes grouped by 480-min capacity
+            const estimatedDays =
+              totalMinutes > 0
+                ? Math.ceil(totalMinutes / SHOOTING_DAY_MINUTES)
+                : 0;
+
+            return {
+              sceneCount: sceneRows.length,
+              createdCount,
+              skippedCount,
+              estimatedDays,
+            } satisfies GeneratePlanResult;
+          })(),
+          (e) =>
+            e instanceof DbError
+              ? e
+              : new DbError("generateShotPlansFromEffort", e),
+        ),
       );
 
       return toShape(result);
