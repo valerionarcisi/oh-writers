@@ -105,24 +105,30 @@ test.describe("[Spec 47b] Cesare universal dispatch — cross-page write", () =>
       )}`,
     ).toBe(true);
 
-    // The version was APPLIED LIVE: the executor emits the doc-applied marker
-    // only when a new version was created and pointed at. This is the
-    // "version created" proof required by the agentic-edit pattern.
+    // The cross-page write dispatched to the Soggetto. The terminal marker is
+    // doc-applied (small edit → live apply) OR ask-new-version (large edit →
+    // Spec 76 streams an ask before minting). The seeded soggetto is ~180 words,
+    // so a full rewrite is a large edit and correctly asks — both markers prove
+    // the soggetto write reached the executor. Either way, document_type=soggetto.
     const result = done?.result ?? "";
-    const markerMatch = /<!--ohw:doc-applied:(.*?)-->/.exec(result);
+    const appliedMatch = /<!--ohw:doc-applied:(.*?)-->/.exec(result);
+    const askedMatch = /<!--ohw:ask-new-version:(.*?)-->/.exec(result);
     expect(
-      markerMatch,
-      `expected an ohw:doc-applied marker in the result; got: ${result}`,
+      appliedMatch ?? askedMatch,
+      `expected a doc-applied or ask-new-version marker; got: ${result}`,
     ).not.toBeNull();
-    const marker = JSON.parse(markerMatch![1]!) as {
+    const marker = JSON.parse((appliedMatch ?? askedMatch)![1]!) as {
       document_type?: string;
       version_id?: string | null;
     };
     expect(marker.document_type).toBe("soggetto");
-    expect(
-      marker.version_id,
-      "a new Soggetto version id must be present",
-    ).toBeTruthy();
+    if (appliedMatch) {
+      // When it applied (small edit), a new version id must be present.
+      expect(
+        marker.version_id,
+        "an applied Soggetto edit must carry a new version id",
+      ).toBeTruthy();
+    }
   });
 
   test("[047-A7] the stream route still enforces project ownership (foreign project → not 200)", async ({

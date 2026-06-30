@@ -64,10 +64,18 @@ test.describe("[Spec 44] Cesare Agentic — Document generation applies live", (
       authenticatedPage,
       "Fammi un v2 del soggetto più asciutto.",
     );
-    expect(reply.toLowerCase()).toMatch(/soggetto|aggiornat|applicat/);
+    expect(reply.toLowerCase()).toMatch(/soggetto|aggiornat|applicat|modifica/);
+
+    // The seeded soggetto is ~180 words, so a full v2 rewrite is a LARGE edit:
+    // per Spec 76 (#36) Cesare ASKS before minting instead of applying silently.
+    // Confirm "Nuova versione" → the edit then applies live to the open editor.
+    const askCard = authenticatedPage.getByTestId("cesare-ask-new-version");
+    await expect(askCard).toBeVisible({ timeout: 30_000 });
+    await authenticatedPage.getByTestId("cesare-ask-mint").click();
 
     // The mock soggetto-v2 output is deterministic ("Marco torna a Falerone…").
-    // Assert it landed in the open editor — the live-doc contract — not a draft.
+    // After confirming, it landed in the open editor — the live-doc contract —
+    // not a draft.
     await expect(editor).toContainText("Marco torna a Falerone", {
       timeout: 15_000,
     });
