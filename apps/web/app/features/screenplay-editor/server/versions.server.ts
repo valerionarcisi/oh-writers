@@ -193,7 +193,7 @@ export const listVersions = createServerFn({ method: "GET" })
     async ({
       data,
     }): Promise<ResultShape<VersionView[], VersionAccessError>> => {
-      const user = await requireUser();
+      // resolveScreenplayAccess already enforces requireUser via requireProjectAccess.
       const db = await getDb();
 
       const access = await resolveScreenplayAccess(db, data.screenplayId);
@@ -250,7 +250,7 @@ export const getVersion = createServerFn({ method: "GET" })
   .validator(GetVersionInput)
   .handler(
     async ({ data }): Promise<ResultShape<VersionView, VersionAccessError>> => {
-      const user = await requireUser();
+      // resolveVersionAccess already enforces requireUser via requireProjectAccess.
       const db = await getDb();
 
       const access = await resolveVersionAccess(db, data.versionId);
@@ -621,7 +621,7 @@ export const restoreVersion = createServerFn({ method: "POST" })
     async ({
       data,
     }): Promise<ResultShape<ScreenplayView, VersionAccessError>> => {
-      const user = await requireUser();
+      // resolveVersionAccess already enforces requireUser via requireProjectAccess.
       const db = await getDb();
 
       const access = await resolveVersionAccess(db, data.versionId);
@@ -680,7 +680,7 @@ export const deleteVersion = createServerFn({ method: "POST" })
     }): Promise<
       ResultShape<void, VersionAccessError | CannotDeleteLastManualError>
     > => {
-      const user = await requireUser();
+      // resolveVersionAccess already enforces requireUser via requireProjectAccess.
       const db = await getDb();
 
       const access = await resolveVersionAccess(db, data.versionId);
@@ -720,7 +720,7 @@ export const renameVersion = createServerFn({ method: "POST" })
     }): Promise<
       ResultShape<VersionView, VersionAccessError | InvalidLabelError>
     > => {
-      const user = await requireUser();
+      // resolveVersionAccess already enforces requireUser via requireProjectAccess.
       const db = await getDb();
 
       const access = await resolveVersionAccess(db, data.versionId);
@@ -792,7 +792,7 @@ export const updateVersionMeta = createServerFn({ method: "POST" })
   .validator(UpdateVersionMetaInput)
   .handler(
     async ({ data }): Promise<ResultShape<VersionView, VersionAccessError>> => {
-      const user = await requireUser();
+      // resolveVersionAccess already enforces requireUser via requireProjectAccess.
       const db = await getDb();
 
       const access = await resolveVersionAccess(db, data.versionId);
