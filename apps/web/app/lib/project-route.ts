@@ -1,4 +1,4 @@
-import { notFound } from "@tanstack/react-router";
+import { redirect } from "@tanstack/react-router";
 import { z } from "zod";
 
 // Trust boundary for the `$id` project param (issue #62). A non-uuid id used to
@@ -15,11 +15,17 @@ import { z } from "zod";
 // users (custom error handler), strip the stack there too.
 const projectIdSchema = z.string().uuid();
 
-// Reject an invalid `$id` in `beforeLoad` (not `params.parse`): a `notFound()`
-// thrown from `beforeLoad` short-circuits the route's loaders/component and
-// renders the router's `defaultNotFoundComponent`. A throw from `params.parse`
-// does NOT short-circuit in this router version — the route still mounts and
-// fires its queries (the very 500 storm we are preventing).
+// Reject an invalid `$id` in `beforeLoad` (not `params.parse`): the throw here
+// short-circuits the route's loaders/component BEFORE any project-scoped query
+// fires (a throw from `params.parse` does NOT short-circuit in this router
+// version — the route still mounts and fires its queries, the very 500 storm we
+// are preventing).
+//
+// We `redirect` to the real `/not-found` route rather than throw `notFound()`:
+// the router renders a `notFound()` ABOVE the `__root` document shell, so it
+// comes out unstyled; `/not-found` is a normal route under `_app`, rendered
+// inside `<body>` + `global.css` (branded). See `_app.not-found.tsx`.
 export const assertValidProjectId = (params: { id: string }): void => {
-  if (!projectIdSchema.safeParse(params.id).success) throw notFound();
+  if (!projectIdSchema.safeParse(params.id).success)
+    throw redirect({ to: "/not-found" });
 };

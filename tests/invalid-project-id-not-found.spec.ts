@@ -7,12 +7,13 @@
 // boundary).
 //
 // The fix validates `$id` in each project route's `beforeLoad`
-// (`assertValidProjectId`), which throws `notFound()` to short-circuit the route
-// BEFORE its loaders/queries run, so a bad id never fires a query and the router
-// renders the branded `defaultNotFoundComponent` instead. (A throw from
-// `params.parse` does NOT short-circuit in this router version — see
-// project-route.ts.) This test locks: (1) the branded not-found is shown,
-// (2) NO project-scoped server-fn request fires (no 500 storm, no stack leak).
+// (`assertValidProjectId`), which redirects to the styled `/not-found` route
+// BEFORE its loaders/queries run, so a bad id never fires a query. (A throw from
+// `params.parse` does NOT short-circuit in this router version, and a thrown
+// `notFound()` renders unstyled above the document shell — see project-route.ts /
+// _app.not-found.tsx.) This test locks: (1) the redirect lands on the branded
+// `/not-found`, (2) NO project-scoped server-fn request fires (no 500 storm, no
+// stack leak).
 
 import { test, expect } from "./fixtures";
 import { BASE_URL } from "./fixtures";
@@ -36,12 +37,13 @@ test.describe("[#62] invalid project id → branded not-found, no 500 leak", () 
 
     await page.goto(`${BASE_URL}/projects/${INVALID_ID}/soggetto`);
 
-    // Branded not-found is shown…
+    // Redirected to the branded /not-found route…
     await expect(page.getByTestId("route-not-found")).toBeVisible({
       timeout: 10_000,
     });
     // …reusing the error-fallback chrome (shares the testid) with not-found copy.
     await expect(page.getByTestId("route-error-title")).toBeVisible();
+    await expect(page).toHaveURL(/\/not-found$/);
 
     // No 500 fired — the storm + stack/path leak are gone at source.
     expect(serverErrors, "no 5xx responses for an invalid id").toEqual([]);
