@@ -2,6 +2,7 @@
 // layer later to surface English copy for non-IT users.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { assertValidProjectId } from "~/lib/project-route";
 import { match } from "ts-pattern";
 import { ContextActionIds, DocumentTypes } from "@oh-writers/domain";
 import { ActionsMenu, Skeleton, computeSaveStatus } from "@oh-writers/ui";
@@ -40,6 +41,7 @@ import type { DocumentViewWithPermission } from "~/features/documents";
 import styles from "./_app.projects.$id_.soggetto.module.css";
 
 export const Route = createFileRoute("/_app/projects/$id_/soggetto")({
+  beforeLoad: ({ params }) => assertValidProjectId(params),
   head: () => titleHead("Soggetto"),
   component: SoggettoPage,
 });

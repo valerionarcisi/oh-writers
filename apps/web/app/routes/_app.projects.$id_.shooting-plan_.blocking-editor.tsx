@@ -1,9 +1,11 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { assertValidProjectId } from "~/lib/project-route";
 import { BlockingEditorPage } from "~/features/shooting-plan/components/blocking-editor/BlockingEditorPage";
 
 export const Route = createFileRoute(
   "/_app/projects/$id_/shooting-plan_/blocking-editor",
 )({
+  beforeLoad: ({ params }) => assertValidProjectId(params),
   component: BlockingEditorRoute,
 });
 
