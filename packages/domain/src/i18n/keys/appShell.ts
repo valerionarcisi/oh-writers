@@ -251,6 +251,12 @@ export const appShellKeys = {
     "errorBoundary.home": "Back to dashboard",
     "errorBoundary.showDetails": "Show details",
     "errorBoundary.hideDetails": "Hide details",
+
+    // Not-found fallback (issue #62) — branded page for an unknown/invalid route
+    // (e.g. a malformed project id), reusing the error-boundary chrome.
+    "notFound.title": "Page not found",
+    "notFound.body":
+      "We couldn't find what you were looking for. It may have been moved or removed, or the link is incorrect.",
   },
   it: {
     // Cesare success toasts (live-apply markers)
@@ -501,5 +507,10 @@ export const appShellKeys = {
     "errorBoundary.home": "Torna alla dashboard",
     "errorBoundary.showDetails": "Mostra dettagli",
     "errorBoundary.hideDetails": "Nascondi dettagli",
+
+    // Not-found fallback (issue #62)
+    "notFound.title": "Pagina non trovata",
+    "notFound.body":
+      "Non abbiamo trovato quello che cercavi. Potrebbe essere stato spostato o rimosso, oppure il link non è corretto.",
   },
 } as const satisfies LocaleDict;

@@ -18,6 +18,7 @@ import { Route as IndexImport } from "./routes/index";
 import { Route as InviteTokenImport } from "./routes/invite.$token";
 import { Route as DevTokensImport } from "./routes/dev/tokens";
 import { Route as AppSettingsImport } from "./routes/_app.settings";
+import { Route as AppNotFoundImport } from "./routes/_app.not-found";
 import { Route as AppDashboardImport } from "./routes/_app.dashboard";
 import { Route as AppCrashTestImport } from "./routes/_app.crash-test";
 import { Route as AppTeamsIndexImport } from "./routes/_app.teams.index";
@@ -91,6 +92,12 @@ const DevTokensRoute = DevTokensImport.update({
 const AppSettingsRoute = AppSettingsImport.update({
   id: "/settings",
   path: "/settings",
+  getParentRoute: () => AppRoute,
+} as any);
+
+const AppNotFoundRoute = AppNotFoundImport.update({
+  id: "/not-found",
+  path: "/not-found",
   getParentRoute: () => AppRoute,
 } as any);
 
@@ -340,6 +347,13 @@ declare module "@tanstack/react-router" {
       path: "/dashboard";
       fullPath: "/dashboard";
       preLoaderRoute: typeof AppDashboardImport;
+      parentRoute: typeof AppImport;
+    };
+    "/_app/not-found": {
+      id: "/_app/not-found";
+      path: "/not-found";
+      fullPath: "/not-found";
+      preLoaderRoute: typeof AppNotFoundImport;
       parentRoute: typeof AppImport;
     };
     "/_app/settings": {
@@ -632,6 +646,7 @@ const AppProjectsIdSessionsRouteWithChildren =
 interface AppRouteChildren {
   AppCrashTestRoute: typeof AppCrashTestRoute;
   AppDashboardRoute: typeof AppDashboardRoute;
+  AppNotFoundRoute: typeof AppNotFoundRoute;
   AppSettingsRoute: typeof AppSettingsRoute;
   AppProjectsIdRoute: typeof AppProjectsIdRoute;
   AppProjectsNewRoute: typeof AppProjectsNewRoute;
@@ -661,6 +676,7 @@ interface AppRouteChildren {
 const AppRouteChildren: AppRouteChildren = {
   AppCrashTestRoute: AppCrashTestRoute,
   AppDashboardRoute: AppDashboardRoute,
+  AppNotFoundRoute: AppNotFoundRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppProjectsIdRoute: AppProjectsIdRoute,
   AppProjectsNewRoute: AppProjectsNewRoute,
@@ -697,6 +713,7 @@ export interface FileRoutesByFullPath {
   "/register": typeof RegisterRoute;
   "/crash-test": typeof AppCrashTestRoute;
   "/dashboard": typeof AppDashboardRoute;
+  "/not-found": typeof AppNotFoundRoute;
   "/settings": typeof AppSettingsRoute;
   "/dev/tokens": typeof DevTokensRoute;
   "/invite/$token": typeof InviteTokenRoute;
@@ -739,6 +756,7 @@ export interface FileRoutesByTo {
   "/register": typeof RegisterRoute;
   "/crash-test": typeof AppCrashTestRoute;
   "/dashboard": typeof AppDashboardRoute;
+  "/not-found": typeof AppNotFoundRoute;
   "/settings": typeof AppSettingsRoute;
   "/dev/tokens": typeof DevTokensRoute;
   "/invite/$token": typeof InviteTokenRoute;
@@ -780,6 +798,7 @@ export interface FileRoutesById {
   "/register": typeof RegisterRoute;
   "/_app/crash-test": typeof AppCrashTestRoute;
   "/_app/dashboard": typeof AppDashboardRoute;
+  "/_app/not-found": typeof AppNotFoundRoute;
   "/_app/settings": typeof AppSettingsRoute;
   "/dev/tokens": typeof DevTokensRoute;
   "/invite/$token": typeof InviteTokenRoute;
@@ -824,6 +843,7 @@ export interface FileRouteTypes {
     | "/register"
     | "/crash-test"
     | "/dashboard"
+    | "/not-found"
     | "/settings"
     | "/dev/tokens"
     | "/invite/$token"
@@ -865,6 +885,7 @@ export interface FileRouteTypes {
     | "/register"
     | "/crash-test"
     | "/dashboard"
+    | "/not-found"
     | "/settings"
     | "/dev/tokens"
     | "/invite/$token"
@@ -904,6 +925,7 @@ export interface FileRouteTypes {
     | "/register"
     | "/_app/crash-test"
     | "/_app/dashboard"
+    | "/_app/not-found"
     | "/_app/settings"
     | "/dev/tokens"
     | "/invite/$token"
@@ -984,6 +1006,7 @@ export const routeTree = rootRoute
       "children": [
         "/_app/crash-test",
         "/_app/dashboard",
+        "/_app/not-found",
         "/_app/settings",
         "/_app/projects/$id",
         "/_app/projects/new",
@@ -1022,6 +1045,10 @@ export const routeTree = rootRoute
     },
     "/_app/dashboard": {
       "filePath": "_app.dashboard.tsx",
+      "parent": "/_app"
+    },
+    "/_app/not-found": {
+      "filePath": "_app.not-found.tsx",
       "parent": "/_app"
     },
     "/_app/settings": {

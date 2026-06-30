@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { assertValidProjectId } from "~/lib/project-route";
 import { titleHead } from "~/lib/document-title";
 import { match } from "ts-pattern";
 import { Viewbar, ViewbarSep, Skeleton } from "@oh-writers/ui";
@@ -18,6 +19,7 @@ import styles from "./_app.projects.$id_.title-page.module.css";
 const SAVE_DEBOUNCE_MS = 800;
 
 export const Route = createFileRoute("/_app/projects/$id_/title-page")({
+  beforeLoad: ({ params }) => assertValidProjectId(params),
   head: () => titleHead("Frontespizio"),
   component: TitlePageRoute,
 });

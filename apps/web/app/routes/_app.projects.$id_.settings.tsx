@@ -1,5 +1,6 @@
 import type { ComponentProps } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { assertValidProjectId } from "~/lib/project-route";
 import { titleHead } from "~/lib/document-title";
 import { match } from "ts-pattern";
 import { Button, useConfirmDialog, Skeleton } from "@oh-writers/ui";
@@ -17,6 +18,7 @@ import { ResultErrorView } from "~/components/ResultErrorView";
 import styles from "./_app.projects.$id_.settings.module.css";
 
 export const Route = createFileRoute("/_app/projects/$id_/settings")({
+  beforeLoad: ({ params }) => assertValidProjectId(params),
   head: () => titleHead("Impostazioni progetto"),
   component: ProjectSettingsPage,
 });
