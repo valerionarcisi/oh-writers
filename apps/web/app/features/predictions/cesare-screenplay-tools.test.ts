@@ -272,3 +272,64 @@ describe("sliceFountainSceneRange", () => {
     expect(slice).toContain("INT. UFFICIO");
   });
 });
+
+// #51 / #53 — every model→screenplay seam must normalise inline cues. rewrite_scene
+// is pure (no db), so we decode its marker and assert no "CUE speech" one-liner
+// survives — the cue and its speech land on separate lines.
+describe("[#51] executeScreenplayTool — rewrite_scene normalises inline cues", () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = null as any;
+
+  const decode = (marker: string): string => {
+    const m = marker.match(/<!--ohw:rewrite-scene-b64:([A-Za-z0-9+/=]+)-->/);
+    const decoded = JSON.parse(
+      Buffer.from(m![1]!, "base64").toString("utf8"),
+    ) as { new_content: string };
+    return decoded.new_content;
+  };
+
+  const runRewrite = async (newContent: string): Promise<string> => {
+    const result = await executeScreenplayTool(
+      {
+        type: "tool_use",
+        id: "id",
+        name: "rewrite_scene",
+        input: { scene_number: 1, new_content: newContent },
+      },
+      db,
+      "proj-1",
+    );
+    expect(result.isOk()).toBe(true);
+    const payload = JSON.parse(
+      (result as { value: { content: string } }).value.content,
+    ) as { marker: string };
+    return decode(payload.marker);
+  };
+
+  // The canonicaliser indents cues (6sp) and dialogue (10sp); assert the
+  // structural property — cue and speech on separate lines, no "CUE speech"
+  // one-liner survives — rather than an exact indent string.
+  const noInlineCueSurvives = (out: string): void => {
+    for (const line of out.split("\n")) {
+      const t = line.trim();
+      if (t.startsWith("INT.") || t.startsWith("EXT.")) continue;
+      expect(t).not.toMatch(/^[A-ZÀ-Ý][A-ZÀ-Ý ]+\s+\p{Ll}/u);
+    }
+  };
+
+  it("splits a single inline cue in the rewritten scene", async () => {
+    const out = await runRewrite(
+      "INT. CUCINA - NOTTE\n\nGIULIO Dammi la marinara.",
+    );
+    expect(out).toMatch(/GIULIO\s*\n\s*Dammi la marinara\./);
+    noInlineCueSurvives(out);
+  });
+
+  it("splits TWO cues colliding on one line", async () => {
+    const out = await runRewrite(
+      "INT. CUCINA - NOTTE\n\nFILIPPO Giulio — GIULIO Vai.",
+    );
+    expect(out).toMatch(/FILIPPO\s*\n\s*Giulio\s*\n\s*GIULIO\s*\n\s*Vai\./);
+    noInlineCueSurvives(out);
+  });
+});

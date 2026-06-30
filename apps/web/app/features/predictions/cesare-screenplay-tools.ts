@@ -1,11 +1,15 @@
 import { tool } from "ai";
 import { z } from "zod";
 import { ResultAsync, errAsync, okAsync } from "neverthrow";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { screenplays, screenplayVersions } from "@oh-writers/db/schema";
 import type { Db } from "~/server/db";
 import { callHaiku, extractText } from "~/features/ai";
 import { sanitizeAiText } from "@oh-writers/utils";
+import {
+  normaliseScreenplayFountain,
+  splitInlineCues,
+} from "~/features/screenplay-editor";
 import { CesareError } from "./cesare.errors";
 
 // ─── Tool definitions ─────────────────────────────────────────────────────────
@@ -541,7 +545,11 @@ const executeProposeScreenplayEdit = (
       kind: "edit",
       sceneNumber: input.scene_number,
       find: input.find,
-      replace: input.replace,
+      // #53 — a replacement fragment can itself be model-formatted dialogue.
+      // We split inline cues (not the full round-trip canonicaliser) because a
+      // find/replace fragment may be a bare line, not a whole scene, and forcing
+      // scene parsing on a fragment could mangle it.
+      replace: splitInlineCues(input.replace),
       reason,
       createdAt: Date.now(),
     };
@@ -751,6 +759,36 @@ const findCreatorUserId = (
         ),
   );
 
+// #50 — delete the still-draft version rows of every prior un-promoted
+// revision banner for this screenplay, so a fresh revision replaces them
+// instead of stacking. Only `isDraft` rows are removed — a promoted/active
+// version is never touched. Buckets hold only un-promoted drafts (promote and
+// discard both clear them), so iterating the bucket is sufficient.
+const supersedePriorDrafts = (
+  db: Db,
+  screenplayId: string,
+): ResultAsync<void, CesareError> => {
+  const priorIds = (PROPOSAL_STORE.get(screenplayId)?.drafts ?? []).map(
+    (d) => d.versionId,
+  );
+  if (priorIds.length === 0) return okAsync(undefined);
+  return ResultAsync.fromPromise(
+    db
+      .delete(screenplayVersions)
+      .where(
+        and(
+          inArray(screenplayVersions.id, priorIds),
+          eq(screenplayVersions.isDraft, true),
+        ),
+      )
+      .then(() => undefined),
+    (e) =>
+      new CesareError(
+        `supersedePriorDrafts: ${e instanceof Error ? e.message : String(e)}`,
+      ),
+  );
+};
+
 const executeProposeScreenplayRevision = (
   input: ReviseInput,
   db: Db,
@@ -818,7 +856,13 @@ const executeProposeScreenplayRevision = (
                   new CesareError("Revision call returned no text"),
                 );
               }
-              return okAsync(sanitizeAiText(newText));
+              // #53 — the model is unreliable at Fountain cue formatting on
+              // EVERY path. Normalise BEFORE sanitize so the canonicaliser sees
+              // the model's original line breaks; after the round-trip the cues
+              // are indented/structural and survive sanitize's reflow.
+              return okAsync(
+                sanitizeAiText(normaliseScreenplayFountain(newText)),
+              );
             });
 
     return mockedRewrite.andThen((newText) => {
@@ -879,12 +923,19 @@ const executeProposeScreenplayRevision = (
             scenesChanged: scenesChangedApprox,
             createdAt: Date.now(),
           };
-          getBucket(sp.id).drafts.push(proposal);
-          return okAsync({
-            version_id: row.id,
-            label,
-            scenes_changed_count: scenesChangedApprox,
-            proposal_id: proposal.id,
+          // #50 — ONE draft-promote affordance at a time. The model re-proposes
+          // a revision several times per turn (re-runs, per-scene-range calls);
+          // each used to push a separate banner + leave an orphan draft row.
+          // Supersede every prior un-promoted draft for this screenplay: drop
+          // its stale draft version row and replace the banner with this one.
+          return supersedePriorDrafts(db, sp.id).map(() => {
+            getBucket(sp.id).drafts = [proposal];
+            return {
+              version_id: row.id,
+              label,
+              scenes_changed_count: scenesChangedApprox,
+              proposal_id: proposal.id,
+            };
           });
         });
     });
@@ -913,8 +964,19 @@ const executeRewriteScene = (
   if (!input.new_content || input.new_content.trim().length === 0) {
     return errAsync(new CesareError("rewrite_scene: new_content is empty"));
   }
+  // #51 — normalise at the SOURCE of the marker, so both the live preview
+  // (streamed into the pending-edit plugin) and the accepted text parse to real
+  // DIALOGUE instead of action. The shared canonicaliser round-trips through the
+  // PM parser so cues land indented on their own lines and survive any later
+  // reflow — a flat cue would otherwise be folded back into the next line.
+  // Normalise BEFORE sanitize: the canonicaliser must see the model's original
+  // line breaks (sanitize's reflow would merge flat "CUE speech" lines first).
+  // After normalise the cues are indented/structural, so sanitize's later reflow
+  // leaves them intact while still repairing mojibake.
   const content = sanitizeAiText(
-    input.new_content.slice(0, REWRITE_CONTENT_LIMIT),
+    normaliseScreenplayFountain(
+      input.new_content.slice(0, REWRITE_CONTENT_LIMIT),
+    ),
   );
   // Reject multi-slugline payloads. rewrite_scene replaces ONE scene; if the
   // model emits two sluglines we'd duplicate / shift downstream numbering.

@@ -724,6 +724,49 @@ export const MOCK_SCENARIOS: ReadonlyArray<MockScenario> = [
     ],
   },
 
+  // #50 — the model re-proposes a revision several times in ONE turn (re-runs,
+  // per-scene-range calls). Each used to push a separate draft banner + leave an
+  // orphan draft version row. The supersede logic must collapse them to ONE live
+  // banner. This mock fires propose_screenplay_revision THREE times in a turn.
+  {
+    match: /rigenera tre volte|regen tre volte|tripla revisione/i,
+    turns: [
+      {
+        tool_uses: [
+          {
+            name: "propose_screenplay_revision",
+            input: {
+              scope: { kind: "whole_screenplay" },
+              instruction: "pass 1",
+              label: "Rigenerazione 1",
+            },
+          },
+          {
+            name: "propose_screenplay_revision",
+            input: {
+              scope: { kind: "whole_screenplay" },
+              instruction: "pass 2",
+              label: "Rigenerazione 2",
+            },
+          },
+          {
+            name: "propose_screenplay_revision",
+            input: {
+              scope: { kind: "whole_screenplay" },
+              instruction: "pass 3",
+              label: "Rigenerazione 3",
+            },
+          },
+        ],
+        stop_reason: "tool_use",
+      },
+      {
+        text: "Ho rigenerato la sceneggiatura. C'è un solo banner Promuovi/Scarta.",
+        stop_reason: "end_turn",
+      },
+    ],
+  },
+
   // Screenplay — propose_rename_entity (OHW-572).
   // "Rinomina Giulio in Lucia." → whole-word rename on the screenplay.
   // The fountain seed has many GIULIO occurrences so the tool returns
@@ -776,6 +819,33 @@ export const MOCK_SCENARIOS: ReadonlyArray<MockScenario> = [
   },
 
   // Screenplay — rewrite_scene (OHW-041).
+  // #51 — rewrite_scene returns DELIBERATELY broken Fountain (cue + speech on
+  // one line, plus a two-cue collision). The server-side splitInlineCues gate
+  // must normalise it at the marker source, so the accepted scene parses to real
+  // DIALOGUE. Must precede the broad /riscrivi la scena/ matcher below.
+  {
+    match: /riscrivi la scena con dialoghi rotti/i,
+    turns: [
+      {
+        tool_uses: [
+          {
+            name: "rewrite_scene",
+            input: {
+              scene_number: 1,
+              new_content:
+                "INT. OPEN GREZZO - NOTTE\n\nUn club di cabaret affollato.\n\nFILIPPO Comici. Open mic.\nGIULIO Dodici.\nFILIPPO Giulio — GIULIO Vai.",
+            },
+          },
+        ],
+        stop_reason: "tool_use",
+      },
+      {
+        text: "Ho riscritto la scena 1. Accetta o rifiuta con ✓/✗.",
+        stop_reason: "end_turn",
+      },
+    ],
+  },
+
   // "Riscrivi la scena 1." → inline typewriter rewrite of scene 1.
   // The new_content is a self-contained Fountain scene starting with INT.
   // The executor embeds the content in a <!--ohw:rewrite-scene-b64:...--> marker

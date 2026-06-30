@@ -5,6 +5,7 @@ import type { EditorView } from "prosemirror-view";
 import { Fragment } from "prosemirror-model";
 import type { Node as PMNode } from "prosemirror-model";
 import { fountainToDoc } from "../fountain-to-doc";
+import { splitInlineCues } from "../split-inline-cues";
 
 // ─── Public types ─────────────────────────────────────────────────────────────
 
@@ -176,7 +177,11 @@ const applyAccept = (view: EditorView, edit: PendingEdit): void => {
   // If parsing fails (e.g. empty text) we fall back to a no-op.
   let replacementNodes: PMNode[] = [];
   try {
-    const parsed = fountainToDoc(streamedText);
+    // #51 — defensive last line: even if the streamed text reached here with an
+    // inline cue (older server build, or text typed in directly), normalise
+    // before parsing so the accepted scene is real DIALOGUE, not action. The
+    // pass is idempotent, so re-running over already-normalised text is a no-op.
+    const parsed = fountainToDoc(splitInlineCues(streamedText));
     parsed.forEach((child) => {
       replacementNodes.push(child);
     });

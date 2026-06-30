@@ -95,4 +95,5 @@ export { fountainFromPdf } from "./lib/fountain-from-pdf";
 export { fountainToDoc } from "./lib/fountain-to-doc";
 export { docToFountain } from "./lib/doc-to-fountain";
 export { splitInlineCues } from "./lib/split-inline-cues";
+export { normaliseScreenplayFountain } from "./lib/normalise-screenplay-fountain";
 export { schema as screenplaySchema } from "./lib/schema";
