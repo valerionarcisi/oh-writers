@@ -44,6 +44,28 @@ describe("[#46] splitInlineCues", () => {
     expect(splitInlineCues("FILIPPO MARCO")).toBe("FILIPPO MARCO");
   });
 
+  it("[#53-fix] does NOT split a character-intro age tag as a cue", () => {
+    // "JOHN (35) holds the microphone." is ACTION introducing a character, not a
+    // cue — the "(35)" is an age tag, not a "(V.O.)"/"(CONT'D)" cue extension.
+    // Splitting it stacked the intro action under a fake cue (real bug in #012).
+    for (const action of [
+      "JOHN (35) holds the microphone. He's standing in a corner.",
+      "FILIPPO (40) è fuori dal locale. Si accende una sigaretta.",
+      "TEA (35) poco distante da lui.",
+    ]) {
+      expect(splitInlineCues(action)).toBe(action);
+    }
+  });
+
+  it("[#53-fix] STILL splits a real cue extension (letters inside the parenthetical)", () => {
+    expect(splitInlineCues("MARCO (V.O.) Non sei più qui.")).toBe(
+      "MARCO (V.O.)\nNon sei più qui.",
+    );
+    expect(splitInlineCues("JOHN (CONT'D) Twelve comedians.")).toBe(
+      "JOHN (CONT'D)\nTwelve comedians.",
+    );
+  });
+
   it("leaves normal action prose untouched", () => {
     const action =
       "Filippo pushes through the swing door, order ticket in hand.";

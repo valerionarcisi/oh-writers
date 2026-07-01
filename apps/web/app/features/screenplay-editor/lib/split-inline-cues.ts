@@ -30,8 +30,17 @@
 // "FILIPPO I have to …" yields cue "FILIPPO" + remainder "I have to …" rather
 // than greedily swallowing the speech's leading capital ("FILIPPO I"). Multi-
 // word cues ("THE NONNO") are recovered downstream by splitEmbeddedCues.
+//
+// A trailing parenthetical is a cue extension ONLY when it contains a LETTER
+// ("(V.O.)", "(CONT'D)", "(O.S.)") — an age tag like "(35)" is character-intro
+// ACTION ("JOHN (35) holds the microphone."), never a cue. Requiring a letter
+// (\p{L}) inside the parenthetical keeps real extensions and rejects age tags.
 const INLINE_CUE_RE =
-  /^([A-ZÀ-Ý][A-ZÀ-Ý0-9'’#-]*(?:\s+[A-ZÀ-Ý0-9'’#-]+){0,3}?(?:\s*\([^)]*\))*)\s+(\S.*)$/u;
+  /^([A-ZÀ-Ý][A-ZÀ-Ý0-9'’#-]*(?:\s+[A-ZÀ-Ý0-9'’#-]+){0,3}?(?:\s*\([^)]*\p{L}[^)]*\))*)\s+(\S.*)$/u;
+
+// A remainder that STARTS with an age tag "(35) …" means the matched name was a
+// character introduction in action, not a cue — leave the whole line as action.
+const AGE_TAG_START_RE = /^\(\s*\d+\s*\)/u;
 
 // BUG #51 — the model also collides TWO cues on one physical line:
 //   "FILIPPO Giulio — GIULIO Go."  /  "FILIPPO I have to — THE NONNO Go. Work."
@@ -103,7 +112,13 @@ export const splitInlineCues = (raw: string): string => {
       continue;
     }
     const m = INLINE_CUE_RE.exec(line);
-    if (m && m[1] && m[2] && hasLowercase(m[2])) {
+    if (
+      m &&
+      m[1] &&
+      m[2] &&
+      hasLowercase(m[2]) &&
+      !AGE_TAG_START_RE.test(m[2])
+    ) {
       // A cue needs a preceding blank line to parse as a cue, not a dialogue
       // continuation of the line above.
       pushCue(out, m[1].trim());

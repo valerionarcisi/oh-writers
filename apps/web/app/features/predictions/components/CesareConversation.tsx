@@ -862,6 +862,11 @@ export function MessageView({
       ? openEntityLabelFor(editedDocType)
       : null;
 
+  // "Mostra modifiche" toggles a transient diff highlight driven by liveDiffs.
+  // A rewrite_scene card has no liveDiffs (the scene is already applied via the
+  // pending-edit typewriter), so the button had nothing to show and read as
+  // dead. Below, onShowChanges is gated on liveDiffs — the same gate onOpenSplit
+  // uses — so a pure scene rewrite keeps only the "Apri Sceneggiatura" jump.
   return (
     <div className={styles.assistantWithSteps}>
       {rendered && <div className={styles.bubbleMarkdown}>{rendered}</div>}
@@ -871,7 +876,7 @@ export function MessageView({
         thoughts={parsed.thoughts}
         updates={parsed.updates}
         isShowingChanges={isShowingDiff}
-        {...(onShowChanges
+        {...(onShowChanges && metadata.liveDiffs.length > 0
           ? {
               onShowChanges: () => {
                 setShowingDiff(true);
