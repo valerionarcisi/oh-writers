@@ -549,21 +549,34 @@ const executeProposeScreenplayEdit = (
         ),
       );
     }
-    const proposal: ProposedEdit = {
+    // #53 — a replacement fragment can itself be model-formatted dialogue.
+    // We split inline cues (not the full round-trip canonicaliser) because a
+    // find/replace fragment may be a bare line, not a whole scene, and forcing
+    // scene parsing on a fragment could mangle it.
+    const replace = splitInlineCues(input.replace);
+    const bucket = getBucket(sp.id);
+    // #85 — the tool-loop can call this tool several times per turn (the model
+    // re-proposes the same edit), which stacked N identical ✓/✗ cards on the
+    // same line — the writer then had to reject each one. Dedup like renames do:
+    // an equivalent edit already this turn is reused, not re-added.
+    const existing = bucket.edits.find(
+      (e) =>
+        e.kind === "edit" &&
+        e.find === input.find &&
+        e.replace === replace &&
+        e.sceneNumber === input.scene_number,
+    );
+    const proposal: ProposedEdit = existing ?? {
       id: crypto.randomUUID(),
       screenplayId: sp.id,
       kind: "edit",
       sceneNumber: input.scene_number,
       find: input.find,
-      // #53 — a replacement fragment can itself be model-formatted dialogue.
-      // We split inline cues (not the full round-trip canonicaliser) because a
-      // find/replace fragment may be a bare line, not a whole scene, and forcing
-      // scene parsing on a fragment could mangle it.
-      replace: splitInlineCues(input.replace),
+      replace,
       reason,
       createdAt: Date.now(),
     };
-    getBucket(sp.id).edits.push(proposal);
+    if (!existing) bucket.edits.push(proposal);
     return okAsync({
       proposed_edit: {
         id: proposal.id,

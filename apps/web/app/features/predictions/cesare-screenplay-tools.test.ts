@@ -4,6 +4,8 @@ import {
   clampSceneRange,
   sliceFountainSceneRange,
   executeScreenplayTool,
+  listScreenplayProposals,
+  clearScreenplayProposals,
 } from "./cesare-screenplay-tools";
 
 describe("countWholeWordOccurrences", () => {
@@ -331,5 +333,56 @@ describe("[#51] executeScreenplayTool — rewrite_scene normalises inline cues",
     );
     expect(out).toMatch(/FILIPPO\s*\n\s*Giulio\s*\n\s*GIULIO\s*\n\s*Vai\./);
     noInlineCueSurvives(out);
+  });
+});
+
+// #85 — the model re-proposes the same edit several times per turn, which used
+// to stack N identical ✓/✗ cards the writer had to reject one by one. Verified
+// live on 2026-07-01 (5 duplicate cards). Dedup like renames already do.
+describe("[#85] propose_screenplay_edit dedups identical proposals per turn", () => {
+  const SP_ID = "sp-dedup-1";
+  const CONTENT = "INT. CUCINA - NOTTE\n\nTEA\nVedemo cosa?\n";
+  // Minimal db mock matching loadScreenplayForProject's query chain.
+  const db = {
+    select: () => ({
+      from: () => ({
+        where: () => ({
+          limit: () => Promise.resolve([{ id: SP_ID, content: CONTENT }]),
+        }),
+      }),
+    }),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } as any;
+
+  const propose = (find: string, replace: string) =>
+    executeScreenplayTool(
+      {
+        type: "tool_use",
+        id: "id",
+        name: "propose_screenplay_edit",
+        input: { scene_number: 1, find, replace, reason: "r" },
+      },
+      db,
+      "proj-1",
+    );
+
+  it("collapses two identical calls into ONE bucket entry", async () => {
+    clearScreenplayProposals(SP_ID);
+    const find = "Vedemo cosa?";
+    const replace = "Vedemo cosa?\n\nFILIPPO\nVedemo se fanno ride'.";
+    const r1 = await propose(find, replace);
+    const r2 = await propose(find, replace);
+    expect(r1.isOk() && r2.isOk()).toBe(true);
+    // Same proposal id returned both times, and only one lives in the bucket.
+    expect(listScreenplayProposals(SP_ID).edits).toHaveLength(1);
+    clearScreenplayProposals(SP_ID);
+  });
+
+  it("keeps DISTINCT edits as separate entries", async () => {
+    clearScreenplayProposals(SP_ID);
+    await propose("Vedemo cosa?", "Vedemo cosa?\n\nFILIPPO\nUno.");
+    await propose("Vedemo cosa?", "Vedemo cosa?\n\nFILIPPO\nDue.");
+    expect(listScreenplayProposals(SP_ID).edits).toHaveLength(2);
+    clearScreenplayProposals(SP_ID);
   });
 });
