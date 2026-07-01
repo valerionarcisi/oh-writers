@@ -75,7 +75,10 @@ const CONFIDENCE_THRESHOLD = 0.55;
 // (question, comment) fall through to "auto".
 const TOOL_BY_INTENT: Partial<Record<IntentType, string>> = {
   macro_rewrite: "propose_screenplay_revision",
-  micro_edit: "propose_screenplay_edit",
+  // Spec 80 — a single-scene edit (micro OR full rewrite) is one universal tool
+  // now: the model returns the whole scene, which rewrite_scene applies inline
+  // (correct Fountain, right scene, no fragile find/replace). See rewrite_scene.
+  micro_edit: "rewrite_scene",
   rewrite_one_scene: "rewrite_scene",
   merge_scenes: "merge_scenes",
   delete_scene: "delete_scene",

@@ -105,28 +105,34 @@ export const CESARE_SCREENPLAY_TOOLS = [
   {
     name: "rewrite_scene",
     description:
-      "Riscrive una singola scena inline nell'editor con un effetto typewriter. " +
-      "L'utente vede il testo arrivare carattere per carattere come overlay verde " +
-      "sulla scena originale. Al termine può accettare (la modifica entra nel doc) " +
-      "o rifiutare (il testo originale rimane). " +
-      "Usa quando l'utente chiede 'riscrivi questa scena', 'opzione B', " +
-      "'rendi più intensa la scena N', 'dammi una versione alternativa di sc.N'. " +
-      "NON usare per modifiche puntuali (< 3 righe) — usa propose_screenplay_edit. " +
-      "NON usare per l'intera sceneggiatura — usa propose_screenplay_revision.",
+      "Applica QUALSIASI modifica al testo di UNA scena restituendo la scena " +
+      "INTERA riscritta. È il tool universale per la scena: aggiungere una " +
+      "battuta o un personaggio, tagliare una riga, spostare un momento, " +
+      "cambiare una parola, rendere più intensa, dare un'alternativa. " +
+      "L'utente vede la nuova scena applicata inline (overlay verde) e può " +
+      "accettare o rifiutare. " +
+      "PROCEDURA: leggi prima la scena con read_scene(N), poi restituisci in " +
+      "new_content il testo Fountain COMPLETO della scena così come deve " +
+      "risultare dopo la modifica (non un frammento). " +
+      "Usa questo per ogni richiesta su una singola scena — inclusi 'aggiungi', " +
+      "'togli', 'sposta', 'cambia', 'riscrivi', 'opzione B'. " +
+      "NON usare per l'intera sceneggiatura o più scene — usa " +
+      "propose_screenplay_revision.",
     input_schema: {
       type: "object" as const,
       properties: {
         scene_number: {
           type: "integer",
           minimum: 1,
-          description: "Numero della scena da riscrivere (1-based)",
+          description: "Numero della scena da modificare (1-based)",
         },
         new_content: {
           type: "string",
           description:
-            "Il testo Fountain completo della scena riscritta. " +
-            "Deve iniziare con uno slugline (INT./EXT. ...) e " +
-            "includere tutto il corpo della scena.",
+            "Il testo Fountain COMPLETO della scena come deve risultare dopo " +
+            "la modifica (non un frammento, non un diff). Deve iniziare con " +
+            "uno slugline (INT./EXT. ...) e includere tutto il corpo, con le " +
+            "cue personaggio e i dialoghi già presenti più le tue modifiche.",
         },
       },
       required: ["scene_number", "new_content"],
@@ -309,14 +315,19 @@ export const createScreenplayTools = (db: Db, projectId: string) => ({
   }),
   rewrite_scene: tool({
     description:
-      "Riscrive una singola scena inline nell'editor con un effetto typewriter. " +
-      "L'utente vede il testo arrivare carattere per carattere come overlay verde " +
-      "sulla scena originale. Al termine può accettare (la modifica entra nel doc) " +
-      "o rifiutare (il testo originale rimane). " +
-      "Usa quando l'utente chiede 'riscrivi questa scena', 'opzione B', " +
-      "'rendi più intensa la scena N', 'dammi una versione alternativa di sc.N'. " +
-      "NON usare per modifiche puntuali (< 3 righe) — usa propose_screenplay_edit. " +
-      "NON usare per l'intera sceneggiatura — usa propose_screenplay_revision.",
+      "Applica QUALSIASI modifica al testo di UNA scena restituendo la scena " +
+      "INTERA riscritta. È il tool universale per la singola scena: aggiungere " +
+      "una battuta o un personaggio, tagliare una riga, spostare un momento, " +
+      "cambiare una parola, rendere più intensa, dare un'alternativa. " +
+      "L'utente vede la nuova scena applicata inline (overlay verde) e può " +
+      "accettare o rifiutare. " +
+      "PROCEDURA OBBLIGATORIA: leggi PRIMA la scena con read_scene(N) per avere " +
+      "il testo esatto, poi restituisci in new_content il Fountain COMPLETO " +
+      "della scena come deve risultare dopo la modifica. " +
+      "Usa questo per OGNI richiesta su una singola scena — inclusi 'aggiungi', " +
+      "'togli', 'sposta', 'cambia', 'riscrivi', 'opzione B'. " +
+      "NON usare per l'intera sceneggiatura o più scene — usa " +
+      "propose_screenplay_revision.",
     inputSchema: z.object({
       scene_number: z
         .number()

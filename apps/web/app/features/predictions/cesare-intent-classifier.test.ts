@@ -469,10 +469,12 @@ const SCREENPLAY_INTENT_ROWS: ReadonlyArray<IntentRow> = [
     expectedTool: "propose_rename_entity",
   },
   {
+    // Spec 80 — a single-scene micro-edit now routes to the universal
+    // rewrite_scene (whole-scene return, no fragile find/replace).
     phrasing: "cambia 'ciao' con 'salve' nella scena 3",
     type: "micro_edit",
     confidence: 0.9,
-    expectedTool: "propose_screenplay_edit",
+    expectedTool: "rewrite_scene",
   },
 ];
 
