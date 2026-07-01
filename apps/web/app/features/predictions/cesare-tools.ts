@@ -3259,21 +3259,27 @@ const runProductionToolLoopEffect = (
       }
 
       // A tool-only turn (the model ran a tool but emitted no closing text) would
-      // otherwise render as a blank reply — the user sees a spinner that resolves
-      // to nothing. When tools ran but there is no text, add a one-liner so the
-      // turn always says something. No tools + no text stays empty (the caller
-      // handles that as its own no-op case).
+      // otherwise render as a BLANK bubble — the user sees a spinner resolve to
+      // nothing. The reply the CLIENT renders is `textAccumulator` MINUS every
+      // `<!--ohw:…-->` marker (the client strips them). So the real test is not
+      // "accumulator empty" but "nothing VISIBLE after markers are removed": a
+      // turn that pushed only markers (a proposal that didn't render, an edit
+      // marker) still shows an empty bubble. Compute the visible text and, when
+      // it's empty but tools ran, add an honest one-liner.
       //
-      // Honesty (bug N3): every editor-visible change (rewrite, applied doc/entity
-      // edit, proposal) pushes a `<!--ohw:…-->` marker into `textAccumulator`.
-      // So an EMPTY accumulator here means tools ran but produced NOTHING the
-      // user can see in the editor. Claiming "Trovi le modifiche nell'editor"
-      // in that case is a lie — the exact failure the tracer invariant forbids.
-      // Reserve that phrasing for when a marker actually landed; otherwise be
-      // honest that no change was applied.
-      if (textAccumulator.length === 0 && toolsExecuted > 0) {
+      // Honesty (bug N3): reserve any "trovi le modifiche nell'editor" phrasing
+      // for when a real apply/proposal marker landed; otherwise say plainly that
+      // nothing visible was applied — never claim a change the user can't see.
+      const visibleText = textAccumulator
+        .join("\n")
+        .replace(/<!--ohw:[\s\S]*?-->/g, "")
+        .trim();
+      if (visibleText.length === 0 && toolsExecuted > 0) {
+        const anyMarker = textAccumulator.some((t) => t.includes("<!--ohw:"));
         textAccumulator.push(
-          "Ho provato a eseguire la richiesta, ma non è stata applicata alcuna modifica visibile nell'editor. Riprova o riformula la richiesta.",
+          anyMarker
+            ? "Fatto — vedi la proposta nell'editor. Accetta con ✓ o rifiuta con ✕."
+            : "Ho provato a eseguire la richiesta, ma non è stata applicata alcuna modifica visibile nell'editor. Riprova o riformula la richiesta.",
         );
       }
 
