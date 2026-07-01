@@ -1,14 +1,20 @@
 # Spec 80 — One liquid scene-edit tool (retire find/replace)
 
-Status: IN PROGRESS (2026-07-01). Phase 1 shipped: rewrite_scene is now the
-UNIVERSAL single-scene edit tool and the intent classifier + routing prompt send
-every single-scene change (add/cut/move/reword) to it. Verified live on the seed
-project 010: "aggiungi un cameriere Marco in scena 3" now returns the whole scene
-via rewrite_scene — cue/dialogue land as real Fountain nodes (no flat action),
-right scene, zero duplicate proposals, green whole-scene overlay. This is the fix
-the propose_screenplay_edit patches (#85/#86/#87/#88) could not fully deliver.
-propose_screenplay_edit is no longer routed to but not yet deleted (safe to leave
-dormant). Full retirement of the tool + its dead code is the remaining step.
+Status: DONE (2026-07-01). Phase 1: rewrite*scene is the UNIVERSAL single-scene
+edit tool; the classifier + routing prompt send every single-scene change
+(add/cut/move/reword) to it. Verified live on seed project 010: "aggiungi un
+cameriere Marco in scena 3" returns the whole scene via rewrite_scene — cue/
+dialogue land as real Fountain nodes, right scene, zero duplicate proposals,
+green whole-scene overlay. Phase 2: propose_screenplay_edit and its dead code are
+DELETED — the tool defs, executeProposeScreenplayEdit, the edit branch/helpers in
+proposed-edit-decoration (locateEdit, findFlexibleWhitespace, parseReplacementBlocks,
+containingBlockRange, scene scoping), the PROPOSAL*\*\_LIMIT constants, the
+entity-map + prompt + skill + mock references, and the edit-only tests. The
+rename path (propose_rename_entity) is untouched: it still shares the
+PROPOSAL_STORE bucket + decoration plugin (whole-word doc-wide matching), the
+screenplay-proposal marker, and the sceneNumber field (renames set it null). The
+propose_screenplay_edit bug class (#85/#86/#87/#88) is now structurally
+impossible. Only historical docs/specs still mention the retired tool by name.
 
 ## Context
 

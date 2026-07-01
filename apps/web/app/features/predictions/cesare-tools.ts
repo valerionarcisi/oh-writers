@@ -2825,9 +2825,8 @@ export const extractSideChannelMarkers = (
 // applied edit). A successful call must nudge the client to refetch the
 // `screenplay-proposals` query so the ✓/✗ decorations / draft banner appear.
 // merge_scenes and propose_screenplay_revision both create draft banners;
-// propose_screenplay_edit and propose_rename_entity push inline edits.
+// propose_rename_entity pushes an inline rename proposal.
 const SCREENPLAY_PROPOSAL_TOOLS: ReadonlySet<string> = new Set([
-  "propose_screenplay_edit",
   "propose_rename_entity",
   "propose_screenplay_revision",
   "merge_scenes",

@@ -3,15 +3,11 @@ import type { EditorState, Transaction } from "prosemirror-state";
 import { Decoration, DecorationSet } from "prosemirror-view";
 import type { EditorView } from "prosemirror-view";
 import type { Node as PMNode } from "prosemirror-model";
-import { Fragment } from "prosemirror-model";
 import styles from "./proposed-edit-decoration.module.css";
 import {
   cesareAppliedHighlightKey,
   highlightAppliedRange,
 } from "./cesare-applied-highlight";
-import { findSceneRange } from "./cesare-pending-edit";
-import { fountainToDoc } from "../fountain-to-doc";
-import { splitInlineCues } from "../split-inline-cues";
 
 // ─── Public types ─────────────────────────────────────────────────────────────
 
@@ -161,66 +157,14 @@ const mapFlatRangeToPm = (
 const escapeRegex = (s: string): string =>
   s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-// Find `needle` inside `haystack` tolerating any difference in whitespace runs.
-// The model's `find` anchor is validated against the raw Fountain (indented,
-// line-broken), but the client walks the PM doc's text leaves, which drop
-// indentation and reflow lines — so an exact indexOf often misses even though
-// the text is "the same" to a human. We build a regex from the needle where
-// every whitespace run matches `\s+`, then map the match back to flat indices.
-// Returns the [start, end) flat range of the FIRST match, or null.
-const findFlexibleWhitespace = (
-  haystack: string,
-  needle: string,
-): { start: number; end: number } | null => {
-  const trimmed = needle.trim();
-  if (trimmed.length === 0) return null;
-  const pattern = trimmed.split(/\s+/).map(escapeRegex).join("\\s+");
-  const m = new RegExp(pattern).exec(haystack);
-  return m ? { start: m.index, end: m.index + m[0].length } : null;
-};
-
-// Locate `find` in `segments` (exact first, then whitespace-tolerant) and map to
-// a single PM MatchRange. Null when neither strategy locates it.
-const locateEdit = (
-  segments: TextSegment[],
-  find: string,
-): MatchRange | null => {
-  const flatText = segments.map((s) => s.text).join("");
-  const exact = flatText.indexOf(find);
-  if (exact >= 0) {
-    const mapped = mapFlatRangeToPm(segments, exact, exact + find.length);
-    return mapped ? { ...mapped, text: find } : null;
-  }
-  const flex = findFlexibleWhitespace(flatText, find);
-  if (!flex) return null;
-  const mapped = mapFlatRangeToPm(segments, flex.start, flex.end);
-  return mapped
-    ? { ...mapped, text: flatText.slice(flex.start, flex.end) }
-    : null;
-};
-
-// Exported for unit tests: pure (doc, proposal) → match ranges. `edit`
-// proposals with a sceneNumber are scoped to that scene; renames are global.
+// Exported for unit tests: pure (doc, proposal) → match ranges. Screenplay
+// proposals are now only renames (a global whole-word entity swap); the
+// per-scene find/replace edit path was retired with propose_screenplay_edit
+// (spec 80 — single-scene edits go through rewrite_scene instead).
 export const findAllMatches = (
   doc: PMNode,
   proposal: ProposedEdit,
 ): MatchRange[] => {
-  if (proposal.kind === "edit") {
-    // Confine the search to the target scene (#86). If the model named a scene
-    // the edit does not actually touch, decorate NOTHING rather than hijacking a
-    // look-alike line in another scene. Within the scene the match is
-    // whitespace-tolerant so a `find` the server accepted (validated against the
-    // indented Fountain) still lands on the reflowed PM text.
-    if (proposal.sceneNumber !== null) {
-      const range = findSceneRange(doc, proposal.sceneNumber);
-      if (!range) return [];
-      const scoped = collectTextSegments(doc, range);
-      const hit = locateEdit(scoped, proposal.find);
-      return hit ? [hit] : [];
-    }
-    const hit = locateEdit(collectTextSegments(doc), proposal.find);
-    return hit ? [hit] : [];
-  }
   // rename — whole-word, case-insensitive, all occurrences (global by design)
   const segments = collectTextSegments(doc);
   const fullText = segments.map((s) => s.text).join("");
@@ -305,56 +249,8 @@ const buildWidget = (
   return wrap;
 };
 
-// A replacement that spans more than one screenplay element (a new cue + its
-// dialogue, an action line then a character block) cannot be inserted as flat
-// inline text — that collapses every element into the paragraph the match sat
-// in, which is exactly the "MARCO ... TEA Del quattro. MARCO Ah." on one line
-// bug. Such a replacement must be parsed into real Fountain nodes (cue/dialogue/
-// action) and spliced in at the BLOCK level, the same pipeline rewrite_scene
-// uses. A single-line replacement (a word, one dialogue line) stays inline.
-const isMultiBlockReplacement = (replace: string): boolean =>
-  replace.includes("\n");
-
-// Parse a Fountain body fragment into its block nodes (action / character /
-// dialogue / parenthetical / transition), reusing fountainToDoc. We prepend a
-// throwaway slugline so the fragment parses as a scene body, then drop the
-// synthetic heading and return only the body nodes. Exported for unit tests.
-export const parseReplacementBlocks = (replace: string): PMNode[] => {
-  const doc = fountainToDoc(
-    `INT. _OHW_TMP_ - DAY\n\n${splitInlineCues(replace)}`,
-  );
-  const scene = doc.firstChild;
-  if (!scene || scene.type.name !== "scene") return [];
-  const blocks: PMNode[] = [];
-  scene.content.forEach((child, _offset, index) => {
-    if (index === 0) return; // skip the synthetic heading
-    blocks.push(child);
-  });
-  return blocks;
-};
-
-// The block-level range [start, end) covering the textblock that contains `pos`.
-const containingBlockRange = (
-  doc: PMNode,
-  pos: number,
-): { from: number; to: number } | null => {
-  try {
-    const $pos = doc.resolve(Math.min(pos, doc.content.size));
-    for (let d = $pos.depth; d >= 1; d--) {
-      if ($pos.node(d).isTextblock) {
-        return { from: $pos.before(d), to: $pos.after(d) };
-      }
-    }
-    return null;
-  } catch {
-    return null;
-  }
-};
-
-// Apply a proposal's replacements to the doc as a single transaction.
-// For `edit` proposals: one replacement at the first match.
-// For `rename_*` proposals: replace every whole-word occurrence in one
-// transaction so undo restores the screenplay in a single step.
+// Apply a rename proposal to the doc as a single transaction: replace every
+// whole-word occurrence at once so undo restores the screenplay in one step.
 const applyProposalToView = (
   view: EditorView,
   proposal: ProposedEdit,
@@ -362,47 +258,9 @@ const applyProposalToView = (
   const matches = findAllMatches(view.state.doc, proposal);
   if (matches.length === 0) return;
 
-  // Multi-block edit: replace the whole containing block with parsed Fountain
-  // nodes so cues/dialogue land as proper centred elements, not flat action.
-  // Only when the match covers essentially the ENTIRE block (the model swapped a
-  // whole line/beat for a multi-element one) — a partial mid-block match with a
-  // multi-line replace stays inline so we never drop the block's other text.
-  if (
-    proposal.kind === "edit" &&
-    matches.length === 1 &&
-    isMultiBlockReplacement(proposal.replace)
-  ) {
-    const m = matches[0]!;
-    const blockRange = containingBlockRange(view.state.doc, m.from);
-    const block = blockRange ? view.state.doc.nodeAt(blockRange.from) : null;
-    const matchIsWholeBlock =
-      block != null && m.to - m.from >= block.content.size - 1; // ±1 for block boundary
-    const blocks = matchIsWholeBlock
-      ? parseReplacementBlocks(proposal.replace)
-      : [];
-    if (blockRange && blocks.length > 0) {
-      const tr = view.state.tr.replaceWith(
-        blockRange.from,
-        blockRange.to,
-        Fragment.fromArray(blocks),
-      );
-      const mappedFrom = tr.mapping.map(blockRange.from);
-      tr.setMeta(
-        cesareAppliedHighlightKey,
-        highlightAppliedRange(mappedFrom, tr.mapping.map(blockRange.to)),
-      );
-      view.dispatch(tr);
-      return;
-    }
-    // Fall through to inline replacement if parsing/positioning failed.
-  }
-
-  // A rename mirrors each occurrence's case (cues/headings stay uppercase); an
-  // `edit` replaces verbatim with the model's exact text.
+  // A rename mirrors each occurrence's case (cues/headings stay uppercase).
   const replacementFor = (m: MatchRange): string =>
-    proposal.kind === "edit"
-      ? proposal.replace
-      : matchCase(m.text, proposal.replace);
+    matchCase(m.text, proposal.replace);
   // Sort descending so earlier replacements don't shift later positions.
   const sorted = [...matches].sort((a, b) => b.from - a.from);
   let tr = view.state.tr;

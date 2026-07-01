@@ -32,7 +32,6 @@ const DOC_TOOLS = new Set([
 ]);
 
 const SCREENPLAY_TOOLS = new Set([
-  "propose_screenplay_edit",
   "propose_screenplay_revision",
   "rewrite_scene",
 ]);
@@ -216,7 +215,6 @@ describe("classifyIntent — screenplay intents still work", () => {
 const SESSION_PAGE_TOOLS = new Set([
   ...SCREENPLAY_TOOLS,
   "propose_screenplay_revision",
-  "propose_screenplay_edit",
   "propose_rename_entity",
   "merge_scenes",
   "delete_scene",

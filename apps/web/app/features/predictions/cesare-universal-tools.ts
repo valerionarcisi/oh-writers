@@ -88,9 +88,8 @@ export const createUniversalCesareTools = (
     // find_or_create_requirement_for_scene)
     ...createLocationTools(db, ctx.projectId),
 
-    // Screenplay write tools (propose_screenplay_edit, rewrite_scene,
-    // merge_scenes, delete_scene, propose_screenplay_revision,
-    // propose_rename_entity)
+    // Screenplay write tools (rewrite_scene, merge_scenes, delete_scene,
+    // propose_screenplay_revision, propose_rename_entity)
     ...createScreenplayTools(db, ctx.projectId),
 
     // Document text edits on the active document (apply_text_edit, …)

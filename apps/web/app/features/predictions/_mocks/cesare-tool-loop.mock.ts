@@ -666,11 +666,10 @@ export const MOCK_SCENARIOS: ReadonlyArray<MockScenario> = [
     ],
   },
 
-  // Screenplay — propose_screenplay_edit (OHW-570).
-  // "Rendi questa scena più tesa." → micro-edit on scene 1 of the team
-  // screenplay (fountain seed: "Si accende una sigaretta."). The replace
-  // string contains "le mani che tremano" so the spec assertion on the
-  // post-accept fountain hits.
+  // Screenplay — rewrite_scene (spec 80). "Rendi questa scena più tesa." →
+  // the universal single-scene edit returns the whole scene; rewrite_scene
+  // applies it inline as a green overlay. The new_content contains "le mani che
+  // tremano" so any post-accept fountain assertion still hits.
   {
     match:
       /rendi questa scena|rendi la scena|più tesa|piu tesa|più tensione|piu tensione/i,
@@ -678,19 +677,18 @@ export const MOCK_SCENARIOS: ReadonlyArray<MockScenario> = [
       {
         tool_uses: [
           {
-            name: "propose_screenplay_edit",
+            name: "rewrite_scene",
             input: {
               scene_number: 1,
-              find: "Si accende una sigaretta.",
-              replace: "Si accende una sigaretta con le mani che tremano.",
-              reason: "Aggiunge tensione fisica al gesto.",
+              new_content:
+                "INT. STANZA - NOTTE\n\nSi accende una sigaretta con le mani che tremano.",
             },
           },
         ],
         stop_reason: "tool_use",
       },
       {
-        text: "Ho preparato una proposta di modifica sulla scena 1. Vai sull'editor: l'overlay ✓/✕ ti permette di accettarla o scartarla.",
+        text: "Ho riscritto la scena 1. Vedi l'overlay verde nell'editor: accetta con ✓ o rifiuta con ✕.",
         stop_reason: "end_turn",
       },
     ],
@@ -978,7 +976,7 @@ export const MOCK_SCENARIOS: ReadonlyArray<MockScenario> = [
     match: /che tool hai|quali tool hai|quali strumenti hai|cosa puoi fare/i,
     turns: [
       {
-        text: "Posso lavorare in tutte le aree del progetto:\n\n📜 SCENEGGIATURA — propose_screenplay_edit, rewrite_scene, merge_scenes, delete_scene\n💰 BUDGET — update_budget_line, add_budget_line, set_budget_cap\n📍 LOCATION — search_places, add_candidate, find_or_create_requirement_for_scene\n📅 SCHEDULE — move_scene_to_day, swap_scenes\n🎬 PIANO INQUADRATURE — add_parallel_plan, add_shot_to_plan\n📄 DOCUMENTI — apply_text_edit, expand_section\n\nSono un layer sopra il prodotto: dimmi cosa serve e lo faccio.",
+        text: "Posso lavorare in tutte le aree del progetto:\n\n📜 SCENEGGIATURA — rewrite_scene, propose_rename_entity, merge_scenes, delete_scene\n💰 BUDGET — update_budget_line, add_budget_line, set_budget_cap\n📍 LOCATION — search_places, add_candidate, find_or_create_requirement_for_scene\n📅 SCHEDULE — move_scene_to_day, swap_scenes\n🎬 PIANO INQUADRATURE — add_parallel_plan, add_shot_to_plan\n📄 DOCUMENTI — apply_text_edit, expand_section\n\nSono un layer sopra il prodotto: dimmi cosa serve e lo faccio.",
         stop_reason: "end_turn",
       },
     ],

@@ -1368,7 +1368,7 @@ Linee guida:
 const buildScreenplayToolsGuidance = (_page: PageContext["page"]): string => {
   return `\n\nTOOLS DISPONIBILI SULLA SCENEGGIATURA — ogni modifica al testo DEVE passare per un tool propose_/rewrite_/merge_/delete_, MAI scrivere il testo nuovo nel chat.
 
-NUMERAZIONE SCENE (REGOLA TASSATIVA): il parametro \`scene_number\` di OGNI tool (rewrite_scene, propose_screenplay_edit, delete_scene, merge_scenes, tag_element, ecc.) è SEMPRE la posizione ORDINALE della scena nell'INDICE SCENEGGIATURA qui sopra (1 = prima scena del documento, 2 = seconda, e così via). NON è l'etichetta che compare accanto allo slugline nell'editor (che può essere "5A", avere buchi, o essere stata rinumerata a mano): quell'etichetta è puramente cosmetica e non va MAI usata come \`scene_number\`. Quando l'utente nomina una scena — anche con un'etichetta tipo "scena 5A" o "l'ultima scena" — mappala tu alla posizione ordinale contando le voci nell'INDICE SCENEGGIATURA. Nel dubbio, usa read_scene(N) per verificare di aver individuato la scena giusta PRIMA di riscriverla.
+NUMERAZIONE SCENE (REGOLA TASSATIVA): il parametro \`scene_number\` di OGNI tool (rewrite_scene, delete_scene, merge_scenes, tag_element, ecc.) è SEMPRE la posizione ORDINALE della scena nell'INDICE SCENEGGIATURA qui sopra (1 = prima scena del documento, 2 = seconda, e così via). NON è l'etichetta che compare accanto allo slugline nell'editor (che può essere "5A", avere buchi, o essere stata rinumerata a mano): quell'etichetta è puramente cosmetica e non va MAI usata come \`scene_number\`. Quando l'utente nomina una scena — anche con un'etichetta tipo "scena 5A" o "l'ultima scena" — mappala tu alla posizione ordinale contando le voci nell'INDICE SCENEGGIATURA. Nel dubbio, usa read_scene(N) per verificare di aver individuato la scena giusta PRIMA di riscriverla.
 
 TOOLS DISPONIBILI SULLA SCENEGGIATURA:
 - rewrite_scene({ scene_number, new_content }): il tool UNIVERSALE per modificare UNA scena. Vale per QUALSIASI cambiamento al testo di quella scena — aggiungere/togliere una battuta, aggiungere un personaggio, spostare un momento, cambiare una parola, rendere più intensa, dare un'alternativa. Leggi PRIMA la scena con read_scene(N), poi restituisci in new_content il Fountain COMPLETO della scena come deve risultare dopo la modifica (non un frammento, non un diff). ESATTAMENTE UNO slugline (INT./EXT.). Applica inline (overlay verde) formattando cue e dialoghi correttamente.
@@ -1466,7 +1466,7 @@ const buildToolGuidanceBlock = (
   // but never restricts which tools you can invoke.
   return `GUIDA AGLI STRUMENTI — sei un layer SOPRA il SaaS: vedi e modifichi tutto, anche cross-pagina.
 L'utente si trova attualmente sulla pagina "${page}" (informazione di contesto, NON un filtro sui tool).
-Quando ha senso, usa tool di un'altra area (es. dalle Locations puoi modificare una scena con propose_screenplay_edit, o leggere il soggetto con read_document) — il prodotto è un unico spazio di lavoro.${buildLocationsToolsGuidance(
+Quando ha senso, usa tool di un'altra area (es. dalle Locations puoi modificare una scena con rewrite_scene, o leggere il soggetto con read_document) — il prodotto è un unico spazio di lavoro.${buildLocationsToolsGuidance(
     page,
     ctx.bible,
   )}${documentToolsGuidance}${buildBreakdownToolsGuidance(
@@ -1677,7 +1677,6 @@ const callCesareWithTools = (
 };
 
 const SCREENPLAY_PROPOSE_TOOLS = new Set<string>([
-  "propose_screenplay_edit",
   "propose_screenplay_revision",
   "propose_rename_entity",
   "rewrite_scene",

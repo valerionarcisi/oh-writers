@@ -6,43 +6,12 @@ import { screenplays, screenplayVersions } from "@oh-writers/db/schema";
 import type { Db } from "~/server/db";
 import { callHaiku, extractText } from "~/features/ai";
 import { sanitizeAiText } from "@oh-writers/utils";
-import {
-  normaliseScreenplayFountain,
-  splitInlineCues,
-} from "~/features/screenplay-editor";
+import { normaliseScreenplayFountain } from "~/features/screenplay-editor";
 import { CesareError } from "./cesare.errors";
 
 // ─── Tool definitions ─────────────────────────────────────────────────────────
 
 export const CESARE_SCREENPLAY_TOOLS = [
-  {
-    name: "propose_screenplay_edit",
-    description:
-      "Propone una modifica puntuale al testo di una scena (find/replace verbatim). " +
-      "L'utente vedrà la proposta come overlay sul testo con bottoni ✓/✕. " +
-      "Usa quando la richiesta è una modifica circoscritta a una scena o a poche righe.",
-    input_schema: {
-      type: "object" as const,
-      properties: {
-        scene_number: { type: "integer", minimum: 1 },
-        find: {
-          type: "string",
-          description:
-            "Sottostringa esatta da cercare nel doc (verbatim, max 400 char)",
-        },
-        replace: {
-          type: "string",
-          description: "Testo proposto come sostituzione (max 800 char)",
-        },
-        reason: {
-          type: "string",
-          description:
-            "Motivazione breve (max 200 char) mostrata all'utente nell'overlay",
-        },
-      },
-      required: ["scene_number", "find", "replace", "reason"],
-    },
-  },
   {
     name: "propose_screenplay_revision",
     description:
@@ -143,37 +112,6 @@ export const CESARE_SCREENPLAY_TOOLS = [
 // ─── Screenplay tools factory (AI SDK v5 format) ──────────────────────────────
 
 export const createScreenplayTools = (db: Db, projectId: string) => ({
-  propose_screenplay_edit: tool({
-    description:
-      "Propone una modifica puntuale al testo di una scena (find/replace verbatim). " +
-      "L'utente vedrà la proposta come overlay sul testo con bottoni ✓/✕. " +
-      "Usa quando la richiesta è una modifica circoscritta a una scena o a poche righe.",
-    inputSchema: z.object({
-      scene_number: z.number().int().min(1),
-      find: z
-        .string()
-        .describe(
-          "Sottostringa esatta da cercare nel doc (verbatim, max 400 char)",
-        ),
-      replace: z
-        .string()
-        .describe("Testo proposto come sostituzione (max 800 char)"),
-      reason: z
-        .string()
-        .describe(
-          "Motivazione breve (max 200 char) mostrata all'utente nell'overlay",
-        ),
-    }),
-    execute: async (input, _opts) => {
-      const result = await executeProposeScreenplayEdit(
-        input as ProposeEditInput,
-        db,
-        projectId,
-      );
-      if (result.isErr()) return { error: result.error.message };
-      return result.value;
-    },
-  }),
   propose_screenplay_revision: tool({
     description:
       "Propone una riscrittura strutturale (macro) di un range di scene o " +
@@ -505,100 +443,6 @@ export const clampSceneRange = (
 };
 
 // ─── Executors ────────────────────────────────────────────────────────────────
-
-const PROPOSAL_TEXT_LIMIT = 800;
-const PROPOSAL_FIND_LIMIT = 400;
-const PROPOSAL_REASON_LIMIT = 200;
-
-interface ProposeEditInput {
-  scene_number: number;
-  find: string;
-  replace: string;
-  reason: string;
-}
-
-const executeProposeScreenplayEdit = (
-  input: ProposeEditInput,
-  db: Db,
-  projectId: string,
-): ResultAsync<
-  {
-    proposed_edit: {
-      id: string;
-      scene_number: number;
-      find: string;
-      replace: string;
-      reason: string;
-    };
-  },
-  CesareError
-> => {
-  if (!input.find || input.find.length === 0) {
-    return errAsync(new CesareError("propose_screenplay_edit: empty find"));
-  }
-  if (input.find.length > PROPOSAL_FIND_LIMIT) {
-    return errAsync(
-      new CesareError(
-        `propose_screenplay_edit: 'find' exceeds ${PROPOSAL_FIND_LIMIT} chars`,
-      ),
-    );
-  }
-  if (input.replace.length > PROPOSAL_TEXT_LIMIT) {
-    return errAsync(
-      new CesareError(
-        `propose_screenplay_edit: 'replace' exceeds ${PROPOSAL_TEXT_LIMIT} chars`,
-      ),
-    );
-  }
-  const reason = (input.reason ?? "").slice(0, PROPOSAL_REASON_LIMIT);
-
-  return loadScreenplayForProject(db, projectId).andThen((sp) => {
-    if (!sp.content.includes(input.find)) {
-      return errAsync(
-        new CesareError(
-          "propose_screenplay_edit: 'find' string not present verbatim in the screenplay",
-        ),
-      );
-    }
-    // #53 — a replacement fragment can itself be model-formatted dialogue.
-    // We split inline cues (not the full round-trip canonicaliser) because a
-    // find/replace fragment may be a bare line, not a whole scene, and forcing
-    // scene parsing on a fragment could mangle it.
-    const replace = splitInlineCues(input.replace);
-    const bucket = getBucket(sp.id);
-    // #85 — the tool-loop can call this tool several times per turn (the model
-    // re-proposes the same edit), which stacked N identical ✓/✗ cards on the
-    // same line — the writer then had to reject each one. Dedup like renames do:
-    // an equivalent edit already this turn is reused, not re-added.
-    const existing = bucket.edits.find(
-      (e) =>
-        e.kind === "edit" &&
-        e.find === input.find &&
-        e.replace === replace &&
-        e.sceneNumber === input.scene_number,
-    );
-    const proposal: ProposedEdit = existing ?? {
-      id: crypto.randomUUID(),
-      screenplayId: sp.id,
-      kind: "edit",
-      sceneNumber: input.scene_number,
-      find: input.find,
-      replace,
-      reason,
-      createdAt: Date.now(),
-    };
-    if (!existing) bucket.edits.push(proposal);
-    return okAsync({
-      proposed_edit: {
-        id: proposal.id,
-        scene_number: proposal.sceneNumber ?? 0,
-        find: proposal.find,
-        replace: proposal.replace,
-        reason: proposal.reason,
-      },
-    });
-  });
-};
 
 interface RenameInput {
   kind: "character" | "location";
@@ -1071,13 +915,6 @@ export const executeScreenplayTool = (
   db: Db,
   projectId: string,
 ): ResultAsync<ToolResult, CesareError> => {
-  if (block.name === "propose_screenplay_edit") {
-    return executeProposeScreenplayEdit(
-      block.input as ProposeEditInput,
-      db,
-      projectId,
-    ).map((r) => toResult(block.id, r));
-  }
   if (block.name === "propose_screenplay_revision") {
     return executeProposeScreenplayRevision(
       block.input as ReviseInput,
