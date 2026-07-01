@@ -8,6 +8,7 @@ import { unwrapResult } from "@oh-writers/utils";
 import {
   getScreenplayProposals,
   removeScreenplayProposalFn,
+  clearScreenplayEditProposalsFn,
   promoteDraftToActive,
   discardDraftVersion,
   type ProposalsView,
@@ -27,6 +28,22 @@ export const useScreenplayProposals = (screenplayId: string) =>
     ...screenplayProposalsQueryOptions(screenplayId),
     enabled: screenplayId.length > 0,
   });
+
+// Clear stale inline edit proposals once per page load, then refetch so the
+// editor starts clean (#85). Draft-revision banners are left intact server-side.
+export const useClearEditProposalsOnMount = (screenplayId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () =>
+      unwrapResult(
+        await clearScreenplayEditProposalsFn({ data: { screenplayId } }),
+      ),
+    onSettled: () =>
+      void qc.invalidateQueries({
+        queryKey: ["screenplay-proposals", screenplayId],
+      }),
+  });
+};
 
 export const useRemoveScreenplayProposal = (screenplayId: string) => {
   const qc = useQueryClient();

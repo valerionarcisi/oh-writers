@@ -22,6 +22,7 @@ import { CesareError } from "./cesare.errors";
 import {
   listScreenplayProposals,
   removeScreenplayProposal,
+  clearScreenplayEditProposals,
   type ProposedEdit,
   type DraftRevisionProposal,
 } from "./cesare-screenplay-tools";
@@ -153,6 +154,35 @@ export const removeScreenplayProposalFn = createServerFn({ method: "POST" })
       );
       if (accessResult.isErr()) return toShape(err(accessResult.error));
       removeScreenplayProposal(data.screenplayId, data.proposalId);
+      return toShape(ok(undefined));
+    },
+  );
+
+// ─── clearEditProposals (called once per page load) ───────────────────────────
+// An un-accepted inline ✓/✗ proposal is ephemeral turn output; it must not
+// resurrect from the in-memory bucket on a page refresh (#85). The editor calls
+// this once on mount before its first proposals fetch. Draft-revision banners
+// are left intact (they're backed by a real DRAFT version row).
+
+const ClearEditProposalsInput = z.object({
+  screenplayId: z.string().uuid(),
+});
+
+export const clearScreenplayEditProposalsFn = createServerFn({ method: "POST" })
+  .validator(ClearEditProposalsInput)
+  .handler(
+    async ({ data }): Promise<ResultShape<void, ProposalAccessError>> => {
+      await requireUser();
+      const projectResult = await resolveScreenplayProject(data.screenplayId);
+      if (projectResult.isErr()) return toShape(err(projectResult.error));
+      const db = await getDb();
+      const accessResult = await requireProjectAccess(
+        db,
+        projectResult.value,
+        "edit",
+      );
+      if (accessResult.isErr()) return toShape(err(accessResult.error));
+      clearScreenplayEditProposals(data.screenplayId);
       return toShape(ok(undefined));
     },
   );

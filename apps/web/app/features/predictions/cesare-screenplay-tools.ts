@@ -431,6 +431,16 @@ export const clearScreenplayProposals = (screenplayId: string): void => {
   PROPOSAL_STORE.delete(screenplayId);
 };
 
+// Drop only the inline ✓/✗ edit proposals, keeping any pending draft-revision
+// banner. Called once per page load: an un-accepted micro-edit is ephemeral
+// turn output and must not resurrect on refresh (#85), but a draft revision is
+// backed by a real DRAFT version row and stays promotable.
+export const clearScreenplayEditProposals = (screenplayId: string): void => {
+  const bucket = PROPOSAL_STORE.get(screenplayId);
+  if (!bucket) return;
+  bucket.edits = [];
+};
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const loadScreenplayForProject = (

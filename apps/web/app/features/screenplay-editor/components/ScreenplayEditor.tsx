@@ -60,6 +60,7 @@ import { HoverToolbar } from "./HoverToolbar";
 import {
   useScreenplayProposals,
   useRemoveScreenplayProposal,
+  useClearEditProposalsOnMount,
   usePromoteDraftToActive,
   useDiscardDraftVersion,
 } from "../hooks/useProposals";
@@ -294,6 +295,15 @@ export const ScreenplayEditor = forwardRef<
   // effect below refetches on, so the plugin sees fresh edits (bug N3).
   const proposalsQuery = useScreenplayProposals(screenplay.id);
   const removeProposal = useRemoveScreenplayProposal(screenplay.id);
+  const clearEditProposals = useClearEditProposalsOnMount(screenplay.id);
+
+  // Drop stale inline proposals on first mount so a page refresh starts clean
+  // (#85). Runs once per editor mount; the in-session post-turn refetch is a
+  // separate path and is not affected.
+  const clearEditProposalsMutate = clearEditProposals.mutate;
+  useEffect(() => {
+    clearEditProposalsMutate();
+  }, [screenplay.id, clearEditProposalsMutate]);
   const promoteDraft = usePromoteDraftToActive(screenplay.id);
   const discardDraft = useDiscardDraftVersion(screenplay.id);
 
