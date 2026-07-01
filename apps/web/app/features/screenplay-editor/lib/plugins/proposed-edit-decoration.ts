@@ -8,6 +8,7 @@ import {
   cesareAppliedHighlightKey,
   highlightAppliedRange,
 } from "./cesare-applied-highlight";
+import { findSceneRange } from "./cesare-pending-edit";
 
 // ─── Public types ─────────────────────────────────────────────────────────────
 
@@ -22,6 +23,11 @@ export interface ProposedEdit {
   readonly find: string;
   readonly replace: string;
   readonly reason: string;
+  /** 1-based ordinal of the scene the edit targets. When set, an `edit`
+   *  proposal is decorated ONLY inside that scene, so a `find` collision in
+   *  another scene can't hijack the highlight (#86). Null for rename proposals,
+   *  which are global by design. */
+  readonly sceneNumber: number | null;
 }
 
 export interface ProposalCallbacks {
@@ -80,11 +86,19 @@ interface TextSegment {
   readonly from: number;
 }
 
-const collectTextSegments = (doc: PMNode): TextSegment[] => {
+// Collect text leaves with their PM positions. When `range` is given, only
+// leaves fully inside it are kept — used to confine an `edit` proposal to its
+// target scene so a `find` collision elsewhere can't steal the highlight (#86).
+const collectTextSegments = (
+  doc: PMNode,
+  range?: { from: number; to: number },
+): TextSegment[] => {
   const segments: TextSegment[] = [];
   doc.descendants((node, pos) => {
     if (node.isText && node.text) {
-      segments.push({ text: node.text, from: pos });
+      if (!range || (pos >= range.from && pos + node.text.length <= range.to)) {
+        segments.push({ text: node.text, from: pos });
+      }
     }
     return true;
   });
@@ -144,16 +158,36 @@ const mapFlatRangeToPm = (
 const escapeRegex = (s: string): string =>
   s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-const findAllMatches = (doc: PMNode, proposal: ProposedEdit): MatchRange[] => {
-  const segments = collectTextSegments(doc);
-  const fullText = segments.map((s) => s.text).join("");
+// Exported for unit tests: pure (doc, proposal) → match ranges. `edit`
+// proposals with a sceneNumber are scoped to that scene; renames are global.
+export const findAllMatches = (
+  doc: PMNode,
+  proposal: ProposedEdit,
+): MatchRange[] => {
   if (proposal.kind === "edit") {
+    // Confine the search to the target scene (#86). If the model named a scene
+    // the edit does not actually touch — or the `find` isn't present there —
+    // decorate NOTHING rather than hijacking a look-alike line in another scene.
+    if (proposal.sceneNumber !== null) {
+      const range = findSceneRange(doc, proposal.sceneNumber);
+      if (!range) return [];
+      const scoped = collectTextSegments(doc, range);
+      const scopedText = scoped.map((s) => s.text).join("");
+      const idx = scopedText.indexOf(proposal.find);
+      if (idx < 0) return [];
+      const mapped = mapFlatRangeToPm(scoped, idx, idx + proposal.find.length);
+      return mapped ? [{ ...mapped, text: proposal.find }] : [];
+    }
+    const segments = collectTextSegments(doc);
+    const fullText = segments.map((s) => s.text).join("");
     const idx = fullText.indexOf(proposal.find);
     if (idx < 0) return [];
     const mapped = mapFlatRangeToPm(segments, idx, idx + proposal.find.length);
     return mapped ? [{ ...mapped, text: proposal.find }] : [];
   }
-  // rename — whole-word, case-insensitive, all occurrences
+  // rename — whole-word, case-insensitive, all occurrences (global by design)
+  const segments = collectTextSegments(doc);
+  const fullText = segments.map((s) => s.text).join("");
   const re = new RegExp(`\\b${escapeRegex(proposal.find)}\\b`, "gi");
   const results: MatchRange[] = [];
   let m: RegExpExecArray | null;

@@ -368,6 +368,7 @@ export const ScreenplayEditor = forwardRef<
       find: e.find,
       replace: e.replace,
       reason: e.reason,
+      sceneNumber: e.sceneNumber,
     }));
     view.dispatch(
       view.state.tr.setMeta(
@@ -1259,6 +1260,7 @@ export const ScreenplayEditor = forwardRef<
                   find: e.find,
                   replace: e.replace,
                   reason: e.reason,
+                  sceneNumber: e.sceneNumber,
                 }));
                 view.dispatch(
                   view.state.tr.setMeta(

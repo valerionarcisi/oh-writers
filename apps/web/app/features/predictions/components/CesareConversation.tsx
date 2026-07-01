@@ -331,6 +331,7 @@ function stripToolCalls(content: string): string {
     .replace(/<!--ohw:entity-applied:[\s\S]*?-->/g, "")
     .replace(/<!--ohw:ask-new-version:[\s\S]*?-->/g, "")
     .replace(/<!--ohw:live-diff-b64:[A-Za-z0-9+/=]+-->/g, "")
+    .replace(/<!--ohw:screenplay-proposal-->/g, "")
     .trim();
 }
 
