@@ -7,22 +7,26 @@ import type { Node as PMNode } from "prosemirror-model";
 import { fountainToDoc } from "../fountain-to-doc";
 import { splitInlineCues } from "../split-inline-cues";
 
+// ─── Pending scene rewrite ────────────────────────────────────────────────────
+//
+// Cesare's rewrite_scene applies the new scene text LIVE and IN-PLACE (WYSIWYG),
+// highlighted green ("this is new, not yet confirmed"), with a single
+// accept/reject bar anchored to the scene. There is NO overlay box and NO
+// dimmed original — the editor shows the real new text exactly as it will read.
+//
+// On accept the green highlight clears and the text stays. On reject the
+// original scene nodes (captured at apply time) are restored verbatim.
+
 // ─── Public types ─────────────────────────────────────────────────────────────
 
 export interface PendingEdit {
   /** 1-based scene number targeted by the rewrite */
   readonly sceneNumber: number;
-  /** ProseMirror position: start of target scene node */
-  readonly sceneFrom: number;
-  /** ProseMirror position: end of target scene node */
-  readonly sceneTo: number;
-  /** Characters received so far from the typewriter animation */
-  readonly streamedText: string;
-  /** Whether the animation is still running */
-  readonly status: "streaming" | "done";
+  /** Original scene nodes, kept so a reject restores them verbatim. */
+  readonly originalSlice: Fragment;
+  /** Streaming is instantaneous now — status is always "done" once applied. */
+  readonly status: "done";
 }
-
-// ─── Plugin state ─────────────────────────────────────────────────────────────
 
 interface CesarePendingState {
   pendingEdit: PendingEdit | null;
@@ -31,75 +35,23 @@ interface CesarePendingState {
 
 // ─── Meta shapes ──────────────────────────────────────────────────────────────
 
-interface StartPendingEditMeta {
-  readonly kind: "start";
+interface ApplyRewriteMeta {
+  readonly kind: "apply";
   readonly sceneNumber: number;
-  readonly sceneFrom: number;
-  readonly sceneTo: number;
+  readonly originalSlice: Fragment;
 }
 
-interface AppendStreamChunkMeta {
-  readonly kind: "appendChunk";
-  readonly chunk: string;
+interface ClearPendingMeta {
+  readonly kind: "clear";
 }
 
-interface FinishStreamingMeta {
-  readonly kind: "finishStreaming";
-}
-
-interface AcceptPendingEditMeta {
-  readonly kind: "accept";
-}
-
-interface RejectPendingEditMeta {
-  readonly kind: "reject";
-}
-
-type CesarePendingMeta =
-  | StartPendingEditMeta
-  | AppendStreamChunkMeta
-  | FinishStreamingMeta
-  | AcceptPendingEditMeta
-  | RejectPendingEditMeta;
+type CesarePendingMeta = ApplyRewriteMeta | ClearPendingMeta;
 
 export const cesarePendingEditKey = new PluginKey<CesarePendingState>(
   "cesare-pending-edit",
 );
 
-// ─── Public meta constructors ─────────────────────────────────────────────────
-
-export const startPendingEdit = (
-  sceneNumber: number,
-  sceneFrom: number,
-  sceneTo: number,
-): StartPendingEditMeta => ({
-  kind: "start",
-  sceneNumber,
-  sceneFrom,
-  sceneTo,
-});
-
-export const appendStreamChunk = (chunk: string): AppendStreamChunkMeta => ({
-  kind: "appendChunk",
-  chunk,
-});
-
-export const finishStreaming = (): FinishStreamingMeta => ({
-  kind: "finishStreaming",
-});
-
-export const acceptPendingEdit = (): AcceptPendingEditMeta => ({
-  kind: "accept",
-});
-
-export const rejectPendingEdit = (): RejectPendingEditMeta => ({
-  kind: "reject",
-});
-
-// ─── Decoration builder ───────────────────────────────────────────────────────
-
-const PENDING_CLASS = "cesare-pending-edit";
-const PENDING_BLOCK_CLASS = "cesare-pending-edit-block";
+// ─── Scene lookup ──────────────────────────────────────────────────────────────
 
 // Find the start and end positions of the nth scene node (1-based).
 // Returns null when the scene is not found.
@@ -121,91 +73,22 @@ export const findSceneRange = (
   return result;
 };
 
-const buildDecos = (doc: PMNode, edit: PendingEdit | null): DecorationSet => {
-  if (!edit) return DecorationSet.empty;
+// ─── Decoration builder ───────────────────────────────────────────────────────
 
-  const decorations: Decoration[] = [];
+const NEW_SCENE_CLASS = "cesare-scene-new";
 
-  // Block decoration over the entire scene range — the green overlay.
-  // We use a node decoration on the scene node itself so it covers the
-  // entire original text without modifying the document.
-  decorations.push(
-    Decoration.node(edit.sceneFrom, edit.sceneTo, {
-      class: PENDING_BLOCK_CLASS,
-      "data-scene-number": String(edit.sceneNumber),
-      "data-pending-status": edit.status,
+// A green node decoration over the just-rewritten scene(s). No overlay, no
+// dimming — the highlight sits ON the real new text.
+const buildDecos = (doc: PMNode, sceneNumber: number): DecorationSet => {
+  const range = findSceneRange(doc, sceneNumber);
+  if (!range) return DecorationSet.empty;
+  return DecorationSet.create(doc, [
+    Decoration.node(range.from, range.to, {
+      class: NEW_SCENE_CLASS,
+      "data-scene-number": String(sceneNumber),
+      "data-testid": "cesare-pending-edit",
     }),
-  );
-
-  // Widget at the top of the scene — renders the streamed text as a preview.
-  // The original content is hidden by CSS (the block decoration) and this
-  // widget shows the incoming text as an overlay.
-  decorations.push(
-    Decoration.widget(
-      edit.sceneFrom,
-      () => {
-        const el = document.createElement("div");
-        el.className = `${PENDING_CLASS}${edit.status === "done" ? " is-done" : ""}`;
-        el.setAttribute("data-testid", "cesare-pending-edit");
-        el.setAttribute("contenteditable", "false");
-        el.setAttribute("data-pending-status", edit.status);
-        // Use a <pre> to preserve fountain line breaks
-        const pre = document.createElement("pre");
-        pre.className = "cesare-pending-edit-text";
-        pre.textContent = edit.streamedText;
-        el.appendChild(pre);
-        return el;
-      },
-      {
-        side: -1,
-        key: "cesare-pending-widget",
-      },
-    ),
-  );
-
-  return DecorationSet.create(doc, decorations);
-};
-
-// ─── Accept helper ────────────────────────────────────────────────────────────
-
-// Apply the streamed text as a real doc change. We parse the streamed fountain
-// text back into PM nodes and replace the original scene range.
-const applyAccept = (view: EditorView, edit: PendingEdit): void => {
-  const { sceneFrom, sceneTo, streamedText } = edit;
-
-  // Parse the streamed fountain text into a PM doc and extract the scenes.
-  // If parsing fails (e.g. empty text) we fall back to a no-op.
-  let replacementNodes: PMNode[] = [];
-  try {
-    // #51 — defensive last line: even if the streamed text reached here with an
-    // inline cue (older server build, or text typed in directly), normalise
-    // before parsing so the accepted scene is real DIALOGUE, not action. The
-    // pass is idempotent, so re-running over already-normalised text is a no-op.
-    const parsed = fountainToDoc(splitInlineCues(streamedText));
-    parsed.forEach((child) => {
-      replacementNodes.push(child);
-    });
-  } catch {
-    // Parsing failed — silently reject rather than corrupt the doc.
-    view.dispatch(
-      view.state.tr.setMeta(cesarePendingEditKey, rejectPendingEdit()),
-    );
-    return;
-  }
-
-  if (replacementNodes.length === 0) {
-    view.dispatch(
-      view.state.tr.setMeta(cesarePendingEditKey, rejectPendingEdit()),
-    );
-    return;
-  }
-
-  const fragment = Fragment.fromArray(replacementNodes);
-  const tr = view.state.tr;
-  // Set meta to clear the pending decoration, then apply the replacement.
-  tr.setMeta(cesarePendingEditKey, rejectPendingEdit());
-  tr.replaceWith(sceneFrom, sceneTo, fragment);
-  view.dispatch(tr);
+  ]);
 };
 
 // ─── Plugin factory ───────────────────────────────────────────────────────────
@@ -220,7 +103,6 @@ export interface CesarePendingEditCallbacks {
 export const buildCesarePendingEditPlugin = (
   callbacks: CesarePendingEditCallbacks,
 ): Plugin<CesarePendingState> => {
-  let cachedView: EditorView | null = null;
   const callbacksRef = { current: callbacks };
   callbacksRef.current = callbacks;
 
@@ -238,53 +120,29 @@ export const buildCesarePendingEditPlugin = (
           | CesarePendingMeta
           | undefined;
 
-        if (meta?.kind === "start") {
+        if (meta?.kind === "apply") {
           const edit: PendingEdit = {
             sceneNumber: meta.sceneNumber,
-            sceneFrom: meta.sceneFrom,
-            sceneTo: meta.sceneTo,
-            streamedText: "",
-            status: "streaming",
-          };
-          return { pendingEdit: edit, decos: buildDecos(newState.doc, edit) };
-        }
-
-        if (meta?.kind === "appendChunk" && prev.pendingEdit) {
-          const edit: PendingEdit = {
-            ...prev.pendingEdit,
-            streamedText: prev.pendingEdit.streamedText + meta.chunk,
-          };
-          return { pendingEdit: edit, decos: buildDecos(newState.doc, edit) };
-        }
-
-        if (meta?.kind === "finishStreaming" && prev.pendingEdit) {
-          const edit: PendingEdit = {
-            ...prev.pendingEdit,
+            originalSlice: meta.originalSlice,
             status: "done",
           };
-          return { pendingEdit: edit, decos: buildDecos(newState.doc, edit) };
-        }
-
-        if (meta?.kind === "accept") {
-          return { pendingEdit: null, decos: DecorationSet.empty };
-        }
-
-        if (meta?.kind === "reject") {
-          return { pendingEdit: null, decos: DecorationSet.empty };
-        }
-
-        // Map decorations through doc changes (e.g. if user types elsewhere)
-        if (tr.docChanged && prev.pendingEdit) {
-          const mapped = prev.decos.map(tr.mapping, tr.doc);
-          // Remap the scene positions
-          const newFrom = tr.mapping.map(prev.pendingEdit.sceneFrom);
-          const newTo = tr.mapping.map(prev.pendingEdit.sceneTo);
-          const edit: PendingEdit = {
-            ...prev.pendingEdit,
-            sceneFrom: newFrom,
-            sceneTo: newTo,
+          return {
+            pendingEdit: edit,
+            decos: buildDecos(newState.doc, meta.sceneNumber),
           };
-          return { pendingEdit: edit, decos: mapped };
+        }
+
+        if (meta?.kind === "clear") {
+          return { pendingEdit: null, decos: DecorationSet.empty };
+        }
+
+        // Re-map the decoration through doc changes (e.g. the accept/reject
+        // replacement, or the user typing elsewhere while it's pending).
+        if (tr.docChanged && prev.pendingEdit) {
+          return {
+            pendingEdit: prev.pendingEdit,
+            decos: buildDecos(newState.doc, prev.pendingEdit.sceneNumber),
+          };
         }
 
         return prev;
@@ -294,7 +152,7 @@ export const buildCesarePendingEditPlugin = (
       decorations(state: EditorState) {
         return cesarePendingEditKey.getState(state)?.decos ?? null;
       },
-      // Handle Cmd/Ctrl+Z while a pending edit is active: reject the edit.
+      // Cmd/Ctrl+Z while a pending edit is active rejects it (restore original).
       handleKeyDown(view: EditorView, event: KeyboardEvent): boolean {
         const state = cesarePendingEditKey.getState(view.state);
         if (!state?.pendingEdit) return false;
@@ -304,41 +162,78 @@ export const buildCesarePendingEditPlugin = (
           !event.shiftKey;
         if (!isUndo) return false;
         event.preventDefault();
-        view.dispatch(
-          view.state.tr.setMeta(cesarePendingEditKey, rejectPendingEdit()),
-        );
+        dispatchRejectPendingEdit(view);
         callbacksRef.current.onReject();
         return true;
       },
     },
-    view(view: EditorView) {
-      cachedView = view;
-      return {
-        update(currentView: EditorView) {
-          cachedView = currentView;
-        },
-        destroy() {
-          cachedView = null;
-        },
-      };
-    },
   });
 };
 
-// ─── Public accept/reject dispatchers ────────────────────────────────────────
+// ─── Public dispatchers ────────────────────────────────────────────────────────
 
+// Apply the rewritten scene LIVE and in-place: parse the new Fountain, replace
+// the target scene's nodes, capture the original nodes for a possible reject,
+// and mark the new range green. Returns false if the scene isn't found or the
+// new text fails to parse (no-op — the doc is left untouched).
+export const startPendingEdit = (
+  view: EditorView,
+  sceneNumber: number,
+  newFountain: string,
+): boolean => {
+  const range = findSceneRange(view.state.doc, sceneNumber);
+  if (!range) return false;
+
+  let replacementNodes: PMNode[] = [];
+  try {
+    // The normaliser already ran server-side; splitInlineCues here is a cheap
+    // idempotent safety net before parsing.
+    const parsed = fountainToDoc(splitInlineCues(newFountain));
+    parsed.forEach((child) => replacementNodes.push(child));
+  } catch {
+    return false;
+  }
+  if (replacementNodes.length === 0) return false;
+
+  // Capture the original scene nodes verbatim so a reject restores them.
+  const originalSlice = view.state.doc.slice(range.from, range.to).content;
+
+  const fragment = Fragment.fromArray(replacementNodes);
+  const tr = view.state.tr;
+  tr.replaceWith(range.from, range.to, fragment);
+  tr.setMeta(cesarePendingEditKey, {
+    kind: "apply",
+    sceneNumber,
+    originalSlice,
+  } satisfies ApplyRewriteMeta);
+  view.dispatch(tr);
+  return true;
+};
+
+// Accept: keep the applied text, just clear the green highlight.
 export const dispatchAcceptPendingEdit = (view: EditorView): void => {
   const state = cesarePendingEditKey.getState(view.state);
   if (!state?.pendingEdit) return;
-  applyAccept(view, state.pendingEdit);
+  view.dispatch(
+    view.state.tr.setMeta(cesarePendingEditKey, {
+      kind: "clear",
+    } satisfies ClearPendingMeta),
+  );
 };
 
+// Reject: restore the original scene nodes captured at apply time.
 export const dispatchRejectPendingEdit = (view: EditorView): void => {
   const state = cesarePendingEditKey.getState(view.state);
   if (!state?.pendingEdit) return;
-  view.dispatch(
-    view.state.tr.setMeta(cesarePendingEditKey, rejectPendingEdit()),
-  );
+  const range = findSceneRange(view.state.doc, state.pendingEdit.sceneNumber);
+  const tr = view.state.tr;
+  if (range) {
+    tr.replaceWith(range.from, range.to, state.pendingEdit.originalSlice);
+  }
+  tr.setMeta(cesarePendingEditKey, {
+    kind: "clear",
+  } satisfies ClearPendingMeta);
+  view.dispatch(tr);
 };
 
 export const hasPendingEdit = (view: EditorView): boolean => {
@@ -346,9 +241,7 @@ export const hasPendingEdit = (view: EditorView): boolean => {
   return state !== undefined && state.pendingEdit !== null;
 };
 
-export const getPendingEditStatus = (
-  view: EditorView,
-): "streaming" | "done" | null => {
+export const getPendingEditStatus = (view: EditorView): "done" | null => {
   const state = cesarePendingEditKey.getState(view.state);
   return state?.pendingEdit?.status ?? null;
 };

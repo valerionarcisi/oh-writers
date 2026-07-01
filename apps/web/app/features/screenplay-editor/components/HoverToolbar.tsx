@@ -9,20 +9,15 @@ export interface HoverToolbarProps {
   /**
    * Controls toolbar visibility:
    * - `false`: hidden entirely (no pending edit)
-   * - `"streaming"`: streaming is in progress, toolbar is hidden
-   * - `"done"`: streaming complete, toolbar is always shown
+   * - `"done"`: a scene rewrite is applied and awaiting accept/reject.
    */
-  status: false | "streaming" | "done";
+  status: false | "done";
 }
 
 /**
- * Inline accept/reject toolbar that appears over the `.cesare-pending-edit`
- * decoration block. Portal-mounted so it sits above the ProseMirror layer
- * without disturbing the editor's DOM tree.
- *
- * - When status is "streaming": toolbar is hidden.
- * - When status is "done": toolbar is always visible, positioned at the
- *   top-right of the decoration block. Also responds to hover for CSS effect.
+ * Inline accept/reject bar anchored to the just-rewritten scene (the green
+ * `.cesare-scene-new` node). Portal-mounted so it sits above the ProseMirror
+ * layer without disturbing the editor's DOM tree.
  */
 export function HoverToolbar({
   onAccept,
@@ -45,7 +40,7 @@ export function HoverToolbar({
     }
 
     const updatePosition = () => {
-      const block = document.querySelector<HTMLElement>(".cesare-pending-edit");
+      const block = document.querySelector<HTMLElement>(".cesare-scene-new");
       if (!block) {
         setToolbarPos(null);
         return;
