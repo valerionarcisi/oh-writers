@@ -1368,6 +1368,8 @@ Linee guida:
 const buildScreenplayToolsGuidance = (_page: PageContext["page"]): string => {
   return `\n\nTOOLS DISPONIBILI SULLA SCENEGGIATURA — ogni modifica al testo DEVE passare per un tool propose_/rewrite_/merge_/delete_, MAI scrivere il testo nuovo nel chat.
 
+NUMERAZIONE SCENE (REGOLA TASSATIVA): il parametro \`scene_number\` di OGNI tool (rewrite_scene, propose_screenplay_edit, delete_scene, merge_scenes, tag_element, ecc.) è SEMPRE la posizione ORDINALE della scena nell'INDICE SCENEGGIATURA qui sopra (1 = prima scena del documento, 2 = seconda, e così via). NON è l'etichetta che compare accanto allo slugline nell'editor (che può essere "5A", avere buchi, o essere stata rinumerata a mano): quell'etichetta è puramente cosmetica e non va MAI usata come \`scene_number\`. Quando l'utente nomina una scena — anche con un'etichetta tipo "scena 5A" o "l'ultima scena" — mappala tu alla posizione ordinale contando le voci nell'INDICE SCENEGGIATURA. Nel dubbio, usa read_scene(N) per verificare di aver individuato la scena giusta PRIMA di riscriverla.
+
 TOOLS DISPONIBILI SULLA SCENEGGIATURA:
 - propose_screenplay_edit({ scene_number, find, replace, reason }): micro-edit di una stringa esatta. Usa per cambiare una battuta, una parola, una direzione di scena puntuale. La 'find' DEVE essere una stringa letterale presente nella scena.
 - rewrite_scene({ scene_number, new_content }): riscrive UNA SOLA scena con effetto typewriter. Il new_content DEVE contenere ESATTAMENTE UNO slugline (INT./EXT.) — mai due. Per riscritture multi-scena usa propose_screenplay_revision o merge_scenes.
@@ -1383,6 +1385,8 @@ ROUTING TOOL — REGOLE DI SCELTA:
 - "elimina/togli sc.N" → delete_scene
 - "riscrivi atto II" / "ambienta tutto in X" / range >1 scena con cambio strutturale → propose_screenplay_revision
 - "rinomina/cambia il nome di un personaggio o una location" (in QUALSIASI forma: "cambia nome di X", "chiamiamolo Y", "X diventa Y", anche se dice "nella scena N") → propose_rename_entity. Un cambio-nome NON è mai un edit puntuale: propose_rename_entity prende OGNI occorrenza (cue, azione, dialogo, parentetica) in una sola proposta, mentre propose_screenplay_edit ne becca solo una e lascia fuori i dialoghi. NON usare MAI propose_screenplay_edit per rinominare un personaggio/location.
+
+COERENZA DEI NOMI (REGOLA TASSATIVA): quando riscrivi una scena (rewrite_scene) o una revisione (propose_screenplay_revision), usa ESCLUSIVAMENTE i personaggi e le location già presenti nel progetto — vedi l'elenco PERSONAGGI qui nel contesto e, se serve, leggi le scene con read_scene/read_scene_range per verificare i nomi esatti (cue, dialoghi, azione). NON inventare MAI un nome nuovo per un personaggio o una location che esiste già: riferisciti a chi c'è con il suo nome canonico. Introduci un nome nuovo solo se l'utente lo chiede esplicitamente. Nel dubbio su chi sia in scena, leggi la scena prima di riscriverla.
 
 REGOLA TASSATIVA: per QUALSIASI richiesta che produca testo nuovo lungo (più di 2-3 righe Fountain), DEVI chiamare un tool propose_/rewrite_/merge_/delete_. Mai scrivere il Fountain risultante nel chat.
 

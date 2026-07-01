@@ -53,7 +53,19 @@ export const cesarePendingEditKey = new PluginKey<CesarePendingState>(
 
 // ─── Scene lookup ──────────────────────────────────────────────────────────────
 
-// Find the start and end positions of the nth scene node (1-based).
+// A scene whose heading has no slugline text (empty prefix AND title) is the
+// SYNTHETIC lead `fountainToDoc` wraps around stray action before the first real
+// heading. The server-side scene ordinal (`listScenesInFountain`) counts only
+// real sluglines, so this synthetic scene must NOT consume an ordinal here —
+// otherwise `rewrite_scene(N)` resolves off-by-one and edits the wrong scene.
+const isRealScene = (sceneNode: PMNode): boolean => {
+  const heading = sceneNode.firstChild;
+  if (!heading || heading.type.name !== "heading") return true;
+  return heading.textContent.trim().length > 0;
+};
+
+// Find the start and end positions of the nth REAL scene node (1-based),
+// counting the same way the server assigns scene numbers (sluglines only).
 // Returns null when the scene is not found.
 export const findSceneRange = (
   doc: PMNode,
@@ -63,7 +75,7 @@ export const findSceneRange = (
   let result: { from: number; to: number } | null = null;
   doc.forEach((node, offset) => {
     if (result) return;
-    if (node.type.name === "scene") {
+    if (node.type.name === "scene" && isRealScene(node)) {
       count += 1;
       if (count === sceneNumber) {
         result = { from: offset, to: offset + node.nodeSize };
@@ -176,6 +188,70 @@ export const buildCesarePendingEditPlugin = (
 // the target scene's nodes, capture the original nodes for a possible reject,
 // and mark the new range green. Returns false if the scene isn't found or the
 // new text fails to parse (no-op — the doc is left untouched).
+// The displayed scene number lives on the heading node's `scene_number` /
+// `scene_number_locked` attrs — NOT on an auto-counter. `fountainToDoc` always
+// numbers a freshly-parsed fragment from 1, so a single-scene rewrite would
+// stamp "1" on the replacement heading and break the doc's numbering (bug N2:
+// "1, 1, 3"). Carry the ORIGINAL scene's heading attrs onto the replacement so
+// the number the user saw is preserved verbatim (including a locked "5A").
+const carryHeadingNumber = (original: PMNode, replacement: PMNode): PMNode => {
+  const origHeading = original.firstChild;
+  const replHeading = replacement.firstChild;
+  if (
+    !origHeading ||
+    !replHeading ||
+    origHeading.type.name !== "heading" ||
+    replHeading.type.name !== "heading"
+  ) {
+    return replacement;
+  }
+  // Respect a forced number the model emitted in new_content (Fountain `#7#`
+  // syntax → fountainToDoc parses it locked). Only backfill the original number
+  // when the replacement carries none of its own, so an explicit renumber is
+  // never silently reverted.
+  if (
+    replHeading.attrs["scene_number_locked"] &&
+    ((replHeading.attrs["scene_number"] as string) ?? "").length > 0
+  ) {
+    return replacement;
+  }
+  const patchedHeading = replHeading.type.create(
+    {
+      ...replHeading.attrs,
+      scene_number: origHeading.attrs["scene_number"],
+      scene_number_locked: origHeading.attrs["scene_number_locked"],
+    },
+    replHeading.content,
+    replHeading.marks,
+  );
+  return replacement.type.create(
+    replacement.attrs,
+    Fragment.from([patchedHeading]).append(
+      replacement.content.cut(replHeading.nodeSize),
+    ),
+    replacement.marks,
+  );
+};
+
+// Return a new node list with the number carried onto the FIRST real scene node
+// of the replacement, immutably. When the parsed rewrite yields more than one
+// scene node (non-standard headings like INSERT/MONTAGE that fountainToDoc
+// splits but the server's slug-counter does not), the carry still lands on the
+// primary scene so the "1,1,3" numbering regression cannot slip back in on the
+// multi-node path.
+const withCarriedNumber = (
+  original: PMNode,
+  nodes: readonly PMNode[],
+): PMNode[] => {
+  const firstSceneIdx = nodes.findIndex(
+    (n) => n.type.name === "scene" && isRealScene(n),
+  );
+  if (firstSceneIdx < 0) return [...nodes];
+  return nodes.map((n, i) =>
+    i === firstSceneIdx ? carryHeadingNumber(original, n) : n,
+  );
+};
+
 export const startPendingEdit = (
   view: EditorView,
   sceneNumber: number,
@@ -184,16 +260,25 @@ export const startPendingEdit = (
   const range = findSceneRange(view.state.doc, sceneNumber);
   if (!range) return false;
 
-  let replacementNodes: PMNode[] = [];
+  const originalScene = view.state.doc.nodeAt(range.from);
+
+  const parsedNodes: PMNode[] = [];
   try {
     // The normaliser already ran server-side; splitInlineCues here is a cheap
     // idempotent safety net before parsing.
     const parsed = fountainToDoc(splitInlineCues(newFountain));
-    parsed.forEach((child) => replacementNodes.push(child));
+    parsed.forEach((child) => parsedNodes.push(child));
   } catch {
     return false;
   }
-  if (replacementNodes.length === 0) return false;
+  if (parsedNodes.length === 0) return false;
+
+  // Carry the original scene's heading number onto the rewritten scene so the
+  // doc's numbering is preserved (bug N2). Handles the multi-node parse too.
+  const replacementNodes =
+    originalScene && originalScene.type.name === "scene"
+      ? withCarriedNumber(originalScene, parsedNodes)
+      : parsedNodes;
 
   // Capture the original scene nodes verbatim so a reject restores them.
   const originalSlice = view.state.doc.slice(range.from, range.to).content;
