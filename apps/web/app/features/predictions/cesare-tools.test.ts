@@ -95,6 +95,45 @@ describe("extractSideChannelMarkers — honest success for write tools", () => {
     expect(markers).toEqual([]);
   });
 
+  it("emits a screenplay-proposal marker on a successful propose_screenplay_edit (N3)", () => {
+    // The proposal marker is a REFETCH signal, not an applied-edit claim: the
+    // client invalidates the proposals query so the ✓/✗ card appears. Without
+    // it the proposal stays invisible while the turn claims "Fatto".
+    const markers = markersFor(
+      "propose_screenplay_edit",
+      JSON.stringify({
+        proposed_edit: {
+          id: "e-1",
+          scene_number: 9,
+          find: "x",
+          replace: "y",
+          reason: "r",
+        },
+      }),
+    );
+    expect(markers).toEqual(["<!--ohw:screenplay-proposal-->"]);
+  });
+
+  it("emits a screenplay-proposal marker for rename / revision / merge (N3)", () => {
+    for (const tool of [
+      "propose_rename_entity",
+      "propose_screenplay_revision",
+      "merge_scenes",
+    ]) {
+      expect(markersFor(tool, JSON.stringify({ ok: true }))).toEqual([
+        "<!--ohw:screenplay-proposal-->",
+      ]);
+    }
+  });
+
+  it("does NOT emit a screenplay-proposal marker when the tool FAILS (N3)", () => {
+    const markers = markersFor(
+      "propose_screenplay_edit",
+      JSON.stringify({ error: "'find' string not present verbatim" }),
+    );
+    expect(markers).toEqual([]);
+  });
+
   it("emits a doc-applied marker for the screenplay generator (BUG-N67)", () => {
     // generate_screenplay_from_narrative applies the first draft LIVE as the
     // active screenplay version, so it MUST emit the doc-applied marker the

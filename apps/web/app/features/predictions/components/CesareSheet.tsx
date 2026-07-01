@@ -322,6 +322,14 @@ export function CesareSheet({
         );
       }
 
+      // A screenplay PROPOSAL landed in the server-side bucket (edit / rename /
+      // revision / merge). The proposals query does not refetch on its own, so
+      // signal the mounted editor to invalidate it — otherwise the ✓/✗ card /
+      // draft banner never appears though Cesare says it proposed one (bug N3).
+      if (content.includes("<!--ohw:screenplay-proposal-->")) {
+        window.dispatchEvent(new CustomEvent("ohw:cesare:screenplay-proposal"));
+      }
+
       const rewrite = parseRewriteSceneMarker(content);
       if (rewrite) {
         try {

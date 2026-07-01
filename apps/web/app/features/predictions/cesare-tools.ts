@@ -2720,6 +2720,19 @@ export const extractSideChannelMarkers = (
       // ignore malformed payloads — the marker is best-effort
     }
   }
+  // Screenplay PROPOSAL tools push into the server-side in-memory proposal
+  // bucket; the client renders the ✓/✗ decorations (edits/renames) or the draft
+  // banner (revision) from the `screenplay-proposals` query. That query is NOT
+  // refetched on its own — without a signal the proposal stays invisible while
+  // the turn still claims "Fatto" (bug N3). Emit a proposal marker on a
+  // successful call so the client invalidates the query and the proposal
+  // surfaces. This is a PROPOSAL signal, not an applied-edit signal: it tells
+  // the client to refetch, not that the doc changed.
+  if (SCREENPLAY_PROPOSAL_TOOLS.has(toolName)) {
+    if (isSuccessfulToolResult(toolResultContent)) {
+      accumulator.push("<!--ohw:screenplay-proposal-->");
+    }
+  }
   // Document tools apply the new content LIVE to the open document (Spec 44
   // canonical pattern) — both the whole-document generators (propose_*) and the
   // in-place edits (apply_text_edit / expand_section / compress_section). We
@@ -2807,6 +2820,18 @@ export const extractSideChannelMarkers = (
     }
   }
 };
+
+// Screenplay tools that emit a PROPOSAL into the server-side bucket (not an
+// applied edit). A successful call must nudge the client to refetch the
+// `screenplay-proposals` query so the ✓/✗ decorations / draft banner appear.
+// merge_scenes and propose_screenplay_revision both create draft banners;
+// propose_screenplay_edit and propose_rename_entity push inline edits.
+const SCREENPLAY_PROPOSAL_TOOLS: ReadonlySet<string> = new Set([
+  "propose_screenplay_edit",
+  "propose_rename_entity",
+  "propose_screenplay_revision",
+  "merge_scenes",
+]);
 
 // The non-document write tools that COMMIT a DB mutation directly (no proposal,
 // no document version). Kept explicit — not derived from the entity-map's
@@ -3235,11 +3260,21 @@ const runProductionToolLoopEffect = (
 
       // A tool-only turn (the model ran a tool but emitted no closing text) would
       // otherwise render as a blank reply — the user sees a spinner that resolves
-      // to nothing. When tools ran but there is no text, add an honest one-liner
-      // so the turn always says something. No tools + no text stays empty (the
-      // caller handles that as its own no-op case).
+      // to nothing. When tools ran but there is no text, add a one-liner so the
+      // turn always says something. No tools + no text stays empty (the caller
+      // handles that as its own no-op case).
+      //
+      // Honesty (bug N3): every editor-visible change (rewrite, applied doc/entity
+      // edit, proposal) pushes a `<!--ohw:…-->` marker into `textAccumulator`.
+      // So an EMPTY accumulator here means tools ran but produced NOTHING the
+      // user can see in the editor. Claiming "Trovi le modifiche nell'editor"
+      // in that case is a lie — the exact failure the tracer invariant forbids.
+      // Reserve that phrasing for when a marker actually landed; otherwise be
+      // honest that no change was applied.
       if (textAccumulator.length === 0 && toolsExecuted > 0) {
-        textAccumulator.push("Fatto. Trovi le modifiche proposte nell'editor.");
+        textAccumulator.push(
+          "Ho provato a eseguire la richiesta, ma non è stata applicata alcuna modifica visibile nell'editor. Riprova o riformula la richiesta.",
+        );
       }
 
       const marker = `<!--ohw:tools=${toolsExecuted}-->`;

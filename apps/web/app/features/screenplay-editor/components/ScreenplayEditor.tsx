@@ -288,9 +288,10 @@ export const ScreenplayEditor = forwardRef<
   const realtimeActive = latchedRealtime !== null;
 
   // ─── Cesare propose/accept wiring ──────────────────────────────────────
-  // Proposals live in a server-side in-memory store; the chat hook
-  // invalidates the query whenever Cesare finishes a turn so the plugin
-  // sees fresh edits as soon as they're emitted.
+  // Proposals live in a server-side in-memory store. The query does NOT
+  // refetch on its own — when Cesare emits a screenplay proposal it fires an
+  // `ohw:cesare:screenplay-proposal` window event (see CesareSheet) that the
+  // effect below refetches on, so the plugin sees fresh edits (bug N3).
   const proposalsQuery = useScreenplayProposals(screenplay.id);
   const removeProposal = useRemoveScreenplayProposal(screenplay.id);
   const promoteDraft = usePromoteDraftToActive(screenplay.id);
@@ -335,6 +336,16 @@ export const ScreenplayEditor = forwardRef<
       }),
     ];
   }
+
+  // Refetch the proposals bucket when Cesare signals a fresh screenplay
+  // proposal. Without this the ✓/✗ card / draft banner never appears (bug N3).
+  const refetchProposals = proposalsQuery.refetch;
+  useEffect(() => {
+    const onProposal = () => void refetchProposals();
+    window.addEventListener("ohw:cesare:screenplay-proposal", onProposal);
+    return () =>
+      window.removeEventListener("ohw:cesare:screenplay-proposal", onProposal);
+  }, [refetchProposals]);
 
   // Sync proposal state into the PM plugin whenever the query data changes.
   useEffect(() => {
