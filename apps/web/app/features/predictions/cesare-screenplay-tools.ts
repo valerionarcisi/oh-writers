@@ -2,7 +2,7 @@ import { tool } from "ai";
 import { z } from "zod";
 import { ResultAsync, errAsync, okAsync } from "neverthrow";
 import { and, eq, inArray, sql } from "drizzle-orm";
-import { screenplays, screenplayVersions } from "@oh-writers/db/schema";
+import { screenplays, screenplayVersions, scenes } from "@oh-writers/db/schema";
 import type { Db } from "~/server/db";
 import { callHaiku, extractText } from "~/features/ai";
 import { sanitizeAiText } from "@oh-writers/utils";
@@ -254,14 +254,23 @@ export const createScreenplayTools = (db: Db, projectId: string) => ({
   rewrite_scene: tool({
     description:
       "Applica QUALSIASI modifica al testo di UNA scena restituendo la scena " +
-      "INTERA riscritta. È il tool universale per la singola scena: aggiungere " +
-      "una battuta o un personaggio, tagliare una riga, spostare un momento, " +
-      "cambiare una parola, rendere più intensa, dare un'alternativa. " +
+      "INTERA. È il tool universale per la singola scena: aggiungere una battuta " +
+      "o un personaggio, tagliare una riga, spostare un momento, cambiare una " +
+      "parola, rendere più intensa, dare un'alternativa. " +
       "L'utente vede la nuova scena applicata inline (overlay verde) e può " +
       "accettare o rifiutare. " +
-      "PROCEDURA OBBLIGATORIA: leggi PRIMA la scena con read_scene(N) per avere " +
-      "il testo esatto, poi restituisci in new_content il Fountain COMPLETO " +
-      "della scena come deve risultare dopo la modifica. " +
+      "PROCEDURA OBBLIGATORIA:\n" +
+      "1. Leggi PRIMA la scena con read_scene(N) per avere il testo LETTERALE esatto.\n" +
+      "2. In new_content RICOPIA TUTTA la scena riga per riga, dall'inizio alla " +
+      "fine, cambiando SOLO la parte che l'utente ha chiesto.\n" +
+      "REGOLA TASSATIVA ANTI-TRONCAMENTO: new_content DEVE contenere la scena " +
+      "COMPLETA — tutte le battute, tutte le azioni, tutte le parentetiche che " +
+      "c'erano prima, anche quelle che non c'entrano con la modifica. NON " +
+      "riassumere, NON accorciare, NON restituire solo la parte cambiata: " +
+      "cancelleresti il resto della scena. Se dopo un edit piccolo il tuo " +
+      "new_content è più corto della scena originale, hai sbagliato — ricomincia " +
+      "e ricopia tutto. Accorcia SOLO se l'utente ha chiesto esplicitamente di " +
+      "tagliare/accorciare. " +
       "Usa questo per OGNI richiesta su una singola scena — inclusi 'aggiungi', " +
       "'togli', 'sposta', 'cambia', 'riscrivi', 'opzione B'. " +
       "NON usare per l'intera sceneggiatura o più scene — usa " +
@@ -275,16 +284,30 @@ export const createScreenplayTools = (db: Db, projectId: string) => ({
       new_content: z
         .string()
         .describe(
-          "Il testo Fountain completo della scena riscritta. " +
+          "Il testo Fountain COMPLETO della scena — tutte le battute e azioni " +
+            "originali ricopiate, con SOLO la parte richiesta modificata. " +
             "Deve iniziare con uno slugline (INT./EXT. ...) e " +
-            "includere tutto il corpo della scena. " +
+            "includere tutto il corpo della scena, non un frammento. " +
             "IMPORTANTE: ogni paragrafo di azione su UNA SOLA RIGA, anche se lungo. " +
             "Usa \\n\\n SOLO tra paragrafi narrativi distinti — MAI a metà frase, MAI ogni 50-60 caratteri. " +
             "Esempio corretto:\nEXT. LUOGO - NOTTE\n\nUna villetta liberty stretta tra due palazzi di cemento anni Sessanta. Freddo di novembre. L'insegna del RADICE è al neon — metà lettere spente, le altre arancioni, sufficienti.\n\nSul marciapiede, qualcuno fuma e ride prima di rientrare.\n\n      PERSONAGGIO\n          Dialogo.",
         ),
+      summary: z
+        .string()
+        .optional()
+        .describe(
+          "Una riga che dichiara COSA hai cambiato, per trasparenza verso " +
+            "l'utente (es. 'Cambiata la prima battuta di Tea, resto invariato'). " +
+            "Se hai toccato anche altro oltre alla richiesta esplicita, DILLO qui " +
+            "(es. 'Cambiata la battuta X; adattata la reazione di Y per coerenza').",
+        ),
     }),
     execute: async (input, _opts) => {
-      const result = await executeRewriteScene(input as RewriteSceneInput);
+      const result = await executeRewriteScene(
+        input as RewriteSceneInput,
+        db,
+        projectId,
+      );
       if (result.isErr()) return { error: result.error.message };
       return result.value;
     },
@@ -824,12 +847,53 @@ const executeProposeScreenplayRevision = (
 interface RewriteSceneInput {
   scene_number: number;
   new_content: string;
+  summary?: string;
 }
 
 const REWRITE_CONTENT_LIMIT = 8000;
 
+// Load the original body length of scene N (from scenes.notes) so the
+// anti-truncation guard can compare. Null when the scene/screenplay isn't found
+// (then the guard is skipped — never block an edit on a lookup miss).
+const loadSceneBodyLength = (
+  db: Db,
+  projectId: string,
+  sceneNumber: number,
+): ResultAsync<number | null, CesareError> =>
+  ResultAsync.fromPromise(
+    (async () => {
+      const [sp] = await db
+        .select({ id: screenplays.id })
+        .from(screenplays)
+        .where(eq(screenplays.projectId, projectId))
+        .limit(1);
+      if (!sp) return null;
+      const [row] = await db
+        .select({ notes: scenes.notes, heading: scenes.heading })
+        .from(scenes)
+        .where(
+          and(eq(scenes.screenplayId, sp.id), eq(scenes.number, sceneNumber)),
+        )
+        .limit(1);
+      if (!row) return null;
+      return (row.heading?.length ?? 0) + (row.notes?.length ?? 0);
+    })(),
+    (e) =>
+      new CesareError(
+        `loadSceneBodyLength: ${e instanceof Error ? e.message : String(e)}`,
+      ),
+  );
+
+// Below this ratio of the original scene length, a rewrite has almost certainly
+// dropped the scene's content (the model returned a fragment / just the slugline)
+// rather than making the requested edit. 0.4 tolerates a legitimate "make it
+// shorter" while catching the catastrophic "slugline only" truncation.
+const REWRITE_MIN_LENGTH_RATIO = 0.4;
+
 const executeRewriteScene = (
   input: RewriteSceneInput,
+  db: Db,
+  projectId: string,
 ): ResultAsync<
   { scene_number: number; accepted: false; marker: string },
   CesareError
@@ -875,18 +939,50 @@ const executeRewriteScene = (
       ),
     );
   }
-  // The marker is embedded in the tool result text. The client side-channel
-  // (`parseRewriteSceneMarker`) extracts it and dispatches the pending-edit
-  // plugin with the scene number and new content.
-  const payload = Buffer.from(
-    JSON.stringify({ scene_number: input.scene_number, new_content: content }),
-    "utf8",
-  ).toString("base64");
-  // Base64 encoding prevents Fountain syntax (e.g. `--> CUT TO:`) inside
-  // new_content from containing `-->`, which would terminate the HTML comment
-  // marker early and break `parseRewriteSceneMarker`.
-  const marker = `<!--ohw:rewrite-scene-b64:${payload}-->`;
-  return okAsync({ scene_number: input.scene_number, accepted: false, marker });
+  // Anti-truncation guard. The model sometimes returns only a fragment (worst
+  // case: just the slugline) instead of the full scene, silently deleting the
+  // rest. Load the original scene length and reject a rewrite that collapsed to
+  // a small fraction of it, so the tool loop makes the model regenerate the
+  // COMPLETE scene. A legitimate "make it shorter" survives the 0.4 threshold;
+  // a "slugline only" catastrophe does not. The lookup miss / short original
+  // cases skip the guard (never block a real edit on a lookup detail).
+  return loadSceneBodyLength(db, projectId, input.scene_number)
+    .orElse(() => okAsync(null as number | null))
+    .andThen((originalLen) => {
+      if (
+        originalLen !== null &&
+        originalLen > 200 &&
+        content.length < originalLen * REWRITE_MIN_LENGTH_RATIO
+      ) {
+        return errAsync(
+          new CesareError(
+            `rewrite_scene: il new_content (${content.length} caratteri) è troppo più corto della scena originale (${originalLen} caratteri): hai perso contenuto. ` +
+              `Leggi la scena con read_scene(${input.scene_number}) e restituisci il Fountain COMPLETO della scena — TUTTE le battute e le azioni originali — con SOLO la modifica richiesta. ` +
+              `Accorcia davvero solo se l'utente ha chiesto esplicitamente di tagliare.`,
+          ),
+        );
+      }
+      // The marker is embedded in the tool result text. The client side-channel
+      // (`parseRewriteSceneMarker`) extracts it and dispatches the pending-edit
+      // plugin with the scene number and new content.
+      const payload = Buffer.from(
+        JSON.stringify({
+          scene_number: input.scene_number,
+          new_content: content,
+          ...(input.summary ? { summary: input.summary } : {}),
+        }),
+        "utf8",
+      ).toString("base64");
+      // Base64 encoding prevents Fountain syntax (e.g. `--> CUT TO:`) inside
+      // new_content from containing `-->`, which would terminate the HTML
+      // comment marker early and break `parseRewriteSceneMarker`.
+      const marker = `<!--ohw:rewrite-scene-b64:${payload}-->`;
+      return okAsync({
+        scene_number: input.scene_number,
+        accepted: false as const,
+        marker,
+      });
+    });
 };
 
 // ─── Public router ────────────────────────────────────────────────────────────
@@ -930,9 +1026,11 @@ export const executeScreenplayTool = (
     ).map((r) => toResult(block.id, r));
   }
   if (block.name === "rewrite_scene") {
-    return executeRewriteScene(block.input as RewriteSceneInput).map((r) =>
-      toResult(block.id, r),
-    );
+    return executeRewriteScene(
+      block.input as RewriteSceneInput,
+      db,
+      projectId,
+    ).map((r) => toResult(block.id, r));
   }
   return okAsync(
     toResult(block.id, { error: `Unknown screenplay tool: ${block.name}` }),

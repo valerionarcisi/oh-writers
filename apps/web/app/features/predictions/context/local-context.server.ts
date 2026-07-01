@@ -777,6 +777,7 @@ const loadSceneSummaries = (
         presentCharacters: parsed.data.presentCharacters,
         keyActions: parsed.data.keyActions,
         productionNotes: parsed.data.productionNotes,
+        narrativePurpose: parsed.data.narrativePurpose,
       });
     }
 

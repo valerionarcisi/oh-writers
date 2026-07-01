@@ -335,3 +335,62 @@ describe("[#51] executeScreenplayTool — rewrite_scene normalises inline cues",
     noInlineCueSurvives(out);
   });
 });
+
+// Spec 81 — the model sometimes truncates a scene to a fragment (worst case just
+// the slugline). The server rejects a rewrite far shorter than the original so
+// the tool loop makes it regenerate the full scene. Verified live on 010.
+describe("[spec 81] rewrite_scene anti-truncation guard", () => {
+  // A scene body of ~1000 chars in the DB.
+  const longBody = "Azione lunga. ".repeat(80); // ~1120 chars
+  const dbWithScene = (bodyLen: number) =>
+    ({
+      select: () => ({
+        from: (t: unknown) => ({
+          where: () => ({
+            limit: () =>
+              // First call resolves the screenplay row, second the scene row.
+              // Both go through this chain; distinguish by returning a row that
+              // satisfies whichever select() asked (id for screenplay, notes for
+              // scene). Returning both keys is harmless.
+              Promise.resolve([
+                {
+                  id: "sp-1",
+                  heading: "INT. STANZA - NOTTE",
+                  notes: "x".repeat(bodyLen),
+                },
+              ]),
+          }),
+        }),
+      }),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    }) as any;
+
+  const runRewriteWithDb = async (newContent: string, origLen: number) => {
+    void longBody;
+    return executeScreenplayTool(
+      {
+        type: "tool_use",
+        id: "id",
+        name: "rewrite_scene",
+        input: { scene_number: 1, new_content: newContent },
+      },
+      dbWithScene(origLen),
+      "proj-1",
+    );
+  };
+
+  it("REJECTS a rewrite that collapsed to a fragment of the original", async () => {
+    // Original ~1000 chars, rewrite is just the slugline → reject.
+    const result = await runRewriteWithDb("INT. STANZA - NOTTE", 1000);
+    expect(result.isErr()).toBe(true);
+    if (result.isErr()) {
+      expect(result.error.message).toMatch(/troppo più corto|perso contenuto/i);
+    }
+  });
+
+  it("ALLOWS a rewrite that preserves most of the scene", async () => {
+    const full = `INT. STANZA - NOTTE\n\n${"Battuta piena. ".repeat(70)}`;
+    const result = await runRewriteWithDb(full, 1000);
+    expect(result.isOk()).toBe(true);
+  });
+});

@@ -54,5 +54,10 @@ export const buildScreenplayEditSkill = (_ctx: SkillBuildContext): Skill => ({
     if (readResult) return readResult;
     return executeScreenplayTool(block, db, projectId);
   },
-  requiredData: ["screenplay"],
+  // "scene-summaries" makes the already-cached per-scene summaries (setting,
+  // characters, key actions, narrative purpose) available when editing a scene,
+  // so rewrite_scene understands what the scene contains and does not truncate
+  // it (spec 81). The summaries are Haiku-distilled + fingerprinted — no new LLM
+  // cost for scenes whose text hasn't changed.
+  requiredData: ["screenplay", "scene-summaries"],
 });

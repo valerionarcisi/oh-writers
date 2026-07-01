@@ -57,17 +57,24 @@ const formatSceneList = (ctx: LocalContext): string | null => {
 // ─── Scene summaries ──────────────────────────────────────────────────────────
 
 const formatSummaryRow = (s: SceneSummaryRow): string => {
-  const prod =
-    s.productionNotes.length > 0 ? s.productionNotes.join(", ") : "—";
   const chars =
     s.presentCharacters.length > 0 ? s.presentCharacters.join(", ") : "—";
-  return `| ${s.sceneNumber} | ${s.sceneHeading} | ${chars} | ${prod} |`;
+  // keyActions = what actually happens in the scene. This is the beat-level
+  // content rewrite_scene needs so it preserves the untouched parts of a scene
+  // instead of truncating it (spec 81). narrativePurpose (scene's story role)
+  // is included when the distiller has produced it.
+  const actions = s.keyActions.length > 0 ? s.keyActions.join("; ") : "—";
+  const purpose =
+    s.narrativePurpose && s.narrativePurpose.length > 0
+      ? s.narrativePurpose
+      : "—";
+  return `| ${s.sceneNumber} | ${s.sceneHeading} | ${chars} | ${actions} | ${purpose} |`;
 };
 
 const formatSceneSummaries = (summaries: SceneSummaryRow[]): string | null => {
   if (summaries.length === 0) return null;
 
-  const header = `| SC | Heading | Personaggi | Note produzione |\n|----|---------|-----------|----------------|\n`;
+  const header = `| SC | Heading | Personaggi | Cosa succede | Funzione narrativa |\n|----|---------|-----------|--------------|--------------------|\n`;
   const rows = summaries.map(formatSummaryRow);
   const capped = truncateRows(rows, CAPS.sceneSummaries, 1);
   const omitted = rows.length - capped.length;

@@ -95,6 +95,20 @@ describe("listScenesInFountain", () => {
       expect(scenes[1]?.heading).toBe("MONTAGE: TRAINING");
     });
 
+    it("does NOT treat a lowercase 'Montage ...' action line as a scene", () => {
+      // Case-sensitive alignment with the PM editor (fountain-constants.ts): a
+      // lowercase "Montage di Filippo che lavora" is ACTION, not a heading. If
+      // this counted as a scene, DB scenes.number and the editor ordinal would
+      // drift by one and Cesare would edit the wrong scene.
+      const fountain = `INT. CUCINA - NOTTE\n\nGiulio cucina.\n\nMontage di Filippo che lavora. Comici che si alternano.\n\nINT. BANCONE - NOTTE\n\nFilippo pulisce.`;
+      const scenes = listScenesInFountain(fountain);
+      expect(scenes).toHaveLength(2);
+      expect(scenes.map((s) => s.heading)).toEqual([
+        "INT. CUCINA - NOTTE",
+        "INT. BANCONE - NOTTE",
+      ]);
+    });
+
     it("detects FLASHBACK heading", () => {
       const fountain = `INT. UFFICIO - GIORNO\n\nAzione.\n\nFLASHBACK - INFANZIA\n\nBambini.\n`;
       const scenes = listScenesInFountain(fountain);

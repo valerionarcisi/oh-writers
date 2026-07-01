@@ -21,6 +21,8 @@ const FIXTURES: Readonly<Record<number, SceneSummary>> = {
       "Tense exchange about the evening show",
     ],
     productionNotes: [],
+    narrativePurpose:
+      "Establishes the tense dynamic between Dante and Filippo over the evening show",
   },
   2: {
     sceneNumber: 2,
@@ -35,6 +37,8 @@ const FIXTURES: Readonly<Record<number, SceneSummary>> = {
       "First customers arrive",
     ],
     productionNotes: ["Practical lighting from hanging bulbs"],
+    narrativePurpose:
+      "Raises the stakes of the comedian booking as service begins",
   },
   3: {
     sceneNumber: 3,
@@ -48,6 +52,8 @@ const FIXTURES: Readonly<Record<number, SceneSummary>> = {
       "Filippo defends his choice of comedian",
     ],
     productionNotes: ["Open flame gas range"],
+    narrativePurpose:
+      "Deepens Dante's frustration and Filippo's stubborn optimism",
   },
 };
 
@@ -59,6 +65,7 @@ const DEFAULT_FIXTURE: SceneSummary = {
   presentCharacters: [],
   keyActions: ["Characters interact"],
   productionNotes: [],
+  narrativePurpose: "",
 };
 
 export const findSceneSummaryFixture = (

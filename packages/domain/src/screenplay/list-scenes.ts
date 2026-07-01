@@ -38,8 +38,16 @@ const HEADING_PREFIX =
 // Oh Writers PDF importer. Accepted when followed by whitespace, a dash, colon,
 // or end-of-line — this keeps bare character names like "INTERCUT" from a
 // hypothetical cue from being misclassified.
+//
+// CASE-SENSITIVE (no /i): a non-standard slugline is a heading only when written
+// in UPPERCASE, exactly like the PM editor's SCENE_HEADING_RE
+// (fountain-constants.ts). A lowercase line like "Montage di Filippo che lavora"
+// is ACTION, not a scene. When the two parsers disagreed on this (DB counted it
+// as a scene, the editor didn't), the DB scenes.number and the editor's scene
+// ordinal drifted by one, so read_scene(N) and the on-screen scene N pointed at
+// different scenes and Cesare edited the wrong one.
 const NON_STANDARD_HEADING_PREFIX =
-  /^(INSERT|INTERCUT|SERIES\s+OF\s+SHOTS|MONTAGE|FLASHBACK)(\s|[-–—:]|$)/i;
+  /^(INSERT|INTERCUT|SERIES\s+OF\s+SHOTS|MONTAGE|FLASHBACK)(\s|[-–—:]|$)/;
 
 const SCENE_NUMBER_SUFFIX = /\s+#([^#]+)#\s*$/;
 
