@@ -3,12 +3,15 @@ import type { EditorState, Transaction } from "prosemirror-state";
 import { Decoration, DecorationSet } from "prosemirror-view";
 import type { EditorView } from "prosemirror-view";
 import type { Node as PMNode } from "prosemirror-model";
+import { Fragment } from "prosemirror-model";
 import styles from "./proposed-edit-decoration.module.css";
 import {
   cesareAppliedHighlightKey,
   highlightAppliedRange,
 } from "./cesare-applied-highlight";
 import { findSceneRange } from "./cesare-pending-edit";
+import { fountainToDoc } from "../fountain-to-doc";
+import { splitInlineCues } from "../split-inline-cues";
 
 // ─── Public types ─────────────────────────────────────────────────────────────
 
@@ -302,6 +305,52 @@ const buildWidget = (
   return wrap;
 };
 
+// A replacement that spans more than one screenplay element (a new cue + its
+// dialogue, an action line then a character block) cannot be inserted as flat
+// inline text — that collapses every element into the paragraph the match sat
+// in, which is exactly the "MARCO ... TEA Del quattro. MARCO Ah." on one line
+// bug. Such a replacement must be parsed into real Fountain nodes (cue/dialogue/
+// action) and spliced in at the BLOCK level, the same pipeline rewrite_scene
+// uses. A single-line replacement (a word, one dialogue line) stays inline.
+const isMultiBlockReplacement = (replace: string): boolean =>
+  replace.includes("\n");
+
+// Parse a Fountain body fragment into its block nodes (action / character /
+// dialogue / parenthetical / transition), reusing fountainToDoc. We prepend a
+// throwaway slugline so the fragment parses as a scene body, then drop the
+// synthetic heading and return only the body nodes. Exported for unit tests.
+export const parseReplacementBlocks = (replace: string): PMNode[] => {
+  const doc = fountainToDoc(
+    `INT. _OHW_TMP_ - DAY\n\n${splitInlineCues(replace)}`,
+  );
+  const scene = doc.firstChild;
+  if (!scene || scene.type.name !== "scene") return [];
+  const blocks: PMNode[] = [];
+  scene.content.forEach((child, _offset, index) => {
+    if (index === 0) return; // skip the synthetic heading
+    blocks.push(child);
+  });
+  return blocks;
+};
+
+// The block-level range [start, end) covering the textblock that contains `pos`.
+const containingBlockRange = (
+  doc: PMNode,
+  pos: number,
+): { from: number; to: number } | null => {
+  try {
+    const $pos = doc.resolve(Math.min(pos, doc.content.size));
+    for (let d = $pos.depth; d >= 1; d--) {
+      if ($pos.node(d).isTextblock) {
+        return { from: $pos.before(d), to: $pos.after(d) };
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+};
+
 // Apply a proposal's replacements to the doc as a single transaction.
 // For `edit` proposals: one replacement at the first match.
 // For `rename_*` proposals: replace every whole-word occurrence in one
@@ -312,6 +361,42 @@ const applyProposalToView = (
 ): void => {
   const matches = findAllMatches(view.state.doc, proposal);
   if (matches.length === 0) return;
+
+  // Multi-block edit: replace the whole containing block with parsed Fountain
+  // nodes so cues/dialogue land as proper centred elements, not flat action.
+  // Only when the match covers essentially the ENTIRE block (the model swapped a
+  // whole line/beat for a multi-element one) — a partial mid-block match with a
+  // multi-line replace stays inline so we never drop the block's other text.
+  if (
+    proposal.kind === "edit" &&
+    matches.length === 1 &&
+    isMultiBlockReplacement(proposal.replace)
+  ) {
+    const m = matches[0]!;
+    const blockRange = containingBlockRange(view.state.doc, m.from);
+    const block = blockRange ? view.state.doc.nodeAt(blockRange.from) : null;
+    const matchIsWholeBlock =
+      block != null && m.to - m.from >= block.content.size - 1; // ±1 for block boundary
+    const blocks = matchIsWholeBlock
+      ? parseReplacementBlocks(proposal.replace)
+      : [];
+    if (blockRange && blocks.length > 0) {
+      const tr = view.state.tr.replaceWith(
+        blockRange.from,
+        blockRange.to,
+        Fragment.fromArray(blocks),
+      );
+      const mappedFrom = tr.mapping.map(blockRange.from);
+      tr.setMeta(
+        cesareAppliedHighlightKey,
+        highlightAppliedRange(mappedFrom, tr.mapping.map(blockRange.to)),
+      );
+      view.dispatch(tr);
+      return;
+    }
+    // Fall through to inline replacement if parsing/positioning failed.
+  }
+
   // A rename mirrors each occurrence's case (cues/headings stay uppercase); an
   // `edit` replaces verbatim with the model's exact text.
   const replacementFor = (m: MatchRange): string =>

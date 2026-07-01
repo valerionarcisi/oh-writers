@@ -3,7 +3,11 @@ import { describe, it, expect } from "vitest";
 import type { Node as PMNode } from "prosemirror-model";
 import { fountainToDoc } from "../fountain-to-doc";
 import { findSceneRange } from "./cesare-pending-edit";
-import { findAllMatches, type ProposedEdit } from "./proposed-edit-decoration";
+import {
+  findAllMatches,
+  parseReplacementBlocks,
+  type ProposedEdit,
+} from "./proposed-edit-decoration";
 
 // The exact same action line appears in BOTH scenes, so a doc-wide `find` would
 // decorate the wrong one. Scoping by scene_number must land only in the target.
@@ -79,5 +83,39 @@ describe("findAllMatches — #86 scene scoping for edit proposals", () => {
     );
     expect(matches).toHaveLength(1);
     expect(sceneOf(doc, matches[0]!.from)).toBe(1);
+  });
+});
+
+describe("parseReplacementBlocks — multi-block edit formatting", () => {
+  it("parses a cue + dialogue replacement into separate Fountain nodes", () => {
+    // The exact failure from the screenshot: an added waiter beat was pasted as
+    // flat action ("MARCO ... TEA Del quattro. MARCO Ah." on one line). The
+    // replacement must become real character/dialogue nodes, not a text blob.
+    const blocks = parseReplacementBlocks(
+      [
+        "Tea si ferma, i due si voltano e si guardano.",
+        "",
+        "MARCO (28)",
+        "Tea, qual è la quattro stagioni del tavolo cinque?",
+        "",
+        "TEA",
+        "Del quattro.",
+      ].join("\n"),
+    );
+    const kinds = blocks.map((b) => b.type.name);
+    // Must contain distinct character + dialogue nodes, not a single action.
+    expect(kinds).toContain("character");
+    expect(kinds).toContain("dialogue");
+    expect(
+      kinds.filter((k) => k === "character").length,
+    ).toBeGreaterThanOrEqual(2);
+    // The synthetic heading must be dropped — no heading leaks into the body.
+    expect(kinds).not.toContain("heading");
+  });
+
+  it("still parses a single action line into one action node", () => {
+    const blocks = parseReplacementBlocks("Giulio esce, sbattendo la porta.");
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0]!.type.name).toBe("action");
   });
 });
