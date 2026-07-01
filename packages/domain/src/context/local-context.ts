@@ -32,6 +32,8 @@ export interface SceneSummaryRow {
   readonly presentCharacters: string[];
   readonly keyActions: string[];
   readonly productionNotes: string[];
+  /** Spec 81 — the scene's role in the story. "" until re-distilled. */
+  readonly narrativePurpose: string;
 }
 
 export interface LocalContext {

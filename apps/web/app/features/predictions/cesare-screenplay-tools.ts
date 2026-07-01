@@ -1,44 +1,17 @@
 import { tool } from "ai";
 import { z } from "zod";
 import { ResultAsync, errAsync, okAsync } from "neverthrow";
-import { eq, sql } from "drizzle-orm";
-import { screenplays, screenplayVersions } from "@oh-writers/db/schema";
+import { and, eq, inArray, sql } from "drizzle-orm";
+import { screenplays, screenplayVersions, scenes } from "@oh-writers/db/schema";
 import type { Db } from "~/server/db";
 import { callHaiku, extractText } from "~/features/ai";
 import { sanitizeAiText } from "@oh-writers/utils";
+import { normaliseScreenplayFountain } from "~/features/screenplay-editor";
 import { CesareError } from "./cesare.errors";
 
 // ─── Tool definitions ─────────────────────────────────────────────────────────
 
 export const CESARE_SCREENPLAY_TOOLS = [
-  {
-    name: "propose_screenplay_edit",
-    description:
-      "Propone una modifica puntuale al testo di una scena (find/replace verbatim). " +
-      "L'utente vedrà la proposta come overlay sul testo con bottoni ✓/✕. " +
-      "Usa quando la richiesta è una modifica circoscritta a una scena o a poche righe.",
-    input_schema: {
-      type: "object" as const,
-      properties: {
-        scene_number: { type: "integer", minimum: 1 },
-        find: {
-          type: "string",
-          description:
-            "Sottostringa esatta da cercare nel doc (verbatim, max 400 char)",
-        },
-        replace: {
-          type: "string",
-          description: "Testo proposto come sostituzione (max 800 char)",
-        },
-        reason: {
-          type: "string",
-          description:
-            "Motivazione breve (max 200 char) mostrata all'utente nell'overlay",
-        },
-      },
-      required: ["scene_number", "find", "replace", "reason"],
-    },
-  },
   {
     name: "propose_screenplay_revision",
     description:
@@ -101,28 +74,34 @@ export const CESARE_SCREENPLAY_TOOLS = [
   {
     name: "rewrite_scene",
     description:
-      "Riscrive una singola scena inline nell'editor con un effetto typewriter. " +
-      "L'utente vede il testo arrivare carattere per carattere come overlay verde " +
-      "sulla scena originale. Al termine può accettare (la modifica entra nel doc) " +
-      "o rifiutare (il testo originale rimane). " +
-      "Usa quando l'utente chiede 'riscrivi questa scena', 'opzione B', " +
-      "'rendi più intensa la scena N', 'dammi una versione alternativa di sc.N'. " +
-      "NON usare per modifiche puntuali (< 3 righe) — usa propose_screenplay_edit. " +
-      "NON usare per l'intera sceneggiatura — usa propose_screenplay_revision.",
+      "Applica QUALSIASI modifica al testo di UNA scena restituendo la scena " +
+      "INTERA riscritta. È il tool universale per la scena: aggiungere una " +
+      "battuta o un personaggio, tagliare una riga, spostare un momento, " +
+      "cambiare una parola, rendere più intensa, dare un'alternativa. " +
+      "L'utente vede la nuova scena applicata inline (overlay verde) e può " +
+      "accettare o rifiutare. " +
+      "PROCEDURA: leggi prima la scena con read_scene(N), poi restituisci in " +
+      "new_content il testo Fountain COMPLETO della scena così come deve " +
+      "risultare dopo la modifica (non un frammento). " +
+      "Usa questo per ogni richiesta su una singola scena — inclusi 'aggiungi', " +
+      "'togli', 'sposta', 'cambia', 'riscrivi', 'opzione B'. " +
+      "NON usare per l'intera sceneggiatura o più scene — usa " +
+      "propose_screenplay_revision.",
     input_schema: {
       type: "object" as const,
       properties: {
         scene_number: {
           type: "integer",
           minimum: 1,
-          description: "Numero della scena da riscrivere (1-based)",
+          description: "Numero della scena da modificare (1-based)",
         },
         new_content: {
           type: "string",
           description:
-            "Il testo Fountain completo della scena riscritta. " +
-            "Deve iniziare con uno slugline (INT./EXT. ...) e " +
-            "includere tutto il corpo della scena.",
+            "Il testo Fountain COMPLETO della scena come deve risultare dopo " +
+            "la modifica (non un frammento, non un diff). Deve iniziare con " +
+            "uno slugline (INT./EXT. ...) e includere tutto il corpo, con le " +
+            "cue personaggio e i dialoghi già presenti più le tue modifiche.",
         },
       },
       required: ["scene_number", "new_content"],
@@ -133,37 +112,6 @@ export const CESARE_SCREENPLAY_TOOLS = [
 // ─── Screenplay tools factory (AI SDK v5 format) ──────────────────────────────
 
 export const createScreenplayTools = (db: Db, projectId: string) => ({
-  propose_screenplay_edit: tool({
-    description:
-      "Propone una modifica puntuale al testo di una scena (find/replace verbatim). " +
-      "L'utente vedrà la proposta come overlay sul testo con bottoni ✓/✕. " +
-      "Usa quando la richiesta è una modifica circoscritta a una scena o a poche righe.",
-    inputSchema: z.object({
-      scene_number: z.number().int().min(1),
-      find: z
-        .string()
-        .describe(
-          "Sottostringa esatta da cercare nel doc (verbatim, max 400 char)",
-        ),
-      replace: z
-        .string()
-        .describe("Testo proposto come sostituzione (max 800 char)"),
-      reason: z
-        .string()
-        .describe(
-          "Motivazione breve (max 200 char) mostrata all'utente nell'overlay",
-        ),
-    }),
-    execute: async (input, _opts) => {
-      const result = await executeProposeScreenplayEdit(
-        input as ProposeEditInput,
-        db,
-        projectId,
-      );
-      if (result.isErr()) return { error: result.error.message };
-      return result.value;
-    },
-  }),
   propose_screenplay_revision: tool({
     description:
       "Propone una riscrittura strutturale (macro) di un range di scene o " +
@@ -305,14 +253,28 @@ export const createScreenplayTools = (db: Db, projectId: string) => ({
   }),
   rewrite_scene: tool({
     description:
-      "Riscrive una singola scena inline nell'editor con un effetto typewriter. " +
-      "L'utente vede il testo arrivare carattere per carattere come overlay verde " +
-      "sulla scena originale. Al termine può accettare (la modifica entra nel doc) " +
-      "o rifiutare (il testo originale rimane). " +
-      "Usa quando l'utente chiede 'riscrivi questa scena', 'opzione B', " +
-      "'rendi più intensa la scena N', 'dammi una versione alternativa di sc.N'. " +
-      "NON usare per modifiche puntuali (< 3 righe) — usa propose_screenplay_edit. " +
-      "NON usare per l'intera sceneggiatura — usa propose_screenplay_revision.",
+      "Applica QUALSIASI modifica al testo di UNA scena restituendo la scena " +
+      "INTERA. È il tool universale per la singola scena: aggiungere una battuta " +
+      "o un personaggio, tagliare una riga, spostare un momento, cambiare una " +
+      "parola, rendere più intensa, dare un'alternativa. " +
+      "L'utente vede la nuova scena applicata inline (overlay verde) e può " +
+      "accettare o rifiutare. " +
+      "PROCEDURA OBBLIGATORIA:\n" +
+      "1. Leggi PRIMA la scena con read_scene(N) per avere il testo LETTERALE esatto.\n" +
+      "2. In new_content RICOPIA TUTTA la scena riga per riga, dall'inizio alla " +
+      "fine, cambiando SOLO la parte che l'utente ha chiesto.\n" +
+      "REGOLA TASSATIVA ANTI-TRONCAMENTO: new_content DEVE contenere la scena " +
+      "COMPLETA — tutte le battute, tutte le azioni, tutte le parentetiche che " +
+      "c'erano prima, anche quelle che non c'entrano con la modifica. NON " +
+      "riassumere, NON accorciare, NON restituire solo la parte cambiata: " +
+      "cancelleresti il resto della scena. Se dopo un edit piccolo il tuo " +
+      "new_content è più corto della scena originale, hai sbagliato — ricomincia " +
+      "e ricopia tutto. Accorcia SOLO se l'utente ha chiesto esplicitamente di " +
+      "tagliare/accorciare. " +
+      "Usa questo per OGNI richiesta su una singola scena — inclusi 'aggiungi', " +
+      "'togli', 'sposta', 'cambia', 'riscrivi', 'opzione B'. " +
+      "NON usare per l'intera sceneggiatura o più scene — usa " +
+      "propose_screenplay_revision.",
     inputSchema: z.object({
       scene_number: z
         .number()
@@ -322,16 +284,30 @@ export const createScreenplayTools = (db: Db, projectId: string) => ({
       new_content: z
         .string()
         .describe(
-          "Il testo Fountain completo della scena riscritta. " +
+          "Il testo Fountain COMPLETO della scena — tutte le battute e azioni " +
+            "originali ricopiate, con SOLO la parte richiesta modificata. " +
             "Deve iniziare con uno slugline (INT./EXT. ...) e " +
-            "includere tutto il corpo della scena. " +
+            "includere tutto il corpo della scena, non un frammento. " +
             "IMPORTANTE: ogni paragrafo di azione su UNA SOLA RIGA, anche se lungo. " +
             "Usa \\n\\n SOLO tra paragrafi narrativi distinti — MAI a metà frase, MAI ogni 50-60 caratteri. " +
             "Esempio corretto:\nEXT. LUOGO - NOTTE\n\nUna villetta liberty stretta tra due palazzi di cemento anni Sessanta. Freddo di novembre. L'insegna del RADICE è al neon — metà lettere spente, le altre arancioni, sufficienti.\n\nSul marciapiede, qualcuno fuma e ride prima di rientrare.\n\n      PERSONAGGIO\n          Dialogo.",
         ),
+      summary: z
+        .string()
+        .optional()
+        .describe(
+          "Una riga che dichiara COSA hai cambiato, per trasparenza verso " +
+            "l'utente (es. 'Cambiata la prima battuta di Tea, resto invariato'). " +
+            "Se hai toccato anche altro oltre alla richiesta esplicita, DILLO qui " +
+            "(es. 'Cambiata la battuta X; adattata la reazione di Y per coerenza').",
+        ),
     }),
     execute: async (input, _opts) => {
-      const result = await executeRewriteScene(input as RewriteSceneInput);
+      const result = await executeRewriteScene(
+        input as RewriteSceneInput,
+        db,
+        projectId,
+      );
       if (result.isErr()) return { error: result.error.message };
       return result.value;
     },
@@ -427,6 +403,16 @@ export const clearScreenplayProposals = (screenplayId: string): void => {
   PROPOSAL_STORE.delete(screenplayId);
 };
 
+// Drop only the inline ✓/✗ edit proposals, keeping any pending draft-revision
+// banner. Called once per page load: an un-accepted micro-edit is ephemeral
+// turn output and must not resurrect on refresh (#85), but a draft revision is
+// backed by a real DRAFT version row and stays promotable.
+export const clearScreenplayEditProposals = (screenplayId: string): void => {
+  const bucket = PROPOSAL_STORE.get(screenplayId);
+  if (!bucket) return;
+  bucket.edits = [];
+};
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const loadScreenplayForProject = (
@@ -480,83 +466,6 @@ export const clampSceneRange = (
 };
 
 // ─── Executors ────────────────────────────────────────────────────────────────
-
-const PROPOSAL_TEXT_LIMIT = 800;
-const PROPOSAL_FIND_LIMIT = 400;
-const PROPOSAL_REASON_LIMIT = 200;
-
-interface ProposeEditInput {
-  scene_number: number;
-  find: string;
-  replace: string;
-  reason: string;
-}
-
-const executeProposeScreenplayEdit = (
-  input: ProposeEditInput,
-  db: Db,
-  projectId: string,
-): ResultAsync<
-  {
-    proposed_edit: {
-      id: string;
-      scene_number: number;
-      find: string;
-      replace: string;
-      reason: string;
-    };
-  },
-  CesareError
-> => {
-  if (!input.find || input.find.length === 0) {
-    return errAsync(new CesareError("propose_screenplay_edit: empty find"));
-  }
-  if (input.find.length > PROPOSAL_FIND_LIMIT) {
-    return errAsync(
-      new CesareError(
-        `propose_screenplay_edit: 'find' exceeds ${PROPOSAL_FIND_LIMIT} chars`,
-      ),
-    );
-  }
-  if (input.replace.length > PROPOSAL_TEXT_LIMIT) {
-    return errAsync(
-      new CesareError(
-        `propose_screenplay_edit: 'replace' exceeds ${PROPOSAL_TEXT_LIMIT} chars`,
-      ),
-    );
-  }
-  const reason = (input.reason ?? "").slice(0, PROPOSAL_REASON_LIMIT);
-
-  return loadScreenplayForProject(db, projectId).andThen((sp) => {
-    if (!sp.content.includes(input.find)) {
-      return errAsync(
-        new CesareError(
-          "propose_screenplay_edit: 'find' string not present verbatim in the screenplay",
-        ),
-      );
-    }
-    const proposal: ProposedEdit = {
-      id: crypto.randomUUID(),
-      screenplayId: sp.id,
-      kind: "edit",
-      sceneNumber: input.scene_number,
-      find: input.find,
-      replace: input.replace,
-      reason,
-      createdAt: Date.now(),
-    };
-    getBucket(sp.id).edits.push(proposal);
-    return okAsync({
-      proposed_edit: {
-        id: proposal.id,
-        scene_number: proposal.sceneNumber ?? 0,
-        find: proposal.find,
-        replace: proposal.replace,
-        reason: proposal.reason,
-      },
-    });
-  });
-};
 
 interface RenameInput {
   kind: "character" | "location";
@@ -751,6 +660,36 @@ const findCreatorUserId = (
         ),
   );
 
+// #50 — delete the still-draft version rows of every prior un-promoted
+// revision banner for this screenplay, so a fresh revision replaces them
+// instead of stacking. Only `isDraft` rows are removed — a promoted/active
+// version is never touched. Buckets hold only un-promoted drafts (promote and
+// discard both clear them), so iterating the bucket is sufficient.
+const supersedePriorDrafts = (
+  db: Db,
+  screenplayId: string,
+): ResultAsync<void, CesareError> => {
+  const priorIds = (PROPOSAL_STORE.get(screenplayId)?.drafts ?? []).map(
+    (d) => d.versionId,
+  );
+  if (priorIds.length === 0) return okAsync(undefined);
+  return ResultAsync.fromPromise(
+    db
+      .delete(screenplayVersions)
+      .where(
+        and(
+          inArray(screenplayVersions.id, priorIds),
+          eq(screenplayVersions.isDraft, true),
+        ),
+      )
+      .then(() => undefined),
+    (e) =>
+      new CesareError(
+        `supersedePriorDrafts: ${e instanceof Error ? e.message : String(e)}`,
+      ),
+  );
+};
+
 const executeProposeScreenplayRevision = (
   input: ReviseInput,
   db: Db,
@@ -818,7 +757,13 @@ const executeProposeScreenplayRevision = (
                   new CesareError("Revision call returned no text"),
                 );
               }
-              return okAsync(sanitizeAiText(newText));
+              // #53 — the model is unreliable at Fountain cue formatting on
+              // EVERY path. Normalise BEFORE sanitize so the canonicaliser sees
+              // the model's original line breaks; after the round-trip the cues
+              // are indented/structural and survive sanitize's reflow.
+              return okAsync(
+                sanitizeAiText(normaliseScreenplayFountain(newText)),
+              );
             });
 
     return mockedRewrite.andThen((newText) => {
@@ -879,12 +824,19 @@ const executeProposeScreenplayRevision = (
             scenesChanged: scenesChangedApprox,
             createdAt: Date.now(),
           };
-          getBucket(sp.id).drafts.push(proposal);
-          return okAsync({
-            version_id: row.id,
-            label,
-            scenes_changed_count: scenesChangedApprox,
-            proposal_id: proposal.id,
+          // #50 — ONE draft-promote affordance at a time. The model re-proposes
+          // a revision several times per turn (re-runs, per-scene-range calls);
+          // each used to push a separate banner + leave an orphan draft row.
+          // Supersede every prior un-promoted draft for this screenplay: drop
+          // its stale draft version row and replace the banner with this one.
+          return supersedePriorDrafts(db, sp.id).map(() => {
+            getBucket(sp.id).drafts = [proposal];
+            return {
+              version_id: row.id,
+              label,
+              scenes_changed_count: scenesChangedApprox,
+              proposal_id: proposal.id,
+            };
           });
         });
     });
@@ -895,12 +847,53 @@ const executeProposeScreenplayRevision = (
 interface RewriteSceneInput {
   scene_number: number;
   new_content: string;
+  summary?: string;
 }
 
 const REWRITE_CONTENT_LIMIT = 8000;
 
+// Load the original body length of scene N (from scenes.notes) so the
+// anti-truncation guard can compare. Null when the scene/screenplay isn't found
+// (then the guard is skipped — never block an edit on a lookup miss).
+const loadSceneBodyLength = (
+  db: Db,
+  projectId: string,
+  sceneNumber: number,
+): ResultAsync<number | null, CesareError> =>
+  ResultAsync.fromPromise(
+    (async () => {
+      const [sp] = await db
+        .select({ id: screenplays.id })
+        .from(screenplays)
+        .where(eq(screenplays.projectId, projectId))
+        .limit(1);
+      if (!sp) return null;
+      const [row] = await db
+        .select({ notes: scenes.notes, heading: scenes.heading })
+        .from(scenes)
+        .where(
+          and(eq(scenes.screenplayId, sp.id), eq(scenes.number, sceneNumber)),
+        )
+        .limit(1);
+      if (!row) return null;
+      return (row.heading?.length ?? 0) + (row.notes?.length ?? 0);
+    })(),
+    (e) =>
+      new CesareError(
+        `loadSceneBodyLength: ${e instanceof Error ? e.message : String(e)}`,
+      ),
+  );
+
+// Below this ratio of the original scene length, a rewrite has almost certainly
+// dropped the scene's content (the model returned a fragment / just the slugline)
+// rather than making the requested edit. 0.4 tolerates a legitimate "make it
+// shorter" while catching the catastrophic "slugline only" truncation.
+const REWRITE_MIN_LENGTH_RATIO = 0.4;
+
 const executeRewriteScene = (
   input: RewriteSceneInput,
+  db: Db,
+  projectId: string,
 ): ResultAsync<
   { scene_number: number; accepted: false; marker: string },
   CesareError
@@ -913,8 +906,19 @@ const executeRewriteScene = (
   if (!input.new_content || input.new_content.trim().length === 0) {
     return errAsync(new CesareError("rewrite_scene: new_content is empty"));
   }
+  // #51 — normalise at the SOURCE of the marker, so both the live preview
+  // (streamed into the pending-edit plugin) and the accepted text parse to real
+  // DIALOGUE instead of action. The shared canonicaliser round-trips through the
+  // PM parser so cues land indented on their own lines and survive any later
+  // reflow — a flat cue would otherwise be folded back into the next line.
+  // Normalise BEFORE sanitize: the canonicaliser must see the model's original
+  // line breaks (sanitize's reflow would merge flat "CUE speech" lines first).
+  // After normalise the cues are indented/structural, so sanitize's later reflow
+  // leaves them intact while still repairing mojibake.
   const content = sanitizeAiText(
-    input.new_content.slice(0, REWRITE_CONTENT_LIMIT),
+    normaliseScreenplayFountain(
+      input.new_content.slice(0, REWRITE_CONTENT_LIMIT),
+    ),
   );
   // Reject multi-slugline payloads. rewrite_scene replaces ONE scene; if the
   // model emits two sluglines we'd duplicate / shift downstream numbering.
@@ -935,18 +939,50 @@ const executeRewriteScene = (
       ),
     );
   }
-  // The marker is embedded in the tool result text. The client side-channel
-  // (`parseRewriteSceneMarker`) extracts it and dispatches the pending-edit
-  // plugin with the scene number and new content.
-  const payload = Buffer.from(
-    JSON.stringify({ scene_number: input.scene_number, new_content: content }),
-    "utf8",
-  ).toString("base64");
-  // Base64 encoding prevents Fountain syntax (e.g. `--> CUT TO:`) inside
-  // new_content from containing `-->`, which would terminate the HTML comment
-  // marker early and break `parseRewriteSceneMarker`.
-  const marker = `<!--ohw:rewrite-scene-b64:${payload}-->`;
-  return okAsync({ scene_number: input.scene_number, accepted: false, marker });
+  // Anti-truncation guard. The model sometimes returns only a fragment (worst
+  // case: just the slugline) instead of the full scene, silently deleting the
+  // rest. Load the original scene length and reject a rewrite that collapsed to
+  // a small fraction of it, so the tool loop makes the model regenerate the
+  // COMPLETE scene. A legitimate "make it shorter" survives the 0.4 threshold;
+  // a "slugline only" catastrophe does not. The lookup miss / short original
+  // cases skip the guard (never block a real edit on a lookup detail).
+  return loadSceneBodyLength(db, projectId, input.scene_number)
+    .orElse(() => okAsync(null as number | null))
+    .andThen((originalLen) => {
+      if (
+        originalLen !== null &&
+        originalLen > 200 &&
+        content.length < originalLen * REWRITE_MIN_LENGTH_RATIO
+      ) {
+        return errAsync(
+          new CesareError(
+            `rewrite_scene: il new_content (${content.length} caratteri) è troppo più corto della scena originale (${originalLen} caratteri): hai perso contenuto. ` +
+              `Leggi la scena con read_scene(${input.scene_number}) e restituisci il Fountain COMPLETO della scena — TUTTE le battute e le azioni originali — con SOLO la modifica richiesta. ` +
+              `Accorcia davvero solo se l'utente ha chiesto esplicitamente di tagliare.`,
+          ),
+        );
+      }
+      // The marker is embedded in the tool result text. The client side-channel
+      // (`parseRewriteSceneMarker`) extracts it and dispatches the pending-edit
+      // plugin with the scene number and new content.
+      const payload = Buffer.from(
+        JSON.stringify({
+          scene_number: input.scene_number,
+          new_content: content,
+          ...(input.summary ? { summary: input.summary } : {}),
+        }),
+        "utf8",
+      ).toString("base64");
+      // Base64 encoding prevents Fountain syntax (e.g. `--> CUT TO:`) inside
+      // new_content from containing `-->`, which would terminate the HTML
+      // comment marker early and break `parseRewriteSceneMarker`.
+      const marker = `<!--ohw:rewrite-scene-b64:${payload}-->`;
+      return okAsync({
+        scene_number: input.scene_number,
+        accepted: false as const,
+        marker,
+      });
+    });
 };
 
 // ─── Public router ────────────────────────────────────────────────────────────
@@ -975,13 +1011,6 @@ export const executeScreenplayTool = (
   db: Db,
   projectId: string,
 ): ResultAsync<ToolResult, CesareError> => {
-  if (block.name === "propose_screenplay_edit") {
-    return executeProposeScreenplayEdit(
-      block.input as ProposeEditInput,
-      db,
-      projectId,
-    ).map((r) => toResult(block.id, r));
-  }
   if (block.name === "propose_screenplay_revision") {
     return executeProposeScreenplayRevision(
       block.input as ReviseInput,
@@ -997,9 +1026,11 @@ export const executeScreenplayTool = (
     ).map((r) => toResult(block.id, r));
   }
   if (block.name === "rewrite_scene") {
-    return executeRewriteScene(block.input as RewriteSceneInput).map((r) =>
-      toResult(block.id, r),
-    );
+    return executeRewriteScene(
+      block.input as RewriteSceneInput,
+      db,
+      projectId,
+    ).map((r) => toResult(block.id, r));
   }
   return okAsync(
     toResult(block.id, { error: `Unknown screenplay tool: ${block.name}` }),

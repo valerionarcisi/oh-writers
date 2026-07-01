@@ -9,6 +9,46 @@ export type AppUser = {
   locale: Locale;
 };
 
+// ─── Dev-only auth bypass ──────────────────────────────────────────────────────
+//
+// When `DEV_AUTH_BYPASS=true` AND we are NOT in production, every request
+// resolves to the seeded Test User instead of a real Better Auth session. This
+// lets Playwright / Chrome drive the app without logging in, scoped to the seed
+// project "Non fa ridere" (010) that Test User personally owns — so automated
+// runs never touch real data.
+//
+// Safety: BOTH gates are required and both are read server-side only (this file
+// is dynamically imported to stay out of the browser bundle). The flag is
+// deliberately NOT exposed via app.config.ts, so it can never reach the client.
+// In production `NODE_ENV === "production"` disables it regardless of the flag.
+const DEV_BYPASS_USER: AppUser = {
+  id: "00000000-0000-4000-a000-000000000001" as UserId,
+  name: "Test User",
+  email: "test@ohwriters.dev",
+  locale: "it" as Locale,
+};
+
+let devBypassLogged = false;
+
+// Exported for unit tests. Pure: reads only process.env.
+export const devAuthBypassUser = (): AppUser | null => {
+  if (
+    process.env["NODE_ENV"] === "production" ||
+    process.env["DEV_AUTH_BYPASS"] !== "true"
+  ) {
+    return null;
+  }
+  if (!devBypassLogged) {
+    // One-time loud signal so an active bypass is never a silent surprise.
+    // eslint-disable-next-line no-console
+    console.warn(
+      `[DEV] auth bypass ACTIVE — every request runs as ${DEV_BYPASS_USER.email}. Never enable in production.`,
+    );
+    devBypassLogged = true;
+  }
+  return DEV_BYPASS_USER;
+};
+
 // Resolve the user from an EXPLICIT Headers object. API file routes (e.g.
 // `/api/cesare/stream`) receive `request` as a handler argument and must pass
 // `request.headers` here directly — the ambient `getWebRequest()` is not
@@ -17,6 +57,12 @@ export type AppUser = {
 export const getUserFromHeaders = async (
   headers: Headers,
 ): Promise<AppUser | null> => {
+  // Dev-only bypass short-circuit (see DEV_BYPASS_USER above). Covers every
+  // consumer — getUser, requireUser, requireProjectAccess(WithHeaders), the
+  // _app loader, and API routes — because they all resolve the user here.
+  const bypass = devAuthBypassUser();
+  if (bypass) return bypass;
+
   // Dynamic import: auth.ts pulls in @oh-writers/db → postgres which
   // references Node-only globals (Buffer, net). Keeping this dynamic
   // ensures the browser bundle never loads the postgres driver.

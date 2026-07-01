@@ -95,6 +95,26 @@ describe("extractSideChannelMarkers — honest success for write tools", () => {
     expect(markers).toEqual([]);
   });
 
+  it("emits a screenplay-proposal marker for rename / revision / merge (N3)", () => {
+    for (const tool of [
+      "propose_rename_entity",
+      "propose_screenplay_revision",
+      "merge_scenes",
+    ]) {
+      expect(markersFor(tool, JSON.stringify({ ok: true }))).toEqual([
+        "<!--ohw:screenplay-proposal-->",
+      ]);
+    }
+  });
+
+  it("does NOT emit a screenplay-proposal marker when the tool FAILS (N3)", () => {
+    const markers = markersFor(
+      "propose_rename_entity",
+      JSON.stringify({ error: "'from' not found in screenplay" }),
+    );
+    expect(markers).toEqual([]);
+  });
+
   it("emits a doc-applied marker for the screenplay generator (BUG-N67)", () => {
     // generate_screenplay_from_narrative applies the first draft LIVE as the
     // active screenplay version, so it MUST emit the doc-applied marker the

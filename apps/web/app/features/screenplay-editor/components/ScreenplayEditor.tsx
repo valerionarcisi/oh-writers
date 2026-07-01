@@ -52,19 +52,15 @@ import {
 } from "../lib/plugins/proposed-edit-decoration";
 import {
   buildCesarePendingEditPlugin,
-  cesarePendingEditKey,
   startPendingEdit,
-  appendStreamChunk,
-  finishStreaming,
   dispatchAcceptPendingEdit,
   dispatchRejectPendingEdit,
-  findSceneRange,
-  hasPendingEdit,
 } from "../lib/plugins/cesare-pending-edit";
 import { HoverToolbar } from "./HoverToolbar";
 import {
   useScreenplayProposals,
   useRemoveScreenplayProposal,
+  useClearEditProposalsOnMount,
   usePromoteDraftToActive,
   useDiscardDraftVersion,
 } from "../hooks/useProposals";
@@ -293,11 +289,21 @@ export const ScreenplayEditor = forwardRef<
   const realtimeActive = latchedRealtime !== null;
 
   // ─── Cesare propose/accept wiring ──────────────────────────────────────
-  // Proposals live in a server-side in-memory store; the chat hook
-  // invalidates the query whenever Cesare finishes a turn so the plugin
-  // sees fresh edits as soon as they're emitted.
+  // Proposals live in a server-side in-memory store. The query does NOT
+  // refetch on its own — when Cesare emits a screenplay proposal it fires an
+  // `ohw:cesare:screenplay-proposal` window event (see CesareSheet) that the
+  // effect below refetches on, so the plugin sees fresh edits (bug N3).
   const proposalsQuery = useScreenplayProposals(screenplay.id);
   const removeProposal = useRemoveScreenplayProposal(screenplay.id);
+  const clearEditProposals = useClearEditProposalsOnMount(screenplay.id);
+
+  // Drop stale inline proposals on first mount so a page refresh starts clean
+  // (#85). Runs once per editor mount; the in-session post-turn refetch is a
+  // separate path and is not affected.
+  const clearEditProposalsMutate = clearEditProposals.mutate;
+  useEffect(() => {
+    clearEditProposalsMutate();
+  }, [screenplay.id, clearEditProposalsMutate]);
   const promoteDraft = usePromoteDraftToActive(screenplay.id);
   const discardDraft = useDiscardDraftVersion(screenplay.id);
 
@@ -314,9 +320,7 @@ export const ScreenplayEditor = forwardRef<
   };
 
   // ─── Cesare inline pending-edit state ────────────────────────────────
-  const [pendingStatus, setPendingStatus] = useState<
-    false | "streaming" | "done"
-  >(false);
+  const [pendingStatus, setPendingStatus] = useState<false | "done">(false);
   const pendingEditCallbacksRef = useRef<{
     onAccept: () => void;
     onReject: () => void;
@@ -328,10 +332,6 @@ export const ScreenplayEditor = forwardRef<
     onAccept: () => setPendingStatus(false),
     onReject: () => setPendingStatus(false),
   };
-
-  const typewriterIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
-    null,
-  );
 
   const pluginsExtraRef = useRef<Plugin[] | null>(null);
   if (pluginsExtraRef.current === null) {
@@ -347,6 +347,16 @@ export const ScreenplayEditor = forwardRef<
     ];
   }
 
+  // Refetch the proposals bucket when Cesare signals a fresh screenplay
+  // proposal. Without this the ✓/✗ card / draft banner never appears (bug N3).
+  const refetchProposals = proposalsQuery.refetch;
+  useEffect(() => {
+    const onProposal = () => void refetchProposals();
+    window.addEventListener("ohw:cesare:screenplay-proposal", onProposal);
+    return () =>
+      window.removeEventListener("ohw:cesare:screenplay-proposal", onProposal);
+  }, [refetchProposals]);
+
   // Sync proposal state into the PM plugin whenever the query data changes.
   useEffect(() => {
     const view = viewRef.current;
@@ -358,6 +368,7 @@ export const ScreenplayEditor = forwardRef<
       find: e.find,
       replace: e.replace,
       reason: e.reason,
+      sceneNumber: e.sceneNumber,
     }));
     view.dispatch(
       view.state.tr.setMeta(
@@ -845,11 +856,10 @@ export const ScreenplayEditor = forwardRef<
   }, []);
 
   // Listen for Cesare's rewrite_scene event. When the event fires, the sheet
-  // is already closed. We find the target scene in the PM doc, start the
-  // pending-edit plugin, and run a typewriter animation over the new content.
+  // is already closed. We apply the new scene text LIVE and in-place (green
+  // highlight = "this is new, not yet confirmed") and show a single accept/
+  // reject bar. No overlay box, no dimmed original — WYSIWYG.
   useEffect(() => {
-    const TYPEWRITER_CHAR_DELAY_MS = 8;
-
     const handleRewriteScene = (e: Event) => {
       const detail = (
         e as CustomEvent<{ scene_number: number; new_content: string }>
@@ -861,75 +871,22 @@ export const ScreenplayEditor = forwardRef<
       )
         return;
 
-      // Guard against concurrent events: stop any in-flight typewriter before
-      // starting a new one to prevent two intervals pumping characters at once.
-      if (typewriterIntervalRef.current !== null) {
-        clearInterval(typewriterIntervalRef.current);
-        typewriterIntervalRef.current = null;
-      }
-
       const view = viewRef.current;
       if (!view) return;
 
-      // Find the scene range in the current doc.
-      const range = findSceneRange(view.state.doc, detail.scene_number);
-      if (!range) return;
-
-      // Start the pending edit.
-      view.dispatch(
-        view.state.tr.setMeta(
-          cesarePendingEditKey,
-          startPendingEdit(detail.scene_number, range.from, range.to),
-        ),
+      const applied = startPendingEdit(
+        view,
+        detail.scene_number,
+        detail.new_content,
       );
-      setPendingStatus("streaming");
+      if (!applied) return;
+      setPendingStatus("done");
 
-      // Scroll the scene into view.
+      // Scroll the rewritten scene into view.
       const sceneEl = document.querySelector<HTMLElement>(
         `[data-scene-number="${detail.scene_number}"]`,
       );
       sceneEl?.scrollIntoView({ behavior: "smooth", block: "start" });
-
-      // Typewriter animation: feed one character at a time.
-      const text = detail.new_content;
-      let charIndex = 0;
-      let stopped = false;
-
-      typewriterIntervalRef.current = setInterval(() => {
-        if (stopped) return;
-        const currentView = viewRef.current;
-        if (!currentView || !hasPendingEdit(currentView)) {
-          clearInterval(typewriterIntervalRef.current!);
-          typewriterIntervalRef.current = null;
-          setPendingStatus(false);
-          return;
-        }
-        if (charIndex < text.length) {
-          currentView.dispatch(
-            currentView.state.tr.setMeta(
-              cesarePendingEditKey,
-              appendStreamChunk(text[charIndex]!),
-            ),
-          );
-          charIndex += 1;
-        } else {
-          clearInterval(typewriterIntervalRef.current!);
-          typewriterIntervalRef.current = null;
-          currentView.dispatch(
-            currentView.state.tr.setMeta(
-              cesarePendingEditKey,
-              finishStreaming(),
-            ),
-          );
-          setPendingStatus("done");
-        }
-      }, TYPEWRITER_CHAR_DELAY_MS);
-
-      return () => {
-        stopped = true;
-        clearInterval(typewriterIntervalRef.current!);
-        typewriterIntervalRef.current = null;
-      };
     };
 
     window.addEventListener("ohw:cesare:rewrite-scene", handleRewriteScene);
@@ -1303,6 +1260,7 @@ export const ScreenplayEditor = forwardRef<
                   find: e.find,
                   replace: e.replace,
                   reason: e.reason,
+                  sceneNumber: e.sceneNumber,
                 }));
                 view.dispatch(
                   view.state.tr.setMeta(

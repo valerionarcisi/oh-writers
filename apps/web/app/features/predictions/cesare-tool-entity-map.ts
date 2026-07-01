@@ -75,7 +75,6 @@ const TOOL_ENTITY_MAP: Readonly<Record<string, ToolEntityMapping>> = {
 
   // ── screenplay writes ─────────────────────────────────────────────────────
   rewrite_scene: { access: "write", domain: "screenplay" },
-  propose_screenplay_edit: { access: "write", domain: "screenplay" },
   propose_screenplay_revision: { access: "write", domain: "screenplay" },
   propose_blocking_for_scene: { access: "write", domain: "shooting-plan" },
   propose_move_actor_position: { access: "write", domain: "shooting-plan" },

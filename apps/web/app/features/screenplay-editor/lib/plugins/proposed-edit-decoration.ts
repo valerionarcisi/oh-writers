@@ -22,6 +22,11 @@ export interface ProposedEdit {
   readonly find: string;
   readonly replace: string;
   readonly reason: string;
+  /** 1-based ordinal of the scene the edit targets. When set, an `edit`
+   *  proposal is decorated ONLY inside that scene, so a `find` collision in
+   *  another scene can't hijack the highlight (#86). Null for rename proposals,
+   *  which are global by design. */
+  readonly sceneNumber: number | null;
 }
 
 export interface ProposalCallbacks {
@@ -80,11 +85,19 @@ interface TextSegment {
   readonly from: number;
 }
 
-const collectTextSegments = (doc: PMNode): TextSegment[] => {
+// Collect text leaves with their PM positions. When `range` is given, only
+// leaves fully inside it are kept — used to confine an `edit` proposal to its
+// target scene so a `find` collision elsewhere can't steal the highlight (#86).
+const collectTextSegments = (
+  doc: PMNode,
+  range?: { from: number; to: number },
+): TextSegment[] => {
   const segments: TextSegment[] = [];
   doc.descendants((node, pos) => {
     if (node.isText && node.text) {
-      segments.push({ text: node.text, from: pos });
+      if (!range || (pos >= range.from && pos + node.text.length <= range.to)) {
+        segments.push({ text: node.text, from: pos });
+      }
     }
     return true;
   });
@@ -144,16 +157,17 @@ const mapFlatRangeToPm = (
 const escapeRegex = (s: string): string =>
   s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-const findAllMatches = (doc: PMNode, proposal: ProposedEdit): MatchRange[] => {
+// Exported for unit tests: pure (doc, proposal) → match ranges. Screenplay
+// proposals are now only renames (a global whole-word entity swap); the
+// per-scene find/replace edit path was retired with propose_screenplay_edit
+// (spec 80 — single-scene edits go through rewrite_scene instead).
+export const findAllMatches = (
+  doc: PMNode,
+  proposal: ProposedEdit,
+): MatchRange[] => {
+  // rename — whole-word, case-insensitive, all occurrences (global by design)
   const segments = collectTextSegments(doc);
   const fullText = segments.map((s) => s.text).join("");
-  if (proposal.kind === "edit") {
-    const idx = fullText.indexOf(proposal.find);
-    if (idx < 0) return [];
-    const mapped = mapFlatRangeToPm(segments, idx, idx + proposal.find.length);
-    return mapped ? [{ ...mapped, text: proposal.find }] : [];
-  }
-  // rename — whole-word, case-insensitive, all occurrences
   const re = new RegExp(`\\b${escapeRegex(proposal.find)}\\b`, "gi");
   const results: MatchRange[] = [];
   let m: RegExpExecArray | null;
@@ -235,22 +249,18 @@ const buildWidget = (
   return wrap;
 };
 
-// Apply a proposal's replacements to the doc as a single transaction.
-// For `edit` proposals: one replacement at the first match.
-// For `rename_*` proposals: replace every whole-word occurrence in one
-// transaction so undo restores the screenplay in a single step.
+// Apply a rename proposal to the doc as a single transaction: replace every
+// whole-word occurrence at once so undo restores the screenplay in one step.
 const applyProposalToView = (
   view: EditorView,
   proposal: ProposedEdit,
 ): void => {
   const matches = findAllMatches(view.state.doc, proposal);
   if (matches.length === 0) return;
-  // A rename mirrors each occurrence's case (cues/headings stay uppercase); an
-  // `edit` replaces verbatim with the model's exact text.
+
+  // A rename mirrors each occurrence's case (cues/headings stay uppercase).
   const replacementFor = (m: MatchRange): string =>
-    proposal.kind === "edit"
-      ? proposal.replace
-      : matchCase(m.text, proposal.replace);
+    matchCase(m.text, proposal.replace);
   // Sort descending so earlier replacements don't shift later positions.
   const sorted = [...matches].sort((a, b) => b.from - a.from);
   let tr = view.state.tr;

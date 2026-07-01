@@ -25,6 +25,7 @@ const makeSummary = (n: number, notes: string[] = []): SceneSummaryRow => ({
   presentCharacters: ["Marco"],
   keyActions: ["Azione 1"],
   productionNotes: notes,
+  narrativePurpose: `Funzione scena ${n}`,
 });
 
 describe("formatLocalContext", () => {
@@ -96,10 +97,11 @@ describe("formatLocalContext", () => {
       };
       const output = formatLocalContext(ctx);
       expect(output).toContain("### Scene summaries");
+      // Spec 81 — the table exposes what happens + narrative function so the
+      // model understands the scene before editing it.
       expect(output).toContain(
-        "| SC | Heading | Personaggi | Note produzione |",
+        "| SC | Heading | Personaggi | Cosa succede | Funzione narrativa |",
       );
-      expect(output).toContain("Stunt: caduta");
     });
 
     it("omits scene summaries section when sceneSummaries is empty", () => {
@@ -112,20 +114,20 @@ describe("formatLocalContext", () => {
       expect(output).not.toContain("### Scene summaries");
     });
 
-    it("formats production notes from summaries", () => {
+    it("renders keyActions and narrativePurpose (spec 81)", () => {
       const ctx: LocalContext = {
         ...baseCtx(),
         scenes: [{ id: "s1", number: 1, heading: "INT. UFFICIO - GIORNO" }],
-        sceneSummaries: [
-          makeSummary(1, ["Generatore esterno", "10+ comparse"]),
-        ],
+        sceneSummaries: [makeSummary(1, [])],
       };
       const output = formatLocalContext(ctx);
-      expect(output).toContain("Generatore esterno");
-      expect(output).toContain("10+ comparse");
+      // keyActions ("Azione 1") + narrativePurpose ("Funzione scena 1") reach
+      // the model — the beat-level content that prevents truncation.
+      expect(output).toContain("Azione 1");
+      expect(output).toContain("Funzione scena 1");
     });
 
-    it("shows — for empty production notes", () => {
+    it("shows the row for a summary with empty production notes", () => {
       const ctx: LocalContext = {
         ...baseCtx(),
         scenes: [{ id: "s1", number: 1, heading: "INT. UFFICIO - GIORNO" }],
@@ -133,8 +135,6 @@ describe("formatLocalContext", () => {
       };
       const output = formatLocalContext(ctx);
       expect(output).toContain("| 1 |");
-      // The — placeholder for empty notes
-      expect(output).toContain("| — |");
     });
   });
 

@@ -666,11 +666,10 @@ export const MOCK_SCENARIOS: ReadonlyArray<MockScenario> = [
     ],
   },
 
-  // Screenplay — propose_screenplay_edit (OHW-570).
-  // "Rendi questa scena più tesa." → micro-edit on scene 1 of the team
-  // screenplay (fountain seed: "Si accende una sigaretta."). The replace
-  // string contains "le mani che tremano" so the spec assertion on the
-  // post-accept fountain hits.
+  // Screenplay — rewrite_scene (spec 80). "Rendi questa scena più tesa." →
+  // the universal single-scene edit returns the whole scene; rewrite_scene
+  // applies it inline as a green overlay. The new_content contains "le mani che
+  // tremano" so any post-accept fountain assertion still hits.
   {
     match:
       /rendi questa scena|rendi la scena|più tesa|piu tesa|più tensione|piu tensione/i,
@@ -678,19 +677,18 @@ export const MOCK_SCENARIOS: ReadonlyArray<MockScenario> = [
       {
         tool_uses: [
           {
-            name: "propose_screenplay_edit",
+            name: "rewrite_scene",
             input: {
               scene_number: 1,
-              find: "Si accende una sigaretta.",
-              replace: "Si accende una sigaretta con le mani che tremano.",
-              reason: "Aggiunge tensione fisica al gesto.",
+              new_content:
+                "INT. STANZA - NOTTE\n\nSi accende una sigaretta con le mani che tremano.",
             },
           },
         ],
         stop_reason: "tool_use",
       },
       {
-        text: "Ho preparato una proposta di modifica sulla scena 1. Vai sull'editor: l'overlay ✓/✕ ti permette di accettarla o scartarla.",
+        text: "Ho riscritto la scena 1. Vedi l'overlay verde nell'editor: accetta con ✓ o rifiuta con ✕.",
         stop_reason: "end_turn",
       },
     ],
@@ -719,6 +717,49 @@ export const MOCK_SCENARIOS: ReadonlyArray<MockScenario> = [
       },
       {
         text: "Ho preparato una v2 draft della sceneggiatura. Apri il diff dal banner sopra l'editor per confrontarla con la versione corrente.",
+        stop_reason: "end_turn",
+      },
+    ],
+  },
+
+  // #50 — the model re-proposes a revision several times in ONE turn (re-runs,
+  // per-scene-range calls). Each used to push a separate draft banner + leave an
+  // orphan draft version row. The supersede logic must collapse them to ONE live
+  // banner. This mock fires propose_screenplay_revision THREE times in a turn.
+  {
+    match: /rigenera tre volte|regen tre volte|tripla revisione/i,
+    turns: [
+      {
+        tool_uses: [
+          {
+            name: "propose_screenplay_revision",
+            input: {
+              scope: { kind: "whole_screenplay" },
+              instruction: "pass 1",
+              label: "Rigenerazione 1",
+            },
+          },
+          {
+            name: "propose_screenplay_revision",
+            input: {
+              scope: { kind: "whole_screenplay" },
+              instruction: "pass 2",
+              label: "Rigenerazione 2",
+            },
+          },
+          {
+            name: "propose_screenplay_revision",
+            input: {
+              scope: { kind: "whole_screenplay" },
+              instruction: "pass 3",
+              label: "Rigenerazione 3",
+            },
+          },
+        ],
+        stop_reason: "tool_use",
+      },
+      {
+        text: "Ho rigenerato la sceneggiatura. C'è un solo banner Promuovi/Scarta.",
         stop_reason: "end_turn",
       },
     ],
@@ -776,6 +817,33 @@ export const MOCK_SCENARIOS: ReadonlyArray<MockScenario> = [
   },
 
   // Screenplay — rewrite_scene (OHW-041).
+  // #51 — rewrite_scene returns DELIBERATELY broken Fountain (cue + speech on
+  // one line, plus a two-cue collision). The server-side splitInlineCues gate
+  // must normalise it at the marker source, so the accepted scene parses to real
+  // DIALOGUE. Must precede the broad /riscrivi la scena/ matcher below.
+  {
+    match: /riscrivi la scena con dialoghi rotti/i,
+    turns: [
+      {
+        tool_uses: [
+          {
+            name: "rewrite_scene",
+            input: {
+              scene_number: 1,
+              new_content:
+                "INT. OPEN GREZZO - NOTTE\n\nUn club di cabaret affollato.\n\nFILIPPO Comici. Open mic.\nGIULIO Dodici.\nFILIPPO Giulio — GIULIO Vai.",
+            },
+          },
+        ],
+        stop_reason: "tool_use",
+      },
+      {
+        text: "Ho riscritto la scena 1. Accetta o rifiuta con ✓/✗.",
+        stop_reason: "end_turn",
+      },
+    ],
+  },
+
   // "Riscrivi la scena 1." → inline typewriter rewrite of scene 1.
   // The new_content is a self-contained Fountain scene starting with INT.
   // The executor embeds the content in a <!--ohw:rewrite-scene-b64:...--> marker
@@ -908,7 +976,7 @@ export const MOCK_SCENARIOS: ReadonlyArray<MockScenario> = [
     match: /che tool hai|quali tool hai|quali strumenti hai|cosa puoi fare/i,
     turns: [
       {
-        text: "Posso lavorare in tutte le aree del progetto:\n\n📜 SCENEGGIATURA — propose_screenplay_edit, rewrite_scene, merge_scenes, delete_scene\n💰 BUDGET — update_budget_line, add_budget_line, set_budget_cap\n📍 LOCATION — search_places, add_candidate, find_or_create_requirement_for_scene\n📅 SCHEDULE — move_scene_to_day, swap_scenes\n🎬 PIANO INQUADRATURE — add_parallel_plan, add_shot_to_plan\n📄 DOCUMENTI — apply_text_edit, expand_section\n\nSono un layer sopra il prodotto: dimmi cosa serve e lo faccio.",
+        text: "Posso lavorare in tutte le aree del progetto:\n\n📜 SCENEGGIATURA — rewrite_scene, propose_rename_entity, merge_scenes, delete_scene\n💰 BUDGET — update_budget_line, add_budget_line, set_budget_cap\n📍 LOCATION — search_places, add_candidate, find_or_create_requirement_for_scene\n📅 SCHEDULE — move_scene_to_day, swap_scenes\n🎬 PIANO INQUADRATURE — add_parallel_plan, add_shot_to_plan\n📄 DOCUMENTI — apply_text_edit, expand_section\n\nSono un layer sopra il prodotto: dimmi cosa serve e lo faccio.",
         stop_reason: "end_turn",
       },
     ],

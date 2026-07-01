@@ -32,7 +32,6 @@ const DOC_TOOLS = new Set([
 ]);
 
 const SCREENPLAY_TOOLS = new Set([
-  "propose_screenplay_edit",
   "propose_screenplay_revision",
   "rewrite_scene",
 ]);
@@ -216,7 +215,6 @@ describe("classifyIntent — screenplay intents still work", () => {
 const SESSION_PAGE_TOOLS = new Set([
   ...SCREENPLAY_TOOLS,
   "propose_screenplay_revision",
-  "propose_screenplay_edit",
   "propose_rename_entity",
   "merge_scenes",
   "delete_scene",
@@ -469,10 +467,12 @@ const SCREENPLAY_INTENT_ROWS: ReadonlyArray<IntentRow> = [
     expectedTool: "propose_rename_entity",
   },
   {
+    // Spec 80 — a single-scene micro-edit now routes to the universal
+    // rewrite_scene (whole-scene return, no fragile find/replace).
     phrasing: "cambia 'ciao' con 'salve' nella scena 3",
     type: "micro_edit",
     confidence: 0.9,
-    expectedTool: "propose_screenplay_edit",
+    expectedTool: "rewrite_scene",
   },
 ];
 

@@ -4,6 +4,8 @@ import {
   clampSceneRange,
   sliceFountainSceneRange,
   executeScreenplayTool,
+  listScreenplayProposals,
+  clearScreenplayProposals,
 } from "./cesare-screenplay-tools";
 
 describe("countWholeWordOccurrences", () => {
@@ -270,5 +272,125 @@ describe("sliceFountainSceneRange", () => {
     const { slice } = sliceFountainSceneRange(fountain, 1, 99);
     expect(slice).toContain("INT. CUCINA");
     expect(slice).toContain("INT. UFFICIO");
+  });
+});
+
+// #51 / #53 — every model→screenplay seam must normalise inline cues. rewrite_scene
+// is pure (no db), so we decode its marker and assert no "CUE speech" one-liner
+// survives — the cue and its speech land on separate lines.
+describe("[#51] executeScreenplayTool — rewrite_scene normalises inline cues", () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = null as any;
+
+  const decode = (marker: string): string => {
+    const m = marker.match(/<!--ohw:rewrite-scene-b64:([A-Za-z0-9+/=]+)-->/);
+    const decoded = JSON.parse(
+      Buffer.from(m![1]!, "base64").toString("utf8"),
+    ) as { new_content: string };
+    return decoded.new_content;
+  };
+
+  const runRewrite = async (newContent: string): Promise<string> => {
+    const result = await executeScreenplayTool(
+      {
+        type: "tool_use",
+        id: "id",
+        name: "rewrite_scene",
+        input: { scene_number: 1, new_content: newContent },
+      },
+      db,
+      "proj-1",
+    );
+    expect(result.isOk()).toBe(true);
+    const payload = JSON.parse(
+      (result as { value: { content: string } }).value.content,
+    ) as { marker: string };
+    return decode(payload.marker);
+  };
+
+  // The canonicaliser indents cues (6sp) and dialogue (10sp); assert the
+  // structural property — cue and speech on separate lines, no "CUE speech"
+  // one-liner survives — rather than an exact indent string.
+  const noInlineCueSurvives = (out: string): void => {
+    for (const line of out.split("\n")) {
+      const t = line.trim();
+      if (t.startsWith("INT.") || t.startsWith("EXT.")) continue;
+      expect(t).not.toMatch(/^[A-ZÀ-Ý][A-ZÀ-Ý ]+\s+\p{Ll}/u);
+    }
+  };
+
+  it("splits a single inline cue in the rewritten scene", async () => {
+    const out = await runRewrite(
+      "INT. CUCINA - NOTTE\n\nGIULIO Dammi la marinara.",
+    );
+    expect(out).toMatch(/GIULIO\s*\n\s*Dammi la marinara\./);
+    noInlineCueSurvives(out);
+  });
+
+  it("splits TWO cues colliding on one line", async () => {
+    const out = await runRewrite(
+      "INT. CUCINA - NOTTE\n\nFILIPPO Giulio — GIULIO Vai.",
+    );
+    expect(out).toMatch(/FILIPPO\s*\n\s*Giulio\s*\n\s*GIULIO\s*\n\s*Vai\./);
+    noInlineCueSurvives(out);
+  });
+});
+
+// Spec 81 — the model sometimes truncates a scene to a fragment (worst case just
+// the slugline). The server rejects a rewrite far shorter than the original so
+// the tool loop makes it regenerate the full scene. Verified live on 010.
+describe("[spec 81] rewrite_scene anti-truncation guard", () => {
+  // A scene body of ~1000 chars in the DB.
+  const longBody = "Azione lunga. ".repeat(80); // ~1120 chars
+  const dbWithScene = (bodyLen: number) =>
+    ({
+      select: () => ({
+        from: (t: unknown) => ({
+          where: () => ({
+            limit: () =>
+              // First call resolves the screenplay row, second the scene row.
+              // Both go through this chain; distinguish by returning a row that
+              // satisfies whichever select() asked (id for screenplay, notes for
+              // scene). Returning both keys is harmless.
+              Promise.resolve([
+                {
+                  id: "sp-1",
+                  heading: "INT. STANZA - NOTTE",
+                  notes: "x".repeat(bodyLen),
+                },
+              ]),
+          }),
+        }),
+      }),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    }) as any;
+
+  const runRewriteWithDb = async (newContent: string, origLen: number) => {
+    void longBody;
+    return executeScreenplayTool(
+      {
+        type: "tool_use",
+        id: "id",
+        name: "rewrite_scene",
+        input: { scene_number: 1, new_content: newContent },
+      },
+      dbWithScene(origLen),
+      "proj-1",
+    );
+  };
+
+  it("REJECTS a rewrite that collapsed to a fragment of the original", async () => {
+    // Original ~1000 chars, rewrite is just the slugline → reject.
+    const result = await runRewriteWithDb("INT. STANZA - NOTTE", 1000);
+    expect(result.isErr()).toBe(true);
+    if (result.isErr()) {
+      expect(result.error.message).toMatch(/troppo più corto|perso contenuto/i);
+    }
+  });
+
+  it("ALLOWS a rewrite that preserves most of the scene", async () => {
+    const full = `INT. STANZA - NOTTE\n\n${"Battuta piena. ".repeat(70)}`;
+    const result = await runRewriteWithDb(full, 1000);
+    expect(result.isOk()).toBe(true);
   });
 });

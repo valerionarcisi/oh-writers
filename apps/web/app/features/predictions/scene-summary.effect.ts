@@ -67,6 +67,11 @@ const EMIT_TOOL = {
         items: { type: "string" },
         maxItems: 10,
       },
+      narrativePurpose: {
+        type: "string",
+        description:
+          "One sentence: what this scene does for the STORY — its dramatic function (e.g. 'establishes Giulio's desperation about the failing restaurant', 'the turning point where Filippo commits to the comedy night').",
+      },
     },
     required: [
       "sceneNumber",
@@ -76,15 +81,19 @@ const EMIT_TOOL = {
       "presentCharacters",
       "keyActions",
       "productionNotes",
+      "narrativePurpose",
     ],
   },
 } as const;
 
-const SYSTEM_PROMPT = `You are a film production analyst.
-Given the Fountain-formatted body of a screenplay scene, emit a structured JSON summary
-that captures the physical setting, characters present, the key dramatic actions (≤5 bullets),
-and any production notes that affect logistics (stunts, SFX, vehicles, night exterior, etc.).
-Be concise. The settingDescription should be a 1-sentence description of the physical place.`;
+const SYSTEM_PROMPT = `You are a film analyst.
+Given the Fountain-formatted body of a screenplay scene, emit a structured JSON summary that captures:
+- the physical setting (settingDescription: 1 sentence),
+- the characters present,
+- the key dramatic actions (keyActions, ≤5 bullets — WHAT happens),
+- production notes affecting logistics (stunts, SFX, vehicles, night exterior, etc.),
+- narrativePurpose: ONE sentence on the scene's ROLE in the story (its dramatic function — what it sets up, pays off, reveals, or escalates).
+Be concise.`;
 
 // ─── Core generation ──────────────────────────────────────────────────────────
 

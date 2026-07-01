@@ -60,9 +60,7 @@ const commitOptions = (
 });
 import {
   importAsActiveVersionTx,
-  fountainToDoc,
-  docToFountain,
-  splitInlineCues,
+  normaliseScreenplayFountain,
 } from "~/features/screenplay-editor";
 
 // ─── Tool definitions ─────────────────────────────────────────────────────────
@@ -1336,61 +1334,54 @@ const handleGenerateScreenplay = (
       ? `Istruzione: ${input.instruction}\n\n`
       : "";
     const user = `${instructionLine}Materiale a monte:\n${upstream.text}\n\nScrivi la prima stesura completa della sceneggiatura in formato Fountain.`;
-    return runGeneration(
-      SCREENPLAY_FROM_NARRATIVE_SYSTEM,
-      user,
-      6000,
-      "cesare.generateScreenplay",
-    )
-      .map((s) => sanitizeAiText(s.trim()))
-      .andThen((raw) => {
-        if (raw.length === 0) {
-          return errAsync(
-            new CesareError(
-              "Il modello ha restituito una sceneggiatura vuota. Riformula l'istruzione.",
+    return (
+      runGeneration(
+        SCREENPLAY_FROM_NARRATIVE_SYSTEM,
+        user,
+        6000,
+        "cesare.generateScreenplay",
+      )
+        // NORMALISE to the editor's canonical Fountain dialect (BUG-N63 + #46/#53
+        // root cause). The model is unreliable about element FORMATTING — it
+        // collides a cue with its speech ("GIULIO And?"), stacks cues with no
+        // blank lines, wrote dialogue at the character indent, transitions as
+        // plain action. `normaliseScreenplayFountain` splits inline cues and
+        // round-trips through the editor's own parser+serializer, re-deriving
+        // every element from its shape and re-emitting the exact indents the
+        // editor expects. It must run on the model's ORIGINAL line breaks, so it
+        // precedes sanitize (whose reflow would otherwise merge flat cue lines).
+        // sanitize then repairs mojibake without touching the now-structural cues.
+        .map((s) => sanitizeAiText(normaliseScreenplayFountain(s.trim())))
+        .andThen((raw) => {
+          if (raw.length === 0) {
+            return errAsync(
+              new CesareError(
+                "Il modello ha restituito una sceneggiatura vuota. Riformula l'istruzione.",
+              ),
+            );
+          }
+          const fountain = raw;
+          return ResultAsync.fromPromise(
+            db.transaction((tx) =>
+              importAsActiveVersionTx(tx, {
+                screenplayId: sp.id,
+                label: SCREENPLAY_DRAFT_LABEL,
+                content: fountain,
+                prevActiveId: sp.currentVersionId,
+                userId: sp.createdBy,
+              }),
             ),
-          );
-        }
-        // NORMALISE to the editor's canonical Fountain dialect (BUG-N63 root
-        // cause): the model is unreliable about element FORMATTING — it wrote
-        // dialogue at the character indent (→ rendered UPPERCASE as a cue) and
-        // transitions as plain action. Round-tripping through the editor's own
-        // parser+serializer (`fountainToDoc` → `docToFountain`) re-derives every
-        // element from its shape and re-emits it with the exact indents the
-        // editor expects (scene/action/character=6sp/dialogue=10sp/parenthetical/
-        // transition right-aligned). So however the model spaced things, the
-        // saved screenplay is always correctly typed — Cesare effectively uses
-        // every screenplay element correctly. Falls back to the raw text if the
-        // round-trip somehow yields nothing.
-        //
-        // BUG #46: the round-trip alone can't recover a cue that shares a line
-        // with its dialogue ("GIULIO And?") — the parser already sees it as
-        // action. So we PRE-split inline cues onto their own line (with the
-        // dialogue below) BEFORE parsing, then canonicalise.
-        const normalised = docToFountain(
-          fountainToDoc(splitInlineCues(raw)),
-        ).trim();
-        const fountain = normalised.length > 0 ? normalised : raw;
-        return ResultAsync.fromPromise(
-          db.transaction((tx) =>
-            importAsActiveVersionTx(tx, {
-              screenplayId: sp.id,
-              label: SCREENPLAY_DRAFT_LABEL,
-              content: fountain,
-              prevActiveId: sp.currentVersionId,
-              userId: sp.createdBy,
-            }),
-          ),
-          (e) =>
-            new CesareError(
-              `generate_screenplay_from_narrative apply: ${e instanceof Error ? e.message : String(e)}`,
-            ),
-        ).map((updated) => ({
-          versionId: updated.currentVersionId ?? "",
-          previousVersionId: sp.currentVersionId,
-          label: SCREENPLAY_DRAFT_LABEL,
-        }));
-      });
+            (e) =>
+              new CesareError(
+                `generate_screenplay_from_narrative apply: ${e instanceof Error ? e.message : String(e)}`,
+              ),
+          ).map((updated) => ({
+            versionId: updated.currentVersionId ?? "",
+            previousVersionId: sp.currentVersionId,
+            label: SCREENPLAY_DRAFT_LABEL,
+          }));
+        })
+    );
   });
 
 // ─── Public executor ──────────────────────────────────────────────────────────

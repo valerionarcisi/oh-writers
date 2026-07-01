@@ -44,6 +44,28 @@ describe("[#46] splitInlineCues", () => {
     expect(splitInlineCues("FILIPPO MARCO")).toBe("FILIPPO MARCO");
   });
 
+  it("[#53-fix] does NOT split a character-intro age tag as a cue", () => {
+    // "JOHN (35) holds the microphone." is ACTION introducing a character, not a
+    // cue — the "(35)" is an age tag, not a "(V.O.)"/"(CONT'D)" cue extension.
+    // Splitting it stacked the intro action under a fake cue (real bug in #012).
+    for (const action of [
+      "JOHN (35) holds the microphone. He's standing in a corner.",
+      "FILIPPO (40) è fuori dal locale. Si accende una sigaretta.",
+      "TEA (35) poco distante da lui.",
+    ]) {
+      expect(splitInlineCues(action)).toBe(action);
+    }
+  });
+
+  it("[#53-fix] STILL splits a real cue extension (letters inside the parenthetical)", () => {
+    expect(splitInlineCues("MARCO (V.O.) Non sei più qui.")).toBe(
+      "MARCO (V.O.)\nNon sei più qui.",
+    );
+    expect(splitInlineCues("JOHN (CONT'D) Twelve comedians.")).toBe(
+      "JOHN (CONT'D)\nTwelve comedians.",
+    );
+  });
+
   it("leaves normal action prose untouched", () => {
     const action =
       "Filippo pushes through the swing door, order ticket in hand.";
@@ -61,10 +83,88 @@ describe("[#46] splitInlineCues", () => {
     expect(splitInlineCues(single)).toBe(single);
   });
 
+  it("[#51] splits TWO cues colliding on one line (blank line before the 2nd cue)", () => {
+    expect(splitInlineCues("FILIPPO Giulio — GIULIO Go.")).toBe(
+      "FILIPPO\nGiulio\n\nGIULIO\nGo.",
+    );
+  });
+
+  it("[#51] splits THREE cues recursively on one line (blank before each later cue)", () => {
+    expect(
+      splitInlineCues("FILIPPO I have to — THE NONNO Go. — GIULIO Work."),
+    ).toBe("FILIPPO\nI have to\n\nTHE NONNO\nGo.\n\nGIULIO\nWork.");
+  });
+
+  it("[#51] does NOT split a dash that is not a cue boundary (Title-case / no lowercase speech)", () => {
+    // "Giulio" is Title-case (not a cue) — em dash is just prose punctuation.
+    expect(splitInlineCues("GIULIO Vado a Roma — poi torno.")).toBe(
+      "GIULIO\nVado a Roma — poi torno.",
+    );
+    // ALL-CAPS after the dash but no lowercase speech follows → not a cue.
+    expect(splitInlineCues("GIULIO Da ROMA a NAPOLI.")).toBe(
+      "GIULIO\nDa ROMA a NAPOLI.",
+    );
+  });
+
+  it("[#53] inserts the blank line a cue needs when cues are stacked with no separators", () => {
+    // The real #53 symptom: consecutive "CUE speech" lines with NO blank lines.
+    // Each must end up as cue + dialogue WITH a blank line before every cue,
+    // else the parser folds the next cue into the previous dialogue block.
+    expect(splitInlineCues("FILIPPO Comici. Open mic.\nGIULIO Dodici.")).toBe(
+      "FILIPPO\nComici. Open mic.\n\nGIULIO\nDodici.",
+    );
+  });
+
+  it("[#51] multi-cue split is idempotent", () => {
+    const once = splitInlineCues("FILIPPO Giulio — GIULIO Go.");
+    expect(splitInlineCues(once)).toBe(once);
+  });
+
   it("is idempotent — running twice equals running once", () => {
     const raw = "GIULIO Give them the marinara.\nFILIPPO With or without?";
     const once = splitInlineCues(raw);
     expect(splitInlineCues(once)).toBe(once);
+  });
+
+  it("[#53] golden fixture: a fully broken Cesare scene parses to sane DIALOGUE distribution", () => {
+    // A realistic chunk of the way Cesare mis-formats a whole scene: every cue
+    // collides with its speech, some lines collide TWO cues. After the pass it
+    // must parse to real character + dialogue nodes, and NO "CUE speech"
+    // one-liner may survive in the canonical Fountain.
+    const broken = [
+      "INT. OPEN GREZZO - NIGHT",
+      "",
+      "A cramped comedy club. Mismatched chairs.",
+      "",
+      "FILIPPO Comici. Open mic. Si chiama l'Open Grezzo.",
+      "GIULIO Grezzo.",
+      "FILIPPO Dodici.",
+      "GIULIO Comici.",
+      "FILIPPO Giulio — GIULIO Vai.",
+      "TEA Vuoi dirmi qualcosa?",
+    ].join("\n");
+
+    const canonical = docToFountain(fountainToDoc(splitInlineCues(broken)));
+    const doc = fountainToDoc(canonical);
+
+    const counts: Record<string, number> = {};
+    doc.descendants((n) => {
+      counts[n.type.name] = (counts[n.type.name] ?? 0) + 1;
+      return true;
+    });
+
+    // Every cue (FILIPPO ×3, GIULIO ×2, TEA ×1) became a character node, each
+    // paired with a dialogue node — a sane distribution, not a wall of action.
+    expect(counts["character"] ?? 0).toBeGreaterThanOrEqual(6);
+    expect(counts["dialogue"] ?? 0).toBeGreaterThanOrEqual(6);
+
+    // No "CUE speech" one-liner survives: no action/paragraph line starts with
+    // an ALL-CAPS cue immediately followed by lowercase-bearing speech.
+    for (const line of canonical.split("\n")) {
+      const t = line.trim();
+      if (t.startsWith("INT.") || t.startsWith("EXT.")) continue;
+      expect(t).not.toMatch(/^[A-ZÀ-Ý][A-ZÀ-Ý ]+\s+\p{Ll}/u);
+    }
   });
 
   it("end-to-end: a one-line-dialogue scene round-trips to real DIALOGUE, not action", () => {
