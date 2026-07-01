@@ -158,6 +158,44 @@ const mapFlatRangeToPm = (
 const escapeRegex = (s: string): string =>
   s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
+// Find `needle` inside `haystack` tolerating any difference in whitespace runs.
+// The model's `find` anchor is validated against the raw Fountain (indented,
+// line-broken), but the client walks the PM doc's text leaves, which drop
+// indentation and reflow lines — so an exact indexOf often misses even though
+// the text is "the same" to a human. We build a regex from the needle where
+// every whitespace run matches `\s+`, then map the match back to flat indices.
+// Returns the [start, end) flat range of the FIRST match, or null.
+const findFlexibleWhitespace = (
+  haystack: string,
+  needle: string,
+): { start: number; end: number } | null => {
+  const trimmed = needle.trim();
+  if (trimmed.length === 0) return null;
+  const pattern = trimmed.split(/\s+/).map(escapeRegex).join("\\s+");
+  const m = new RegExp(pattern).exec(haystack);
+  return m ? { start: m.index, end: m.index + m[0].length } : null;
+};
+
+// Locate `find` in `segments` (exact first, then whitespace-tolerant) and map to
+// a single PM MatchRange. Null when neither strategy locates it.
+const locateEdit = (
+  segments: TextSegment[],
+  find: string,
+): MatchRange | null => {
+  const flatText = segments.map((s) => s.text).join("");
+  const exact = flatText.indexOf(find);
+  if (exact >= 0) {
+    const mapped = mapFlatRangeToPm(segments, exact, exact + find.length);
+    return mapped ? { ...mapped, text: find } : null;
+  }
+  const flex = findFlexibleWhitespace(flatText, find);
+  if (!flex) return null;
+  const mapped = mapFlatRangeToPm(segments, flex.start, flex.end);
+  return mapped
+    ? { ...mapped, text: flatText.slice(flex.start, flex.end) }
+    : null;
+};
+
 // Exported for unit tests: pure (doc, proposal) → match ranges. `edit`
 // proposals with a sceneNumber are scoped to that scene; renames are global.
 export const findAllMatches = (
@@ -166,24 +204,19 @@ export const findAllMatches = (
 ): MatchRange[] => {
   if (proposal.kind === "edit") {
     // Confine the search to the target scene (#86). If the model named a scene
-    // the edit does not actually touch — or the `find` isn't present there —
-    // decorate NOTHING rather than hijacking a look-alike line in another scene.
+    // the edit does not actually touch, decorate NOTHING rather than hijacking a
+    // look-alike line in another scene. Within the scene the match is
+    // whitespace-tolerant so a `find` the server accepted (validated against the
+    // indented Fountain) still lands on the reflowed PM text.
     if (proposal.sceneNumber !== null) {
       const range = findSceneRange(doc, proposal.sceneNumber);
       if (!range) return [];
       const scoped = collectTextSegments(doc, range);
-      const scopedText = scoped.map((s) => s.text).join("");
-      const idx = scopedText.indexOf(proposal.find);
-      if (idx < 0) return [];
-      const mapped = mapFlatRangeToPm(scoped, idx, idx + proposal.find.length);
-      return mapped ? [{ ...mapped, text: proposal.find }] : [];
+      const hit = locateEdit(scoped, proposal.find);
+      return hit ? [hit] : [];
     }
-    const segments = collectTextSegments(doc);
-    const fullText = segments.map((s) => s.text).join("");
-    const idx = fullText.indexOf(proposal.find);
-    if (idx < 0) return [];
-    const mapped = mapFlatRangeToPm(segments, idx, idx + proposal.find.length);
-    return mapped ? [{ ...mapped, text: proposal.find }] : [];
+    const hit = locateEdit(collectTextSegments(doc), proposal.find);
+    return hit ? [hit] : [];
   }
   // rename — whole-word, case-insensitive, all occurrences (global by design)
   const segments = collectTextSegments(doc);

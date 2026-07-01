@@ -65,4 +65,19 @@ describe("findAllMatches — #86 scene scoping for edit proposals", () => {
     expect(matches).toHaveLength(1);
     expect(sceneOf(doc, matches[0]!.from)).toBe(1);
   });
+
+  it("matches a find whose whitespace differs from the reflowed PM text", () => {
+    // The model's anchor line as it appears in the indented Fountain vs the
+    // reflowed PM doc: extra/collapsed spaces and a line break in the middle.
+    // Exact indexOf would miss; the whitespace-tolerant path must still land it.
+    const doc = fountainToDoc(
+      ["INT. CUCINA - GIORNO", "", "Tea taglia il pane lentamente."].join("\n"),
+    );
+    const matches = findAllMatches(
+      doc,
+      editProposal("Tea taglia\n   il  pane   lentamente.", 1),
+    );
+    expect(matches).toHaveLength(1);
+    expect(sceneOf(doc, matches[0]!.from)).toBe(1);
+  });
 });
