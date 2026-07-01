@@ -84,6 +84,9 @@ describe("[OHW-038a] SceneSummarySchema", () => {
       presentCharacters: ["FILIPPO"],
       keyActions: ["Filippo runs away"],
       productionNotes: ["Night exterior"],
+      // Spec 81 — narrativePurpose is part of the schema (defaults to "" for
+      // summaries distilled before the field existed).
+      narrativePurpose: "Filippo flees the failure of the comedy night",
     };
     const serialised = JSON.parse(JSON.stringify(original));
     const result = SceneSummarySchema.safeParse(serialised);

@@ -2,7 +2,6 @@ import { test, expect } from "./fixtures";
 import { BASE_URL } from "./fixtures";
 import { TEAM_PROJECT_ID } from "./breakdown/helpers";
 import {
-  closeCesareSheet,
   openCesareSheet,
   resetScreenplayState,
   sendCesareWithRetry,
@@ -11,12 +10,14 @@ import {
 /**
  * [Spec 34] Cesare agentic — Screenplay propose/accept
  *
- * - 570: propose_screenplay_edit — verbatim find/replace overlay with
- *   ✓/✕ buttons. After ✓ the doc is updated.
  * - 571: propose_screenplay_revision — macro rewrite creates a DRAFT
  *   version and renders a banner with "Apri il diff" + Promuovi / Scarta.
  * - 572: propose_rename_entity — whole-word rename across the doc,
  *   accept-all promotes every occurrence in one transaction.
+ *
+ * (Former 570 — propose_screenplay_edit find/replace overlay — was removed:
+ * that tool was retired in spec 80; single-scene edits now go through
+ * rewrite_scene, covered by cesare-inline-edits.spec.ts.)
  */
 test.describe("[Spec 34] Cesare Agentic — Screenplay", () => {
   test.beforeEach(async ({ authenticatedPage }) => {
@@ -26,60 +27,6 @@ test.describe("[Spec 34] Cesare Agentic — Screenplay", () => {
     // the Cesare textarea and intercept clicks. Wipe both stores before each
     // run so every test starts from a known empty state.
     await resetScreenplayState(authenticatedPage, TEAM_PROJECT_ID);
-  });
-
-  test("[570] propose_screenplay_edit shows ✓/✕ overlay and applies on accept", async ({
-    authenticatedPage,
-  }) => {
-    await authenticatedPage.goto(
-      `${BASE_URL}/projects/${TEAM_PROJECT_ID}/screenplay`,
-    );
-    await authenticatedPage.waitForLoadState("networkidle");
-
-    await expect(authenticatedPage.getByTestId("prosemirror-view")).toBeVisible(
-      { timeout: 20_000 },
-    );
-
-    await openCesareSheet(authenticatedPage);
-    const reply = await sendCesareWithRetry(
-      authenticatedPage,
-      "Rendi questa scena più tesa.",
-    );
-    expect(reply.toLowerCase()).toMatch(/propost|modifica|scena/);
-
-    // The edit applies live in the editor; the accept widget lives in-page.
-    // Dismiss the floating Cesare drawer (bottom-right) so it can't intercept
-    // the click on the inline accept widget — the real user flow.
-    await closeCesareSheet(authenticatedPage);
-
-    // The PM plugin renders a widget with accept/reject buttons next to the
-    // matched range. The widget carries data-testid="proposal-accept" /
-    // data-testid="proposal-reject" so tests can target them without
-    // dependence on visible label.
-    const acceptBtn = authenticatedPage
-      .locator('[data-testid="proposal-accept"]')
-      .first();
-    await expect(acceptBtn).toBeVisible({ timeout: 10_000 });
-
-    await acceptBtn.click();
-
-    // After accept, the doc replaces "Si accende una sigaretta." with the
-    // proposed string. We assert the new text appears in the editor; the
-    // PM mapping was performed client-side.
-    await expect
-      .poll(
-        async () => {
-          const fountain = await authenticatedPage.evaluate(
-            () =>
-              (
-                window as unknown as { __ohWritersFountain?: () => string }
-              ).__ohWritersFountain?.() ?? "",
-          );
-          return fountain.includes("le mani che tremano");
-        },
-        { timeout: 5_000 },
-      )
-      .toBe(true);
   });
 
   test("[571] propose_screenplay_revision creates a DRAFT and shows the banner", async ({
