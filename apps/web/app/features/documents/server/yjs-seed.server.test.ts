@@ -67,8 +67,27 @@ describe("yjsStateFromNarrativeContent", () => {
     expect(yjsStateFromNarrativeContent("  \n\n ")).toBeNull();
   });
 
-  it("returns null for HTML content (needs a DOM to parse)", () => {
-    expect(yjsStateFromNarrativeContent("<p>già html</p>")).toBeNull();
+  it("encodes canonical HTML content (#92 — HTML no longer skips the reseed)", () => {
+    const state = yjsStateFromNarrativeContent(
+      "<p>Primo <strong>forte</strong>.</p><p>Secondo.</p>",
+    );
+    expect(state).not.toBeNull();
+    const doc = decode(state!);
+    expect(doc.content).toHaveLength(2);
+    expect(doc.content[0]!.content!.map((n) => n.text)).toEqual([
+      "Primo ",
+      "forte",
+      ".",
+    ]);
+  });
+
+  it("returns null for NON-canonical HTML (unknown tags keep the client-seed path)", () => {
+    expect(
+      yjsStateFromNarrativeContent('<div class="x">foreign</div>'),
+    ).toBeNull();
+    expect(
+      yjsStateFromNarrativeContent("<p><script>x</script></p>"),
+    ).toBeNull();
   });
 });
 
