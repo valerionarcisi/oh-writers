@@ -7,14 +7,15 @@
 // fragment, seed empty, and the autosave then persists the empty state OVER
 // the seeded content (BUG-N53; observed live as a clobbered soggetto).
 //
-// Seeding the state server-side removes the race. The doc is built with the
-// plain-text branch of `htmlToDoc` mirrored programmatically (no DOM on the
-// server): `\n\n+` splits paragraphs, single `\n` becomes a hard_break, and
-// whitespace is collapsed the way ProseMirror's DOMParser would collapse it,
-// so the seeded doc serialises back to the same canonical HTML the editor
-// derives from `content` (the Spec 61 autosave dirty-check). HTML content
-// returns null — parsing it needs a DOM, so those docs keep the client-seed
-// path (status quo, and seed fixtures are all plain text).
+// Seeding the state server-side removes the race. Plain text is built with
+// the plain-text branch of `htmlToDoc` mirrored programmatically (no DOM on
+// the server): `\n\n+` splits paragraphs, single `\n` becomes a hard_break,
+// and whitespace is collapsed the way ProseMirror's DOMParser would collapse
+// it, so the seeded doc serialises back to the same canonical HTML the editor
+// derives from `content` (the Spec 61 autosave dirty-check). HTML content is
+// parsed by the strict canonical parser (#92) — it accepts exactly the
+// vocabulary `docToHtml` emits and returns null on anything else, in which
+// case those docs keep the client-seed path (the pre-#92 status quo).
 //
 // The schema is always the headings-enabled one: a plain-text build only ever
 // emits paragraph/hard_break/text nodes, which are identical in both narrative
@@ -27,6 +28,7 @@ import * as Y from "yjs";
 import type { DocumentType } from "@oh-writers/domain";
 import { XML_FRAGMENT } from "../../realtime/lib/yjs-plugins";
 import { getNarrativeSchema } from "../lib/narrative-schema";
+import { parseCanonicalNarrativeHtml } from "../lib/parse-canonical-narrative-html";
 
 // The narrative document types that mount a ProseMirror realtime room
 // (`document:{id}`) and therefore read their content from `documents.yjs_state`,
@@ -59,18 +61,23 @@ export const plainTextToNarrativeDoc = (text: string): PMNode => {
 
 /**
  * Build a Yjs CRDT state (as a Buffer ready for the `bytea` column) from a
- * narrative document's plain-text content, encoding the same ProseMirror doc
- * the editor would seed. Returns null for empty content (a blank doc keeps a
- * NULL state — the room seeds empty, which is correct) and for HTML content
- * (needs a DOM to parse; the client seed handles it).
+ * narrative document's content, encoding the same ProseMirror doc the editor
+ * would seed. Plain text goes through `plainTextToNarrativeDoc`; HTML goes
+ * through the strict canonical parser (#92 — before that, every HTML write
+ * skipped the reseed and the open editor silently kept the stale CRDT).
+ * Returns null for empty content (a blank doc keeps a NULL state — the room
+ * seeds empty, which is correct) and for NON-canonical HTML (anything our own
+ * serializer would not emit; the client seed handles it, the pre-#92 path).
  */
 export const yjsStateFromNarrativeContent = (
   content: string,
 ): Buffer | null => {
   const trimmed = content.trim();
   if (trimmed.length === 0) return null;
-  if (trimmed.startsWith("<")) return null;
-  const doc = plainTextToNarrativeDoc(trimmed);
+  const doc = trimmed.startsWith("<")
+    ? parseCanonicalNarrativeHtml(trimmed)
+    : plainTextToNarrativeDoc(trimmed);
+  if (doc === null) return null;
   const ydoc = prosemirrorToYDoc(doc, XML_FRAGMENT);
   const update = Y.encodeStateAsUpdate(ydoc);
   ydoc.destroy();
