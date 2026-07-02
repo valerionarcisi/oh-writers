@@ -70,10 +70,16 @@ export const useRealtimeEditorGate = (
 ): RealtimeEditorGate => {
   const realtime = useLatchedRealtime(room);
 
-  const keyRef = useRef(resetKey);
+  // The room epoch is part of the reset key: a reseed eviction (BUG-N72 /
+  // #35) bumps it and rebuilds the room with a fresh Y.Doc — the content
+  // changed wholesale server-side, so the skeleton re-arms and the stale text
+  // never flashes through the HTTP-fallback editor (which could even autosave
+  // it back) while the new room syncs.
+  const compositeKey = `${resetKey}#${room.epoch}`;
+  const keyRef = useRef(compositeKey);
   const mountedOnceRef = useRef(false);
-  if (keyRef.current !== resetKey) {
-    keyRef.current = resetKey;
+  if (keyRef.current !== compositeKey) {
+    keyRef.current = compositeKey;
     mountedOnceRef.current = false;
   }
 

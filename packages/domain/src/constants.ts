@@ -118,3 +118,12 @@ export const IntExtValues = {
 } as const;
 
 export type IntExt = (typeof IntExtValues)[keyof typeof IntExtValues];
+
+/**
+ * WebSocket close code the ws-server sends when it evicts a live Yjs room
+ * because the DB CRDT was just reseeded (Cesare apply / version activate,
+ * BUG-N72 / #35). The client must NOT re-sync its local doc on reconnect —
+ * it destroys the provider + Y.Doc and rebuilds from the fresh server state.
+ * App-specific range (4000-4999).
+ */
+export const REALTIME_RESEED_CLOSE_CODE = 4712;

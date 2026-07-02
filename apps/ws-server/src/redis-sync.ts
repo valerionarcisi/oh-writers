@@ -39,8 +39,10 @@ const AWARENESS_CHANNEL = "ohw:yjs:awareness";
 // A server-side actor (the web app's Cesare apply / version activate) reseeded a
 // room's CRDT in the DB and asks every ws-server to drop its in-memory copy so
 // connected clients reload the fresh state (BUG-N72). Unlike UPDATE_CHANNEL this
-// carries no payload — just the room to evict. Published by the WEB app, not by
-// a ws-server, so it is NOT filtered by INSTANCE_ID (every instance must act).
+// carries no payload — just the room to evict. The receiving endpoint evicts
+// locally FIRST and then publishes for its peers, so the self-echo IS filtered
+// by INSTANCE_ID — re-running the eviction after the Redis round-trip could
+// evict a FRESH room a fast client already re-created.
 const RESEED_CHANNEL = "ohw:yjs:reseed";
 
 interface FanoutMessage {
@@ -65,6 +67,7 @@ export const setReseedHandler = (handler: ReseedHandler): void => {
 };
 
 interface ReseedMessage {
+  instanceId: string;
   docName: string;
 }
 
@@ -98,6 +101,7 @@ const onAwarenessMessage = (raw: string): void => {
 
 const onReseedMessage = (raw: string): void => {
   const message = JSON.parse(raw) as ReseedMessage;
+  if (message.instanceId === INSTANCE_ID) return;
   onReseed(message.docName);
 };
 
@@ -172,15 +176,15 @@ export const publishAwareness = (
 };
 
 /**
- * Ask every ws-server to drop its in-memory copy of `docName` so connected
- * clients reload the fresh DB state (BUG-N72). Published by the WEB app after it
- * reseeds a room's CRDT in the DB (Cesare apply / version activate). No-op
- * without Redis — in single-instance dev the web and ws-server SHARE the Redis,
- * so the publish reaches the local ws-server.
+ * Ask every PEER ws-server to drop its in-memory copy of `docName` so
+ * connected clients reload the fresh DB state (BUG-N72). Called by the
+ * /internal/reseed-room endpoint AFTER it evicted the local room — the
+ * self-echo is filtered by INSTANCE_ID on receive. No-op without Redis
+ * (single-instance default: the local eviction alone is complete).
  */
 export const publishReseed = (docName: string): void => {
   if (!publisher) return;
-  const message: ReseedMessage = { docName };
+  const message: ReseedMessage = { instanceId: INSTANCE_ID, docName };
   void publisher.publish(RESEED_CHANNEL, JSON.stringify(message));
 };
 

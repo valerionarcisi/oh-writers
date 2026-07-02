@@ -1,3 +1,4 @@
+import { REALTIME_RESEED_CLOSE_CODE } from "@oh-writers/domain";
 import { applyUpdate } from "./yjs-shared.js";
 import type { Doc as YDoc } from "./yjs-shared.js";
 import { parseRoomId } from "./room-id.js";
@@ -139,7 +140,12 @@ const flushDirtyRooms = async (utils: YWebsocketUtils): Promise<void> => {
 export const reseedRoom = async (docName: string): Promise<number> => {
   const utils = await getYWebsocketUtils();
   const doc = utils.docs.get(docName) as
-    | (YDoc & { conns?: Map<{ close?: () => void }, unknown> })
+    | (YDoc & {
+        conns?: Map<
+          { close?: (code?: number, reason?: string) => void },
+          unknown
+        >;
+      })
     | undefined;
   if (!doc) return 0;
 
@@ -150,10 +156,21 @@ export const reseedRoom = async (docName: string): Promise<number> => {
   dirtyRooms.delete(docName);
   utils.docs.delete(docName);
   forgetRoomLoaded(docName);
+  // Detach the connections from the stale doc BEFORE closing them.
+  // y-websocket's closeConn (fired per socket 'close') is guarded by
+  // `doc.conns.has(conn)`; with the map cleared it neither fires the
+  // last-disconnect `writeState` — which would flush the STALE doc right back
+  // over the DB reseed, even ~30s later on a dead socket's close timeout —
+  // nor its unconditional `docs.delete(doc.name)`, which would race a fast
+  // reconnect and delete the FRESH re-created room out from under its clients.
+  doc.conns?.clear();
 
   for (const conn of conns) {
     try {
-      conn.close?.();
+      // The dedicated close code tells the client this is a reseed eviction:
+      // it must rebuild its provider + local Y.Doc instead of re-syncing the
+      // stale one back over the fresh DB state.
+      conn.close?.(REALTIME_RESEED_CLOSE_CODE, "room-reseeded");
     } catch {
       // A socket already closing is fine — the goal is just to make every
       // client reconnect and reload.

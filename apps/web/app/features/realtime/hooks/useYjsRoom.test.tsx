@@ -17,6 +17,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, renderHook } from "@testing-library/react";
 import * as Y from "yjs";
+import { REALTIME_RESEED_CLOSE_CODE } from "@oh-writers/domain";
 import { useYjsRoom } from "./useYjsRoom";
 import { SYNC_DEADLINE_MS } from "../lib/sync-latch";
 import { createYjsRoom } from "../lib/provider";
@@ -167,6 +168,72 @@ describe("useYjsRoom happy path and post-sync behaviour", () => {
     act(() => status(provider, "connected"));
     act(() => provider.emit("sync", [false]));
     expect(result.current.synced).toBe(false);
+
+    unmount();
+  });
+
+  it("a reseed close-code rebuilds the room with a FRESH Y.Doc and bumps epoch (BUG-N72 / #35)", async () => {
+    const { result, provider, ydoc } = await openRoom();
+
+    act(() => status(provider, "connected"));
+    act(() => provider.emit("sync", [true]));
+    expect(result.current.epoch).toBe(0);
+
+    // Second room the rebuild will open.
+    const provider2 = new FakeProvider();
+    const ydoc2 = new Y.Doc();
+    vi.mocked(createYjsRoom).mockReturnValue({
+      ydoc: ydoc2,
+      provider: provider2 as never,
+    });
+
+    // The close handler resets the room and bumps the epoch in ONE batch: the
+    // epoch-bump render must not still expose the destroyed ydoc, or the
+    // editor gate's latch would survive it and skip the skeleton re-arm.
+    act(() => {
+      provider.emit("connection-close", [
+        { code: REALTIME_RESEED_CLOSE_CODE },
+        provider,
+      ]);
+    });
+    // Old pair destroyed — the stale local doc must never re-sync back.
+    expect(provider.destroy).toHaveBeenCalledTimes(1);
+    expect(result.current.epoch).toBe(1);
+    expect(result.current.ydoc).toBeNull();
+    // Anything but the terminal `offline` — that would flip the editors onto
+    // the HTTP fallback instead of holding the re-armed skeleton.
+    expect(result.current.status).not.toBe("offline");
+
+    // Flush the rebuild's token-fetch chain so the new room opens.
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    act(() => status(provider2, "connected"));
+    act(() => provider2.emit("sync", [true]));
+    expect(result.current.ydoc).toBe(ydoc2);
+    expect(result.current.ydoc).not.toBe(ydoc);
+    expect(result.current.status).toBe("connected");
+    expect(result.current.synced).toBe(true);
+  });
+
+  it("a normal close code does NOT rebuild the room", async () => {
+    const { result, provider, ydoc, unmount } = await openRoom();
+
+    act(() => status(provider, "connected"));
+    act(() => provider.emit("sync", [true]));
+
+    act(() => {
+      provider.emit("connection-close", [{ code: 1006 }, provider]);
+      status(provider, "disconnected");
+    });
+
+    expect(provider.destroy).not.toHaveBeenCalled();
+    expect(result.current.epoch).toBe(0);
+    expect(result.current.ydoc).toBe(ydoc);
+    expect(result.current.status).toBe("offline");
 
     unmount();
   });
