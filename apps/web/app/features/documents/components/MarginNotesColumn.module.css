@@ -12,19 +12,6 @@
   padding-block-start: 8px;
 }
 
-/* "Compact" mode: when Cesare's floating sub-window is open the margin
- * column should collapse every note back to a single-line header so the
- * editor + Cesare have more breathing room. We hide the disclosed area
- * inside this column; the note's chevron still rotates if the user opened
- * it locally before Cesare popped, and the header remains hover-readable.
- */
-:global(body[data-cesare]:not([data-cesare="closed"]))
-  .column
-  [data-open]
-  [class*="disclosed"] {
-  display: none;
-}
-
 /* ── Loading skeleton ───────────────────────────────────────── */
 
 .skeletonNote {

@@ -3,6 +3,7 @@ import {
   findSection,
   parseHeading,
   extractSideChannelMarkers,
+  markerAwareFallbackText,
 } from "./cesare-tools";
 import { parsePlanDescription } from "./cesare-shooting-plan-tools";
 
@@ -276,5 +277,46 @@ describe("parsePlanDescription", () => {
   it("preserves order across separators ('e', 'poi', commas)", () => {
     const shots = parsePlanDescription("WS, poi CU e infine OTS");
     expect(shots.map((s) => s.shotSize)).toEqual(["WS", "CU", "OTS"]);
+  });
+});
+
+// Marker-only turns get a fallback bubble matched to the affordance the
+// marker actually renders — the ✓/✕ overlay copy is reserved for screenplay
+// inline proposals ("non vedo la x", 2026-07-02).
+describe("markerAwareFallbackText — fallback matches the rendered affordance", () => {
+  it("ask-new-version → points at the Sovrascrivi/Nuova versione card, no ✓/✕", () => {
+    const text = markerAwareFallbackText('<!--ohw:ask-new-version {"x":1}-->');
+    expect(text).toContain("sovrascrivi");
+    expect(text).not.toContain("✓");
+  });
+
+  it("doc-applied → says the edit is already live + revert via Versioni", () => {
+    const text = markerAwareFallbackText('<!--ohw:doc-applied {"x":1}-->');
+    expect(text).toContain("già applicata");
+    expect(text).toContain("Versioni");
+    expect(text).not.toContain("✓");
+  });
+
+  it("entity-applied → same applied copy", () => {
+    expect(
+      markerAwareFallbackText('<!--ohw:entity-applied {"domain":"budget"}-->'),
+    ).toContain("già applicata");
+  });
+
+  it("screenplay proposal markers keep the ✓/✕ copy", () => {
+    expect(
+      markerAwareFallbackText('<!--ohw:screenplay-proposal {"x":1}-->'),
+    ).toContain("✓");
+  });
+
+  it("ask wins over an applied marker in the same turn (the card is the pending action)", () => {
+    const text = markerAwareFallbackText(
+      '<!--ohw:doc-applied {"x":1}-->\n<!--ohw:ask-new-version {"y":2}-->',
+    );
+    expect(text).toContain("sovrascrivi");
+  });
+
+  it("no marker → honest 'nothing applied' copy", () => {
+    expect(markerAwareFallbackText("")).toContain("non è stata applicata");
   });
 });

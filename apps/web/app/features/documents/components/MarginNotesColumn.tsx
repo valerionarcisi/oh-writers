@@ -91,10 +91,8 @@ function ErrorState() {
  * The first card opens by default so the user lands on actionable content
  * without an extra click. Subsequent cards stay collapsed and can be expanded
  * one at a time — same affordance as the mockup's `.note.open` behavior.
- *
- * When Cesare's floating sub-window is open (`body[data-cesare]` ≠ `closed`),
- * a parent CSS rule collapses every note back to one-line to free reading
- * space — the spec calls this the "compact" mode (see `MarginNotesColumn.module.css`).
+ * Expanding always works, Cesare open or not — the old "compact" CSS override
+ * (hide the disclosed area while the drawer is open) made clicks appear dead.
  */
 export const MarginNotesColumn: FC<MarginNotesColumnProps> = ({
   projectId,

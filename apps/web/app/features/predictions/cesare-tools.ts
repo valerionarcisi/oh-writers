@@ -3269,17 +3269,10 @@ const runProductionToolLoopEffect = (
       // Honesty (bug N3): reserve any "trovi le modifiche nell'editor" phrasing
       // for when a real apply/proposal marker landed; otherwise say plainly that
       // nothing visible was applied — never claim a change the user can't see.
-      const visibleText = textAccumulator
-        .join("\n")
-        .replace(/<!--ohw:[\s\S]*?-->/g, "")
-        .trim();
+      const joinedText = textAccumulator.join("\n");
+      const visibleText = joinedText.replace(/<!--ohw:[\s\S]*?-->/g, "").trim();
       if (visibleText.length === 0 && toolsExecuted > 0) {
-        const anyMarker = textAccumulator.some((t) => t.includes("<!--ohw:"));
-        textAccumulator.push(
-          anyMarker
-            ? "Fatto — vedi la proposta nell'editor. Accetta con ✓ o rifiuta con ✕."
-            : "Ho provato a eseguire la richiesta, ma non è stata applicata alcuna modifica visibile nell'editor. Riprova o riformula la richiesta.",
-        );
+        textAccumulator.push(markerAwareFallbackText(joinedText));
       }
 
       const marker = `<!--ohw:tools=${toolsExecuted}-->`;
@@ -3290,6 +3283,24 @@ const runProductionToolLoopEffect = (
         `Tool loop failed: ${e instanceof Error ? e.message : String(e)}`,
       ),
   });
+};
+
+// Fallback bubble for a marker-only turn, matched to the affordance the marker
+// actually renders. The ✓/✕ overlay exists ONLY for screenplay inline
+// proposals — telling the user to look for it after a narrative ask/apply is a
+// lie ("non vedo la x", 2026-07-02): the ask card has its own buttons, and an
+// applied edit is already live in the editor with its checkpoint in Versioni.
+export const markerAwareFallbackText = (joinedText: string): string => {
+  if (joinedText.includes("<!--ohw:ask-new-version"))
+    return "Come vuoi applicare la modifica? Scegli qui sotto: sovrascrivi la versione corrente oppure creane una nuova.";
+  if (
+    joinedText.includes("<!--ohw:doc-applied") ||
+    joinedText.includes("<!--ohw:entity-applied")
+  )
+    return "Fatto — la modifica è già applicata nell'editor. Puoi sempre tornare alla versione precedente da Versioni.";
+  if (joinedText.includes("<!--ohw:"))
+    return "Fatto — vedi la proposta nell'editor. Accetta con ✓ o rifiuta con ✕.";
+  return "Ho provato a eseguire la richiesta, ma non è stata applicata alcuna modifica visibile nell'editor. Riprova o riformula la richiesta.";
 };
 
 // Dispatch the tool loop as an `Effect`: the legacy manual loop (MOCK_AI without
