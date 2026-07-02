@@ -49,7 +49,8 @@ vi.mock("y-websocket/bin/utils", () => ({
   setupWSConnection: utils.setupWSConnection,
 }));
 
-import { installPersistence } from "./persistence-binding.js";
+import { REALTIME_RESEED_CLOSE_CODE } from "@oh-writers/domain";
+import { installPersistence, reseedRoom } from "./persistence-binding.js";
 import { Doc } from "./yjs-shared.js";
 
 beforeEach(() => {
@@ -117,6 +118,75 @@ describe("installPersistence dirty-room flush path", () => {
     expect(persistence.flushRoom).toHaveBeenCalledWith(
       { kind: "branch", id: "br-1" },
       ydoc,
+    );
+  });
+
+  it("reseedRoom drops the room WITHOUT flushing and closes clients with the reseed code (BUG-N72 / #35)", async () => {
+    await installPersistence();
+    const { bindState } = utils.getCaptured();
+
+    const docName = "document:doc-1";
+    const ydoc = new Doc() as Doc & {
+      conns: Map<{ close: ReturnType<typeof vi.fn> }, unknown>;
+    };
+    ydoc.conns = new Map([
+      [{ close: vi.fn() }, new Set()],
+      [{ close: vi.fn() }, new Set()],
+    ]);
+    utils.docs.set(docName, ydoc);
+    await bindState(docName, ydoc);
+
+    // A pending local edit must be DISCARDED, not flushed — the DB already
+    // holds the reseeded (newer) state.
+    ydoc.getText("content").insert(0, "stale edit");
+
+    const staleConns = [...ydoc.conns.keys()];
+    const closed = await reseedRoom(docName);
+
+    expect(closed).toBe(2);
+    expect(utils.docs.has(docName)).toBe(false);
+    expect(persistence.flushRoom).not.toHaveBeenCalled();
+    // Conns are DETACHED from the stale doc before closing: y-websocket's
+    // closeConn is guarded by `doc.conns.has(conn)`, so the stale doc can
+    // never fire a last-disconnect writeState (flushing stale state over the
+    // DB reseed) nor its unconditional docs.delete (which would race a fast
+    // reconnect and delete the fresh re-created room).
+    expect(ydoc.conns.size).toBe(0);
+    for (const conn of staleConns) {
+      expect(conn.close).toHaveBeenCalledWith(
+        REALTIME_RESEED_CLOSE_CODE,
+        "room-reseeded",
+      );
+    }
+  });
+
+  it("reseedRoom is a no-op (0 closed) for a room not live in this instance", async () => {
+    await installPersistence();
+    expect(await reseedRoom("document:not-open")).toBe(0);
+  });
+
+  it("a NEW room re-created after a reseed still flushes normally on last disconnect", async () => {
+    await installPersistence();
+    const { writeState } = utils.getCaptured();
+
+    const docName = "document:doc-2";
+    const staleDoc = new Doc() as Doc & {
+      conns: Map<{ close: ReturnType<typeof vi.fn> }, unknown>;
+    };
+    staleDoc.conns = new Map([[{ close: vi.fn() }, new Set()]]);
+    utils.docs.set(docName, staleDoc);
+
+    await reseedRoom(docName);
+
+    // A client reconnects and a fresh room binds from the reseeded DB; its
+    // legitimate last-disconnect flush must persist — the eviction only
+    // detaches the STALE doc, it never suppresses future flushes by name.
+    const freshDoc = new Doc();
+    await writeState(docName, freshDoc);
+    expect(persistence.flushRoom).toHaveBeenCalledTimes(1);
+    expect(persistence.flushRoom).toHaveBeenCalledWith(
+      { kind: "document", id: "doc-2" },
+      freshDoc,
     );
   });
 

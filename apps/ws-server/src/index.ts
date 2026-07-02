@@ -11,6 +11,8 @@ import { attachWsServer } from "./ws-handler.js";
 import {
   initRedisSync,
   closeRedisSync,
+  publishReseed,
+  setReseedHandler,
   type DocResolver,
 } from "./redis-sync.js";
 
@@ -40,6 +42,17 @@ app.post("/internal/reseed-room", async (c) => {
   } | null;
   if (!body?.docName) return c.json({ error: "docName required" }, 400);
   const closed = await reseedRoom(body.docName);
+  console.info(
+    JSON.stringify({
+      event: "ws.room_reseeded",
+      docName: body.docName,
+      closedConnections: closed,
+    }),
+  );
+  // Multi-instance: peers holding the same room must evict too. No-op
+  // without Redis; the self-published message is a harmless re-reseed of an
+  // already-dropped room.
+  publishReseed(body.docName);
   return c.json({ ok: true, closedConnections: closed });
 });
 
@@ -53,6 +66,7 @@ const start = async (): Promise<void> => {
   const utils = await getYWebsocketUtils();
   const resolveDoc: DocResolver = (docName) =>
     utils.docs.get(docName) as ReturnType<DocResolver>;
+  setReseedHandler((docName) => void reseedRoom(docName));
   await initRedisSync(resolveDoc);
 
   const server = serve({ fetch: app.fetch, port }) as unknown as HttpServer;

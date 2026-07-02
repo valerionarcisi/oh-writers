@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type * as Y from "yjs";
 import type { WebsocketProvider } from "y-websocket";
+import { REALTIME_RESEED_CLOSE_CODE } from "@oh-writers/domain";
 import { userColor } from "@oh-writers/utils";
 import { createYjsRoom, isRealtimeEnabled } from "../lib/provider";
 import {
@@ -44,6 +45,12 @@ export interface RealtimeRoom {
    *  fragment still looks empty but the server's content is in flight makes
    *  y-prosemirror merge the initial doc on top of it (BUG-N41 double-seed). */
   synced: boolean;
+  /** Bumped when the server evicts the room with the reseed close code
+   *  (BUG-N72 / #35): the DB CRDT was rebuilt wholesale, so the local Y.Doc is
+   *  stale and the room reopens with a FRESH doc. Gate consumers re-arm the
+   *  first-mount skeleton on an epoch change — the old content must not flash
+   *  through an HTTP-fallback editor while the new room syncs. */
+  epoch: number;
 }
 
 interface LocalUser {
@@ -51,7 +58,11 @@ interface LocalUser {
   name: string;
 }
 
-const DISABLED: RealtimeRoom = {
+// Epoch lives in its own state (it survives room close/reopen), so the
+// internal room state carries everything else.
+type RoomState = Omit<RealtimeRoom, "epoch">;
+
+const DISABLED: RoomState = {
   ydoc: null,
   provider: null,
   status: "disabled",
@@ -70,7 +81,10 @@ export const useYjsRoom = (
   user: LocalUser | null,
   enabled: boolean,
 ): RealtimeRoom => {
-  const [room, setRoom] = useState<RealtimeRoom>(DISABLED);
+  const [room, setRoom] = useState<RoomState>(DISABLED);
+  // Bumped on a server reseed eviction — an effect dependency, so the room
+  // reopens with a fresh Y.Doc that re-binds from the reseeded DB state.
+  const [epoch, setEpoch] = useState(0);
   // Keep the latest user without re-opening the room when only the name changes.
   const userRef = useRef(user);
   userRef.current = user;
@@ -168,6 +182,7 @@ export const useYjsRoom = (
           if (syncDeadline !== undefined) clearTimeout(syncDeadline);
           provider.off("status", onStatus);
           provider.off("sync", onSync);
+          provider.off("connection-close", onConnectionClose);
           provider.awareness.off("update", onAwareness);
           provider.destroy();
           ydoc.destroy();
@@ -217,9 +232,26 @@ export const useYjsRoom = (
           update("connected");
         };
         const onAwareness = (): void => update(lastStatus);
+        // The ws-server closes with a dedicated code after a server-side actor
+        // (Cesare apply / version activate) reseeded the DB CRDT (BUG-N72 /
+        // #35). Re-syncing would push this client's STALE local doc back over
+        // the fresh state, so instead the provider + Y.Doc are destroyed and
+        // the epoch bump reopens the room from scratch.
+        const onConnectionClose = (event?: { code?: number } | null): void => {
+          if (event?.code !== REALTIME_RESEED_CLOSE_CODE) return;
+          teardown();
+          if (disposed) return;
+          // Reset the room IN THE SAME BATCH as the epoch bump: the epoch-bump
+          // render must not still carry the old (destroyed) ydoc, or the gate's
+          // latch would survive that render and instantly re-consume the
+          // re-armed skeleton — mounting the stale HTTP fallback instead.
+          setRoom({ ...DISABLED, status: "connecting" });
+          setEpoch((current) => current + 1);
+        };
 
         provider.on("status", onStatus);
         provider.on("sync", onSync);
+        provider.on("connection-close", onConnectionClose);
         provider.awareness.on("update", onAwareness);
 
         syncDeadline = setTimeout(() => {
@@ -239,7 +271,7 @@ export const useYjsRoom = (
     // room.status intentionally excluded — it would re-open the room on every
     // connection-state change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [roomId, enabled, userId]);
+  }, [roomId, enabled, userId, epoch]);
 
-  return room;
+  return useMemo(() => ({ ...room, epoch }), [room, epoch]);
 };
