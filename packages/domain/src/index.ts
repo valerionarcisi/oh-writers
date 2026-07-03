@@ -1,5 +1,6 @@
 export * from "./types.js";
 export * from "./constants.js";
+export * from "./dev-auth.js";
 export * from "./actions/index.js";
 export * from "./features/index.js";
 export * from "./i18n/index.js";

@@ -31,6 +31,7 @@ export interface FreeNarrativeEditorProps {
   /** Document type (soggetto/synopsis/…). Arms the Cesare "Mostra cosa è
    *  cambiato" in-document underline (Spec 63) for this editor. */
   readonly documentType?: string;
+  readonly currentUser?: { readonly id: string; readonly name: string } | null;
 }
 
 const stripHtmlTags = (html: string): string =>
@@ -48,6 +49,7 @@ export function FreeNarrativeEditor({
   hideCounter = false,
   documentId,
   documentType,
+  currentUser = null,
 }: FreeNarrativeEditorProps) {
   const { t, locale } = useTranslation();
   const { cartelle, chars } = useMemo(() => {
@@ -61,9 +63,11 @@ export function FreeNarrativeEditor({
   // `realtime` object only when fully connected, and degrade silently when
   // disabled (no VITE_WS_URL / no documentId / viewing read-only).
   const { data: sessionData } = useSession();
-  const realtimeUser = sessionData?.user
-    ? { id: sessionData.user.id, name: sessionData.user.name }
-    : null;
+  const realtimeUser = currentUser
+    ? { id: currentUser.id, name: currentUser.name }
+    : sessionData?.user
+      ? { id: sessionData.user.id, name: sessionData.user.name }
+      : null;
   const room = useYjsRoom(
     documentId ? `document:${documentId}` : "",
     realtimeUser,

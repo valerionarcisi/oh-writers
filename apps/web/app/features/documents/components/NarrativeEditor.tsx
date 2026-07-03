@@ -72,6 +72,7 @@ const stripHtml = (html: string): string =>
 interface NarrativeEditorProps {
   document: DocumentViewWithPermission;
   type: DocumentType;
+  currentUser?: { readonly id: string; readonly name: string } | null;
 }
 
 const DOCUMENT_PLACEHOLDER_KEYS: Record<DocumentType, TranslationKey | null> = {
@@ -94,7 +95,11 @@ const layoutForType = (type: DocumentType): "single" | "two" | "three" => {
   return "two";
 };
 
-export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
+export function NarrativeEditor({
+  document,
+  type,
+  currentUser = null,
+}: NarrativeEditorProps) {
   const { t } = useTranslation();
   const placeholderKey = DOCUMENT_PLACEHOLDER_KEYS[type];
   const documentPlaceholder = placeholderKey ? t(placeholderKey) : "";
@@ -170,9 +175,11 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
 
   // ─── Realtime collaboration ────────────────────────────────────────────
   const { data: sessionData } = useSession();
-  const realtimeUser = sessionData?.user
-    ? { id: sessionData.user.id, name: sessionData.user.name }
-    : null;
+  const realtimeUser = currentUser
+    ? { id: currentUser.id, name: currentUser.name }
+    : sessionData?.user
+      ? { id: sessionData.user.id, name: sessionData.user.name }
+      : null;
   const realtimeRoom = useYjsRoom(
     `document:${document.id}`,
     realtimeUser,

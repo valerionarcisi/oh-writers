@@ -121,6 +121,7 @@ interface ScreenplayEditorProps {
   /** Emits the list of scene headings extracted from the PM doc whenever the
    *  doc changes. Used by the shell to populate the Indice popover TOC. */
   onScenesChange?: (scenes: Array<{ number: string; title: string }>) => void;
+  currentUser?: { readonly id: string; readonly name: string } | null;
 }
 
 /** Imperative handle exposed by the editor so the parent route can drive
@@ -215,6 +216,7 @@ export const ScreenplayEditor = forwardRef<
     onCurrentElementChange,
     onMetricsChange,
     onScenesChange,
+    currentUser = null,
   },
   ref,
 ) {
@@ -259,9 +261,11 @@ export const ScreenplayEditor = forwardRef<
   // A version snapshot is read-only and must never connect. Viewers connect
   // read-only (writes are blocked server-side); editors get full sync.
   const { data: sessionData } = useSession();
-  const realtimeUser = sessionData?.user
-    ? { id: sessionData.user.id, name: sessionData.user.name }
-    : null;
+  const realtimeUser = currentUser
+    ? { id: currentUser.id, name: currentUser.name }
+    : sessionData?.user
+      ? { id: sessionData.user.id, name: sessionData.user.name }
+      : null;
   // The screenplay content is version-backed: each active version is its own
   // CRDT room (`screenplay:<id>:<versionId>`), persisted in the version's
   // yjs_snapshot. Switching the active version (Attiva / + Nuova versione)

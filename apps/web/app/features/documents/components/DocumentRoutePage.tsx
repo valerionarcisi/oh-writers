@@ -12,11 +12,13 @@ import styles from "../../../routes/_app.projects.$id_.editor.module.css";
 interface DocumentRoutePageProps {
   readonly type: Exclude<DocumentType, "soggetto">;
   readonly projectId: string;
+  readonly currentUser?: { readonly id: string; readonly name: string } | null;
 }
 
 export const DocumentRoutePage: FC<DocumentRoutePageProps> = ({
   type,
   projectId,
+  currentUser = null,
 }) => {
   const { t } = useTranslation();
   const { data: result, isLoading } = useDocument(projectId, type);
@@ -35,7 +37,7 @@ export const DocumentRoutePage: FC<DocumentRoutePageProps> = ({
 
   return match(result)
     .with({ isOk: true }, ({ value }) => (
-      <NarrativeEditor document={value} type={type} />
+      <NarrativeEditor document={value} type={type} currentUser={currentUser} />
     ))
     .with({ isOk: false }, ({ error }) =>
       // A document that hasn't been written yet for a reachable project is an
@@ -50,6 +52,7 @@ export const DocumentRoutePage: FC<DocumentRoutePageProps> = ({
           <NarrativeEditor
             document={emptyNarrativeDocument(projectId, type)}
             type={type}
+            currentUser={currentUser}
           />
         ))
         .otherwise((e) => <ResultErrorView error={e} />),

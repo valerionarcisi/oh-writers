@@ -1,8 +1,11 @@
 import type { IncomingMessage } from "node:http";
 import { Redis } from "ioredis";
 import { and, eq, gt } from "drizzle-orm";
-import { db } from "@oh-writers/db";
-import { sessions } from "@oh-writers/db/schema";
+import {
+  DEV_AUTH_BYPASS_TOKEN,
+  DEV_AUTH_BYPASS_USER_ID,
+  isDevAuthBypassEnabled,
+} from "@oh-writers/domain";
 
 export interface ValidatedSession {
   userId: string;
@@ -47,7 +50,23 @@ const fromRedis = async (token: string): Promise<ValidatedSession | null> => {
   return { userId, sessionId: parsed.session?.id ?? token };
 };
 
+export const validateDevAuthBypassToken = (
+  token: string,
+  env: NodeJS.ProcessEnv = process.env,
+): ValidatedSession | null => {
+  if (!isDevAuthBypassEnabled(env)) return null;
+  if (token !== DEV_AUTH_BYPASS_TOKEN) return null;
+  return {
+    userId: DEV_AUTH_BYPASS_USER_ID,
+    sessionId: DEV_AUTH_BYPASS_TOKEN,
+  };
+};
+
 const fromDb = async (token: string): Promise<ValidatedSession | null> => {
+  const [{ db }, { sessions }] = await Promise.all([
+    import("@oh-writers/db"),
+    import("@oh-writers/db/schema"),
+  ]);
   const row = await db.query.sessions.findFirst({
     where: and(eq(sessions.token, token), gt(sessions.expiresAt, new Date())),
     columns: { id: true, userId: true },
@@ -66,5 +85,7 @@ export const validateSession = async (
 ): Promise<ValidatedSession | null> => {
   const token = tokenFromRequest(req);
   if (!token) return null;
+  const devSession = validateDevAuthBypassToken(token);
+  if (devSession) return devSession;
   return (await fromRedis(token)) ?? (await fromDb(token));
 };

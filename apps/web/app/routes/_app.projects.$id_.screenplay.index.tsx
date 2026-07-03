@@ -12,6 +12,7 @@ import {
 import { ResultErrorView } from "~/components/ResultErrorView";
 import { Skeleton } from "@oh-writers/ui";
 import styles from "./_app.projects.$id_.editor.module.css";
+import { Route as appRoute } from "./_app";
 
 export const Route = createFileRoute("/_app/projects/$id_/screenplay/")({
   component: ScreenplayEditorPage,
@@ -19,6 +20,7 @@ export const Route = createFileRoute("/_app/projects/$id_/screenplay/")({
 
 function ScreenplayEditorPage() {
   const { id } = Route.useParams();
+  const { user } = appRoute.useLoaderData();
   const { data: result, isLoading } = useScreenplay(id);
   const [isCesareOn, setIsCesareOn] = useState(true);
   const [currentElement, setCurrentElement] = useState<ElementType>("action");
@@ -102,6 +104,7 @@ function ScreenplayEditorPage() {
             onCurrentElementChange={setCurrentElement}
             onMetricsChange={setMetrics}
             onScenesChange={setRawScenes}
+            currentUser={user}
           />
         </ScreenplayEditorShell>
       );

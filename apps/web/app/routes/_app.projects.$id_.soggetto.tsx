@@ -39,6 +39,7 @@ import { useTranslation } from "~/features/i18n";
 import { titleHead } from "~/lib/document-title";
 import type { DocumentViewWithPermission } from "~/features/documents";
 import styles from "./_app.projects.$id_.soggetto.module.css";
+import { Route as appRoute } from "./_app";
 
 export const Route = createFileRoute("/_app/projects/$id_/soggetto")({
   beforeLoad: ({ params }) => assertValidProjectId(params),
@@ -48,6 +49,7 @@ export const Route = createFileRoute("/_app/projects/$id_/soggetto")({
 
 function SoggettoPage() {
   const { id } = Route.useParams();
+  const { user } = appRoute.useLoaderData();
   const soggetto = useDocument(id, DocumentTypes.SOGGETTO);
   const logline = useDocument(id, DocumentTypes.LOGLINE);
 
@@ -110,6 +112,7 @@ function SoggettoPage() {
       projectId={id}
       soggettoDoc={soggettoView.value}
       loglineDoc={loglineView.value}
+      currentUser={user}
     />
   );
 }
@@ -118,12 +121,14 @@ interface SoggettoPageReadyProps {
   readonly projectId: string;
   readonly soggettoDoc: DocumentViewWithPermission;
   readonly loglineDoc: DocumentViewWithPermission;
+  readonly currentUser: { readonly id: string; readonly name: string };
 }
 
 function SoggettoPageReady({
   projectId,
   soggettoDoc,
   loglineDoc,
+  currentUser,
 }: SoggettoPageReadyProps) {
   const [soggettoContent, setSoggettoContent] = useState(soggettoDoc.content);
   // Spec 44 TKT-LEAD-01: Cesare opens via shell BottomDock.
@@ -362,6 +367,7 @@ function SoggettoPageReady({
             testId="subject-editor"
             documentId={soggettoDoc.id}
             documentType={DocumentTypes.SOGGETTO}
+            currentUser={currentUser}
           />
         </div>
       </NarrativeDocsShell>

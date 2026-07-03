@@ -1,6 +1,11 @@
 import { getWebRequest } from "@tanstack/start/server";
 import { ResultAsync } from "neverthrow";
-import type { Locale, UserId } from "@oh-writers/domain";
+import {
+  DEV_AUTH_BYPASS_USER_ID,
+  isDevAuthBypassEnabled,
+  type Locale,
+  type UserId,
+} from "@oh-writers/domain";
 
 export type AppUser = {
   id: UserId;
@@ -22,7 +27,7 @@ export type AppUser = {
 // deliberately NOT exposed via app.config.ts, so it can never reach the client.
 // In production `NODE_ENV === "production"` disables it regardless of the flag.
 const DEV_BYPASS_USER: AppUser = {
-  id: "00000000-0000-4000-a000-000000000001" as UserId,
+  id: DEV_AUTH_BYPASS_USER_ID as UserId,
   name: "Test User",
   email: "test@ohwriters.dev",
   locale: "it" as Locale,
@@ -32,12 +37,7 @@ let devBypassLogged = false;
 
 // Exported for unit tests. Pure: reads only process.env.
 export const devAuthBypassUser = (): AppUser | null => {
-  if (
-    process.env["NODE_ENV"] === "production" ||
-    process.env["DEV_AUTH_BYPASS"] !== "true"
-  ) {
-    return null;
-  }
+  if (!isDevAuthBypassEnabled(process.env)) return null;
   if (!devBypassLogged) {
     // One-time loud signal so an active bypass is never a silent surprise.
     // eslint-disable-next-line no-console
