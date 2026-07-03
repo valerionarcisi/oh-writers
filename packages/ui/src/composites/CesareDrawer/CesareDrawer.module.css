@@ -487,7 +487,9 @@
 
 .composer {
   display: flex;
-  align-items: center;
+  /* Bottom-align so the send/stop buttons track the last line while the
+     auto-growing input expands upward (BUG-N65). */
+  align-items: flex-end;
   gap: var(--ds-space-2);
   background: var(--ds-surface);
   border: 1px solid var(--ds-line);
@@ -499,22 +501,16 @@
   }
 }
 
+/* Surface-specific typography/layout only — sizing (1 row → ~8 rows cap,
+   internal scroll) is owned by the shared ComposerTextarea primitive. */
 .composerInput {
   flex: 1 1 auto;
-  border: none;
-  outline: none;
-  background: transparent;
-  font: inherit;
+  min-inline-size: 0;
   font-size: 13px;
   color: var(--ds-text);
-  resize: none;
-  min-block-size: 18px;
-  max-block-size: 96px;
-  line-height: 1.5;
-
-  &::placeholder {
-    color: var(--ds-text-faint);
-  }
+  /* Tighter cap than the primitive's 8-line default — the floating drawer is
+     compact and a full 8 lines would crowd out the thread above it. */
+  max-block-size: calc(5 * 1.5em);
 }
 
 .composerActions {

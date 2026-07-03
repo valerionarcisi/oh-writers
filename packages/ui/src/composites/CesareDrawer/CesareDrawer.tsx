@@ -34,10 +34,9 @@ import {
   useRef,
   useState,
   type ReactNode,
-  type KeyboardEvent,
-  type ChangeEvent,
 } from "react";
 import { useButton } from "react-aria";
+import { ComposerTextarea } from "../../primitives/ComposerTextarea/ComposerTextarea";
 import styles from "./CesareDrawer.module.css";
 import type { CesareDrawerState } from "./use-drawer-state";
 import {
@@ -445,41 +444,6 @@ export function CesareDrawer({
     setIsAnchorReleased(false);
   }, []);
 
-  // ─── Composer auto-grow (BUG-N65) ─────────────────────────────────────────
-  // The composer starts at one row and grows with its content up to the CSS
-  // cap (max-block-size: 96px); past the cap it scrolls internally instead of
-  // pushing the chat off-screen. Mirrors the SessionConversationPage composer
-  // so writing a multi-sentence prompt is comfortable everywhere.
-  const composerRef = useRef<HTMLTextAreaElement>(null);
-  const composerValue = composer?.value ?? "";
-  useEffect(() => {
-    const el = composerRef.current;
-    if (!el) return;
-    el.style.height = "auto";
-    el.style.height = `${Math.min(el.scrollHeight, 96)}px`;
-  }, [composerValue]);
-
-  // ─── Composer handlers ──────────────────────────────────────────────────
-  const handleComposerKeyDown = useCallback(
-    (e: KeyboardEvent<HTMLTextAreaElement>) => {
-      if (!composer) return;
-      // Chat convention: Enter sends, Shift+Enter inserts a newline.
-      // Cmd/Ctrl+Enter also sends (kept for muscle memory).
-      if (e.key !== "Enter") return;
-      if (e.shiftKey) return;
-      e.preventDefault();
-      composer.onSubmit();
-    },
-    [composer],
-  );
-
-  const handleComposerChange = useCallback(
-    (e: ChangeEvent<HTMLTextAreaElement>) => {
-      composer?.onChange(e.target.value);
-    },
-    [composer],
-  );
-
   // ─── Render ─────────────────────────────────────────────────────────────
   const isSplitSurface = surface === "split";
   const isResizing =
@@ -656,16 +620,14 @@ export function CesareDrawer({
 
           {composer && (
             <div className={styles.composer}>
-              <textarea
-                ref={composerRef}
+              <ComposerTextarea
                 className={styles.composerInput}
                 value={composer.value}
-                onChange={handleComposerChange}
-                onKeyDown={handleComposerKeyDown}
+                onChange={composer.onChange}
+                onSubmit={composer.onSubmit}
                 placeholder={composer.placeholder ?? "Chiedi a Cesare…"}
-                disabled={composer.isThinking}
-                rows={1}
-                aria-label="Composer Cesare"
+                isDisabled={composer.isThinking}
+                ariaLabel="Composer Cesare"
               />
               <div className={styles.composerActions}>
                 {composer.onVoice && (
