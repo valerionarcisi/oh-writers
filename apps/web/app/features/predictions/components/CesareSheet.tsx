@@ -40,6 +40,7 @@ import type { TranslationKey } from "@oh-writers/domain";
 import { useTranslation } from "~/features/i18n";
 import { setHighlight, clearHighlight } from "~/features/documents";
 import { useCesareChat } from "../use-cesare-chat";
+import { lastUserMessage } from "../use-cesare-chat-reducer";
 import type { CesareTurnSettle } from "../cesare-chat-store";
 import {
   CesareConversation,
@@ -606,10 +607,8 @@ export function CesareSheet({
   }, [input, isLoading, sendInSession]);
 
   const handleRecallLast = useCallback(() => {
-    const lastUserMessage = [...messages]
-      .reverse()
-      .find((m) => m.role === "user");
-    if (lastUserMessage) setInput(lastUserMessage.content);
+    const recalled = lastUserMessage(messages);
+    if (recalled) setInput(recalled.content);
   }, [messages]);
 
   const handleQuickPrompt = useCallback(

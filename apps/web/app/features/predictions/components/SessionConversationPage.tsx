@@ -24,6 +24,7 @@ import {
 import { useTranslation } from "~/features/i18n";
 import { useSession } from "../sessions";
 import { useCesareChatStore } from "../cesare-chat-store";
+import { lastUserMessage } from "../use-cesare-chat-reducer";
 import {
   CesareConversation,
   extractStepBlockMetadata,
@@ -160,10 +161,8 @@ export function SessionConversationPage({
 
   const handleRecallLast = useCallback(() => {
     const thread = store?.messagesFor(confirmedSessionId) ?? [];
-    const lastUserMessage = [...thread]
-      .reverse()
-      .find((m) => m.role === "user");
-    if (lastUserMessage) setInput(lastUserMessage.content);
+    const recalled = lastUserMessage(thread);
+    if (recalled) setInput(recalled.content);
   }, [store, confirmedSessionId]);
 
   // Per-result-card "Apri <Entity>" navigation: a session can edit several

@@ -660,6 +660,7 @@ export function CesareDrawer({
                     className={styles.composerSend}
                     onClick={composer.onStop}
                     aria-label="Interrompi risposta"
+                    data-testid="cesare-stop-btn"
                   >
                     ⏸
                   </button>

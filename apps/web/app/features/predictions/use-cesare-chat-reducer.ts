@@ -92,6 +92,12 @@ export const threadFor = (
 export const activeThread = (state: ChatState): ReadonlyArray<ChatMessage> =>
   threadFor(state, state.activeSessionId);
 
+/** Most recent user turn in a thread — the composer's ArrowUp recall gesture. */
+export const lastUserMessage = (
+  thread: ReadonlyArray<ChatMessage>,
+): ChatMessage | undefined =>
+  [...thread].reverse().find((m) => m.role === "user");
+
 // ─── Helpers (immutable) ──────────────────────────────────────────────────────
 
 const withThread = (
