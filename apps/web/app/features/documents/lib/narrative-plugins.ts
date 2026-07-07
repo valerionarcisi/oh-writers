@@ -20,7 +20,11 @@ import {
   splitListItem,
   wrapInList,
 } from "prosemirror-schema-list";
-import { inputRules, wrappingInputRule } from "prosemirror-inputrules";
+import {
+  inputRules,
+  textblockTypeInputRule,
+  wrappingInputRule,
+} from "prosemirror-inputrules";
 import { Decoration, DecorationSet } from "prosemirror-view";
 import { Schema } from "prosemirror-model";
 import type * as Y from "yjs";
@@ -80,13 +84,21 @@ export const buildNarrativePlugins = (
 
   const bulletList = schema.nodes["bullet_list"];
   const listItem = schema.nodes["list_item"];
+  const heading = schema.nodes["heading"];
 
-  if (bulletList) {
-    plugins.push(
-      inputRules({
-        rules: [wrappingInputRule(/^\s*([-*])\s$/, bulletList)],
-      }),
-    );
+  const markdownRules = [
+    ...(bulletList ? [wrappingInputRule(/^\s*([-*])\s$/, bulletList)] : []),
+    ...(heading
+      ? [
+          textblockTypeInputRule(/^(#{2,3})\s$/, heading, (match) => ({
+            level: match[1]?.length ?? 2,
+          })),
+        ]
+      : []),
+  ];
+
+  if (markdownRules.length > 0) {
+    plugins.push(inputRules({ rules: markdownRules }));
   }
 
   // Realtime swaps prosemirror-history (incompatible with ySyncPlugin) for the

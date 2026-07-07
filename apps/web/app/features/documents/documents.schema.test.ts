@@ -1,10 +1,32 @@
 import { describe, it, expect } from "vitest";
+import { DocumentTypes } from "@oh-writers/domain";
 import {
   SiaeExportInputSchema,
   SiaeMetadataSchema,
+  ContentMaxByType,
+  LOGLINE_MAX,
+  SOGGETTO_MAX,
+  SYNOPSIS_MAX,
+  TREATMENT_MAX,
   type SiaeExportInput,
   type SiaeMetadata,
 } from "./documents.schema";
+
+describe("ContentMaxByType", () => {
+  it("gives soggetto its own long-form cap, distinct from synopsis", () => {
+    expect(ContentMaxByType[DocumentTypes.SOGGETTO]).toBe(SOGGETTO_MAX);
+    expect(SOGGETTO_MAX).toBeGreaterThan(SYNOPSIS_MAX);
+  });
+
+  it("pins the per-type caps", () => {
+    expect(ContentMaxByType[DocumentTypes.LOGLINE]).toBe(LOGLINE_MAX);
+    expect(ContentMaxByType[DocumentTypes.SYNOPSIS]).toBe(SYNOPSIS_MAX);
+    expect(ContentMaxByType[DocumentTypes.TREATMENT]).toBe(TREATMENT_MAX);
+    expect(ContentMaxByType[DocumentTypes.OUTLINE]).toBe(
+      Number.POSITIVE_INFINITY,
+    );
+  });
+});
 
 const VALID_UUID = "123e4567-e89b-12d3-a456-426614174000";
 

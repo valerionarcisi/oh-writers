@@ -5,17 +5,19 @@ import type { DocumentType } from "@oh-writers/domain";
 // ─── Per-type content caps ────────────────────────────────────────────────────
 // Values are chosen to match industry conventions:
 // - logline: 1–3 lines, ~200 chars is the standard "elevator pitch" length
+// - soggetto: 10–15 pages of Italian film-industry prose, ~30k chars
 // - synopsis: 1–3 pages, ~5k chars leaves breathing room without enabling drift
 // - treatment: long-form prose, 200k is a safety cap for DB health, not UX
 // Outline has no string cap — it is stored as JSON structure (see 04b).
 
 export const LOGLINE_MAX = 200;
+export const SOGGETTO_MAX = 30_000;
 export const SYNOPSIS_MAX = 5_000;
 export const TREATMENT_MAX = 200_000;
 
 export const ContentMaxByType: Record<DocumentType, number> = {
   [DocumentTypes.LOGLINE]: LOGLINE_MAX,
-  [DocumentTypes.SOGGETTO]: SYNOPSIS_MAX,
+  [DocumentTypes.SOGGETTO]: SOGGETTO_MAX,
   [DocumentTypes.SYNOPSIS]: SYNOPSIS_MAX,
   [DocumentTypes.TREATMENT]: TREATMENT_MAX,
   [DocumentTypes.OUTLINE]: Number.POSITIVE_INFINITY,
