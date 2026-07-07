@@ -158,6 +158,14 @@ export function SessionConversationPage({
     void store.send(text, confirmedSessionId);
   }, [store, confirmedSessionId, input, isLoading]);
 
+  const handleRecallLast = useCallback(() => {
+    const thread = store?.messagesFor(confirmedSessionId) ?? [];
+    const lastUserMessage = [...thread]
+      .reverse()
+      .find((m) => m.role === "user");
+    if (lastUserMessage) setInput(lastUserMessage.content);
+  }, [store, confirmedSessionId]);
+
   // Per-result-card "Apri <Entity>" navigation: a session can edit several
   // entities (logline, then soggetto…), so each card jumps to ITS entity's real
   // page via the router (the SplitDrawer has no router; this is the way out to a
@@ -346,6 +354,7 @@ export function SessionConversationPage({
           value={input}
           onChange={setInput}
           onSubmit={handleSubmit}
+          onArrowUp={handleRecallLast}
           isThinking={isLoading}
         />
       </div>
@@ -359,11 +368,13 @@ function SessionComposer({
   value,
   onChange,
   onSubmit,
+  onArrowUp,
   isThinking,
 }: {
   value: string;
   onChange: (next: string) => void;
   onSubmit: () => void;
+  onArrowUp: () => void;
   isThinking: boolean;
 }) {
   const { t } = useTranslation();
@@ -384,6 +395,7 @@ function SessionComposer({
         value={value}
         onChange={onChange}
         onSubmit={onSubmit}
+        onArrowUp={onArrowUp}
         placeholder={t("cesare.session.composerPlaceholder")}
         isDisabled={isThinking}
         ariaLabel={t("cesare.session.composerAria")}

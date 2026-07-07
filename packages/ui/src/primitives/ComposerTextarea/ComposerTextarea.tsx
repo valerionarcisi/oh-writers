@@ -34,6 +34,10 @@ export interface ComposerTextareaProps {
   isDisabled?: boolean;
   /** Accessible label — mandatory, the composer renders no visible label. */
   ariaLabel: string;
+  /** Invoked on ArrowUp when the composer is empty — the standard chat-app
+   *  "recall last message" gesture. Never fires with content already typed,
+   *  so it never steals cursor navigation inside a multi-line draft. */
+  onArrowUp?: () => void;
   /** Surface-specific typography/layout (font-size, flex) — composed with the
    *  primitive's own sizing class. */
   className?: string;
@@ -47,6 +51,7 @@ export function ComposerTextarea({
   placeholder,
   isDisabled,
   ariaLabel,
+  onArrowUp,
   className,
   testId,
 }: ComposerTextareaProps) {
@@ -54,6 +59,11 @@ export function ComposerTextarea({
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (isDisabled) return;
+    if (e.key === "ArrowUp" && value.length === 0 && onArrowUp) {
+      e.preventDefault();
+      onArrowUp();
+      return;
+    }
     if (e.key !== "Enter") return;
     if (e.shiftKey) return;
     e.preventDefault();

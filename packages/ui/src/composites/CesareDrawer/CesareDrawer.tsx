@@ -76,6 +76,9 @@ export interface CesareDrawerComposerProps {
   /** When true: input disabled, send button replaced by stop. */
   isThinking?: boolean;
   onStop?: () => void;
+  /** ArrowUp on an empty composer — recalls the last sent message for
+   *  editing/resending (standard chat-app gesture). */
+  onRecallLast?: () => void;
   /** Voice button (↓). Optional. */
   onVoice?: () => void;
   /** Magic prompt enhancer (✦). Optional. */
@@ -628,6 +631,7 @@ export function CesareDrawer({
                 placeholder={composer.placeholder ?? "Chiedi a Cesare…"}
                 isDisabled={composer.isThinking}
                 ariaLabel="Composer Cesare"
+                onArrowUp={composer.onRecallLast}
               />
               <div className={styles.composerActions}>
                 {composer.onVoice && (

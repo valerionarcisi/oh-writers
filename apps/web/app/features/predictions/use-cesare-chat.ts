@@ -51,6 +51,9 @@ export interface UseCesareChat {
    *  (used to send into a just-created session without a render round-trip). */
   readonly send: (text: string, sessionId?: string) => Promise<void>;
   readonly selectSession: (sessionId: string) => void;
+  /** Abort the in-flight turn (composer's ⏸ button). No-op outside a
+   *  `CesareChatStoreProvider` — the local fallback has no cancellable stream. */
+  readonly stop: (sessionId?: string) => void;
 }
 
 export const useCesareChat = (args: UseCesareChatArgs): UseCesareChat => {
@@ -129,12 +132,17 @@ export const useCesareChat = (args: UseCesareChatArgs): UseCesareChat => {
     [],
   );
 
+  const storeStop = useCallback((sessionId?: string) => {
+    storeRef.current?.stop(sessionId);
+  }, []);
+
   if (store) {
     return {
       messages: store.activeMessages,
       isLoading: store.isLoadingFor(store.activeSessionId),
       send: storeSend,
       selectSession: storeSelect,
+      stop: storeStop,
     };
   }
   return local;
@@ -301,5 +309,9 @@ const useLocalCesareChat = (
     (m) => m.role === "assistant" && m.status === "pending",
   );
 
-  return { messages, isLoading, send, selectSession };
+  // ponytail: no-op — the local fallback has no in-flight request to cancel
+  // (no store, no AbortController); real stop needs a CesareChatStoreProvider.
+  const stop = useCallback(() => {}, []);
+
+  return { messages, isLoading, send, selectSession, stop };
 };

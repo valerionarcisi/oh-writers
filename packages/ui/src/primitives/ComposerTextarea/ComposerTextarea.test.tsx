@@ -68,6 +68,20 @@ describe("ComposerTextarea", () => {
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
+  it("calls onArrowUp on ArrowUp when the composer is empty", () => {
+    const onArrowUp = vi.fn();
+    const { input } = renderComposer({ value: "", onArrowUp });
+    fireEvent.keyDown(input, { key: "ArrowUp" });
+    expect(onArrowUp).toHaveBeenCalledTimes(1);
+  });
+
+  it("does NOT call onArrowUp on ArrowUp when the composer has content", () => {
+    const onArrowUp = vi.fn();
+    const { input } = renderComposer({ value: "ciao", onArrowUp });
+    fireEvent.keyDown(input, { key: "ArrowUp" });
+    expect(onArrowUp).not.toHaveBeenCalled();
+  });
+
   it("sets an explicit block-size from its content (auto-grow wiring)", () => {
     const { input, rerender, onChange, onSubmit } = renderComposer();
     // jsdom has no layout (scrollHeight = 0); the effect must still have run

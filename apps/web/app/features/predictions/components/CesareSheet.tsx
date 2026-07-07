@@ -605,6 +605,13 @@ export function CesareSheet({
     void sendInSession(text);
   }, [input, isLoading, sendInSession]);
 
+  const handleRecallLast = useCallback(() => {
+    const lastUserMessage = [...messages]
+      .reverse()
+      .find((m) => m.role === "user");
+    if (lastUserMessage) setInput(lastUserMessage.content);
+  }, [messages]);
+
   const handleQuickPrompt = useCallback(
     (prompt: string) => {
       void sendInSession(prompt);
@@ -728,6 +735,8 @@ export function CesareSheet({
         onChange: setInput,
         onSubmit: handleSubmit,
         isThinking: isLoading,
+        onStop: () => chat.stop(activeSessionId ?? undefined),
+        onRecallLast: handleRecallLast,
       }}
       peekSubtitle={
         isLoading ? t("cesare.peek.thinking") : t("cesare.peek.waiting")
