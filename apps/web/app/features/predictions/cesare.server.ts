@@ -127,7 +127,9 @@ const ConversationMessageSchema = z.object({
 
 const CesareInputSchema = z.object({
   projectId: z.string().uuid(),
-  message: z.string().min(1).max(2000),
+  // 8000 chars (~1200-1500 words) — a detailed multi-point instruction (e.g.
+  // "restructure scenes 4-9, keep the tone, fix these 5 things") must fit.
+  message: z.string().min(1).max(8000),
   pageContext: PageContextSchema,
   // The Cesare session this turn belongs to (Spec 76 / BUG-N66). Threads down to
   // the version commit so a session's small edits collapse into one working row
