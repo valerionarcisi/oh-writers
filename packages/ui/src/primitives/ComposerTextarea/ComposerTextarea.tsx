@@ -30,8 +30,6 @@ export interface ComposerTextareaProps {
   /** Invoked on Enter (without Shift) and on Cmd/Ctrl+Enter. */
   onSubmit: () => void;
   placeholder?: string;
-  /** Disable while a turn is in flight (the consumer's "thinking" state). */
-  isDisabled?: boolean;
   /** Accessible label — mandatory, the composer renders no visible label. */
   ariaLabel: string;
   /** Invoked on ArrowUp when the composer is empty — the standard chat-app
@@ -49,7 +47,6 @@ export function ComposerTextarea({
   onChange,
   onSubmit,
   placeholder,
-  isDisabled,
   ariaLabel,
   onArrowUp,
   className,
@@ -58,7 +55,6 @@ export function ComposerTextarea({
   const ref = useRef<HTMLTextAreaElement>(null);
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (isDisabled) return;
     if (e.key === "ArrowUp" && value.length === 0 && onArrowUp) {
       e.preventDefault();
       onArrowUp();
@@ -75,7 +71,6 @@ export function ComposerTextarea({
       value,
       onChange,
       placeholder,
-      isDisabled,
       "aria-label": ariaLabel,
       inputElementType: "textarea",
       onKeyDown: handleKeyDown,

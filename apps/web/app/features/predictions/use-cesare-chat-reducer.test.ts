@@ -4,6 +4,7 @@ import {
   initialChatState,
   activeThread,
   threadFor,
+  lastUserMessage,
   type ChatMessage,
   type ChatState,
 } from "./use-cesare-chat-reducer";
@@ -290,5 +291,40 @@ describe("chatReducer — thread/hydrate (Spec 51)", () => {
     });
     expect(state.activeSessionId).toBe(SESSION_A);
     expect(threadFor(state, SESSION_B)).toHaveLength(1);
+  });
+});
+
+describe("lastUserMessage (composer ArrowUp recall)", () => {
+  it("returns undefined for an empty thread", () => {
+    expect(lastUserMessage([])).toBeUndefined();
+  });
+
+  it("returns the only user message in a single-turn thread", () => {
+    const state = send(initialChatState(SESSION_A), SESSION_A, "Ciao", {
+      user: "u1",
+      assistant: "a1",
+    });
+    expect(lastUserMessage(activeThread(state))?.content).toBe("Ciao");
+  });
+
+  it("returns the MOST RECENT user turn across a multi-turn thread", () => {
+    let state = send(initialChatState(SESSION_A), SESSION_A, "Prima domanda", {
+      user: "u1",
+      assistant: "a1",
+    });
+    state = chatReducer(state, {
+      type: "message/delivered",
+      sessionId: SESSION_A,
+      userMessageId: "u1",
+      assistantMessageId: "a1",
+      content: "Prima risposta",
+    });
+    state = send(state, SESSION_A, "Seconda domanda", {
+      user: "u2",
+      assistant: "a2",
+    });
+    expect(lastUserMessage(activeThread(state))?.content).toBe(
+      "Seconda domanda",
+    );
   });
 });

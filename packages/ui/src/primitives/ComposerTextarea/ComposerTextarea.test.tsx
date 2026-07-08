@@ -61,11 +61,14 @@ describe("ComposerTextarea", () => {
     expect(onChange).toHaveBeenCalledWith("ciao Cesare");
   });
 
-  it("is disabled while thinking and never submits", () => {
-    const { input, onSubmit } = renderComposer({ isDisabled: true });
-    expect(input.disabled).toBe(true);
-    fireEvent.keyDown(input, { key: "Enter" });
-    expect(onSubmit).not.toHaveBeenCalled();
+  it("is never HTML-disabled — the consumer gates submit, not the field", () => {
+    // Regression: the composer used to go read-only while Cesare was
+    // streaming a reply, which also blocked the arrow-up recall gesture
+    // (can't edit a recalled message you can't type into). The consumer
+    // (CesareSheet / SessionConversationPage) already guards `handleSubmit`
+    // on its own loading state, so the field itself stays editable always.
+    const { input } = renderComposer();
+    expect(input.disabled).toBe(false);
   });
 
   it("calls onArrowUp on ArrowUp when the composer is empty", () => {

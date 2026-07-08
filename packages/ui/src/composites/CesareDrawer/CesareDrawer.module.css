@@ -501,6 +501,23 @@
   }
 }
 
+/* Enter while a turn is in flight is a no-op (the field stays editable so a
+   reply can be recalled/edited, but a second send must wait) — this shake
+   is the only feedback the user gets that the keypress landed but did
+   nothing, instead of silently swallowing it. */
+.composerBlocked {
+  animation: composer-shake 240ms ease-in-out;
+}
+
+@keyframes composer-shake {
+  25% {
+    translate: -3px 0;
+  }
+  75% {
+    translate: 3px 0;
+  }
+}
+
 /* Surface-specific typography/layout only — sizing (1 row → ~8 rows cap,
    internal scroll) is owned by the shared ComposerTextarea primitive. */
 .composerInput {

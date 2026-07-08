@@ -40,7 +40,6 @@ import type { TranslationKey } from "@oh-writers/domain";
 import { useTranslation } from "~/features/i18n";
 import { setHighlight, clearHighlight } from "~/features/documents";
 import { useCesareChat } from "../use-cesare-chat";
-import { lastUserMessage } from "../use-cesare-chat-reducer";
 import type { CesareTurnSettle } from "../cesare-chat-store";
 import {
   CesareConversation,
@@ -295,6 +294,10 @@ export function CesareSheet({
 
   // ── Chat composer value (local controlled input) ─────────────────────────
   const [input, setInput] = useState("");
+  // A pulse (not persisted state) that plays a brief shake when Enter is
+  // swallowed because a turn is still in flight — the field itself stays
+  // editable, so this is the only signal the keypress did nothing.
+  const [submitBlockedPulse, setSubmitBlockedPulse] = useState(false);
 
   // ── Sessions ────────────────────────────────────────────────────────────
   const sessionsQuery = useSessions(projectId);
@@ -600,16 +603,20 @@ export function CesareSheet({
   );
 
   const handleSubmit = useCallback(() => {
-    if (isLoading) return;
+    if (isLoading) {
+      setSubmitBlockedPulse(true);
+      window.setTimeout(() => setSubmitBlockedPulse(false), 240);
+      return;
+    }
     const text = input;
     setInput("");
     void sendInSession(text);
   }, [input, isLoading, sendInSession]);
 
   const handleRecallLast = useCallback(() => {
-    const recalled = lastUserMessage(messages);
-    if (recalled) setInput(recalled.content);
-  }, [messages]);
+    const recalled = chat.recallLast();
+    if (recalled) setInput(recalled);
+  }, [chat.recallLast]);
 
   const handleQuickPrompt = useCallback(
     (prompt: string) => {
@@ -736,6 +743,7 @@ export function CesareSheet({
         isThinking: isLoading,
         onStop: () => chat.stop(activeSessionId ?? undefined),
         onRecallLast: handleRecallLast,
+        isSubmitBlocked: submitBlockedPulse,
       }}
       peekSubtitle={
         isLoading ? t("cesare.peek.thinking") : t("cesare.peek.waiting")

@@ -104,6 +104,10 @@ export function SessionConversationPage({
   // ── Composer ──────────────────────────────────────────────────────────────
   const [input, setInput] = useState("");
   const isLoading = store?.isLoadingFor(confirmedSessionId) ?? false;
+  // A pulse (not persisted state) that plays a brief shake when Enter is
+  // swallowed because a turn is still in flight — the field itself stays
+  // editable, so this is the only signal the keypress did nothing.
+  const [submitBlockedPulse, setSubmitBlockedPulse] = useState(false);
 
   // Opening a session jumps straight to the latest message (instant, no smooth
   // animation): a writer wants the newest content, not the top of a long thread.
@@ -154,7 +158,12 @@ export function SessionConversationPage({
   const handleSubmit = useCallback(() => {
     if (!store || !confirmedSessionId) return;
     const text = input.trim();
-    if (text.length === 0 || isLoading) return;
+    if (text.length === 0) return;
+    if (isLoading) {
+      setSubmitBlockedPulse(true);
+      window.setTimeout(() => setSubmitBlockedPulse(false), 240);
+      return;
+    }
     setInput("");
     void store.send(text, confirmedSessionId);
   }, [store, confirmedSessionId, input, isLoading]);
@@ -355,6 +364,7 @@ export function SessionConversationPage({
           onSubmit={handleSubmit}
           onArrowUp={handleRecallLast}
           isThinking={isLoading}
+          isSubmitBlocked={submitBlockedPulse}
         />
       </div>
     </div>
@@ -369,12 +379,14 @@ function SessionComposer({
   onSubmit,
   onArrowUp,
   isThinking,
+  isSubmitBlocked,
 }: {
   value: string;
   onChange: (next: string) => void;
   onSubmit: () => void;
   onArrowUp: () => void;
   isThinking: boolean;
+  isSubmitBlocked: boolean;
 }) {
   const { t } = useTranslation();
   const sendRef = useRef<HTMLButtonElement>(null);
@@ -388,7 +400,15 @@ function SessionComposer({
   );
 
   return (
-    <div className={styles.composer} data-testid="session-composer">
+    <div
+      className={[
+        styles.composer,
+        isSubmitBlocked ? styles.composerBlocked : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+      data-testid="session-composer"
+    >
       <ComposerTextarea
         className={styles.composerInput}
         value={value}
@@ -396,7 +416,6 @@ function SessionComposer({
         onSubmit={onSubmit}
         onArrowUp={onArrowUp}
         placeholder={t("cesare.session.composerPlaceholder")}
-        isDisabled={isThinking}
         ariaLabel={t("cesare.session.composerAria")}
         testId="cesare-composer-input"
       />

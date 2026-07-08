@@ -14,6 +14,7 @@ import {
   chatReducer,
   initialChatState,
   activeThread,
+  lastUserMessage,
   type ChatMessage,
   type ChatState,
 } from "./use-cesare-chat-reducer";
@@ -54,6 +55,9 @@ export interface UseCesareChat {
   /** Abort the in-flight turn (composer's ⏸ button). No-op outside a
    *  `CesareChatStoreProvider` — the local fallback has no cancellable stream. */
   readonly stop: (sessionId?: string) => void;
+  /** Text of the most recent user turn — the composer's ArrowUp recall
+   *  gesture. `undefined` when the thread has no user message yet. */
+  readonly recallLast: () => string | undefined;
 }
 
 export const useCesareChat = (args: UseCesareChatArgs): UseCesareChat => {
@@ -135,6 +139,10 @@ export const useCesareChat = (args: UseCesareChatArgs): UseCesareChat => {
   const storeStop = useCallback((sessionId?: string) => {
     storeRef.current?.stop(sessionId);
   }, []);
+  const storeRecallLast = useCallback(
+    () => lastUserMessage(storeRef.current?.activeMessages ?? [])?.content,
+    [],
+  );
 
   if (store) {
     return {
@@ -143,6 +151,7 @@ export const useCesareChat = (args: UseCesareChatArgs): UseCesareChat => {
       send: storeSend,
       selectSession: storeSelect,
       stop: storeStop,
+      recallLast: storeRecallLast,
     };
   }
   return local;
@@ -313,5 +322,10 @@ const useLocalCesareChat = (
   // (no store, no AbortController); real stop needs a CesareChatStoreProvider.
   const stop = useCallback(() => {}, []);
 
-  return { messages, isLoading, send, selectSession, stop };
+  const recallLast = useCallback(
+    () => lastUserMessage(activeThread(stateRef.current))?.content,
+    [],
+  );
+
+  return { messages, isLoading, send, selectSession, stop, recallLast };
 };

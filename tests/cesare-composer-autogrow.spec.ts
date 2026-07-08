@@ -123,7 +123,17 @@ test.describe("[N65] auto-growing Cesare composer", () => {
     const composer = page.getByTestId("session-composer");
     await expect(composer).toBeVisible({ timeout: 10_000 });
     const input = composer.getByTestId("cesare-composer-input");
-    await expect(input).toBeEnabled({ timeout: 15_000 });
+    // The composer field is never HTML-disabled (it must stay editable
+    // through a turn — see the arrow-up recall fix), so wait for the
+    // seeding "Ciao Cesare" turn to actually settle (its reply paragraph
+    // lands) before sending a second message, instead of an isDisabled
+    // check that would now pass trivially and prove nothing about turn state.
+    const thread = page.getByTestId("session-conversation-thread");
+    await expect
+      .poll(async () => await thread.locator("p").count(), {
+        timeout: 60_000,
+      })
+      .toBeGreaterThanOrEqual(2);
 
     const oneLineHeight = await boxHeight(input);
     const maxHeight = await computedMaxHeight(input);

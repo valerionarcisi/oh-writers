@@ -73,12 +73,18 @@ export interface CesareDrawerComposerProps {
   value: string;
   onChange: (next: string) => void;
   onSubmit: () => void;
-  /** When true: input disabled, send button replaced by stop. */
+  /** When true: send button replaced by stop. The field itself stays
+   *  editable (e.g. to recall/edit the last message via ArrowUp). */
   isThinking?: boolean;
   onStop?: () => void;
   /** ArrowUp on an empty composer — recalls the last sent message for
    *  editing/resending (standard chat-app gesture). */
   onRecallLast?: () => void;
+  /** True for one render right after Enter was pressed while a turn was
+   *  still in flight — plays a brief shake so the swallowed keypress isn't
+   *  silent. The consumer flips this back to false itself (it's a pulse,
+   *  not a persisted state). */
+  isSubmitBlocked?: boolean;
   /** Voice button (↓). Optional. */
   onVoice?: () => void;
   /** Magic prompt enhancer (✦). Optional. */
@@ -622,14 +628,20 @@ export function CesareDrawer({
           )}
 
           {composer && (
-            <div className={styles.composer}>
+            <div
+              className={[
+                styles.composer,
+                composer.isSubmitBlocked ? styles.composerBlocked : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+            >
               <ComposerTextarea
                 className={styles.composerInput}
                 value={composer.value}
                 onChange={composer.onChange}
                 onSubmit={composer.onSubmit}
                 placeholder={composer.placeholder ?? "Chiedi a Cesare…"}
-                isDisabled={composer.isThinking}
                 ariaLabel="Composer Cesare"
                 onArrowUp={composer.onRecallLast}
               />
