@@ -138,6 +138,14 @@ const buildSdkTools = (
     ]),
   );
 
+// BUG-101 — with no bound here, a stuck/retrying call blocks the outer
+// tool-loop's streamText indefinitely (the loop can't progress past the tool
+// call that invoked this) and keeps billing Anthropic even after the client
+// gives up watching. 45s covers a real Sonnet generation with room to spare;
+// maxRetries is set explicitly instead of trusting the SDK default so a
+// transient-error retry storm can't silently add tens of seconds on its own.
+const CALL_TIMEOUT_MS = 45_000;
+
 export const callHaiku = (
   params: CallHaikuParams,
   operation: string,
@@ -172,6 +180,8 @@ export const callHaiku = (
           }
         : {}),
       experimental_telemetry: aiTelemetry(`call-haiku:${operation}`),
+      abortSignal: AbortSignal.timeout(CALL_TIMEOUT_MS),
+      maxRetries: 1,
     }).then((result) => {
       const toolUseBlocks: ToolUseBlock[] = result.toolCalls.map((tc) => ({
         type: "tool_use" as const,
