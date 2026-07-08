@@ -19,6 +19,29 @@ export interface HeadingInfo {
   readonly locked: boolean;
 }
 
+export interface SceneNodeAt {
+  readonly sceneNode: PmNode;
+  readonly sceneStart: number;
+  readonly sceneEnd: number;
+}
+
+/**
+ * Given a heading node's `pos`, resolve the enclosing `scene` node (heading +
+ * its full body) and its `[sceneStart, sceneEnd)` range. Shared by
+ * `removeHeading` and the heading NodeView's menu (disabled-state check,
+ * copy-scene-text) — the schema groups heading+body into one `scene` node
+ * (see schema.ts), so this lookup is the same one-liner everywhere it's needed.
+ */
+export const getSceneNodeAt = (
+  doc: PmNode,
+  headingPos: number,
+): SceneNodeAt | null => {
+  const sceneStart = headingPos - 1;
+  const sceneNode = doc.resolve(sceneStart).nodeAfter;
+  if (!sceneNode || sceneNode.type.name !== "scene") return null;
+  return { sceneNode, sceneStart, sceneEnd: sceneStart + sceneNode.nodeSize };
+};
+
 export const listHeadings = (doc: PmNode): HeadingInfo[] => {
   const out: HeadingInfo[] = [];
   doc.descendants((node, pos) => {

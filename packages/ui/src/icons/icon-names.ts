@@ -26,6 +26,7 @@ export const ICON_NAMES = [
   "map-pin",
   "camera",
   "clipboard",
+  "check",
   "book",
   "file-text",
   "help",

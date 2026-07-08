@@ -1,5 +1,7 @@
 export { Button } from "./components/Button";
 export type { ButtonProps } from "./components/Button";
+export { CopyButton } from "./components/CopyButton";
+export type { CopyButtonProps } from "./components/CopyButton";
 export { Badge } from "./components/Badge";
 export { Input } from "./components/Input";
 export { FormField } from "./components/FormField";

@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Button, Popover } from "@oh-writers/ui";
+import { Button, CopyButton, Popover } from "@oh-writers/ui";
 import { LOGLINE_MAX } from "../documents.schema";
 import { useTranslation } from "~/features/i18n";
 import styles from "./LoglinePill.module.css";
@@ -72,7 +72,15 @@ export function LoglinePill({
         width={480}
         className={styles.popover}
       >
-        <p className={styles.popHead}>{t("documents.logline.heading")}</p>
+        <div className={styles.popHeadRow}>
+          <p className={styles.popHead}>{t("documents.logline.heading")}</p>
+          {hasLogline && (
+            <CopyButton
+              getText={() => trimmed}
+              data-testid="narrative-logline-copy"
+            />
+          )}
+        </div>
         {canEdit && onChange !== undefined ? (
           <>
             <textarea

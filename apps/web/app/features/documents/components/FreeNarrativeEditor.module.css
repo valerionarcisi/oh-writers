@@ -33,6 +33,10 @@
   border-block-end: 1px solid var(--ds-line-soft, rgba(0, 0, 0, 0.08));
 }
 
+.copyButton {
+  margin-inline-start: auto;
+}
+
 .counter {
   position: sticky;
   inset-block-end: calc(var(--space-6) * -1);

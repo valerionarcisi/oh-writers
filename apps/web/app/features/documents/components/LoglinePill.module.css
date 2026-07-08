@@ -62,6 +62,13 @@
   gap: var(--ds-space-2);
 }
 
+.popHeadRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-space-2);
+}
+
 .popHead {
   margin: 0;
   font-family: var(--ds-font-mono);

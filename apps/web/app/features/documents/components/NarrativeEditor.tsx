@@ -4,6 +4,7 @@ import { ContextActionIds, DocumentTypes } from "@oh-writers/domain";
 import type { DocumentType, TranslationKey } from "@oh-writers/domain";
 import {
   ActionsMenu,
+  CopyButton,
   FloatingDock,
   Skeleton,
   computeSaveStatus,
@@ -58,7 +59,10 @@ import { createVersionFromScratch } from "../server/versions.server";
 import { useTranslation } from "~/features/i18n";
 import styles from "./NarrativeEditor.module.css";
 
-const stripHtml = (html: string): string =>
+// Exported so pages that host a narrative doc outside this component (e.g.
+// the Soggetto route's copy-to-clipboard button) can produce the same plain
+// text without a fifth ad-hoc stripHtml variant.
+export const stripHtml = (html: string): string =>
   html
     .replace(/<\/(p|h[1-6]|li|br)>/gi, "\n")
     .replace(/<br\s*\/?>/gi, "\n")
@@ -400,13 +404,15 @@ export function NarrativeEditor({
           <PresenceIndicator status={realtimeStatus} peers={realtimePeers} />
         </div>
       )}
-      {!isReadOnly && (
+      {(!isReadOnly || isSynopsis || isTreatment) && (
         <div className={styles.editorToolbar}>
-          <NarrativeFormatToolbar
-            view={editorViewRef.current}
-            enableHeadings={isTreatment}
-          />
-          {isTreatment && (
+          {!isReadOnly && (
+            <NarrativeFormatToolbar
+              view={editorViewRef.current}
+              enableHeadings={isTreatment}
+            />
+          )}
+          {!isReadOnly && isTreatment && (
             <>
               <button
                 type="button"
@@ -493,6 +499,13 @@ export function NarrativeEditor({
                 • List
               </button>
             </>
+          )}
+          {(isSynopsis || isTreatment) && (
+            <CopyButton
+              getText={() => stripHtml(content)}
+              className={styles.copyButton}
+              data-testid="narrative-copy"
+            />
           )}
         </div>
       )}
