@@ -169,10 +169,11 @@ export function SessionConversationPage({
   }, [store, confirmedSessionId, input, isLoading]);
 
   const handleRecallLast = useCallback(() => {
+    if (isLoading) return;
     const thread = store?.messagesFor(confirmedSessionId) ?? [];
     const recalled = lastUserMessage(thread);
     if (recalled) setInput(recalled.content);
-  }, [store, confirmedSessionId]);
+  }, [isLoading, store, confirmedSessionId]);
 
   // Per-result-card "Apri <Entity>" navigation: a session can edit several
   // entities (logline, then soggetto…), so each card jumps to ITS entity's real

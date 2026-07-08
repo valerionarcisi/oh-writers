@@ -614,9 +614,10 @@ export function CesareSheet({
   }, [input, isLoading, sendInSession]);
 
   const handleRecallLast = useCallback(() => {
+    if (isLoading) return;
     const recalled = chat.recallLast();
     if (recalled) setInput(recalled);
-  }, [chat.recallLast]);
+  }, [isLoading, chat.recallLast]);
 
   const handleQuickPrompt = useCallback(
     (prompt: string) => {

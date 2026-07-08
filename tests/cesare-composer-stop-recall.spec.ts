@@ -16,6 +16,7 @@ import {
   sendCesareMessage,
   resetCesareState,
   waitForCesareReply,
+  waitForMidFlightOrSkip,
 } from "./helpers/cesare";
 
 test.describe("Cesare composer — stop button and arrow-up recall", () => {
@@ -95,7 +96,7 @@ test.describe("Cesare composer — stop button and arrow-up recall", () => {
     await expect(input).toHaveValue("bozza in corso");
   });
 
-  test("the composer stays editable and Enter is a no-op while a turn is in flight", async ({
+  test("the composer stays editable, and Enter/ArrowUp are no-ops, while a turn is in flight", async ({
     authenticatedPage: page,
   }) => {
     test.setTimeout(60_000);
@@ -106,22 +107,21 @@ test.describe("Cesare composer — stop button and arrow-up recall", () => {
     await sendCesareMessage(page, "Scrivi un'analisi molto lunga");
 
     const input = page.getByPlaceholder("Chiedi a Cesare…");
-    const stopBtn = page.locator('[data-testid="cesare-stop-btn"]');
-    const caughtMidFlight = await stopBtn
-      .waitFor({ state: "visible", timeout: 3_000 })
-      .then(() => true)
-      .catch(() => false);
-    // Same race as the stop-button test: the mock can resolve very fast.
     // The regression this guards is "the field is readonly while thinking",
     // which only has a window to prove itself while a turn is actually in
     // flight — if it already settled, there is nothing to assert here.
-    test.skip(
-      !caughtMidFlight,
-      "turn settled before the field could be checked",
-    );
+    await waitForMidFlightOrSkip(page, test.skip);
+
+    // Regression: ArrowUp used to recall the in-flight message into an input
+    // that Enter would then silently refuse to submit. It must stay a no-op
+    // until the turn settles. The composer is already focused (sendCesareMessage
+    // left it that way) — skip any extra click/focus round-trip so this fires
+    // as close as possible to the mid-flight check above, since the mock can
+    // settle the turn within milliseconds.
+    await page.keyboard.press("ArrowUp");
+    await expect(input).toHaveValue("");
 
     // The field must accept input (BUG: it used to be HTML-disabled here).
-    await input.click();
     await input.type("non ancora");
     await expect(input).toHaveValue("non ancora");
 

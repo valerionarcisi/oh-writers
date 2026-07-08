@@ -262,3 +262,23 @@ export async function resetCesareState(
     );
   }
 }
+
+/**
+ * Wait for the ⏸ stop button to prove a turn is genuinely mid-flight, or
+ * skip the calling test via `skip` if the mock resolved too fast to catch it.
+ * The mock backend can settle a turn with no artificial delay, so the
+ * mid-flight window is inherently racy — several composer tests need this
+ * exact "catch it or skip" tolerance, so it lives here once instead of being
+ * copy-pasted per test.
+ */
+export async function waitForMidFlightOrSkip(
+  page: Page,
+  skip: (condition: boolean, description: string) => void,
+): Promise<void> {
+  const stopBtn = page.locator('[data-testid="cesare-stop-btn"]');
+  const caughtMidFlight = await stopBtn
+    .waitFor({ state: "visible", timeout: 3_000 })
+    .then(() => true)
+    .catch(() => false);
+  skip(!caughtMidFlight, "turn settled before the field could be checked");
+}
