@@ -10,9 +10,32 @@
 // The edit is already applied live to the document; this preview only lets the
 // writer look at the modified page beside the conversation. One section per touched
 // document (`liveDiffs`).
+import { DocumentTypes } from "@oh-writers/domain";
 import type { SplitDrawerPreviewDiff } from "../split-drawer-context";
 import { useTranslation } from "~/features/i18n";
+import { OutlineEditor } from "~/features/documents";
+import {
+  OutlineContentSchema,
+  type OutlineContent,
+} from "~/features/documents/documents.schema";
 import styles from "./SplitDrawerPreviewBody.module.css";
+
+const noop = () => {};
+
+// `parseOutline` (documents.schema.ts) collapses malformed JSON into an empty
+// outline — the right default for a fresh document, but indistinguishable
+// from "the diff's word-level reassembly broke mid-JSON-token" here. This
+// preview needs to tell the two apart so a Cesare edit is never silently
+// shown as "no scenes." Returns null on any parse/validation failure instead
+// of swallowing it.
+const tryParseOutlineStrict = (raw: string): OutlineContent | null => {
+  try {
+    const result = OutlineContentSchema.safeParse(JSON.parse(raw));
+    return result.success ? result.data : null;
+  } catch {
+    return null;
+  }
+};
 
 interface SplitDrawerPreviewBodyProps {
   readonly title: string;
@@ -69,10 +92,29 @@ export function SplitDrawerPreviewBody({
           <p className={styles.sectionLabel}>{diff.label || title}</p>
           {/* The FINAL document text, clean — no highlight. The change is already
               applied; this is the result as it now reads (the bullet summary on
-              top says what changed). Same for every doc type. */}
-          <p className={styles.body}>
-            {diff.finalSegments.map((seg) => seg.text).join("")}
-          </p>
+              top says what changed). Outline is structured JSON, not prose — it
+              renders as the real scene cards instead of raw text (no highlight
+              there either, same as every other doc type here). */}
+          {(() => {
+            const finalText = diff.finalSegments
+              .map((seg) => seg.text)
+              .join("");
+            const outline =
+              diff.documentType === DocumentTypes.OUTLINE
+                ? tryParseOutlineStrict(finalText)
+                : null;
+            // outline === null covers both "not an outline doc" and "the
+            // diff's word-level reassembly broke mid-JSON-token" — either
+            // way, showing the raw text beats silently rendering zero scenes.
+            if (!outline) {
+              return <p className={styles.body}>{finalText}</p>;
+            }
+            return (
+              <div className={styles.outlinePreview}>
+                <OutlineEditor value={outline} onChange={noop} readOnly />
+              </div>
+            );
+          })()}
         </section>
       ))}
     </div>

@@ -74,3 +74,9 @@
   font-size: 13px;
   text-align: center;
 }
+
+/* OutlineEditor carries its own root padding — cancel this section's implicit
+   inline padding so the scene cards don't double-indent inside the preview. */
+.outlinePreview {
+  margin-inline: calc(var(--ds-space-2) * -1);
+}
