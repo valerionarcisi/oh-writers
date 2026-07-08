@@ -3187,6 +3187,13 @@ const logCacheUsage = (
 // text-delta events, additive to the existing step-trace contract. usage/
 // finishReason/providerMetadata become promises that resolve once the stream
 // drains, awaited below where generateText used to return them synchronously.
+// BUG-101 — hard ceiling on the whole streamText consumption (up to 5 steps,
+// each a model round-trip, plus tool execution). Sized above the nested
+// callHaiku 45s bound so a legitimate multi-step turn with a from-scratch
+// generation inside it isn't cut short, while still guaranteeing the turn can
+// never hang unbounded and leave the tracer stuck.
+const LOOP_TIMEOUT_MS = 90_000;
+
 const runProductionToolLoopEffect = (
   args: RunToolLoopArgs,
 ): Effect.Effect<string, CesareError> => {
@@ -3202,6 +3209,18 @@ const runProductionToolLoopEffect = (
       // step-count distribution in production before picking a lower cap
       // than the current stepCountIs(5).
       let stepCount = 0;
+
+      // BUG-101 (second symptom) — bound the whole streamText consumption so a
+      // turn can never hang unbounded. The nested callHaiku has its own 45s
+      // bound; this covers the outer loop (multiple steps, so a larger ceiling).
+      // Composed with the client abortSignal via AbortSignal.any so a client
+      // cancel and the hard timeout both tear the request down. When it fires,
+      // the fullStream loop below surfaces the abort as an `error` part → the
+      // stream closes → `done`/END reach the client instead of hanging.
+      const timeoutSignal = AbortSignal.timeout(LOOP_TIMEOUT_MS);
+      const effectiveSignal = args.abortSignal
+        ? AbortSignal.any([args.abortSignal, timeoutSignal])
+        : timeoutSignal;
 
       const result = streamText({
         model: resolvedModel,
@@ -3224,7 +3243,8 @@ const runProductionToolLoopEffect = (
         // Spec 48 (W-E2/W-E3) — when the orchestrating Effect fiber is
         // interrupted (client aborted the fetch), this signal aborts and the AI
         // SDK tears down the in-flight model request so no work leaks server-side.
-        ...(args.abortSignal ? { abortSignal: args.abortSignal } : {}),
+        // BUG-101 — now also carries the hard-timeout signal (AbortSignal.any).
+        abortSignal: effectiveSignal,
         // Spec 47e FIX 5 — telemetry gated on Langfuse being configured so dev
         // stays clean ("Not found" noise) when it isn't.
         experimental_telemetry: aiTelemetry("cesare-tool-loop"),
@@ -3264,12 +3284,31 @@ const runProductionToolLoopEffect = (
       });
 
       // Forward token deltas as they arrive — additive to the reasoning/tool
-      // events onStepFinish already emits above. Consuming textStream here
-      // (rather than fullStream) keeps this scoped to Task 4's one job: the
-      // final reply's tokens, not a second copy of the step trace.
-      for await (const delta of result.textStream) {
-        if (delta.length > 0) {
-          args.onStreamEvent?.({ _tag: "text-delta", text: delta });
+      // events onStepFinish already emits above.
+      //
+      // BUG-101 (second symptom) — this loop MUST consume `fullStream`, not
+      // `textStream`. On a tool-only final step (the model ran a tool, e.g. the
+      // Scaletta doc-edit, and emitted NO closing text) `textStream` yields zero
+      // deltas for that step and its async iterator may never terminate — so the
+      // `for await` never completed, the outer promise never resolved, and the
+      // client's tracer sat on "STO SCRIVENDO Scaletta" forever with no `done`.
+      // `fullStream` always emits `finish-step`/`finish` and closes cleanly after
+      // the last step regardless of whether it produced text, so the loop is
+      // guaranteed to terminate. We still forward ONLY `text-delta` parts to keep
+      // the client's `text-delta` event contract byte-for-byte identical; the
+      // step trace (reasoning/tool) keeps coming from onStepFinish above.
+      for await (const part of result.fullStream) {
+        if (part.type === "text-delta") {
+          if (part.text.length > 0) {
+            args.onStreamEvent?.({ _tag: "text-delta", text: part.text });
+          }
+        } else if (part.type === "error") {
+          // Surface the error so the stream can close and the client is
+          // released (it closes on the `error`/`done`/END signals). Re-throw so
+          // the outer Effect.tryPromise maps it to a CesareError.
+          throw part.error instanceof Error
+            ? part.error
+            : new Error(String(part.error));
         }
       }
 

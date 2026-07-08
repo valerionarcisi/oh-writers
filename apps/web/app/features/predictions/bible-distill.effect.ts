@@ -81,7 +81,7 @@ export const computeBibleFingerprint = (
 
 // ─── Tool definition ─────────────────────────────────────────────────────────
 
-const SONNET_MODEL = "claude-sonnet-4-6";
+const SONNET_MODEL = "claude-sonnet-5";
 const EMIT_TOOL_NAME = "emit_film_bible";
 
 const EMIT_TOOL = {

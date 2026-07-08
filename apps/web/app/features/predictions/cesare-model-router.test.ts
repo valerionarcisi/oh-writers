@@ -7,15 +7,8 @@ import {
 } from "./cesare-model-router";
 
 describe("routeModel", () => {
-  it("routes Italian imperative requests to Sonnet", () => {
-    expect(
-      routeModel({
-        userMessage: "aggiungi 3 candidati per il ristorante",
-        page: "locations",
-        conversationLength: 0,
-      }),
-    ).toBe("sonnet");
-  });
+  // Haiku is the default tier (issue #101 cost reversal): questions and everyday
+  // scoped edits are Haiku jobs; Sonnet is reserved for genuinely hard turns.
 
   it("routes a pure question to Haiku", () => {
     expect(
@@ -27,8 +20,32 @@ describe("routeModel", () => {
     ).toBe("haiku");
   });
 
-  it("routes a long message (>200 chars) to Sonnet even if it looks like a question", () => {
-    const long = "Mi puoi spiegare nel dettaglio cosa significa ".repeat(20) + "?";
+  it("routes an everyday scoped edit to Haiku (no longer Sonnet)", () => {
+    expect(
+      routeModel({
+        userMessage: "aggiungi 3 candidati per il ristorante",
+        page: "locations",
+        conversationLength: 0,
+      }),
+    ).toBe("haiku");
+  });
+
+  it("routes a small update to Haiku", () => {
+    expect(
+      routeModel({
+        userMessage: "aggiorna la scaletta e accorcia la scena 2",
+        page: "outline",
+        conversationLength: 0,
+      }),
+    ).toBe("haiku");
+  });
+
+  it("routes a long multi-constraint message (>400 chars) to Sonnet", () => {
+    const long =
+      "Mi puoi spiegare nel dettaglio cosa significa e come cambia tutto ".repeat(
+        10,
+      ) + "?";
+    expect(long.length).toBeGreaterThan(400);
     expect(
       routeModel({
         userMessage: long,
@@ -38,44 +55,54 @@ describe("routeModel", () => {
     ).toBe("sonnet");
   });
 
-  it("routes a deep conversation (>4 turns) to Sonnet", () => {
+  it("routes a deep conversation (>8 turns) to Sonnet", () => {
     expect(
       routeModel({
         userMessage: "ok?",
         page: "screenplay",
-        conversationLength: 5,
+        conversationLength: 9,
       }),
     ).toBe("sonnet");
   });
 
-  it("defends against empty messages by routing to Sonnet", () => {
+  it("keeps a short back-and-forth of edits on Haiku (<=8 turns)", () => {
+    expect(
+      routeModel({
+        userMessage: "aggiungi una battuta",
+        page: "screenplay",
+        conversationLength: 5,
+      }),
+    ).toBe("haiku");
+  });
+
+  it("routes a from-scratch rewrite of the whole document to Sonnet", () => {
+    expect(
+      routeModel({
+        userMessage: "riscrivi tutta la scaletta da zero",
+        page: "outline",
+        conversationLength: 0,
+      }),
+    ).toBe("sonnet");
+  });
+
+  it("does NOT escalate a scoped rewrite to Sonnet", () => {
+    expect(
+      routeModel({
+        userMessage: "riscrivi la scena 3",
+        page: "screenplay",
+        conversationLength: 0,
+      }),
+    ).toBe("haiku");
+  });
+
+  it("routes an empty message to Haiku (nothing complex to reason about)", () => {
     expect(
       routeModel({
         userMessage: "   ",
         page: "screenplay",
         conversationLength: 0,
       }),
-    ).toBe("sonnet");
-  });
-
-  it("treats imperative-in-question hybrid as Sonnet (imperative wins)", () => {
-    expect(
-      routeModel({
-        userMessage: "puoi aggiungere una scena al treatment?",
-        page: "treatment",
-        conversationLength: 0,
-      }),
-    ).toBe("sonnet");
-  });
-
-  it("defaults short non-imperative non-question utterances to Sonnet", () => {
-    expect(
-      routeModel({
-        userMessage: "interessante",
-        page: "screenplay",
-        conversationLength: 0,
-      }),
-    ).toBe("sonnet");
+    ).toBe("haiku");
   });
 });
 

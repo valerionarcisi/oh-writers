@@ -32,10 +32,18 @@ Quando hai il testo della sceneggiatura, citalo esplicitamente nelle tue rispost
 //       burning 2-11 of Anthropic's 4-breakpoint-per-request cap. Collapsing
 //       to one block also guarantees a byte-identical prefix — no risk of
 //       sub-blocks drifting out of sync with each other.
-//   [1] LocalContext   — no cache_control, changes every call
-//   [2] historyContext — no cache_control, changes as edits accumulate
-// Plus the tool-array breakpoint set by withCachedTools (cesare-tools.ts) —
-// 2 breakpoints total per request, well under the 4-breakpoint cap.
+//   [1] LocalContext   — cache_control ephemeral (BUG-101). Changes per TURN,
+//       but the tool loop makes up to 5 model round-trips PER turn and re-sends
+//       this whole block (incl. the up-to-8000-char active-document dump) every
+//       step. Within one turn the block is byte-identical across steps, so a
+//       breakpoint here turns those 4 re-bills into 4 cache reads (~0.1× input
+//       price). It won't cache when the block is under the model's minimum
+//       cacheable prefix (Haiku 4.5: 4096 tok, Sonnet 5: 2048) — that just
+//       silently no-ops, no harm.
+//   [2] historyContext — cache_control ephemeral, same within-turn rationale.
+// Breakpoint budget: MEGA_STATIC(1) + tools(1) + local(1) + history(1) = 4,
+// exactly Anthropic's 4-breakpoint-per-request cap. If a 5th is ever added, fold
+// history into the local block's single breakpoint.
 
 const BLOCK_SEPARATOR = "\n\n---\n\n";
 
@@ -56,9 +64,19 @@ export const assembleSystemPromptV2 = (
 
   return [
     { type: "text", text: megaStatic, cache_control: { type: "ephemeral" } },
-    { type: "text", text: formatLocalContext(local) },
+    {
+      type: "text",
+      text: formatLocalContext(local),
+      cache_control: { type: "ephemeral" },
+    },
     ...(historyContext !== null
-      ? [{ type: "text" as const, text: historyContext }]
+      ? [
+          {
+            type: "text" as const,
+            text: historyContext,
+            cache_control: { type: "ephemeral" as const },
+          },
+        ]
       : []),
   ];
 };

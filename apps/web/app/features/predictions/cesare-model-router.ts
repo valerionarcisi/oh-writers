@@ -3,7 +3,7 @@
 // here so the rest of the Cesare pipeline stays untouched.
 
 export const HAIKU_MODEL = "claude-haiku-4-5-20251001";
-export const SONNET_MODEL = "claude-sonnet-4-6";
+export const SONNET_MODEL = "claude-sonnet-5";
 
 export type ModelTier = "haiku" | "sonnet";
 
@@ -25,15 +25,30 @@ export interface RouteModelInput {
   readonly conversationLength: number;
 }
 
-// Italian imperative verbs that signal a state-changing request. The list
-// is intentionally narrow: false positives only cost us money (route to
-// Sonnet when Haiku would have sufficed), false negatives cost correctness
-// (Haiku tries to handle a mutation and fails).
-const ITALIAN_IMPERATIVE_REGEX =
-  /\b(aggiungi|aggiungere|modifica|modificare|crea|creare|rinomina|rinominare|applica|applicare|salva|salvare|rimuovi|rimuovere|sposta|spostare|sostituisci|sostituire|elimina|eliminare|genera|generare|imposta|impostare|cambia|cambiare|togli|togliere|metti|mettere|fai|costruisci|costruire|riscrivi|riscrivere|scrivi|scrivere|scrivimi|riempi|riempire|aggiorna|aggiornare|cancella|cancellare|propaga|propagare|distribuisci|distribuire|sincronizza|sincronizzare|esegui|eseguire|trova|trovare|cerca|cercare|espandi|espandere|comprimi|comprimere|accorcia|accorciare|riassumi|riassumere|tagga|taggare|spoglia|spogliare|riduci|ridurre|abbassa|abbassare|alza|alzare|aumenta|aumentare|riallocara|rialloca|riallocare|redistribuisci|redistribuire|proponi|proporre|suggerisci|suggerire|componi|comporre|inventa|inventare|racconta|raccontare|disegna|disegnare|rendi|rendere|spinge|spingi|spingere|tira|tirare|tendi|tendere)\b/i;
+// Haiku 4.5 is the default (3× cheaper than Sonnet). It handles the common
+// interactive load — questions and everyday edits ("aggiungi una scena",
+// "accorcia questo", "aggiorna la scaletta") — well. Sonnet is reserved for the
+// genuinely hard turns where its quality earns its cost, gated by three narrow
+// signals below. Note: the heavy *generate-from-scratch* tools (full scaletta /
+// treatment / screenplay from soggetto) already select Sonnet directly at their
+// own call site (cesare-document-tools.ts), so the router does NOT need a broad
+// imperative net to protect those — it only decides the interactive tool-loop
+// tier. This is the deliberate reversal of the old "any imperative → Sonnet"
+// bias, which sent nearly all real requests to the expensive tier (issue #101).
 
-const LONG_MESSAGE_CHAR_LIMIT = 200;
-const DEEP_CONVERSATION_TURN_LIMIT = 4;
+// A narrow set of "rewrite the whole document from scratch" phrasings — the one
+// interactive intent heavy enough to justify Sonnet even when it slips past the
+// generation tools. Everyday scoped edits are intentionally NOT here.
+const HEAVY_GENERATION_REGEX =
+  /\b(riscrivi|riscrivere|rigenera|rigenerare|genera(?:mi)?|generare)\b.*\b(tutt[oa]|intero|intera|dall['’ ]?inizio|da\s?capo|da\s?zero|l['’ ]?intero|l['’ ]?intera)\b/i;
+
+// Multi-constraint prompts encode complex intent. Raised from the old 200 so a
+// normal edit instruction ("aggiungi una scena dopo la 4 e accorcia la 2") still
+// lands on Haiku; only genuinely long, layered requests escalate.
+const LONG_MESSAGE_CHAR_LIMIT = 400;
+// Late-conversation turns accumulate context. Raised from the old 4 so a short
+// back-and-forth of edits stays cheap; only deep threads escalate.
+const DEEP_CONVERSATION_TURN_LIMIT = 8;
 
 export const routeModel = ({
   userMessage,
@@ -42,25 +57,21 @@ export const routeModel = ({
 }: RouteModelInput): ModelTier => {
   const trimmed = userMessage.trim();
 
-  // Defensive: an empty message is not a real Haiku candidate.
-  if (trimmed.length === 0) return "sonnet";
+  // Defensive: an empty message shouldn't reach a model at all; if it does,
+  // Haiku is fine — there is nothing complex to reason about.
+  if (trimmed.length === 0) return "haiku";
 
-  // Long prompts encode complex intent. Don't gamble on Haiku.
+  // Long, multi-constraint prompts: don't gamble on Haiku.
   if (trimmed.length > LONG_MESSAGE_CHAR_LIMIT) return "sonnet";
 
-  // Late-conversation messages tend to carry accumulated context the user
-  // expects us to reason about. Route to Sonnet.
+  // Deep conversations carry accumulated context worth Sonnet's reasoning.
   if (conversationLength > DEEP_CONVERSATION_TURN_LIMIT) return "sonnet";
 
-  // Imperative trumps everything (including questions like "puoi aggiungere?").
-  if (ITALIAN_IMPERATIVE_REGEX.test(trimmed)) return "sonnet";
+  // "Rewrite the whole thing from scratch" — the one heavy interactive intent.
+  if (HEAVY_GENERATION_REGEX.test(trimmed)) return "sonnet";
 
-  // Pure questions are cheap and Haiku handles them well.
-  if (trimmed.endsWith("?")) return "haiku";
-
-  // Default conservatively to Sonnet — we'd rather pay more than degrade
-  // quality on an ambiguous prompt.
-  return "sonnet";
+  // Everything else — questions and everyday scoped edits — is a Haiku job.
+  return "haiku";
 };
 
 export const tierToModel = (tier: ModelTier): string =>
