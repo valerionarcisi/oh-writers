@@ -20,8 +20,9 @@
  * wiring, aria) — never re-implemented by hand.
  */
 
-import { useLayoutEffect, useRef, type KeyboardEvent } from "react";
+import { useRef, type KeyboardEvent } from "react";
 import { useTextField } from "react-aria";
+import { useAutoGrowTextarea } from "./use-auto-grow-textarea";
 import styles from "./ComposerTextarea.module.css";
 
 export interface ComposerTextareaProps {
@@ -78,16 +79,9 @@ export function ComposerTextarea({
     ref,
   );
 
-  // Auto-grow: track the content height on every value change. The element is
-  // measured at `auto` then sized to its scrollHeight; the CSS `max-block-size`
-  // clamps the result (the cap), at which point `overflow-y: auto` scrolls
-  // inside instead of growing further.
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    el.style.blockSize = "auto";
-    el.style.blockSize = `${el.scrollHeight}px`;
-  }, [value]);
+  // Auto-grow: the CSS `max-block-size` clamps the result (the cap), at which
+  // point `overflow-y: auto` scrolls inside instead of growing further.
+  useAutoGrowTextarea(ref, value);
 
   return (
     <textarea

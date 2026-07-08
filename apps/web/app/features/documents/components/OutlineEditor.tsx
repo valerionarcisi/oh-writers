@@ -1,5 +1,6 @@
 import { useRef, useState, useCallback, useId } from "react";
-import type { KeyboardEvent, DragEvent } from "react";
+import type { KeyboardEvent, DragEvent, TextareaHTMLAttributes } from "react";
+import { useAutoGrowTextarea } from "@oh-writers/ui";
 import type {
   OutlineContent,
   OutlineAct,
@@ -42,7 +43,10 @@ const addAct = (outline: OutlineContent): OutlineContent => ({
   ],
 });
 
-const deleteActMergeUp = (outline: OutlineContent, actId: string): OutlineContent => {
+const deleteActMergeUp = (
+  outline: OutlineContent,
+  actId: string,
+): OutlineContent => {
   const idx = outline.acts.findIndex((a) => a.id === actId);
   if (idx === -1) return outline;
   const target = outline.acts[idx]!;
@@ -95,7 +99,10 @@ const updateActTitle = (
   acts: outline.acts.map((a) => (a.id === actId ? { ...a, title } : a)),
 });
 
-const addSequence = (outline: OutlineContent, actId: string): OutlineContent => ({
+const addSequence = (
+  outline: OutlineContent,
+  actId: string,
+): OutlineContent => ({
   acts: outline.acts.map((a) =>
     a.id !== actId
       ? a
@@ -103,7 +110,11 @@ const addSequence = (outline: OutlineContent, actId: string): OutlineContent => 
           ...a,
           sequences: [
             ...a.sequences,
-            { id: newId(), title: `Sequenza ${a.sequences.length + 1}`, scenes: [] },
+            {
+              id: newId(),
+              title: `Sequenza ${a.sequences.length + 1}`,
+              scenes: [],
+            },
           ],
         },
   ),
@@ -150,9 +161,7 @@ const addScene = (
       : {
           ...a,
           sequences: a.sequences.map((s) =>
-            s.id !== seqId
-              ? s
-              : { ...s, scenes: [...s.scenes, newScene()] },
+            s.id !== seqId ? s : { ...s, scenes: [...s.scenes, newScene()] },
           ),
         },
   ),
@@ -183,7 +192,12 @@ const updateScene = (
   actId: string,
   seqId: string,
   sceneId: string,
-  patch: Partial<Pick<OutlineScene, "heading" | "description" | "characters" | "pageEstimate" | "notes">>,
+  patch: Partial<
+    Pick<
+      OutlineScene,
+      "heading" | "description" | "characters" | "pageEstimate" | "notes"
+    >
+  >,
 ): OutlineContent => ({
   acts: outline.acts.map((a) =>
     a.id !== actId
@@ -231,7 +245,13 @@ const collectAllCharacters = (outline: OutlineContent): string[] => {
 // ─── Drag context ─────────────────────────────────────────────────────────────
 
 type DragPayload =
-  | { kind: "scene"; actId: string; seqId: string; sceneId: string; index: number }
+  | {
+      kind: "scene";
+      actId: string;
+      seqId: string;
+      sceneId: string;
+      index: number;
+    }
   | { kind: "sequence"; actId: string; seqId: string; index: number }
   | { kind: "act"; actId: string; index: number };
 
@@ -248,7 +268,12 @@ interface CharacterPickerProps {
   readOnly?: boolean;
 }
 
-function CharacterPicker({ selected, suggestions, onChange, readOnly }: CharacterPickerProps) {
+function CharacterPicker({
+  selected,
+  suggestions,
+  onChange,
+  readOnly,
+}: CharacterPickerProps) {
   const { t } = useTranslation();
   const [input, setInput] = useState("");
   const inputId = useId();
@@ -348,6 +373,30 @@ function CharacterPicker({ selected, suggestions, onChange, readOnly }: Characte
   );
 }
 
+// ─── Auto-growing description field ────────────────────────────────────────────
+// A plain <input> clips long scene descriptions with no way to see the rest
+// (native inputs never wrap or grow). This textarea tracks its own scrollHeight
+// so the card grows to fit the full description instead of hiding it.
+
+function AutoGrowTextarea({
+  className,
+  value,
+  ...rest
+}: TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  useAutoGrowTextarea(ref, typeof value === "string" ? value : "");
+
+  return (
+    <textarea
+      ref={ref}
+      className={className}
+      value={value}
+      rows={1}
+      {...rest}
+    />
+  );
+}
+
 // ─── SceneCard ────────────────────────────────────────────────────────────────
 
 interface SceneCardProps {
@@ -356,7 +405,14 @@ interface SceneCardProps {
   actId: string;
   seqId: string;
   characterSuggestions: string[];
-  onUpdate: (patch: Partial<Pick<OutlineScene, "heading" | "description" | "characters" | "pageEstimate" | "notes">>) => void;
+  onUpdate: (
+    patch: Partial<
+      Pick<
+        OutlineScene,
+        "heading" | "description" | "characters" | "pageEstimate" | "notes"
+      >
+    >,
+  ) => void;
   onDelete: () => void;
   onDragStart: () => void;
   onDragOver: (e: DragEvent) => void;
@@ -421,7 +477,7 @@ function SceneCard({
           readOnly={readOnly}
           aria-label={t("documents.outline.sceneHeadingAria")}
         />
-        <input
+        <AutoGrowTextarea
           className={styles.sceneDescriptionInput}
           value={scene.description}
           onChange={(e) => onUpdate({ description: e.target.value })}
@@ -449,7 +505,9 @@ function SceneCard({
               step={0.25}
               onChange={(e) => {
                 const v = parseFloat(e.target.value);
-                onUpdate({ pageEstimate: isNaN(v) ? null : Math.min(20, Math.max(0, v)) });
+                onUpdate({
+                  pageEstimate: isNaN(v) ? null : Math.min(20, Math.max(0, v)),
+                });
               }}
               readOnly={readOnly}
               aria-label={t("documents.outline.estimatedPagesAria")}
@@ -482,7 +540,15 @@ interface SequenceBlockProps {
   onTitleChange: (title: string) => void;
   onDelete: () => void;
   onAddScene: () => void;
-  onUpdateScene: (sceneId: string, patch: Partial<Pick<OutlineScene, "heading" | "description" | "characters" | "pageEstimate" | "notes">>) => void;
+  onUpdateScene: (
+    sceneId: string,
+    patch: Partial<
+      Pick<
+        OutlineScene,
+        "heading" | "description" | "characters" | "pageEstimate" | "notes"
+      >
+    >,
+  ) => void;
   onDeleteScene: (sceneId: string) => void;
   onOutlineChange: (outline: OutlineContent) => void;
   outline: OutlineContent;
@@ -508,7 +574,13 @@ function SequenceBlock({
 
   const handleSceneDragStart = useCallback(
     (sceneId: string, sceneIndex: number) => {
-      activeDrag = { kind: "scene", actId, seqId: sequence.id, sceneId, index: sceneIndex };
+      activeDrag = {
+        kind: "scene",
+        actId,
+        seqId: sequence.id,
+        sceneId,
+        index: sceneIndex,
+      };
     },
     [actId, sequence.id],
   );
@@ -517,12 +589,33 @@ function SequenceBlock({
     (targetIndex: number) => {
       if (!activeDrag) return;
       if (activeDrag.kind === "scene") {
-        const { actId: srcAct, seqId: srcSeq, sceneId, index: srcIdx } = activeDrag;
+        const {
+          actId: srcAct,
+          seqId: srcSeq,
+          sceneId,
+          index: srcIdx,
+        } = activeDrag;
         if (srcAct === actId && srcSeq === sequence.id) {
-          onOutlineChange(moveSceneWithinSequence(outline, actId, sequence.id, srcIdx, targetIndex));
+          onOutlineChange(
+            moveSceneWithinSequence(
+              outline,
+              actId,
+              sequence.id,
+              srcIdx,
+              targetIndex,
+            ),
+          );
         } else {
           onOutlineChange(
-            moveSceneBetweenSequences(outline, srcAct, srcSeq, sceneId, actId, sequence.id, targetIndex),
+            moveSceneBetweenSequences(
+              outline,
+              srcAct,
+              srcSeq,
+              sceneId,
+              actId,
+              sequence.id,
+              targetIndex,
+            ),
           );
         }
       }
@@ -533,7 +626,12 @@ function SequenceBlock({
 
   const handleSeqDragStart = (e: DragEvent) => {
     e.stopPropagation();
-    activeDrag = { kind: "sequence", actId, seqId: sequence.id, index: sequenceIndex };
+    activeDrag = {
+      kind: "sequence",
+      actId,
+      seqId: sequence.id,
+      index: sequenceIndex,
+    };
     e.dataTransfer.effectAllowed = "move";
   };
 
@@ -546,14 +644,32 @@ function SequenceBlock({
       // Drop scene into this sequence (at end)
       const { actId: srcAct, seqId: srcSeq, sceneId } = activeDrag;
       onOutlineChange(
-        moveSceneBetweenSequences(outline, srcAct, srcSeq, sceneId, actId, sequence.id, sequence.scenes.length),
+        moveSceneBetweenSequences(
+          outline,
+          srcAct,
+          srcSeq,
+          sceneId,
+          actId,
+          sequence.id,
+          sequence.scenes.length,
+        ),
       );
     } else if (activeDrag.kind === "sequence") {
       const { actId: srcAct, seqId: srcSeqId, index: srcIdx } = activeDrag;
       if (srcAct === actId) {
-        onOutlineChange(moveSequenceWithinAct(outline, actId, srcIdx, sequenceIndex));
+        onOutlineChange(
+          moveSequenceWithinAct(outline, actId, srcIdx, sequenceIndex),
+        );
       } else {
-        onOutlineChange(moveSequenceBetweenActs(outline, srcAct, srcSeqId, actId, sequenceIndex));
+        onOutlineChange(
+          moveSequenceBetweenActs(
+            outline,
+            srcAct,
+            srcSeqId,
+            actId,
+            sequenceIndex,
+          ),
+        );
       }
     }
     activeDrag = null;
@@ -715,7 +831,11 @@ function ActBlock({
           }
           type="button"
         >
-          <span className={`${styles.chevron} ${collapsed ? styles.chevronCollapsed : ""}`}>▾</span>
+          <span
+            className={`${styles.chevron} ${collapsed ? styles.chevronCollapsed : ""}`}
+          >
+            ▾
+          </span>
         </button>
         {renaming ? (
           <input
@@ -723,13 +843,21 @@ function ActBlock({
             defaultValue={act.title}
             autoFocus
             onBlur={(e) => {
-              onOutlineChange(updateActTitle(outline, act.id, e.target.value || act.title));
+              onOutlineChange(
+                updateActTitle(outline, act.id, e.target.value || act.title),
+              );
               setRenaming(false);
             }}
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === "Escape") {
                 if (e.key === "Enter") {
-                  onOutlineChange(updateActTitle(outline, act.id, e.currentTarget.value || act.title));
+                  onOutlineChange(
+                    updateActTitle(
+                      outline,
+                      act.id,
+                      e.currentTarget.value || act.title,
+                    ),
+                  );
                 }
                 setRenaming(false);
               }
@@ -770,7 +898,9 @@ function ActBlock({
               sequenceIndex={seqIdx}
               characterSuggestions={characterSuggestions}
               onTitleChange={(title) =>
-                onOutlineChange(updateSequenceTitle(outline, act.id, seq.id, title))
+                onOutlineChange(
+                  updateSequenceTitle(outline, act.id, seq.id, title),
+                )
               }
               onDelete={() =>
                 onOutlineChange(deleteSequence(outline, act.id, seq.id))
@@ -779,7 +909,9 @@ function ActBlock({
                 onOutlineChange(addScene(outline, act.id, seq.id))
               }
               onUpdateScene={(sceneId, patch) =>
-                onOutlineChange(updateScene(outline, act.id, seq.id, sceneId, patch))
+                onOutlineChange(
+                  updateScene(outline, act.id, seq.id, sceneId, patch),
+                )
               }
               onDeleteScene={(sceneId) =>
                 onOutlineChange(deleteScene(outline, act.id, seq.id, sceneId))
@@ -790,7 +922,11 @@ function ActBlock({
             />
           ))}
           {!readOnly && (
-            <button className={styles.addBtn} onClick={onAddSequence} type="button">
+            <button
+              className={styles.addBtn}
+              onClick={onAddSequence}
+              type="button"
+            >
               {t("documents.outline.addSequence")}
             </button>
           )}

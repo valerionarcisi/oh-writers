@@ -129,6 +129,7 @@ export type {
 
 export { ComposerTextarea } from "./primitives/ComposerTextarea/ComposerTextarea";
 export type { ComposerTextareaProps } from "./primitives/ComposerTextarea/ComposerTextarea";
+export { useAutoGrowTextarea } from "./primitives/ComposerTextarea/use-auto-grow-textarea";
 
 export { Modal } from "./primitives/Modal/Modal";
 export type { ModalProps, ModalSize } from "./primitives/Modal/Modal";

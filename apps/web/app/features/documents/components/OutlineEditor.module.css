@@ -261,8 +261,12 @@
   outline: none;
   font-size: var(--text-sm);
   color: var(--ds-text);
+  font-family: inherit;
   inline-size: 100%;
   padding: var(--space-1) 0;
+  resize: none;
+  overflow: hidden;
+  white-space: pre-wrap;
 
   &::placeholder {
     color: var(--ds-text-mute);
@@ -300,7 +304,10 @@
   gap: var(--space-1);
   padding-block: 1px;
   padding-inline: var(--space-2);
-  background: var(--ds-action-muted, color-mix(in srgb, var(--ds-action) 15%, transparent));
+  background: var(
+    --ds-action-muted,
+    color-mix(in srgb, var(--ds-action) 15%, transparent)
+  );
   color: var(--ds-action);
   border-radius: var(--radius-sm);
   font-size: var(--text-xs);
