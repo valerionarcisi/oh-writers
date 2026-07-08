@@ -49,7 +49,6 @@ import { Route as AppProjectsIdShootingPlanBlockingEditorImport } from "./routes
 import { Route as AppProjectsIdSessionsNewImport } from "./routes/_app.projects.$id_.sessions.new";
 import { Route as AppProjectsIdSessionsSessionIdImport } from "./routes/_app.projects.$id_.sessions.$sessionId";
 import { Route as AppProjectsIdScreenplayVersionsImport } from "./routes/_app.projects.$id_.screenplay.versions";
-import { Route as AppProjectsIdScreenplayIndexTestImport } from "./routes/_app.projects.$id_.screenplay.index.test";
 import { Route as AppProjectsIdScreenplayVersionsVIdImport } from "./routes/_app.projects.$id_.screenplay.versions.$vId";
 import { Route as AppProjectsIdScreenplayDiffV1V2Import } from "./routes/_app.projects.$id_.screenplay.diff.$v1.$v2";
 
@@ -287,13 +286,6 @@ const AppProjectsIdScreenplayVersionsRoute =
   AppProjectsIdScreenplayVersionsImport.update({
     id: "/versions",
     path: "/versions",
-    getParentRoute: () => AppProjectsIdScreenplayRoute,
-  } as any);
-
-const AppProjectsIdScreenplayIndexTestRoute =
-  AppProjectsIdScreenplayIndexTestImport.update({
-    id: "/index/test",
-    path: "/index/test",
     getParentRoute: () => AppProjectsIdScreenplayRoute,
   } as any);
 
@@ -588,13 +580,6 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AppProjectsIdScreenplayVersionsVIdImport;
       parentRoute: typeof AppProjectsIdScreenplayVersionsImport;
     };
-    "/_app/projects/$id_/screenplay/index/test": {
-      id: "/_app/projects/$id_/screenplay/index/test";
-      path: "/index/test";
-      fullPath: "/projects/$id/screenplay/index/test";
-      preLoaderRoute: typeof AppProjectsIdScreenplayIndexTestImport;
-      parentRoute: typeof AppProjectsIdScreenplayImport;
-    };
     "/_app/projects/$id_/screenplay/diff/$v1/$v2": {
       id: "/_app/projects/$id_/screenplay/diff/$v1/$v2";
       path: "/diff/$v1/$v2";
@@ -625,7 +610,6 @@ const AppProjectsIdScreenplayVersionsRouteWithChildren =
 interface AppProjectsIdScreenplayRouteChildren {
   AppProjectsIdScreenplayVersionsRoute: typeof AppProjectsIdScreenplayVersionsRouteWithChildren;
   AppProjectsIdScreenplayIndexRoute: typeof AppProjectsIdScreenplayIndexRoute;
-  AppProjectsIdScreenplayIndexTestRoute: typeof AppProjectsIdScreenplayIndexTestRoute;
   AppProjectsIdScreenplayDiffV1V2Route: typeof AppProjectsIdScreenplayDiffV1V2Route;
 }
 
@@ -634,8 +618,6 @@ const AppProjectsIdScreenplayRouteChildren: AppProjectsIdScreenplayRouteChildren
     AppProjectsIdScreenplayVersionsRoute:
       AppProjectsIdScreenplayVersionsRouteWithChildren,
     AppProjectsIdScreenplayIndexRoute: AppProjectsIdScreenplayIndexRoute,
-    AppProjectsIdScreenplayIndexTestRoute:
-      AppProjectsIdScreenplayIndexTestRoute,
     AppProjectsIdScreenplayDiffV1V2Route: AppProjectsIdScreenplayDiffV1V2Route,
   };
 
@@ -764,7 +746,6 @@ export interface FileRoutesByFullPath {
   "/projects/$id/screenplay/": typeof AppProjectsIdScreenplayIndexRoute;
   "/projects/$id/sessions/": typeof AppProjectsIdSessionsIndexRoute;
   "/projects/$id/screenplay/versions/$vId": typeof AppProjectsIdScreenplayVersionsVIdRoute;
-  "/projects/$id/screenplay/index/test": typeof AppProjectsIdScreenplayIndexTestRoute;
   "/projects/$id/screenplay/diff/$v1/$v2": typeof AppProjectsIdScreenplayDiffV1V2Route;
 }
 
@@ -806,7 +787,6 @@ export interface FileRoutesByTo {
   "/projects/$id/screenplay": typeof AppProjectsIdScreenplayIndexRoute;
   "/projects/$id/sessions": typeof AppProjectsIdSessionsIndexRoute;
   "/projects/$id/screenplay/versions/$vId": typeof AppProjectsIdScreenplayVersionsVIdRoute;
-  "/projects/$id/screenplay/index/test": typeof AppProjectsIdScreenplayIndexTestRoute;
   "/projects/$id/screenplay/diff/$v1/$v2": typeof AppProjectsIdScreenplayDiffV1V2Route;
 }
 
@@ -851,7 +831,6 @@ export interface FileRoutesById {
   "/_app/projects/$id_/screenplay/": typeof AppProjectsIdScreenplayIndexRoute;
   "/_app/projects/$id_/sessions/": typeof AppProjectsIdSessionsIndexRoute;
   "/_app/projects/$id_/screenplay/versions/$vId": typeof AppProjectsIdScreenplayVersionsVIdRoute;
-  "/_app/projects/$id_/screenplay/index/test": typeof AppProjectsIdScreenplayIndexTestRoute;
   "/_app/projects/$id_/screenplay/diff/$v1/$v2": typeof AppProjectsIdScreenplayDiffV1V2Route;
 }
 
@@ -897,7 +876,6 @@ export interface FileRouteTypes {
     | "/projects/$id/screenplay/"
     | "/projects/$id/sessions/"
     | "/projects/$id/screenplay/versions/$vId"
-    | "/projects/$id/screenplay/index/test"
     | "/projects/$id/screenplay/diff/$v1/$v2";
   fileRoutesByTo: FileRoutesByTo;
   to:
@@ -938,7 +916,6 @@ export interface FileRouteTypes {
     | "/projects/$id/screenplay"
     | "/projects/$id/sessions"
     | "/projects/$id/screenplay/versions/$vId"
-    | "/projects/$id/screenplay/index/test"
     | "/projects/$id/screenplay/diff/$v1/$v2";
   id:
     | "__root__"
@@ -981,7 +958,6 @@ export interface FileRouteTypes {
     | "/_app/projects/$id_/screenplay/"
     | "/_app/projects/$id_/sessions/"
     | "/_app/projects/$id_/screenplay/versions/$vId"
-    | "/_app/projects/$id_/screenplay/index/test"
     | "/_app/projects/$id_/screenplay/diff/$v1/$v2";
   fileRoutesById: FileRoutesById;
 }
@@ -1139,7 +1115,6 @@ export const routeTree = rootRoute
       "children": [
         "/_app/projects/$id_/screenplay/versions",
         "/_app/projects/$id_/screenplay/",
-        "/_app/projects/$id_/screenplay/index/test",
         "/_app/projects/$id_/screenplay/diff/$v1/$v2"
       ]
     },
@@ -1214,10 +1189,6 @@ export const routeTree = rootRoute
     "/_app/projects/$id_/screenplay/versions/$vId": {
       "filePath": "_app.projects.$id_.screenplay.versions.$vId.tsx",
       "parent": "/_app/projects/$id_/screenplay/versions"
-    },
-    "/_app/projects/$id_/screenplay/index/test": {
-      "filePath": "_app.projects.$id_.screenplay.index.test.tsx",
-      "parent": "/_app/projects/$id_/screenplay"
     },
     "/_app/projects/$id_/screenplay/diff/$v1/$v2": {
       "filePath": "_app.projects.$id_.screenplay.diff.$v1.$v2.tsx",
