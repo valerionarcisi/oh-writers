@@ -244,6 +244,76 @@ describe("chatReducer — live trace (A2)", () => {
   });
 });
 
+// Task 4 (streaming) — text-delta events append token chunks onto the
+// in-flight assistant bubble's content, so MessageView can render partial
+// text as it arrives (see CesareConversation.tsx's pending-with-content
+// branch) instead of only showing the trace.
+describe("chatReducer — text-delta streaming (Task 4)", () => {
+  it("appends successive text-delta chunks onto the assistant bubble's content", () => {
+    let state = send(initialChatState(SESSION_A), SESSION_A, "Ciao", {
+      user: "u1",
+      assistant: "a1",
+    });
+    for (const chunk of ["Cia", "o! ", "Come", " va?"]) {
+      state = chatReducer(state, {
+        type: "stream/step",
+        sessionId: SESSION_A,
+        assistantMessageId: "a1",
+        event: { _tag: "text-delta", text: chunk },
+      });
+    }
+    expect(activeThread(state)[1]?.content).toBe("Ciao! Come va?");
+  });
+
+  it("does not touch the trace when accumulating text-delta", () => {
+    let state = send(initialChatState(SESSION_A), SESSION_A, "x", {
+      user: "u1",
+      assistant: "a1",
+    });
+    state = chatReducer(state, {
+      type: "stream/step",
+      sessionId: SESSION_A,
+      assistantMessageId: "a1",
+      event: {
+        _tag: "reading",
+        entity: { domain: "soggetto", label: "Soggetto" },
+      },
+    });
+    state = chatReducer(state, {
+      type: "stream/step",
+      sessionId: SESSION_A,
+      assistantMessageId: "a1",
+      event: { _tag: "text-delta", text: "Un frammento." },
+    });
+    const assistant = activeThread(state)[1];
+    expect(assistant?.trace).toHaveLength(1);
+    expect(assistant?.content).toBe("Un frammento.");
+  });
+
+  it("message/delivered overwrites the accumulated streamed content with the final authoritative text", () => {
+    let state = send(initialChatState(SESSION_A), SESSION_A, "x", {
+      user: "u1",
+      assistant: "a1",
+    });
+    state = chatReducer(state, {
+      type: "stream/step",
+      sessionId: SESSION_A,
+      assistantMessageId: "a1",
+      event: { _tag: "text-delta", text: "parziale" },
+    });
+    state = chatReducer(state, {
+      type: "message/delivered",
+      sessionId: SESSION_A,
+      userMessageId: "u1",
+      assistantMessageId: "a1",
+      content: "Risposta finale completa.",
+    });
+    const assistant = activeThread(state)[1];
+    expect(assistant?.content).toBe("Risposta finale completa.");
+    expect(assistant?.status).toBe("delivered");
+  });
+});
+
 // [OHW-051] — hydration of a session thread from persisted history.
 
 const persisted = (id: string, content: string): ChatMessage => ({

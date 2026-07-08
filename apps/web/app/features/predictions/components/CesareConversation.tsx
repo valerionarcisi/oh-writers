@@ -774,6 +774,23 @@ export function MessageView({
   }
 
   if (message.status === "pending") {
+    // Task 4 (streaming) — once text-delta events have accumulated content,
+    // show it progressively (with a blinking caret) instead of only the
+    // step trace. Falls back to the trace/loading state until the model's
+    // first token arrives, so the tracer contract (Spec 44) is unaffected.
+    if (message.content.length > 0) {
+      return (
+        <div
+          className={styles.bubbleAssistant}
+          data-testid="cesare-streaming-text"
+        >
+          <div className={styles.bubbleMarkdown}>
+            {renderMarkdown(message.content)}
+            <span className={styles.streamingCaret} aria-hidden="true" />
+          </div>
+        </div>
+      );
+    }
     return message.trace.length > 0 ? (
       <LiveTrace steps={message.trace} />
     ) : (

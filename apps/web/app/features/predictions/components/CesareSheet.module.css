@@ -99,6 +99,24 @@
   border-radius: var(--ds-radius-pill);
 }
 
+/* Task 4 (streaming) — blinking caret appended after the progressively
+   rendered reply text, while the turn is still in flight. */
+.streamingCaret {
+  display: inline-block;
+  inline-size: 2px;
+  block-size: 1em;
+  margin-inline-start: 1px;
+  vertical-align: text-bottom;
+  background: var(--ds-agent);
+  animation: streamingCaretBlink 1s step-end infinite;
+}
+
+@keyframes streamingCaretBlink {
+  50% {
+    opacity: 0;
+  }
+}
+
 .mdH3 {
   font-size: 0.875rem;
   font-weight: 700;
@@ -457,6 +475,10 @@ ol.mdList {
 
 @media (prefers-reduced-motion: reduce) {
   .bubbleStatusDot {
+    animation: none;
+  }
+
+  .streamingCaret {
     animation: none;
   }
 }

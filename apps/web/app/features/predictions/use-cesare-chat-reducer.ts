@@ -137,9 +137,8 @@ const traceStepForEvent = (event: CesareStreamEvent): TraceStep | null =>
       entity: null,
       text: e.name,
     }))
-    // text-delta (Task 4 streaming) is not a trace step — it's the final
-    // reply's token stream, handled separately once the client renders it
-    // progressively. No-op here for now, same as done/error.
+    // text-delta is not a trace step — handled separately in the reducer
+    // (appended to the message's content, see the "stream/step" case below).
     .with({ _tag: "text-delta" }, () => null)
     .with({ _tag: "done" }, () => null)
     .with({ _tag: "error" }, () => null)
@@ -213,6 +212,22 @@ export const chatReducer = (state: ChatState, action: ChatAction): ChatState =>
       ]);
     })
     .with({ type: "stream/step" }, (a) => {
+      // Task 4 (streaming) — text-delta appends to the assistant bubble's
+      // content as tokens arrive, so MessageView can render partial text
+      // instead of only the trace while the turn is still in flight. Every
+      // other event still only affects the trace (unchanged).
+      if (a.event._tag === "text-delta") {
+        const delta = a.event.text;
+        const thread = threadFor(state, a.sessionId);
+        return withThread(
+          state,
+          a.sessionId,
+          mapMessage(thread, a.assistantMessageId, (m) => ({
+            ...m,
+            content: m.content + delta,
+          })),
+        );
+      }
       const step = traceStepForEvent(a.event);
       if (!step) return state;
       const thread = threadFor(state, a.sessionId);
