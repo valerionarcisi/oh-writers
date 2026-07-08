@@ -40,19 +40,25 @@ export type EntityRef = z.infer<typeof EntityRefSchema>;
 /**
  * Discriminated union of every step event the Cesare stream can emit.
  *
- * - `reasoning` — a thought / planning step (no entity touched yet).
- * - `reading`   — Cesare is reading an entity for context.
- * - `writing`   — Cesare is mutating an entity (the cross-domain target).
- * - `tool`      — a raw tool invocation (used when no entity mapping applies).
- * - `done`      — terminal: carries the final assistant text (still embedding
- *                 the legacy `<!--ohw:…-->` markers) + the tool count.
- * - `error`     — terminal: the run failed; carries a user-facing message.
+ * - `reasoning`  — a thought / planning step (no entity touched yet).
+ * - `reading`    — Cesare is reading an entity for context.
+ * - `writing`    — Cesare is mutating an entity (the cross-domain target).
+ * - `tool`       — a raw tool invocation (used when no entity mapping applies).
+ * - `text-delta` — Task 4 (streaming) — an incremental chunk of the model's
+ *                  final reply text, emitted as it's generated so the client
+ *                  can render tokens progressively instead of waiting for
+ *                  `done`. Additive to the existing step-trace contract —
+ *                  reasoning/reading/writing/tool events are unchanged.
+ * - `done`       — terminal: carries the final assistant text (still embedding
+ *                  the legacy `<!--ohw:…-->` markers) + the tool count.
+ * - `error`      — terminal: the run failed; carries a user-facing message.
  */
 export const CesareStreamEventSchema = z.discriminatedUnion("_tag", [
   z.object({ _tag: z.literal("reasoning"), text: z.string() }),
   z.object({ _tag: z.literal("reading"), entity: EntityRefSchema }),
   z.object({ _tag: z.literal("writing"), entity: EntityRefSchema }),
   z.object({ _tag: z.literal("tool"), name: z.string().min(1) }),
+  z.object({ _tag: z.literal("text-delta"), text: z.string() }),
   z.object({
     _tag: z.literal("done"),
     result: z.string(),

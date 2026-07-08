@@ -107,6 +107,13 @@ export const documentsKeys = {
     "documents.marginNotes.none": "No notes right now.",
     "documents.marginNotes.ariaLabel": "Cesare notes",
     "documents.marginNotes.startSession": "✦ Start a session",
+    "documents.marginNotes.header": "Editorial cards",
+    "documents.marginNotes.statusWaiting": "Waiting to reread",
+    "documents.marginNotes.statusReading": "Cesare is rereading",
+    "documents.marginNotes.statusActive": "{count} notes",
+    "documents.marginNotes.statusNone": "No active notes",
+    "documents.marginNotes.statusApproved": "Editorially approved",
+    "documents.marginNotes.reread": "Reread",
 
     // Narrative Cesare panel
     "documents.cesarePanel.empty":
@@ -118,8 +125,11 @@ export const documentsKeys = {
     "documents.cesarePanel.statusError": "Error",
     "documents.cesarePanel.statusNotes": "{count} notes",
     "documents.cesarePanel.statusNoNotes": "No notes",
+    "documents.cesarePanel.statusApproved": "Editorially approved",
     "documents.cesarePanel.statusNone": "–",
     "documents.cesarePanel.footerAnalysis": "AI analysis",
+    "documents.cesarePanel.statusWaiting": "Waiting to reread",
+    "documents.cesarePanel.reread": "Reread",
 
     // Narrative docs shell
     "documents.shell.openVersions": "Open Versions →",
@@ -295,6 +305,13 @@ export const documentsKeys = {
     "documents.marginNotes.none": "Nessuna nota in questo momento.",
     "documents.marginNotes.ariaLabel": "Note di Cesare",
     "documents.marginNotes.startSession": "✦ Avvia sessione",
+    "documents.marginNotes.header": "Schede editoriali",
+    "documents.marginNotes.statusWaiting": "In attesa di rilettura",
+    "documents.marginNotes.statusReading": "Cesare sta rileggendo",
+    "documents.marginNotes.statusActive": "{count} note",
+    "documents.marginNotes.statusNone": "Nessuna nota attiva",
+    "documents.marginNotes.statusApproved": "OK editoriale",
+    "documents.marginNotes.reread": "Rileggi",
 
     "documents.cesarePanel.empty":
       "Inizia a scrivere per ricevere suggerimenti da Cesare.",
@@ -305,8 +322,11 @@ export const documentsKeys = {
     "documents.cesarePanel.statusError": "Errore",
     "documents.cesarePanel.statusNotes": "{count} note",
     "documents.cesarePanel.statusNoNotes": "Nessuna nota",
+    "documents.cesarePanel.statusApproved": "OK editoriale",
     "documents.cesarePanel.statusNone": "–",
     "documents.cesarePanel.footerAnalysis": "Analisi AI",
+    "documents.cesarePanel.statusWaiting": "In attesa di rilettura",
+    "documents.cesarePanel.reread": "Rileggi",
 
     "documents.shell.openVersions": "Apri Versioni →",
     "documents.shell.versions": "Versioni",

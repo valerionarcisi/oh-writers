@@ -21,14 +21,23 @@ Quando parli di location, aiuta il regista a valutare i candidati in base al con
 Quando hai il testo della sceneggiatura, citalo esplicitamente nelle tue risposte.`;
 
 // ─── Assembler v2 ─────────────────────────────────────────────────────────────
-// Incremental replacement for buildSystemPrompt in cesare.server.ts.
-// NOT wired into handleAskCesare yet — Agent E performs the swap.
+// Live system-prompt assembler (wired into handleAskCesareV2 in cesare.server.ts).
 //
 // Block layout (positions are fixed for cache stability):
-//   [0] ROLE_TEXT                   — ephemeral, never changes
-//   [1] GlobalContext (bible)        — ephemeral, changes only when bible is updated
-//   [2..N] one block per active skill — ephemeral, stable for same bible + page
-//   [N+1] LocalContext               — no cache_control, changes every call
+//   [0] MEGA_STATIC = ROLE_TEXT + GlobalContext (bible) + every skill's
+//       guidanceBlock, joined into ONE string — ephemeral, single cache
+//       breakpoint. Bible and the active skill set change together in
+//       practice (same page/project), so splitting them into separate
+//       breakpoints buys no real independent-invalidation benefit while
+//       burning 2-11 of Anthropic's 4-breakpoint-per-request cap. Collapsing
+//       to one block also guarantees a byte-identical prefix — no risk of
+//       sub-blocks drifting out of sync with each other.
+//   [1] LocalContext   — no cache_control, changes every call
+//   [2] historyContext — no cache_control, changes as edits accumulate
+// Plus the tool-array breakpoint set by withCachedTools (cesare-tools.ts) —
+// 2 breakpoints total per request, well under the 4-breakpoint cap.
+
+const BLOCK_SEPARATOR = "\n\n---\n\n";
 
 export const assembleSystemPromptV2 = (
   global: GlobalContext,
@@ -38,22 +47,18 @@ export const assembleSystemPromptV2 = (
   // there is no prior edit history. Placed alongside the local context (no
   // cache_control) because it changes as edits accumulate.
   historyContext: string | null = null,
-): SystemPromptBlock[] => [
-  { type: "text", text: ROLE_TEXT, cache_control: { type: "ephemeral" } },
-  {
-    type: "text",
-    text: serializeGlobalContext(global),
-    cache_control: { type: "ephemeral" },
-  },
-  ...skills.map(
-    (s): SystemPromptBlock => ({
-      type: "text",
-      text: s.guidanceBlock,
-      cache_control: { type: "ephemeral" },
-    }),
-  ),
-  { type: "text", text: formatLocalContext(local) },
-  ...(historyContext !== null
-    ? [{ type: "text" as const, text: historyContext }]
-    : []),
-];
+): SystemPromptBlock[] => {
+  const megaStatic = [
+    ROLE_TEXT,
+    serializeGlobalContext(global),
+    ...skills.map((s) => s.guidanceBlock),
+  ].join(BLOCK_SEPARATOR);
+
+  return [
+    { type: "text", text: megaStatic, cache_control: { type: "ephemeral" } },
+    { type: "text", text: formatLocalContext(local) },
+    ...(historyContext !== null
+      ? [{ type: "text" as const, text: historyContext }]
+      : []),
+  ];
+};

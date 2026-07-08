@@ -10,6 +10,7 @@ import {
 } from "./narrative-polish.server";
 
 const NARRATIVE_DOC_TYPES: readonly NarrativePolishSuggestionDoc[] = [
+  DocumentTypes.LOGLINE,
   DocumentTypes.SOGGETTO,
   DocumentTypes.SYNOPSIS,
   DocumentTypes.OUTLINE,
@@ -101,39 +102,53 @@ describe("NARRATIVE_POLISH_TOOL (transport unchanged — tracer invariant)", () 
     expect(NARRATIVE_POLISH_TOOL.name).toBe(TOOL_NAME);
   });
 
-  it("preserves the suggestions array schema (3-5 items, same fields)", () => {
+  it("preserves the suggestions array schema with shared editorial fields", () => {
     const suggestions =
       NARRATIVE_POLISH_TOOL.input_schema.properties.suggestions;
     expect(suggestions.type).toBe("array");
-    expect(suggestions.minItems).toBe(3);
-    expect(suggestions.maxItems).toBe(5);
+    expect(suggestions.minItems).toBe(1);
+    expect(suggestions.maxItems).toBe(6);
     expect(Object.keys(suggestions.items.properties).sort()).toEqual([
-      "category",
-      "group",
+      "area",
+      "body",
       "id",
-      "message",
+      "minimalIntervention",
+      "severity",
+      "status",
+      "title",
+      "type",
+      "whenToIgnore",
+      "whyItMatters",
     ]);
     expect([...suggestions.items.required].sort()).toEqual([
-      "category",
-      "group",
+      "area",
+      "body",
       "id",
-      "message",
+      "severity",
+      "title",
+      "type",
     ]);
   });
 
-  it("steers the model away from act labels in the category field", () => {
-    const category =
+  it("supports explicit editorial classifications", () => {
+    const typeField =
       NARRATIVE_POLISH_TOOL.input_schema.properties.suggestions.items.properties
-        .category;
-    expect(category.description).not.toContain("Atto II");
-    expect(category.description).toMatch(/Atto I\/II\/III/);
+        .type;
+    expect(typeField.enum).toContain("approved");
+    expect(typeField.enum).toContain("authorial_choice");
   });
 
-  it("requires the proposal frame in the message field", () => {
-    const message =
+  it("uses the richer body field instead of the old message field", () => {
+    const body =
       NARRATIVE_POLISH_TOOL.input_schema.properties.suggestions.items.properties
-        .message;
-    expect(message.description).toContain("potresti introdurre");
-    expect(message.maxLength).toBe(300);
+        .body;
+    expect(body.maxLength).toBe(360);
+  });
+
+  it("keeps the severity scale visible in the tool schema", () => {
+    const severity =
+      NARRATIVE_POLISH_TOOL.input_schema.properties.suggestions.items.properties
+        .severity;
+    expect(severity.enum).toEqual(["high", "medium", "low", "optional"]);
   });
 });

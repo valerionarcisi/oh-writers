@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import type { EditorView } from "prosemirror-view";
 import { formatInteger } from "@oh-writers/domain";
-import { Skeleton } from "@oh-writers/ui";
+import { CopyButton, Skeleton } from "@oh-writers/ui";
 import { NarrativeProseMirrorView } from "./NarrativeProseMirrorView";
 import { NarrativeFormatToolbar } from "./NarrativeFormatToolbar";
 import { toCartelle } from "../lib/cartelle-counter";
@@ -96,6 +96,11 @@ export function FreeNarrativeEditor({
       {canEdit && (
         <div className={styles.formatToolbar}>
           <NarrativeFormatToolbar view={editorView} enableHeadings={true} />
+          <CopyButton
+            getText={() => stripHtmlTags(content)}
+            className={styles.copyButton}
+            data-testid="free-narrative-copy"
+          />
         </div>
       )}
       {realtimeAwaitingSync ? (

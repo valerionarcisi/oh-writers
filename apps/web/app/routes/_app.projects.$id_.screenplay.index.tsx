@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { match } from "ts-pattern";
 import {
   ScreenplayEditor,
+  ScreenplayCesarePanel,
   ScreenplayEditorShell,
   ScreenplayElementChips,
   useScreenplay,
@@ -18,7 +19,7 @@ export const Route = createFileRoute("/_app/projects/$id_/screenplay/")({
   component: ScreenplayEditorPage,
 });
 
-function ScreenplayEditorPage() {
+export function ScreenplayEditorPage() {
   const { id } = Route.useParams();
   const { user } = appRoute.useLoaderData();
   const { data: result, isLoading } = useScreenplay(id);
@@ -88,6 +89,22 @@ function ScreenplayEditorPage() {
           projectId={id}
           acts={acts}
           viewbarCenter={legendNode}
+          cesarePanel={
+            <ScreenplayCesarePanel
+              projectId={id}
+              screenplayId={value.id}
+              versionId={value.currentVersionId}
+              pageCurrent={metrics.pageCurrent}
+              pageTotal={metrics.pageTotal}
+              sceneCurrent={metrics.sceneCurrent}
+              sceneTotal={metrics.sceneTotal}
+              onApplyEdit={(find, replace) =>
+                editorRef.current?.applyEdit(find, replace) ?? false
+              }
+            />
+          }
+          isCesarePanelOpen={isCesareOn}
+          onToggleCesarePanel={() => setIsCesareOn((prev) => !prev)}
         >
           <ScreenplayEditor
             // Remount when the active version changes (Attiva / + Nuova

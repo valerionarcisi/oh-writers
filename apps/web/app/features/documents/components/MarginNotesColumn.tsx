@@ -1,7 +1,7 @@
 import { type FC, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Button } from "@oh-writers/ui";
 import { DocumentTypes, type DocumentType } from "@oh-writers/domain";
-import { Button, CollapsibleNote } from "@oh-writers/ui";
 import {
   narrativePolishQueryOptions,
   type NarrativePolishSuggestion,
@@ -9,11 +9,17 @@ import {
 } from "../server/narrative-polish.server";
 import { useCesareOpen } from "~/features/app-shell";
 import { useTranslation } from "~/features/i18n";
+import {
+  buildAdviceContentFingerprint,
+  useDebouncedValue,
+  EditorialAdviceStack,
+  useEditorialAdviceMemory,
+} from "~/features/predictions";
 import styles from "./MarginNotesColumn.module.css";
 
 /** Build the prompt that seeds a Cesare session from a margin suggestion. */
 export function suggestionPrompt(memo: NarrativePolishSuggestion): string {
-  return `${memo.category}: ${memo.message}`;
+  return `${memo.title}: ${memo.body}`;
 }
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
@@ -21,7 +27,7 @@ export function suggestionPrompt(memo: NarrativePolishSuggestion): string {
 export interface MarginNotesColumnProps {
   readonly projectId: string;
   readonly docType: DocumentType;
-  /** Current document content — suggestions are keyed on the first 200 chars. */
+  /** Current document content. */
   readonly content: string;
 }
 
@@ -108,8 +114,17 @@ export const MarginNotesColumn: FC<MarginNotesColumnProps> = ({
   const openCesare = useCesareOpen();
 
   // eslint-disable-next-line react-hooks/rules-of-hooks
+  const debouncedContent = useDebouncedValue(content);
+  const contentFingerprint = buildAdviceContentFingerprint(debouncedContent);
+
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   const query = useQuery(
-    narrativePolishQueryOptions(projectId, docType, content),
+    narrativePolishQueryOptions(
+      projectId,
+      docType,
+      debouncedContent,
+      contentFingerprint,
+    ),
   );
 
   // eslint-disable-next-line react-hooks/rules-of-hooks
@@ -117,10 +132,25 @@ export const MarginNotesColumn: FC<MarginNotesColumnProps> = ({
     if (!query.data || !query.data.isOk) return [];
     return query.data.value;
   }, [query.data]);
+  const { statuses, setAdviceStatus } = useEditorialAdviceMemory(
+    `${projectId}:${docType}:margin`,
+    contentFingerprint,
+  );
 
   const hasContent = content.length > 50;
   const isLoading = query.isFetching;
   const isError = query.isError || (query.data != null && !query.data.isOk);
+  const isWaitingForDebounce = content !== debouncedContent;
+  const statusLabel = isWaitingForDebounce
+    ? t("documents.marginNotes.statusWaiting")
+    : isLoading
+      ? t("documents.marginNotes.statusReading")
+      : suggestions.length > 0
+        ? t("documents.marginNotes.statusActive").replace(
+            "{count}",
+            String(suggestions.length),
+          )
+        : t("documents.marginNotes.statusApproved");
 
   if (!hasContent) {
     return (
@@ -148,47 +178,38 @@ export const MarginNotesColumn: FC<MarginNotesColumnProps> = ({
     );
   }
 
-  if (suggestions.length === 0) {
-    return (
-      <aside
-        className={styles.column}
-        aria-label={t("documents.marginNotes.ariaLabel")}
-      >
-        <div className={styles.emptyState}>
-          <p className={styles.emptyText}>{t("documents.marginNotes.none")}</p>
-        </div>
-      </aside>
-    );
-  }
-
   return (
     <aside
       className={styles.column}
       aria-label={t("documents.marginNotes.ariaLabel")}
       data-testid="margin-notes-column"
     >
-      {suggestions.map((memo, idx) => (
-        <CollapsibleNote
-          key={memo.id}
-          kind="cesare"
-          eyebrow={`Cesare · ${memo.group}`}
-          title={memo.category}
-          body={memo.message}
-          defaultOpen={idx === 0}
-          testId={`margin-note-${memo.id}`}
-          actions={
-            <Button
-              variant="ghost"
-              size="sm"
-              onPress={() => openCesare({ prompt: suggestionPrompt(memo) })}
-              data-testid={`margin-note-session-${memo.id}`}
-              aria-label={t("documents.marginNotes.startSession")}
-            >
-              {t("documents.marginNotes.startSession")}
-            </Button>
-          }
-        />
-      ))}
+      <header className={styles.header}>
+        <div>
+          <p className={styles.label}>{t("documents.marginNotes.header")}</p>
+          <p className={styles.status}>{statusLabel}</p>
+        </div>
+        <Button
+          variant="secondary"
+          size="sm"
+          onPress={() => void query.refetch()}
+          disabled={!hasContent || query.isFetching}
+        >
+          {t("documents.marginNotes.reread")}
+        </Button>
+      </header>
+      <EditorialAdviceStack
+        advice={suggestions}
+        rememberedStatuses={statuses}
+        fallbackArea={docType === DocumentTypes.SOGGETTO ? "subject" : docType}
+        onExplore={(memo) => openCesare({ prompt: suggestionPrompt(memo) })}
+        onMarkAuthorialChoice={(memo) =>
+          setAdviceStatus(memo, "authorial_choice")
+        }
+        onIgnore={(memo) => setAdviceStatus(memo, "ignored")}
+        onResolve={(memo) => setAdviceStatus(memo, "resolved")}
+        onApprove={(memo) => setAdviceStatus(memo, "approved")}
+      />
     </aside>
   );
 };

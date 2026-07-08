@@ -25,6 +25,55 @@ const headingText = (heading: Node): string => {
   return base;
 };
 
+// Appends one scene node's blocks (heading + body) as Fountain lines. Shared
+// by docToFountain (whole-doc export) and sceneNodeToFountain (single-scene
+// copy) so the two never drift on block-type formatting.
+const pushSceneLines = (scene: Node, lines: string[]): void => {
+  scene.forEach((block) => {
+    const text =
+      block.type.name === "heading" ? headingText(block) : block.textContent;
+
+    switch (block.type.name) {
+      case "heading":
+        // Blank line before each heading except the very first block
+        if (lines.length > 0) lines.push("");
+        lines.push(text);
+        break;
+
+      case "action":
+        lines.push("");
+        lines.push(text);
+        break;
+
+      case "character":
+        lines.push("");
+        lines.push(`${CHARACTER_INDENT}${text}`);
+        break;
+
+      case "parenthetical":
+        // No extra blank line — sits right below the character cue or dialogue
+        lines.push(`${CHARACTER_INDENT}${text}`);
+        break;
+
+      case "dialogue":
+        lines.push(`${DIALOGUE_INDENT}${text}`);
+        break;
+
+      case "transition":
+        lines.push("");
+        lines.push(text);
+        break;
+
+      default:
+        break;
+    }
+  });
+};
+
+// Trim leading/trailing blank lines, normalise to a single trailing newline.
+const finalizeLines = (lines: string[]): string =>
+  lines.join("\n").replace(/^\n+/, "").replace(/\n+$/, "") + "\n";
+
 /**
  * Serialize a ProseMirror document back to Fountain-formatted text.
  *
@@ -37,51 +86,17 @@ const headingText = (heading: Node): string => {
  */
 export const docToFountain = (doc: Node): string => {
   const lines: string[] = [];
-
   doc.forEach((scene) => {
     if (scene.type.name !== "scene") return;
-
-    scene.forEach((block, _, index) => {
-      const text =
-        block.type.name === "heading" ? headingText(block) : block.textContent;
-
-      switch (block.type.name) {
-        case "heading":
-          // Blank line before each heading except the very first block
-          if (lines.length > 0) lines.push("");
-          lines.push(text);
-          break;
-
-        case "action":
-          lines.push("");
-          lines.push(text);
-          break;
-
-        case "character":
-          lines.push("");
-          lines.push(`${CHARACTER_INDENT}${text}`);
-          break;
-
-        case "parenthetical":
-          // No extra blank line — sits right below the character cue or dialogue
-          lines.push(`${CHARACTER_INDENT}${text}`);
-          break;
-
-        case "dialogue":
-          lines.push(`${DIALOGUE_INDENT}${text}`);
-          break;
-
-        case "transition":
-          lines.push("");
-          lines.push(text);
-          break;
-
-        default:
-          break;
-      }
-    });
+    pushSceneLines(scene, lines);
   });
+  return finalizeLines(lines);
+};
 
-  // Trim leading/trailing blank lines, normalise to a single trailing newline
-  return lines.join("\n").replace(/^\n+/, "").replace(/\n+$/, "") + "\n";
+/** Serialize a single `scene` node (heading + body) to Fountain text — used
+ * by the heading NodeView's "copy scene text" action. */
+export const sceneNodeToFountain = (sceneNode: Node): string => {
+  const lines: string[] = [];
+  pushSceneLines(sceneNode, lines);
+  return finalizeLines(lines);
 };

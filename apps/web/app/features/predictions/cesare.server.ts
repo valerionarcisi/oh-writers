@@ -2056,6 +2056,43 @@ const handleAskCesare = (
   );
 };
 
+// Intent classifier hint. The classifier fires on the screenplay page
+// (mutations) and on the narrative document pages (generation — Bug #4: free
+// natural-language writing requests must reliably select a generator instead
+// of falling through to "no tools to invoke"). Universal dispatch exposes the
+// tools on every page; the classifier only FORCES one when the request clearly
+// asks for that mutation/generation, so a genuine chat question still answers
+// in chat. Other pages (budget, schedule, locations) keep good adherence with
+// their narrower scope, so we skip the extra Haiku call there. On any error /
+// low confidence / MOCK_AI the classifier falls back to "auto" too.
+//
+// Depends only on (message, page) — NOT on context/prompt assembly — so the
+// caller kicks this off in parallel with buildGlobalContext/buildLocalContext
+// instead of waiting for the whole chain to finish first (Task 3b).
+export const resolveForcedFirstTool = (
+  message: string,
+  page: string,
+): ResultAsync<string | undefined, CesareError> => {
+  const classifierTools = CLASSIFIER_TOOLS_BY_PAGE[page];
+  if (!classifierTools) {
+    return ResultAsync.fromSafePromise(
+      Promise.resolve<string | undefined>(undefined),
+    );
+  }
+
+  return classifyIntent({
+    userMessage: message,
+    page,
+    availableTools: classifierTools,
+  })
+    .map((intent) => intent.suggestedTool)
+    .orElse(() =>
+      ResultAsync.fromSafePromise(
+        Promise.resolve<string | undefined>(undefined),
+      ),
+    );
+};
+
 // ─── Unified tool loop caller (spec 39) ──────────────────────────────────────
 
 const callCesareV2 = (
@@ -2068,7 +2105,7 @@ const callCesareV2 = (
   executor: import("./skills/types").SkillExecutor,
   tools: readonly import("./skills/types").AnthropicTool[],
   model: string,
-  page: string,
+  forcedFirstToolResult: ResultAsync<string | undefined, CesareError>,
   onStreamEvent?: (event: CesareStreamEvent) => void,
   abortSignal?: AbortSignal,
 ): ResultAsync<string, CesareError> => {
@@ -2077,7 +2114,7 @@ const callCesareV2 = (
     { role: "user" as const, content: message },
   ];
 
-  const run = (forcedFirstTool?: string): ResultAsync<string, CesareError> =>
+  return forcedFirstToolResult.andThen((forcedFirstTool) =>
     runUnifiedToolLoop(
       systemPrompt,
       messages,
@@ -2090,32 +2127,8 @@ const callCesareV2 = (
       onStreamEvent,
       forcedFirstTool,
       abortSignal,
-    );
-
-  // Intent classifier hint. The classifier fires on the screenplay page
-  // (mutations) and on the narrative document pages (generation — Bug #4: free
-  // natural-language writing requests must reliably select a generator instead
-  // of falling through to "no tools to invoke"). Universal dispatch exposes the
-  // tools on every page; the classifier only FORCES one when the request clearly
-  // asks for that mutation/generation, so a genuine chat question still answers
-  // in chat. Other pages (budget, schedule, locations) keep good adherence with
-  // their narrower scope, so we skip the extra Haiku call there. On any error /
-  // low confidence / MOCK_AI the classifier falls back to "auto" too.
-  const classifierTools = CLASSIFIER_TOOLS_BY_PAGE[page];
-  if (!classifierTools) return run();
-
-  return classifyIntent({
-    userMessage: message,
-    page,
-    availableTools: classifierTools,
-  })
-    .map((intent) => intent.suggestedTool)
-    .orElse(() =>
-      ResultAsync.fromSafePromise(
-        Promise.resolve<string | undefined>(undefined),
-      ),
-    )
-    .andThen((forcedFirstTool) => run(forcedFirstTool));
+    ),
+  );
 };
 
 // ─── V2 handler — stratified context (spec 39) ────────────────────────────────
@@ -2153,6 +2166,17 @@ const handleAskCesareV2 = (
       "cesare-v2 request routing",
     );
   }
+
+  // Task 3b: kick off the intent classifier NOW, in parallel with
+  // buildGlobalContext/buildLocalContext below — it depends only on
+  // (message, page), not on context/prompt assembly, so there is no reason to
+  // wait for the (slower) context chain to finish before starting it. Calling
+  // the function starts its underlying promise immediately; `callCesareV2`
+  // only awaits the already-in-flight result once the tool loop needs it.
+  const forcedFirstToolResult = resolveForcedFirstTool(
+    data.message,
+    data.pageContext.page,
+  );
 
   // Step 1: build global context (60s memo cache)
   return buildGlobalContext(db, data.projectId)
@@ -2265,7 +2289,7 @@ const handleAskCesareV2 = (
                 executor,
                 tools,
                 model,
-                data.pageContext.page,
+                forcedFirstToolResult,
                 onStreamEvent,
                 abortSignal,
               ).map((reply) => {

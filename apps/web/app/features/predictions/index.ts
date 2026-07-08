@@ -62,5 +62,16 @@ export { useNarrativeNextStep } from "./use-narrative-next-step";
 export type { UseNarrativeNextStep } from "./use-narrative-next-step";
 export { NextStepChip } from "./components/NextStepChip";
 export type { NextStepChipProps } from "./components/NextStepChip";
+export {
+  EditorialAdviceCard,
+  EditorialAdviceActions,
+} from "./components/EditorialAdviceCard";
+export { EditorialAdviceStack } from "./components/EditorialAdviceStack";
+export {
+  useEditorialAdviceMemory,
+  buildAdviceContentFingerprint,
+  useDebouncedValue,
+  EDITORIAL_ADVICE_REFRESH_DEBOUNCE_MS,
+} from "./use-editorial-advice-memory";
 // askCesare + message/history server functions are server functions — import
 // directly from their *.server modules, never from this barrel.

@@ -22,6 +22,7 @@ import type { Node } from "prosemirror-model";
 import {
   dispatchConflict,
   dispatchSceneNumberToast,
+  getSceneNodeAt,
   hasConflict,
   removeHeading,
   resequenceFrom,
@@ -29,6 +30,7 @@ import {
   setSceneNumberLocked,
   unlockSceneNumber,
 } from "./scene-number-commands";
+import { sceneNodeToFountain } from "../doc-to-fountain";
 
 export interface HeadingNodeViewOptions {
   readOnly?: boolean;
@@ -274,11 +276,10 @@ class HeadingNodeView implements NodeView {
     // into the next scene; either way body content is preserved.
     const removeDisabled = (() => {
       if (pos === undefined) return true;
-      const $sceneStart = this.view.state.doc.resolve(pos - 1);
-      const sceneNode = $sceneStart.nodeAfter;
-      if (!sceneNode) return true;
-      const sceneEnd = pos - 1 + sceneNode.nodeSize;
-      const $sceneEnd = this.view.state.doc.resolve(sceneEnd);
+      const scene = getSceneNodeAt(this.view.state.doc, pos);
+      if (!scene) return true;
+      const $sceneStart = this.view.state.doc.resolve(scene.sceneStart);
+      const $sceneEnd = this.view.state.doc.resolve(scene.sceneEnd);
       const hasNeighbour =
         $sceneStart.nodeBefore !== null || $sceneEnd.nodeAfter !== null;
       return !hasNeighbour;
@@ -298,6 +299,21 @@ class HeadingNodeView implements NodeView {
         }
       | "divider"
     > = [
+      {
+        label: "Copy scene text",
+        testid: "scene-menu-copy",
+        onClick: () => {
+          this.closeMenu();
+          const p = this.getPos();
+          if (p === undefined) return;
+          const scene = getSceneNodeAt(this.view.state.doc, p);
+          if (!scene) return;
+          void navigator.clipboard
+            .writeText(sceneNodeToFountain(scene.sceneNode))
+            .then(() => dispatchSceneNumberToast("Scene text copied"));
+        },
+      },
+      "divider",
       {
         label: "Edit number",
         testid: "scene-menu-edit",

@@ -12,6 +12,30 @@
   padding-block-start: 8px;
 }
 
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-space-2);
+  padding-inline: 2px;
+}
+
+.label {
+  margin: 0;
+  font-family: var(--ds-font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ds-text);
+}
+
+.status {
+  margin: 2px 0 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--ds-text-3);
+}
+
 /* ── Loading skeleton ───────────────────────────────────────── */
 
 .skeletonNote {

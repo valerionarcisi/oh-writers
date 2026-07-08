@@ -1082,6 +1082,14 @@ type MockDoGenerateOptions = Parameters<
 type MockGenerateResult = Awaited<
   ReturnType<InstanceType<typeof MockLanguageModelV3>["doGenerate"]>
 >;
+// Task 4 (streaming) — the element type of a doStream ReadableStream, derived
+// the same indirect way as the two aliases above.
+type LanguageModelV3StreamPart =
+  Awaited<
+    ReturnType<InstanceType<typeof MockLanguageModelV3>["doStream"]>
+  >["stream"] extends ReadableStream<infer P>
+    ? P
+    : never;
 
 const FALLBACK_TEXT =
   "Ho letto la tua richiesta ma non ho strumenti specifici da invocare per questo caso.";
@@ -1194,91 +1202,138 @@ const buildGenerateResult = (turn: MockTurn): MockGenerateResult => {
   };
 };
 
-export const createMockCesareModel = (): MockLanguageModelV3 =>
-  new MockLanguageModelV3({
+// Converts a MockGenerateResult's content array into the LanguageModelV3
+// stream-part sequence streamText expects. Task 4 (streaming) — the mock
+// model previously only implemented doGenerate, so switching the production
+// loop to streamText broke every MOCK_AI test with "Not implemented" from
+// doStream's default. Reusing mockGenerate here (rather than re-deriving the
+// scenario/turn logic) keeps the mock's single source of truth for WHAT the
+// model says; this only reshapes it into a stream of parts.
+const streamPartsFromGenerateResult = (
+  result: MockGenerateResult,
+): LanguageModelV3StreamPart[] => {
+  const parts: LanguageModelV3StreamPart[] = [
+    { type: "stream-start", warnings: result.warnings },
+  ];
+  let textId = 0;
+  for (const block of result.content) {
+    if (block.type === "text") {
+      const id = `mock-text-${textId++}`;
+      parts.push({ type: "text-start", id });
+      parts.push({ type: "text-delta", id, delta: block.text });
+      parts.push({ type: "text-end", id });
+    } else if (block.type === "tool-call") {
+      parts.push(block);
+    }
+  }
+  parts.push({
+    type: "finish",
+    usage: result.usage,
+    finishReason: result.finishReason,
+  });
+  return parts;
+};
+
+export const createMockCesareModel = (): MockLanguageModelV3 => {
+  const mockGenerate = async (
+    options: MockDoGenerateOptions,
+  ): Promise<MockGenerateResult> => {
+    const userText = lastUserTextFromPrompt(options.prompt);
+    const key = conversationKeyFromPrompt(options.prompt);
+    const scenario = findScenario(userText);
+
+    if (!scenario) {
+      TURN_INDEX.delete(key);
+      return {
+        content: [{ type: "text", text: FALLBACK_TEXT }],
+        finishReason: { unified: "stop", raw: "end_turn" },
+        usage: {
+          inputTokens: {
+            total: 10,
+            noCache: 10,
+            cacheRead: 0,
+            cacheWrite: 0,
+          },
+          outputTokens: { total: 20, text: 20, reasoning: 0 },
+        },
+        warnings: [],
+      };
+    }
+
+    const idx = TURN_INDEX.get(key) ?? 0;
+    const turn = scenario.turns[idx];
+
+    if (!turn) {
+      TURN_INDEX.delete(key);
+      return {
+        content: [
+          {
+            type: "text",
+            text: scenario.turns.at(-1)?.text ?? FALLBACK_TEXT,
+          },
+        ],
+        finishReason: { unified: "stop", raw: "end_turn" },
+        usage: {
+          inputTokens: {
+            total: 10,
+            noCache: 10,
+            cacheRead: 0,
+            cacheWrite: 0,
+          },
+          outputTokens: { total: 20, text: 20, reasoning: 0 },
+        },
+        warnings: [],
+      };
+    }
+
+    TURN_INDEX.set(key, idx + 1);
+
+    // Reset so the scenario restarts cleanly on the next use.
+    if (idx + 1 >= scenario.turns.length) {
+      TURN_INDEX.delete(key);
+    }
+
+    // No false success on a no-op: if this turn would emit a scripted success
+    // text but the preceding tool errored, report the failure instead.
+    const isPlainTextTurn = !turn.tool_uses || turn.tool_uses.length === 0;
+    if (isPlainTextTurn && lastToolResultsErrored(options.prompt)) {
+      return {
+        content: [{ type: "text", text: FAILURE_TEXT }],
+        finishReason: { unified: "stop", raw: "end_turn" },
+        usage: {
+          inputTokens: {
+            total: 10,
+            noCache: 10,
+            cacheRead: 0,
+            cacheWrite: 0,
+          },
+          outputTokens: { total: 20, text: 20, reasoning: 0 },
+        },
+        warnings: [],
+      };
+    }
+
+    return buildGenerateResult(turn);
+  };
+
+  return new MockLanguageModelV3({
     provider: "mock-cesare",
     modelId: "mock-cesare-model",
-    doGenerate: async (
-      options: MockDoGenerateOptions,
-    ): Promise<MockGenerateResult> => {
-      const userText = lastUserTextFromPrompt(options.prompt);
-      const key = conversationKeyFromPrompt(options.prompt);
-      const scenario = findScenario(userText);
-
-      if (!scenario) {
-        TURN_INDEX.delete(key);
-        return {
-          content: [{ type: "text", text: FALLBACK_TEXT }],
-          finishReason: { unified: "stop", raw: "end_turn" },
-          usage: {
-            inputTokens: {
-              total: 10,
-              noCache: 10,
-              cacheRead: 0,
-              cacheWrite: 0,
-            },
-            outputTokens: { total: 20, text: 20, reasoning: 0 },
+    doGenerate: mockGenerate,
+    doStream: async (options: MockDoGenerateOptions) => {
+      const result = await mockGenerate(options);
+      const parts = streamPartsFromGenerateResult(result);
+      return {
+        stream: new ReadableStream<LanguageModelV3StreamPart>({
+          start(controller) {
+            for (const part of parts) controller.enqueue(part);
+            controller.close();
           },
-          warnings: [],
-        };
-      }
-
-      const idx = TURN_INDEX.get(key) ?? 0;
-      const turn = scenario.turns[idx];
-
-      if (!turn) {
-        TURN_INDEX.delete(key);
-        return {
-          content: [
-            {
-              type: "text",
-              text: scenario.turns.at(-1)?.text ?? FALLBACK_TEXT,
-            },
-          ],
-          finishReason: { unified: "stop", raw: "end_turn" },
-          usage: {
-            inputTokens: {
-              total: 10,
-              noCache: 10,
-              cacheRead: 0,
-              cacheWrite: 0,
-            },
-            outputTokens: { total: 20, text: 20, reasoning: 0 },
-          },
-          warnings: [],
-        };
-      }
-
-      TURN_INDEX.set(key, idx + 1);
-
-      // Reset so the scenario restarts cleanly on the next use.
-      if (idx + 1 >= scenario.turns.length) {
-        TURN_INDEX.delete(key);
-      }
-
-      // No false success on a no-op: if this turn would emit a scripted success
-      // text but the preceding tool errored, report the failure instead.
-      const isPlainTextTurn = !turn.tool_uses || turn.tool_uses.length === 0;
-      if (isPlainTextTurn && lastToolResultsErrored(options.prompt)) {
-        return {
-          content: [{ type: "text", text: FAILURE_TEXT }],
-          finishReason: { unified: "stop", raw: "end_turn" },
-          usage: {
-            inputTokens: {
-              total: 10,
-              noCache: 10,
-              cacheRead: 0,
-              cacheWrite: 0,
-            },
-            outputTokens: { total: 20, text: 20, reasoning: 0 },
-          },
-          warnings: [],
-        };
-      }
-
-      return buildGenerateResult(turn);
+        }),
+      };
     },
   });
+};
 
 // ─── Legacy Anthropic-style client (kept for createMockStreamingClient) ───────
 // The streaming path (callCesare in cesare.server.ts) still uses the raw

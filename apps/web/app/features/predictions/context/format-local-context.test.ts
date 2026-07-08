@@ -210,4 +210,55 @@ describe("formatLocalContext", () => {
       expect(output).toContain("## CONTESTO LOCALE — Locations");
     });
   });
+
+  // Cesare cache fix — these hints used to be baked into the schedule/
+  // shooting-plan skills' cache_control-marked guidanceBlock, keyed on
+  // activeDayNumber/activeSceneId. Both change whenever the user switches
+  // day/scene within the SAME session, which broke the cache prefix every
+  // time. They moved here, to the uncached per-turn tail — this is the
+  // regression guard for that move.
+  describe("active-state hints (schedule/shooting-plan tool defaults)", () => {
+    it("includes the active shooting day hint when activeShootingDay is set", () => {
+      const ctx: LocalContext = {
+        ...baseCtx(),
+        currentScene: { id: "s1", number: 1, heading: "INT. UFFICIO - GIORNO" },
+        activeShootingDay: {
+          dayNumber: 3,
+        } as LocalContext["activeShootingDay"],
+      };
+      const output = formatLocalContext(ctx);
+      expect(output).toContain(
+        "Giornata attiva (selezionata dall'utente): Giornata 3. Quando l'utente dice \"questa giornata\" si riferisce a questa.",
+      );
+    });
+
+    it("omits the active shooting day hint when activeShootingDay is null", () => {
+      const ctx: LocalContext = {
+        ...baseCtx(),
+        currentScene: { id: "s1", number: 1, heading: "INT. UFFICIO - GIORNO" },
+      };
+      const output = formatLocalContext(ctx);
+      expect(output).not.toContain("Giornata attiva");
+    });
+
+    it("includes the active scene hint (for shooting-plan tool defaults) when currentScene is set", () => {
+      const ctx: LocalContext = {
+        ...baseCtx(),
+        currentScene: {
+          id: "scene-42",
+          number: 1,
+          heading: "INT. UFFICIO - GIORNO",
+        },
+      };
+      const output = formatLocalContext(ctx);
+      expect(output).toContain(
+        "Scena attiva (selezionata dall'utente): scene-42. Usala come default per scene_id nei tool quando l'utente non specifica una scena diversa.",
+      );
+    });
+
+    it("omits the active scene hint when currentScene is null", () => {
+      const output = formatLocalContext(baseCtx());
+      expect(output).not.toContain("Scena attiva (selezionata");
+    });
+  });
 });

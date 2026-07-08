@@ -90,6 +90,24 @@ const formatActiveScene = (ctx: LocalContext): string | null => {
   return `### Scena aperta\n**SC ${ctx.currentScene.number} — ${ctx.currentScene.heading}**`;
 };
 
+// ─── Active state (schedule/shooting-plan hints) ─────────────────────────────
+// These hints used to be baked into the schedule/shooting-plan skills'
+// (cached) guidanceBlock, keyed on activeDayNumber/activeSceneId — both of
+// which change whenever the user switches day/scene within the SAME session,
+// breaking the cache prefix every time. They live here instead, in the
+// uncached per-turn tail, where per-turn state belongs.
+
+const formatActiveShootingDay = (ctx: LocalContext): string | null => {
+  const day = ctx.activeShootingDay as { dayNumber?: number } | null;
+  if (!day || typeof day.dayNumber !== "number") return null;
+  return `Giornata attiva (selezionata dall'utente): Giornata ${day.dayNumber}. Quando l'utente dice "questa giornata" si riferisce a questa.`;
+};
+
+const formatActiveSceneForShootingPlan = (ctx: LocalContext): string | null => {
+  if (!ctx.currentScene) return null;
+  return `Scena attiva (selezionata dall'utente): ${ctx.currentScene.id}. Usala come default per scene_id nei tool quando l'utente non specifica una scena diversa.`;
+};
+
 // ─── Scene window ─────────────────────────────────────────────────────────────
 
 const formatSceneWindow = (ctx: LocalContext): string | null => {
@@ -154,6 +172,13 @@ export const formatLocalContext = (ctx: LocalContext): string => {
   // Active entity (priority 1 — never omitted)
   const activeScene = formatActiveScene(ctx);
   if (activeScene) sections.push(activeScene);
+
+  // Active-state hints for schedule/shooting-plan tool defaults (per-turn,
+  // deliberately uncached — see formatActiveShootingDay/formatActiveScene...).
+  const activeDayHint = formatActiveShootingDay(ctx);
+  if (activeDayHint) sections.push(activeDayHint);
+  const activeSceneHint = formatActiveSceneForShootingPlan(ctx);
+  if (activeSceneHint) sections.push(activeSceneHint);
 
   // Scene summaries (injected from DB, spec 38 output)
   const summariesBlock = formatSceneSummaries(ctx.sceneSummaries);

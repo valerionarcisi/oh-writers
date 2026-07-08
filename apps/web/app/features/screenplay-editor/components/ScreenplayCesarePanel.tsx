@@ -1,13 +1,19 @@
-import { Suspense, useEffect, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Suspense, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
+import { Button } from "@oh-writers/ui";
 import {
   scenePolishQueryOptions,
   type PolishSuggestion,
 } from "../server/screenplay-polish.server";
 import { staleScenesOptions } from "~/features/breakdown";
-import type { TranslationKey } from "@oh-writers/domain";
 import { useTranslation } from "~/features/i18n";
+import {
+  EDITORIAL_ADVICE_REFRESH_DEBOUNCE_MS,
+  EditorialAdviceStack,
+  useDebouncedValue,
+  useEditorialAdviceMemory,
+} from "~/features/predictions";
 import styles from "./ScreenplayCesarePanel.module.css";
 
 interface ScreenplayCesarePanelProps {
@@ -28,7 +34,10 @@ interface ScreenplayCesarePanelProps {
 export function ScreenplayCesarePanel(props: ScreenplayCesarePanelProps) {
   const { t } = useTranslation();
   return (
-    <aside className={styles.panel} aria-label={t("screenplay.cesare.notesAria")}>
+    <aside
+      className={styles.panel}
+      aria-label={t("screenplay.cesare.notesAria")}
+    >
       <header className={styles.header}>
         <span className={styles.label}>Cesare</span>
       </header>
@@ -43,26 +52,6 @@ export function ScreenplayCesarePanel(props: ScreenplayCesarePanelProps) {
   );
 }
 
-const KIND_LABEL_KEY: Record<PolishSuggestion["kind"], TranslationKey> = {
-  dialogue: "screenplay.cesare.kind.dialogue",
-  action: "screenplay.cesare.kind.action",
-  structure: "screenplay.cesare.kind.structure",
-  pacing: "screenplay.cesare.kind.pacing",
-  style: "screenplay.cesare.kind.style",
-  format: "screenplay.cesare.kind.format",
-};
-
-const KIND_COLOR: Record<PolishSuggestion["kind"], string> = {
-  dialogue: "var(--ds-cat-cast, #6c4d8c)",
-  action: "var(--ds-text-3, #8a8479)",
-  structure: "var(--ds-cat-locations, #b07a3a)",
-  pacing: "var(--ds-action, #b04a2a)",
-  style: "var(--ds-cat-costumi, #c98a8a)",
-  format: "var(--ds-cat-suono, #5a8a6a)",
-};
-
-const SCENE_DEBOUNCE_MS = 1000;
-
 function PanelBody({
   projectId,
   screenplayId,
@@ -75,17 +64,12 @@ function PanelBody({
 }: ScreenplayCesarePanelProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const qc = useQueryClient();
   const hasContent = sceneTotal > 0;
 
-  // Debounce scene changes — don't fire a new request on every scroll tick.
-  // After 1s of stability, commit the scene number and let TanStack Query
-  // handle cache: if this scene was already fetched, it returns immediately.
-  const [debouncedScene, setDebouncedScene] = useState<number | null>(sceneCurrent);
-  useEffect(() => {
-    const t = window.setTimeout(() => setDebouncedScene(sceneCurrent), SCENE_DEBOUNCE_MS);
-    return () => window.clearTimeout(t);
-  }, [sceneCurrent]);
+  const debouncedScene = useDebouncedValue(
+    sceneCurrent,
+    EDITORIAL_ADVICE_REFRESH_DEBOUNCE_MS,
+  );
 
   const polishQ = useQuery(
     scenePolishQueryOptions(screenplayId, debouncedScene, { hasContent }),
@@ -95,6 +79,10 @@ function PanelBody({
   const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
   const [flash, setFlash] = useState<string | null>(null);
   const [notFoundIds, setNotFoundIds] = useState<Set<string>>(new Set());
+  const { statuses, setAdviceStatus } = useEditorialAdviceMemory(
+    `${screenplayId}:${debouncedScene ?? "all"}:screenplay`,
+    `${versionId ?? "draft"}:${debouncedScene ?? "all"}:${pageTotal}:${sceneTotal}`,
+  );
   const suggestions = allSuggestions.filter((s) => !appliedIds.has(s.id));
   const staleScenes = staleQ.data ?? [];
 
@@ -123,19 +111,12 @@ function PanelBody({
     });
   };
 
-  const handleRefresh = () => {
-    void qc.invalidateQueries({
-      queryKey: ["screenplay-polish", screenplayId, debouncedScene],
-    });
-  };
-
   const sceneLabel =
     debouncedScene !== null
       ? `${t("screenplay.cesare.scenePrefix")}${debouncedScene}`
       : null;
   const isWaitingForDebounce = sceneCurrent !== debouncedScene;
-  const isLoading =
-    hasContent && (isWaitingForDebounce || polishQ.isFetching);
+  const isLoading = hasContent && (isWaitingForDebounce || polishQ.isFetching);
   const hadPreviousSuggestions = suggestions.length > 0;
 
   return (
@@ -143,30 +124,31 @@ function PanelBody({
       <section className={styles.notes}>
         <div className={styles.notesHeadRow}>
           <p className={styles.notesHead}>
-            {!hasContent ? (
-              t("screenplay.cesare.writeOneScene")
-            ) : isLoading ? (
-              `${sceneLabel ? `${sceneLabel} · ` : ""}${t("screenplay.cesare.cesareReading")}`
-            ) : suggestions.length > 0 ? (
-              `${sceneLabel ? `${sceneLabel} · ` : ""}${suggestions.length}${t("screenplay.cesare.refinementsSuffix")}`
-            ) : (
-              `${sceneLabel ? `${sceneLabel} · ` : ""}${t("screenplay.cesare.noRefinements")}`
-            )}
+            {!hasContent
+              ? t("screenplay.cesare.writeOneScene")
+              : isLoading
+                ? `${sceneLabel ? `${sceneLabel} · ` : ""}${t("screenplay.cesare.cesareReading")}`
+                : suggestions.length > 0
+                  ? `${sceneLabel ? `${sceneLabel} · ` : ""}${suggestions.length}${t("screenplay.cesare.refinementsSuffix")}`
+                  : `${sceneLabel ? `${sceneLabel} · ` : ""}${t("screenplay.cesare.noRefinements")}`}
           </p>
-          <button
-            type="button"
-            className={styles.refresh}
-            onClick={handleRefresh}
+          <Button
+            variant="secondary"
+            size="sm"
+            onPress={() => void polishQ.refetch()}
             disabled={polishQ.isFetching || !hasContent}
             aria-label={t("screenplay.cesare.rereadAria")}
-            title={t("screenplay.cesare.rereadTitle")}
           >
-            ↻
-          </button>
+            {t("screenplay.cesare.reread")}
+          </Button>
         </div>
 
         {isLoading && !hadPreviousSuggestions && (
-          <ul className={styles.suggestionList} aria-busy="true" aria-live="polite">
+          <ul
+            className={styles.suggestionList}
+            aria-busy="true"
+            aria-live="polite"
+          >
             {[0, 1, 2].map((i) => (
               <li key={i} className={styles.suggestionRow}>
                 <span
@@ -199,72 +181,38 @@ function PanelBody({
         {flash && <p className={styles.flash}>{flash}</p>}
 
         {suggestions.length > 0 && (
-          <ul className={styles.suggestionList}>
-            {suggestions.map((s) => {
-              const canApply =
-                onApplyEdit !== undefined &&
-                typeof s.find === "string" &&
-                s.find.length > 0 &&
-                typeof s.replace === "string" &&
-                s.replace.length > 0;
-              return (
-                <li key={s.id} className={styles.suggestionRow}>
-                  <span
-                    className={styles.kindDot}
-                    style={{ background: KIND_COLOR[s.kind] }}
-                    aria-hidden="true"
-                  />
-                  <div className={styles.suggestionBody}>
-                    <p className={styles.suggestionMeta}>
-                      <span
-                        className={styles.kindTag}
-                        style={{ color: KIND_COLOR[s.kind] }}
-                      >
-                        {t(KIND_LABEL_KEY[s.kind])}
-                      </span>
-                      <span className={styles.sceneTag} data-num>
-                        {t("screenplay.cesare.scenePrefix")}
-                        {s.scene}
-                      </span>
-                    </p>
-                    <p className={styles.suggestionMessage}>
-                      {s.message}
-                      {notFoundIds.has(s.id) && (
-                        <span
-                          className={styles.notFoundTag}
-                          title={t("screenplay.cesare.textNotFoundTitle")}
-                          aria-label={t("screenplay.cesare.textNotFoundTitle")}
-                        >
-                          {t("screenplay.cesare.textNotFoundTag")}
-                        </span>
-                      )}
-                    </p>
-                    {canApply && (
-                      <div className={styles.editPreview}>
-                        <span className={styles.editFind}>{s.find}</span>
-                        <span className={styles.editArrow} aria-hidden="true">
-                          →
-                        </span>
-                        <span className={styles.editReplace}>{s.replace}</span>
-                      </div>
-                    )}
-                    {canApply && (
-                      <button
-                        type="button"
-                        className={styles.applyBtn}
-                        onClick={() =>
-                          handleApply(s.id, s.find as string, s.replace as string)
-                        }
-                        data-testid={`cesare-apply-${s.id}`}
-                      >
-                        {t("screenplay.cesare.apply")}
-                      </button>
-                    )}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
+          <EditorialAdviceStack
+            advice={suggestions.map((suggestion) =>
+              notFoundIds.has(suggestion.id)
+                ? {
+                    ...suggestion,
+                    whyItMatters: suggestion.whyItMatters
+                      ? `${suggestion.whyItMatters} ${t("screenplay.cesare.textNotFoundTitle")}.`
+                      : t("screenplay.cesare.textNotFoundTitle"),
+                  }
+                : suggestion,
+            )}
+            rememberedStatuses={statuses}
+            fallbackArea="screenplay"
+            scenePrefix={t("screenplay.cesare.scenePrefix")}
+            onApply={(advice) => {
+              if (
+                typeof advice.find !== "string" ||
+                advice.find.length === 0 ||
+                typeof advice.replace !== "string" ||
+                advice.replace.length === 0
+              ) {
+                return;
+              }
+              handleApply(advice.id, advice.find, advice.replace);
+            }}
+            onMarkAuthorialChoice={(advice) =>
+              setAdviceStatus(advice, "authorial_choice")
+            }
+            onIgnore={(advice) => setAdviceStatus(advice, "ignored")}
+            onResolve={(advice) => setAdviceStatus(advice, "resolved")}
+            onApprove={(advice) => setAdviceStatus(advice, "approved")}
+          />
         )}
 
         {staleScenes.length > 0 && (
