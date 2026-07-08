@@ -37,9 +37,27 @@ const ITALY_ONLY: ReadonlySet<Feature> = new Set<Feature>([
   Features.FUNDRAISING,
 ]);
 
+/**
+ * Features not yet stable enough for production — visible only when the app
+ * runs in a development environment (`import.meta.env.DEV`). Stable surface
+ * today stops at Breakdown + Calendario; Budget/Location/Piano di ripresa are
+ * still shaping up.
+ */
+const DEV_ONLY: ReadonlySet<Feature> = new Set<Feature>([
+  Features.BUDGET,
+  Features.LOCATIONS,
+  Features.SHOOTING_PLAN,
+]);
+
 export interface FeatureContext {
   market: Market;
   plan: Plan;
+  /** True in a development environment (`import.meta.env.DEV`). Gates
+   *  `DEV_ONLY` features — false (production) hides them. Required (not
+   *  optional): an omitted field silently resolves to "hidden," which is
+   *  the right default for production but the wrong one to fall into by
+   *  accident — every call site must say which environment it means. */
+  isDevEnvironment: boolean;
   /**
    * Features the user has switched off in settings. Designed-for now; the
    * settings toggle + its persistence ship in a later cycle, so this is empty
@@ -50,14 +68,16 @@ export interface FeatureContext {
 
 /**
  * Resolve the set of ENABLED features. First source to exclude wins
- * (market → plan → user). Today only the market rule ever excludes anything:
- * the Italy-only features are dropped on the international market. Plan is
- * permissive until billing exists; userDisabled is honoured when populated.
+ * (market → stage → plan → user). Market drops the Italy-only features on the
+ * international market; stage drops DEV_ONLY features outside a dev
+ * environment. Plan is permissive until billing exists; userDisabled is
+ * honoured when populated.
  */
 export const resolveFeatures = (ctx: FeatureContext): ReadonlySet<Feature> => {
   const enabled = new Set<Feature>();
   for (const feature of ALL_FEATURES) {
     if (ctx.market === "intl" && ITALY_ONLY.has(feature)) continue;
+    if (!ctx.isDevEnvironment && DEV_ONLY.has(feature)) continue;
     // Plan gating: no feature is plan-restricted yet — every plan unlocks all.
     if (ctx.userDisabled?.has(feature)) continue;
     enabled.add(feature);

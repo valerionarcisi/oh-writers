@@ -22,6 +22,7 @@ export const Route = createFileRoute("/_app/projects/$id_/opportunities")({
     const enabled = resolveFeatures({
       market: marketFromLocale(locale),
       plan: DEFAULT_PLAN,
+      isDevEnvironment: import.meta.env.DEV,
     });
     if (!enabled.has(Features.FUNDRAISING)) {
       throw redirect({ to: "/projects/$id", params: { id: params.id } });

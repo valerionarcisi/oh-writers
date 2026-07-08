@@ -11,19 +11,24 @@ const FeatureContext = createContext<ReadonlySet<Feature> | null>(null);
 
 /**
  * Provides the set of ENABLED features, resolved from the locale-derived market
- * (+ plan, today permissive). The locale is server-resolved (root loader), so
- * the feature set is correct at first paint and for route guards — no flash.
+ * (+ plan, today permissive) and the dev/prod stage. Both `locale` and
+ * `isDevEnvironment` are server-resolved (root loader), so the feature set is
+ * correct at first paint and for route guards — no flash, no client-only
+ * resolution.
  */
 export function FeatureProvider({
   locale,
+  isDevEnvironment,
   children,
 }: {
   locale: Locale;
+  isDevEnvironment: boolean;
   children: ReactNode;
 }) {
   const enabled = resolveFeatures({
     market: marketFromLocale(locale),
     plan: DEFAULT_PLAN,
+    isDevEnvironment,
   });
   return (
     <FeatureContext.Provider value={enabled}>

@@ -10,7 +10,11 @@
 // turns it into the rail-friendly shape. No router imports here.
 
 import type { RailSection, RailNavItem } from "@oh-writers/ui";
-import type { TranslationKey } from "@oh-writers/domain";
+import {
+  Features,
+  type Feature,
+  type TranslationKey,
+} from "@oh-writers/domain";
 
 export type RailSectionId = "sviluppo" | "produzione" | "recenti";
 
@@ -26,23 +30,40 @@ type NavEntry = {
    *  sprite doesn't yet cover every section so we keep the legacy glyphs
    *  for parity with the mockup. */
   glyph: string;
+  /** Gates the entry through `resolveFeatures` — omitted entries are always
+   *  shown (no gateable concept for them yet, e.g. Soggetto). */
+  feature?: Feature;
 };
 
 const DEV_ENTRIES: ReadonlyArray<NavEntry> = [
   { id: "soggetto", segment: "soggetto", labelKey: "nav.soggetto", glyph: "¶" },
-  { id: "synopsis", segment: "synopsis", labelKey: "nav.synopsis", glyph: "¶" },
-  { id: "outline", segment: "outline", labelKey: "nav.outline", glyph: "≡" },
+  {
+    id: "synopsis",
+    segment: "synopsis",
+    labelKey: "nav.synopsis",
+    glyph: "¶",
+    feature: Features.SYNOPSIS,
+  },
+  {
+    id: "outline",
+    segment: "outline",
+    labelKey: "nav.outline",
+    glyph: "≡",
+    feature: Features.OUTLINE,
+  },
   {
     id: "treatment",
     segment: "treatment",
     labelKey: "nav.treatment",
     glyph: "▤",
+    feature: Features.TREATMENT,
   },
   {
     id: "screenplay",
     segment: "screenplay",
     labelKey: "nav.screenplay",
     glyph: "▣",
+    feature: Features.SCREENPLAY,
   },
 ];
 
@@ -52,35 +73,53 @@ const PROD_ENTRIES: ReadonlyArray<NavEntry> = [
     segment: "breakdown",
     labelKey: "nav.breakdown",
     glyph: "◧",
+    feature: Features.BREAKDOWN,
   },
-  { id: "budget", segment: "budget", labelKey: "nav.budget", glyph: "€" },
-  { id: "schedule", segment: "schedule", labelKey: "nav.schedule", glyph: "▦" },
+  {
+    id: "budget",
+    segment: "budget",
+    labelKey: "nav.budget",
+    glyph: "€",
+    feature: Features.BUDGET,
+  },
+  {
+    id: "schedule",
+    segment: "schedule",
+    labelKey: "nav.schedule",
+    glyph: "▦",
+    feature: Features.SCHEDULE,
+  },
   {
     id: "locations",
     segment: "locations",
     labelKey: "nav.locations",
     glyph: "◎",
+    feature: Features.LOCATIONS,
   },
   {
     id: "shooting-plan",
     segment: "shooting-plan",
     labelKey: "nav.shootingPlan",
     glyph: "▦",
+    feature: Features.SHOOTING_PLAN,
   },
 ];
 
 /** Build the rail navigation for a project. The active flag is computed
  *  against `currentSegment` (e.g. "breakdown"); pass an empty string to
  *  render the rail without any active highlight. `t` resolves labels to the
- *  active locale. */
+ *  active locale. `enabledFeatures` filters out gated entries — pass the set
+ *  from `useFeatures()`. */
 export function buildRailNav({
   projectId,
   currentSegment,
   t,
+  enabledFeatures,
 }: {
   projectId: string;
   currentSegment: string;
   t: Translate;
+  enabledFeatures: ReadonlySet<Feature>;
 }): { sviluppo: RailSection; produzione: RailSection } {
   const toRailItem = (entry: NavEntry): RailNavItem => ({
     id: entry.id,
@@ -89,14 +128,16 @@ export function buildRailNav({
     href: `/projects/${projectId}/${entry.segment}`,
     isActive: entry.segment === currentSegment,
   });
+  const isVisible = (entry: NavEntry) =>
+    !entry.feature || enabledFeatures.has(entry.feature);
   return {
     sviluppo: {
       label: t("navGroup.development"),
-      items: DEV_ENTRIES.map(toRailItem),
+      items: DEV_ENTRIES.filter(isVisible).map(toRailItem),
     },
     produzione: {
       label: t("navGroup.production"),
-      items: PROD_ENTRIES.map(toRailItem),
+      items: PROD_ENTRIES.filter(isVisible).map(toRailItem),
     },
   };
 }

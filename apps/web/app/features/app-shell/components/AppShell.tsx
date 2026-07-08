@@ -86,6 +86,7 @@ import { useWebPush } from "../hooks/useWebPush";
 import { pulseAffectedEntities } from "../cesare-pulse";
 import { buildRailNav } from "../nav";
 import { useTranslation } from "~/features/i18n";
+import { useFeatures } from "~/features/feature-flags";
 import {
   NotificationCenterDrawerHeader,
   NotificationCenterDrawerContent,
@@ -1244,6 +1245,10 @@ function AppShellInner({
     ],
   );
 
+  // Gates the rail nav (and everything derived from it below — palette
+  // section jumps) through DEV_ONLY/market rules.
+  const enabledFeatures = useFeatures();
+
   const paletteItems = useMemo<CommandPaletteItem[]>(() => {
     const items: CommandPaletteItem[] = [
       {
@@ -1259,7 +1264,12 @@ function AppShellInner({
     // Section jumps are derived from the same nav source the rail renders,
     // so the palette can never drift from the rail's section list.
     if (projectId) {
-      const nav = buildRailNav({ projectId, currentSegment: activeSegment, t });
+      const nav = buildRailNav({
+        projectId,
+        currentSegment: activeSegment,
+        t,
+        enabledFeatures,
+      });
       for (const section of [nav.sviluppo, nav.produzione]) {
         for (const entry of section.items) {
           items.push({
@@ -1294,7 +1304,15 @@ function AppShellInner({
     }
 
     return items;
-  }, [router, projectId, activeSegment, openCesare, onCesareSessionNew, t]);
+  }, [
+    router,
+    projectId,
+    activeSegment,
+    openCesare,
+    onCesareSessionNew,
+    t,
+    enabledFeatures,
+  ]);
 
   // ── Rail tools — empty since N-49: the last tool ("+", new project) moved
   // into the project-header dropdown with the other project-level actions.
@@ -1365,9 +1383,14 @@ function AppShellInner({
       // so the chrome is consistent. Recents come from the project list.
       return [];
     }
-    const nav = buildRailNav({ projectId, currentSegment: activeSegment, t });
+    const nav = buildRailNav({
+      projectId,
+      currentSegment: activeSegment,
+      t,
+      enabledFeatures,
+    });
     return [nav.sviluppo, nav.produzione];
-  }, [projectId, activeSegment, t]);
+  }, [projectId, activeSegment, t, enabledFeatures]);
 
   const recentsSection = useMemo(() => {
     if (!projects || projects.length === 0) return null;

@@ -26,19 +26,27 @@ export const Route = createRootRoute({
   // Resolve the UI locale server-side (user.locale → Accept-Language → 'en')
   // so `<html lang>`, the first paint, and feature/route gates are correct and
   // the client never has to re-detect (which would flip lang on hydration).
-  loader: async (): Promise<{ locale: Locale }> => {
+  loader: async (): Promise<{ locale: Locale; isDevEnvironment: boolean }> => {
     // resolveLocale is a createServerFn: on client-side navigation TanStack
     // re-runs this loader, and the server fn is invoked via RPC instead of
     // calling getWebRequest() directly (which throws off-server). See ALTO-1.
-    const { resolveLocale } = await import("~/features/i18n/resolve-locale.server");
-    return { locale: await resolveLocale() };
+    const { resolveLocale } =
+      await import("~/features/i18n/resolve-locale.server");
+    // Feature flags convention: resolve server-side, never on the client.
+    // Vite inlines import.meta.env.DEV at build time — reading it here (not
+    // inside FeatureProvider's render) keeps it on the same loader-resolution
+    // contract as locale/market.
+    return {
+      locale: await resolveLocale(),
+      isDevEnvironment: import.meta.env.DEV,
+    };
   },
   component: RootLayout,
 });
 
 function RootLayout() {
   const [queryClient] = useState(() => new QueryClient());
-  const { locale } = Route.useLoaderData();
+  const { locale, isDevEnvironment } = Route.useLoaderData();
 
   return (
     <html lang={locale}>
@@ -60,7 +68,7 @@ function RootLayout() {
       <body>
         <SpriteLoader />
         <LocaleProvider locale={locale}>
-          <FeatureProvider locale={locale}>
+          <FeatureProvider locale={locale} isDevEnvironment={isDevEnvironment}>
             <QueryClientProvider client={queryClient}>
               <ToastProvider>
                 <ConfirmDialogProvider>

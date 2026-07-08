@@ -26,11 +26,34 @@ describe("resolveFeatures", () => {
     const enabled = resolveFeatures(ctx({ market: "intl" }));
     expect(enabled.has(Features.SIAE_EXPORT)).toBe(false);
     expect(enabled.has(Features.FUNDRAISING)).toBe(false);
-    // Everything else stays on.
+    // Everything else stays on (DEV_ONLY features tested separately below).
     expect(enabled.has(Features.SCREENPLAY)).toBe(true);
-    expect(enabled.has(Features.BUDGET)).toBe(true);
     expect(enabled.has(Features.CESARE)).toBe(true);
+  });
+
+  it("hides DEV_ONLY features (Budget, Location, Piano di ripresa) outside a dev environment", () => {
+    const enabled = resolveFeatures(ctx({ isDevEnvironment: false }));
+    expect(enabled.has(Features.BUDGET)).toBe(false);
+    expect(enabled.has(Features.LOCATIONS)).toBe(false);
+    expect(enabled.has(Features.SHOOTING_PLAN)).toBe(false);
+    // The stable surface (Soggetto → Breakdown + Calendario) stays visible.
+    expect(enabled.has(Features.SOGGETTO)).toBe(true);
+    expect(enabled.has(Features.OUTLINE)).toBe(true);
+    expect(enabled.has(Features.SCREENPLAY)).toBe(true);
+    expect(enabled.has(Features.BREAKDOWN)).toBe(true);
+    expect(enabled.has(Features.SCHEDULE)).toBe(true);
+  });
+
+  it("shows DEV_ONLY features in a dev environment", () => {
+    const enabled = resolveFeatures(ctx({ isDevEnvironment: true }));
+    expect(enabled.has(Features.BUDGET)).toBe(true);
     expect(enabled.has(Features.LOCATIONS)).toBe(true);
+    expect(enabled.has(Features.SHOOTING_PLAN)).toBe(true);
+  });
+
+  it("defaults to hiding DEV_ONLY features when isDevEnvironment is omitted", () => {
+    const enabled = resolveFeatures(ctx({}));
+    expect(enabled.has(Features.BUDGET)).toBe(false);
   });
 
   it("plan is permissive — no feature is plan-gated yet", () => {
