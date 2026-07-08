@@ -41,13 +41,20 @@ const signInAndOpenPage = async (
   browser: Browser,
   email: string,
   password: string,
+  // Defaults to the shared BASE_URL (every project except prod-build points
+  // at the same dev webServer). prod-build passes its own baseURL — via
+  // testInfo.project.use.baseURL — since it runs a SEPARATE webServer on a
+  // different port; without this the sign-in fetch and the cookie's target
+  // origin would silently point at the wrong server (auth cookie set for
+  // the dev server never reaches the prod-build page's actual origin).
+  baseURL: string = BASE_URL,
 ): Promise<Page> => {
   // Sign in via API to avoid React hydration timing issues
-  const resp = await fetch(`${BASE_URL}/api/auth/sign-in/email`, {
+  const resp = await fetch(`${baseURL}/api/auth/sign-in/email`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Origin: BASE_URL,
+      Origin: baseURL,
     },
     body: JSON.stringify({ email, password }),
   });
@@ -79,23 +86,29 @@ const signInAndOpenPage = async (
     await context.addCookies(cookies);
   }
   const page = await context.newPage();
-  await page.goto(`${BASE_URL}/dashboard`);
+  await page.goto(`${baseURL}/dashboard`);
   await page.waitForURL("**/dashboard", { timeout: 15_000 });
   return page;
 };
 
 export const test = base.extend<AuthFixtures>({
-  authenticatedPage: async ({ browser }, use) => {
-    const page = await signInAndOpenPage(browser, TEST_EMAIL, TEST_PASSWORD);
+  authenticatedPage: async ({ browser }, use, testInfo) => {
+    const page = await signInAndOpenPage(
+      browser,
+      TEST_EMAIL,
+      TEST_PASSWORD,
+      testInfo.project.use.baseURL ?? BASE_URL,
+    );
     await use(page);
     await page.context().close();
   },
 
-  authenticatedViewerPage: async ({ browser }, use) => {
+  authenticatedViewerPage: async ({ browser }, use, testInfo) => {
     const page = await signInAndOpenPage(
       browser,
       TEST_VIEWER_EMAIL,
       TEST_VIEWER_PASSWORD,
+      testInfo.project.use.baseURL ?? BASE_URL,
     );
     await use(page);
     await page.context().close();

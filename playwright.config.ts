@@ -7,6 +7,13 @@ const TEST_DB_URL =
   process.env["DATABASE_URL_TEST"] ??
   "postgresql://oh-writers:oh-writers@localhost:5432/oh-writers_test";
 
+// Dedicated port/URL for the production-build webServer (isDevEnvironment
+// gating can only be exercised against a real `vinxi build` — `import.meta.
+// env.DEV` is always true under `vinxi dev`, which every other project uses).
+const PROD_PORT = process.env["WEB_PROD_PORT"] ?? "3003";
+const PROD_BASE_URL =
+  process.env["PROD_BASE_URL"] ?? `http://localhost:${PROD_PORT}`;
+
 export default defineConfig({
   globalSetup: "./tests/global-setup.ts",
   testDir: "./tests",
@@ -63,6 +70,19 @@ export default defineConfig({
         viewport: { width: 1440, height: 900 },
       },
     },
+    {
+      // Real `vinxi build` + `vinxi start` — the only way to exercise
+      // isDevEnvironment=false (DEV_ONLY nav/route gating for Budget,
+      // Location, Piano di ripresa). Separate webServer entry below builds
+      // and starts a production server on PROD_BASE_URL for this project only.
+      name: "prod-build",
+      testMatch: /shell-production-gating\.spec\.ts$/,
+      use: {
+        ...devices["Desktop Chrome"],
+        baseURL: PROD_BASE_URL,
+        viewport: { width: 1440, height: 900 },
+      },
+    },
   ],
   webServer: [
     {
@@ -80,6 +100,18 @@ export default defineConfig({
       // CI cold starts (vinxi + Vite) routinely exceed 60s on GitHub runners;
       // 180s gives headroom without hiding real start-up issues.
       timeout: 180_000,
+    },
+    {
+      // MOCK_AI is baked in at BUILD time (Vite `define`), so it must be set
+      // for the build step too, not just the start step, or this "prod" build
+      // would call the real Anthropic API. Uses the same test DB as the dev
+      // webServer above — this is only about isDevEnvironment, not data.
+      command: `PORT=${PROD_PORT} BETTER_AUTH_URL=${PROD_BASE_URL} DATABASE_URL=${TEST_DB_URL} VITE_WS_URL= LLM_FIRST_BREAKDOWN=false MOCK_AI=true CRON_SECRET=test-cron-secret pnpm --filter @oh-writers/web build && PORT=${PROD_PORT} BETTER_AUTH_URL=${PROD_BASE_URL} DATABASE_URL=${TEST_DB_URL} VITE_WS_URL= LLM_FIRST_BREAKDOWN=false MOCK_AI=true CRON_SECRET=test-cron-secret pnpm --filter @oh-writers/web start`,
+      url: PROD_BASE_URL,
+      reuseExistingServer: process.env["PW_REUSE_SERVER"] === "1",
+      // Build + start: a cold production build easily exceeds the 180s the
+      // dev server gets.
+      timeout: 300_000,
     },
   ],
 });
