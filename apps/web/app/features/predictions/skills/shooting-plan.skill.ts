@@ -8,11 +8,13 @@ import type { Skill, SkillBuildContext } from "./types";
 
 // ─── Guidance builder ─────────────────────────────────────────────────────────
 
-const buildShootingPlanGuidance = (activeSceneId: string | null): string => {
-  const sceneHint = activeSceneId
-    ? `\nScena attiva (selezionata dall'utente): ${activeSceneId}. Usala come default per scene_id nei tool quando l'utente non specifica una scena diversa.`
-    : "\nNessuna scena attiva — se l'utente non passa un scene_id, chiedigli di selezionarne una prima di operare.";
-  return `\n\nRUOLO: sei un DIRETTORE DELLA FOTOGRAFIA (DOP) con esperienza su produzioni italiane. Ragioni in termini di luce, movimento camera, e racconto visivo. Quando costruisci un piano inquadrature pensi a: tono del film (dalla Bible), ambientazione della scena (INT/EXT, giorno/notte), numero di attori, disponibilità di luce naturale, e tempo di setup realistico.
+// Static, deterministic guidance text — stable for Anthropic cache (per
+// SkillBuildContext's doc comment). The active-scene hint used to be
+// interpolated here, but activeSceneId changes whenever the user switches
+// scene within the SAME cached session, which broke the cache prefix every
+// time. It now lives in formatLocalContext's uncached tail instead.
+const buildShootingPlanGuidance = (): string =>
+  `\n\nRUOLO: sei un DIRETTORE DELLA FOTOGRAFIA (DOP) con esperienza su produzioni italiane. Ragioni in termini di luce, movimento camera, e racconto visivo. Quando costruisci un piano inquadrature pensi a: tono del film (dalla Bible), ambientazione della scena (INT/EXT, giorno/notte), numero di attori, disponibilità di luce naturale, e tempo di setup realistico.
 
 PRODUTTORE ESECUTIVO (sempre attivo): ogni shot ha un costo di setup. Un ECU o un POV complesso richiedono più tempo di un WS. Quando proponi un piano, stima duration_min in modo realistico e segnala se il totale giornaliero supera le ore disponibili. Usa i SCENE SUMMARIES nel contesto per capire il tono e le note di produzione della scena prima di costruire il piano.
 
@@ -41,8 +43,7 @@ REGOLE FERREE:
 - L'utente lavora su una scena specifica — usa scene_id dal contesto come default.
 - Stima duration_min realistica: 45min per setup iniziale (WS), 20-30min per shot complesso (CU/OTS), 15min per insert.
 - Quando l'utente non specifica gli shot, proponi 4-6 shot coerenti col contesto narrativo della scena (vedi TESTO SCENEGGIATURA).
-- Non duplicare la struttura di Piano A se stai costruendo Piano B — guarda i PIANI ESISTENTI per variare angoli e approccio.${sceneHint}`;
-};
+- Non duplicare la struttura di Piano A se stai costruendo Piano B — guarda i PIANI ESISTENTI per variare angoli e approccio.`;
 
 // ─── Skill factory ────────────────────────────────────────────────────────────
 
@@ -50,7 +51,7 @@ export const buildShootingPlanSkill = (ctx: SkillBuildContext): Skill => ({
   id: "shooting-plan",
   // Read tools are provided by the companion read-scene skill in PAGE_SKILL_MAP.
   tools: [...CESARE_SHOOTING_PLAN_TOOLS] as Skill["tools"],
-  guidanceBlock: buildShootingPlanGuidance(ctx.activeSceneId),
+  guidanceBlock: buildShootingPlanGuidance(),
   executor: (block, db, projectId) => {
     const readResult = tryExecuteReadTool(block, db, projectId);
     if (readResult) return readResult;

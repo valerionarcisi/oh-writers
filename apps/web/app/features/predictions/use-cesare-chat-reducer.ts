@@ -137,6 +137,10 @@ const traceStepForEvent = (event: CesareStreamEvent): TraceStep | null =>
       entity: null,
       text: e.name,
     }))
+    // text-delta (Task 4 streaming) is not a trace step — it's the final
+    // reply's token stream, handled separately once the client renders it
+    // progressively. No-op here for now, same as done/error.
+    .with({ _tag: "text-delta" }, () => null)
     .with({ _tag: "done" }, () => null)
     .with({ _tag: "error" }, () => null)
     .exhaustive();

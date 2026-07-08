@@ -1,5 +1,6 @@
 import { type FC, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Button } from "@oh-writers/ui";
 import {
   DocumentTypes,
   formatTime,
@@ -11,6 +12,12 @@ import {
   type NarrativePolishSuggestionDoc,
 } from "../server/narrative-polish.server";
 import { useTranslation } from "~/features/i18n";
+import {
+  buildAdviceContentFingerprint,
+  useDebouncedValue,
+  EditorialAdviceStack,
+  useEditorialAdviceMemory,
+} from "~/features/predictions";
 import styles from "./NarrativeCesarePanel.module.css";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
@@ -18,7 +25,7 @@ import styles from "./NarrativeCesarePanel.module.css";
 interface NarrativeCesarePanelProps {
   readonly projectId: string;
   readonly docType: DocumentType;
-  /** Current document content — suggestions are keyed on the first 200 chars. */
+  /** Current document content. */
   readonly content: string;
 }
 
@@ -31,26 +38,6 @@ const isNarrativeDocType = (
   type === DocumentTypes.SYNOPSIS ||
   type === DocumentTypes.OUTLINE ||
   type === DocumentTypes.TREATMENT;
-
-const groupByGroup = (
-  memos: readonly NarrativePolishSuggestion[],
-): ReadonlyArray<{
-  group: string;
-  items: readonly NarrativePolishSuggestion[];
-}> => {
-  const order: string[] = [];
-  const buckets = new Map<string, NarrativePolishSuggestion[]>();
-  for (const memo of memos) {
-    const bucket = buckets.get(memo.group);
-    if (bucket) {
-      bucket.push(memo);
-    } else {
-      buckets.set(memo.group, [memo]);
-      order.push(memo.group);
-    }
-  }
-  return order.map((group) => ({ group, items: buckets.get(group) ?? [] }));
-};
 
 // ─── Sub-components ────────────────────────────────────────────────────────────
 
@@ -147,8 +134,17 @@ export const NarrativeCesarePanel: FC<NarrativeCesarePanelProps> = ({
   const { t, locale } = useTranslation();
 
   // eslint-disable-next-line react-hooks/rules-of-hooks
+  const debouncedContent = useDebouncedValue(content);
+  const contentFingerprint = buildAdviceContentFingerprint(debouncedContent);
+
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   const query = useQuery(
-    narrativePolishQueryOptions(projectId, docType, content),
+    narrativePolishQueryOptions(
+      projectId,
+      docType,
+      debouncedContent,
+      contentFingerprint,
+    ),
   );
 
   // eslint-disable-next-line react-hooks/rules-of-hooks
@@ -156,26 +152,30 @@ export const NarrativeCesarePanel: FC<NarrativeCesarePanelProps> = ({
     if (!query.data || !query.data.isOk) return [];
     return query.data.value;
   }, [query.data]);
-
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  const grouped = useMemo(() => groupByGroup(suggestions), [suggestions]);
+  const { statuses, setAdviceStatus } = useEditorialAdviceMemory(
+    `${projectId}:${docType}:panel`,
+    contentFingerprint,
+  );
 
   const hasContent = content.length > 50;
   const isLoading = query.isFetching;
   const isError = query.isError || (query.data != null && !query.data.isOk);
+  const isWaitingForDebounce = content !== debouncedContent;
 
-  const statusLabel = isLoading
-    ? t("documents.cesarePanel.statusAnalyzing")
-    : isError
-      ? t("documents.cesarePanel.statusError")
-      : suggestions.length > 0
-        ? t("documents.cesarePanel.statusNotes").replace(
-            "{count}",
-            String(suggestions.length),
-          )
-        : hasContent
-          ? t("documents.cesarePanel.statusNoNotes")
-          : t("documents.cesarePanel.statusNone");
+  const statusLabel = isWaitingForDebounce
+    ? t("documents.cesarePanel.statusWaiting")
+    : isLoading
+      ? t("documents.cesarePanel.statusAnalyzing")
+      : isError
+        ? t("documents.cesarePanel.statusError")
+        : suggestions.length > 0
+          ? t("documents.cesarePanel.statusNotes").replace(
+              "{count}",
+              String(suggestions.length),
+            )
+          : hasContent
+            ? t("documents.cesarePanel.statusApproved")
+            : t("documents.cesarePanel.statusNone");
 
   const lastUpdated =
     query.dataUpdatedAt > 0
@@ -190,6 +190,14 @@ export const NarrativeCesarePanel: FC<NarrativeCesarePanelProps> = ({
       <header className={styles.header}>
         <span className={styles.label}>Cesare</span>
         <span className={styles.status}>{statusLabel}</span>
+        <Button
+          variant="secondary"
+          size="sm"
+          onPress={() => void query.refetch()}
+          disabled={!hasContent || query.isFetching}
+        >
+          {t("documents.cesarePanel.reread")}
+        </Button>
       </header>
 
       {!hasContent ? (
@@ -200,19 +208,19 @@ export const NarrativeCesarePanel: FC<NarrativeCesarePanelProps> = ({
         <ErrorState />
       ) : (
         <div className={styles.body}>
-          {grouped.map(({ group, items }) => (
-            <section key={group} className={styles.group}>
-              <p className={styles.groupLabel}>{group}</p>
-              <ul className={styles.list}>
-                {items.map((memo) => (
-                  <li key={memo.id} className={styles.item}>
-                    <p className={styles.itemCat}>{memo.category}</p>
-                    <p className={styles.itemText}>{memo.message}</p>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ))}
+          <EditorialAdviceStack
+            advice={suggestions}
+            rememberedStatuses={statuses}
+            fallbackArea={
+              docType === DocumentTypes.SOGGETTO ? "subject" : docType
+            }
+            onMarkAuthorialChoice={(memo) =>
+              setAdviceStatus(memo, "authorial_choice")
+            }
+            onIgnore={(memo) => setAdviceStatus(memo, "ignored")}
+            onResolve={(memo) => setAdviceStatus(memo, "resolved")}
+            onApprove={(memo) => setAdviceStatus(memo, "approved")}
+          />
         </div>
       )}
 

@@ -170,6 +170,7 @@ export const screenplayKeys = {
     "screenplay.cesare.noRefinements": "No refinement.",
     "screenplay.cesare.rereadAria": "Re-reads the screenplay",
     "screenplay.cesare.rereadTitle": "Re-reads the screenplay",
+    "screenplay.cesare.reread": "Reread",
     "screenplay.cesare.textNotFoundTitle": "Text not found in the screenplay",
     "screenplay.cesare.textNotFoundTag": "! text not found",
     "screenplay.cesare.apply": "Apply",
@@ -396,6 +397,7 @@ export const screenplayKeys = {
     "screenplay.cesare.noRefinements": "Nessuna rifinitura.",
     "screenplay.cesare.rereadAria": "Rilegge la sceneggiatura",
     "screenplay.cesare.rereadTitle": "Rilegge la sceneggiatura",
+    "screenplay.cesare.reread": "Rileggi",
     "screenplay.cesare.textNotFoundTitle":
       "Testo non trovato nella sceneggiatura",
     "screenplay.cesare.textNotFoundTag": "! testo non trovato",

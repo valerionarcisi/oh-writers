@@ -3,7 +3,20 @@ import { z } from "zod";
 import { eq, and, gte, lte } from "drizzle-orm";
 import { ResultAsync, err, ok } from "neverthrow";
 import { match } from "ts-pattern";
-import { screenplays, scenes } from "@oh-writers/db/schema";
+import {
+  createEditorialApprovalAdvice,
+  dedupeEditorialAdvice,
+  EditorialAdviceListSchema,
+  EditorialAdviceSchema,
+  sortEditorialAdvice,
+  type EditorialAdvice,
+} from "@oh-writers/domain";
+import {
+  screenplays,
+  scenes,
+  documents,
+  projects,
+} from "@oh-writers/db/schema";
 import { toShape, type ResultShape } from "@oh-writers/utils";
 import { requireUser } from "~/server/context";
 import { getDb } from "~/server/db";
@@ -14,42 +27,11 @@ import {
 } from "../screenplay.errors";
 import { callHaiku, extractToolUse } from "~/features/ai";
 
-// ─── Polish suggestions: tipologie e schemi ──────────────────────────────────
-// Polish è la "Cesare di scrittura": leggere la sceneggiatura e proporre
-// piccole rifiniture al testo (dialoghi che suonano lunghi, descrizioni
-// telegrafiche, beat di pacing, refusi di formato). Risultato pensato per
-// vivere nel pannello laterale dello Screenplay come lista cortissima.
-
-const PolishSuggestionSchema = z.object({
-  id: z.string().min(1),
-  kind: z.enum([
-    "dialogue",
-    "action",
-    "structure",
-    "pacing",
-    "style",
-    "format",
-  ]),
-  severity: z.enum(["info", "suggestion", "warning"]),
-  /** 1-indexed scene number the suggestion refers to. */
+const PolishSuggestionSchema = EditorialAdviceSchema.extend({
   scene: z.number().int().positive(),
-  /** Short message (≤ 140 chars), Italian, action-oriented. */
-  message: z.string().min(1).max(280),
-  /** Tiny snippet (≤ 80 chars) from the screenplay quoted by Cesare. */
-  snippet: z.string().max(160).nullable().optional(),
-  /** When Cesare proposes a concrete textual edit, `find` is the exact
-   *  substring to look for in the screenplay (must match verbatim) and
-   *  `replace` is the proposed replacement. The UI shows an 'Applica'
-   *  action only when both are present. PM's undo history handles reverse. */
-  find: z.string().max(400).nullable().optional(),
-  replace: z.string().max(800).nullable().optional(),
 });
 
-const PolishResponseSchema = z.object({
-  suggestions: z.array(PolishSuggestionSchema).max(20),
-});
-
-export type PolishSuggestion = z.infer<typeof PolishSuggestionSchema>;
+export type PolishSuggestion = EditorialAdvice;
 
 const POLISH_TOOL_NAME = "submit_polish_suggestions";
 
@@ -60,7 +42,7 @@ const POLISH_TOOL: {
 } = {
   name: POLISH_TOOL_NAME,
   description:
-    "Restituisci una lista corta di rifiniture per la sceneggiatura: pacing, ritmi dei dialoghi, descrizioni telegrafiche, refusi di formato. Massimo 6 voci, ordinate per impatto.",
+    "Restituisci da 2 a 6 note editoriali per la sceneggiatura. Non tutte devono essere problemi: puoi segnalare rischi, scelte autoriali, rifiniture opzionali o un OK editoriale.",
   input_schema: {
     type: "object",
     properties: {
@@ -71,24 +53,33 @@ const POLISH_TOOL: {
           type: "object",
           properties: {
             id: { type: "string" },
-            kind: {
+            area: {
               type: "string",
-              enum: [
-                "dialogue",
-                "action",
-                "structure",
-                "pacing",
-                "style",
-                "format",
-              ],
+              description:
+                "Narrative area slug: screenplay, dialogue, action, structure, rhythm, tone, clarity, format, scene.",
             },
             severity: {
               type: "string",
-              enum: ["info", "suggestion", "warning"],
+              enum: ["high", "medium", "low", "optional"],
+            },
+            type: {
+              type: "string",
+              enum: [
+                "real_problem",
+                "risk",
+                "authorial_choice",
+                "optional",
+                "already_resolved",
+                "approved",
+              ],
             },
             scene: { type: "integer", minimum: 1 },
-            message: { type: "string", maxLength: 280 },
+            title: { type: "string", maxLength: 120 },
+            body: { type: "string", maxLength: 360 },
             snippet: { type: "string", maxLength: 160 },
+            whyItMatters: { type: "string", maxLength: 240 },
+            whenToIgnore: { type: "string", maxLength: 240 },
+            minimalIntervention: { type: "string", maxLength: 240 },
             find: {
               type: "string",
               maxLength: 400,
@@ -102,7 +93,15 @@ const POLISH_TOOL: {
                 "Testo che dovrebbe rimpiazzare 'find'. Solo quando hai un edit chiaro e applicabile.",
             },
           },
-          required: ["id", "kind", "severity", "scene", "message"],
+          required: [
+            "id",
+            "area",
+            "type",
+            "severity",
+            "scene",
+            "title",
+            "body",
+          ],
         },
       },
     },
@@ -110,22 +109,24 @@ const POLISH_TOOL: {
   },
 };
 
-const POLISH_SYSTEM_PROMPT = `Sei Cesare, dramaturg italiano sobrio. Stai leggendo una scrittura in formato Fountain.
-Restituisci da 4 a 6 suggerimenti di polish concreti, in italiano, ognuno ≤ 140 caratteri.
-Riferisci ogni suggerimento alla scena (numero 1-indexato basato su INT./EXT.).
-Niente complimenti. Niente generiche "rivedi il dialogo": indica COSA e PERCHÉ.
+const POLISH_SYSTEM_PROMPT = `Sei Cesare, editor narrativo italiano sobrio. Stai leggendo una sceneggiatura in formato Fountain.
+Restituisci da 2 a 6 note editoriali in italiano.
+Riferisci ogni nota alla scena (numero 1-indexato basato su INT./EXT.).
+Non dare consigli per obbligo. Se una scena funziona, puoi dirlo con una nota di tipo "approved" o "already_resolved".
+Non trasformare ogni ambiguità, ellissi o asimmetria in errore. Prima chiediti: rende il testo più forte o solo più convenzionale?
+Preferisci interventi minimi, concreti e filmabili. Evita spiegoni psicologici o tematici.
 
 REGOLA SUI FIND/REPLACE (importante):
 Per ogni suggerimento dove l'edit è esprimibile come sostituzione testuale puntuale, DEVI compilare entrambi:
 - find: la sostringa ESATTA presente nel testo (copia-incolla, verbatim, max 400 char)
 - replace: il testo proposto che la rimpiazza (max 800 char)
-Almeno metà dei suggerimenti deve includere find/replace. Solo note puramente strutturali (pacing globale, ordine scene, scelte registiche) possono ometterli.
+Usali solo quando l'intervento minimo è davvero puntuale. Le note strutturali o le scelte autoriali possono ometterli.
 
 Esempi:
-- format: "Scena 2: 'sarria' è dialetto pugliese, marca con corsivo per il lettore." → find:"sarria", replace:"_sarria_"
-- style: "Scena 1: 'Nice Nice!' suona sciatto come tag — meglio 'Belli belli!'." → find:"Nice Nice!", replace:"Belli belli!"
-- dialogo: "Scena 1: 'Sottoscala pizzeria' è chunky — 'pizzeria Sottoscala' scorre meglio." → find:"Sottoscala pizzeria", replace:"pizzeria Sottoscala"
-- pacing: "Scena 3: la sequenza chiude troppo in fretta — un beat tra Tea e Filippo aiuta." (no find/replace, è strutturale)
+- format: una sostituzione puntuale di formato
+- dialogue: una battuta troppo lunga da stringere
+- risk: una scena leggibile ma con rischio di dispersione
+- approved: "Questa scena regge così, non la toccherei"
 
 Non inventare elementi che non sono nel testo. Verifica che 'find' compaia letteralmente.`;
 
@@ -155,26 +156,59 @@ export const getScreenplayPolish = createServerFn({ method: "GET" })
 
       const content = spResult.value.content;
       const wantsMock =
-        process.env["MOCK_AI"] === "true" ||
-        !process.env["ANTHROPIC_API_KEY"];
+        process.env["MOCK_AI"] === "true" || !process.env["ANTHROPIC_API_KEY"];
 
       const suggestions: PolishSuggestion[] = wantsMock
         ? mockPolishForContent(content)
-        : await callPolish(content);
+        : await callPolish(spResult.value.projectId, content);
 
       return toShape(ok({ suggestions }));
     },
   );
 
-const callPolish = async (content: string): Promise<PolishSuggestion[]> => {
+const buildProjectContext = async (projectId: string): Promise<string> => {
+  const db = await getDb();
+  const project = await db.query.projects.findFirst({
+    where: eq(projects.id, projectId),
+    columns: { title: true, format: true, genre: true },
+  });
+  const loglineDoc = await db.query.documents.findFirst({
+    where: and(
+      eq(documents.projectId, projectId),
+      eq(documents.type, "logline"),
+    ),
+    columns: { content: true },
+  });
+  return [
+    `Titolo progetto: ${project?.title ?? "N/D"}`,
+    `Formato: ${project?.format ?? "N/D"}`,
+    `Genere: ${project?.genre ?? "N/D"}`,
+    `Logline del progetto: ${loglineDoc?.content?.trim() || "N/D"}`,
+  ].join("\n");
+};
+
+const normalizeScreenplayAdvice = (
+  suggestions: readonly PolishSuggestion[],
+): PolishSuggestion[] => {
+  const normalized = sortEditorialAdvice(dedupeEditorialAdvice(suggestions));
+  return normalized.length > 0
+    ? normalized
+    : [createEditorialApprovalAdvice("screenplay")];
+};
+
+const callPolish = async (
+  projectId: string,
+  content: string,
+): Promise<PolishSuggestion[]> => {
   // Trim to keep tokens predictable: most polish comes from the first ~6
   // scenes anyway. The agent gets up to ~8k characters.
   const trimmed = content.slice(0, 8000);
+  const context = await buildProjectContext(projectId);
   const result = await callHaiku(
     {
       system: POLISH_SYSTEM_PROMPT,
       fewShot: [],
-      user: trimmed,
+      user: `${context}\n\nSceneggiatura:\n${trimmed}`,
       maxTokens: 1500,
       tools: [POLISH_TOOL],
       toolChoice: { type: "tool", name: POLISH_TOOL_NAME },
@@ -193,7 +227,7 @@ const callPolish = async (content: string): Promise<PolishSuggestion[]> => {
     );
     return [];
   }
-  const parsed = PolishResponseSchema.safeParse(input);
+  const parsed = EditorialAdviceListSchema.safeParse(input);
   if (!parsed.success) {
     console.warn(
       "[cesare/polish] schema parse error:",
@@ -203,7 +237,12 @@ const callPolish = async (content: string): Promise<PolishSuggestion[]> => {
     );
     return [];
   }
-  return parsed.data.suggestions;
+  return normalizeScreenplayAdvice(
+    parsed.data.suggestions.filter(
+      (item): item is PolishSuggestion =>
+        PolishSuggestionSchema.safeParse(item).success,
+    ),
+  );
 };
 
 // ─── Mock fallback per MOCK_AI=true / chiave mancante ────────────────────────
@@ -220,12 +259,15 @@ const mockPolishForContent = (content: string): PolishSuggestion[] => {
     return [
       {
         id: "polish-empty-1",
-        kind: "structure",
-        severity: "info",
+        area: "format",
+        type: "real_problem",
+        severity: "high",
         scene: 1,
-        message:
-          "Manca una scene heading INT./EXT. all'inizio — il primo blocco è quello che imposta il tono.",
+        title: "Manca la prima scene heading",
+        body: "Senza una INT./EXT. iniziale la pagina non imposta il campo della scena. Qui il problema è reale.",
         snippet: null,
+        minimalIntervention:
+          "Apri con una scene heading minima, poi lascia il resto asciutto.",
       },
     ];
   }
@@ -233,33 +275,50 @@ const mockPolishForContent = (content: string): PolishSuggestion[] => {
   const out: PolishSuggestion[] = [];
   const sample = sceneHeadings.slice(0, 5);
   sample.forEach((s, i) => {
-    const message = match(i % 4)
-      .with(0, () =>
-        `Scena ${s.sceneNum}: l'heading "${s.heading.slice(0, 60)}" è chiaro — assicurati che il tempo (NOTTE/GIORNO) sia coerente con la luce descritta.`,
+    const body = match(i % 4)
+      .with(
+        0,
+        () =>
+          `L'heading "${s.heading.slice(0, 60)}" è leggibile. Controllerei solo la coerenza tra luce e tempo della scena.`,
       )
-      .with(1, () =>
-        `Scena ${s.sceneNum}: introduzione del personaggio. Aggiungi età solo alla prima apparizione, non a ogni rientro.`,
+      .with(
+        1,
+        () =>
+          `L'ingresso del personaggio è chiaro. Se l'età ricompare più volte, la taglierei: è una rifinitura, non un difetto grave.`,
       )
-      .with(2, () =>
-        `Scena ${s.sceneNum}: occhio al pacing — se ci sono più di 4 righe di azione consecutive considera di spezzare con un beat o un dialogo.`,
+      .with(
+        2,
+        () =>
+          `La scena rischia di restare tutta su un unico respiro d'azione. Un beat in più può aiutare senza cambiare l'intenzione.`,
       )
-      .otherwise(() =>
-        `Scena ${s.sceneNum}: i dialoghi in dialetto vanno marcati (in dialetto) la prima volta e poi liberi.`,
+      .otherwise(
+        () =>
+          `Il dialetto qui può restare ruvido. Marcherei solo il primo ingresso per accompagnare il lettore.`,
       );
     out.push({
       id: `polish-mock-${s.sceneNum}-${i}`,
-      kind: match(i % 4)
-        .with(0, () => "format" as const)
-        .with(1, () => "style" as const)
-        .with(2, () => "pacing" as const)
-        .otherwise(() => "dialogue" as const),
-      severity: i === 0 ? "info" : i % 3 === 0 ? "warning" : "suggestion",
+      area: match(i % 4)
+        .with(0, () => "format")
+        .with(1, () => "style")
+        .with(2, () => "rhythm")
+        .otherwise(() => "dialogue"),
+      type: match(i % 4)
+        .with(0, () => "already_resolved" as const)
+        .with(1, () => "optional" as const)
+        .with(2, () => "risk" as const)
+        .otherwise(() => "authorial_choice" as const),
+      severity: i === 2 ? "medium" : i === 0 ? "optional" : "low",
       scene: s.sceneNum,
-      message,
+      title: match(i % 4)
+        .with(0, () => "Forma di scena già a fuoco")
+        .with(1, () => "Descrizione da alleggerire")
+        .with(2, () => "Rischio di respiro unico")
+        .otherwise(() => "Dialetto leggibile così"),
+      body,
       snippet: s.heading.slice(0, 80),
     });
   });
-  return out;
+  return normalizeScreenplayAdvice(out);
 };
 
 export const polishQueryOptions = (
@@ -288,15 +347,15 @@ export const polishQueryOptions = (
 // automatically: navigating back to a previously-visited scene hits the cache.
 
 const SCENE_POLISH_SYSTEM_PROMPT = `Sei Cesare, dramaturg italiano. Stai leggendo una singola scena in formato Fountain.
-Restituisci da 3 a 5 suggerimenti concreti, in italiano, ognuno ≤ 140 caratteri.
-Riferisci ogni suggerimento al numero di scena fornito.
-Niente complimenti. Indica COSA e PERCHÉ.
+Restituisci da 2 a 5 note editoriali in italiano.
+Riferisci ogni nota al numero di scena fornito.
+Non trattare ogni ambiguità come errore. Se la scena funziona, puoi dirlo.
 
 REGOLA SUI FIND/REPLACE (importante):
 Per ogni suggerimento dove l'edit è esprimibile come sostituzione testuale puntuale, DEVI compilare entrambi:
 - find: la sostringa ESATTA presente nel testo (verbatim, max 400 char)
 - replace: il testo proposto che la rimpiazza (max 800 char)
-Almeno metà dei suggerimenti deve includere find/replace. Solo note puramente strutturali possono ometterli.
+Usali solo quando l'intervento minimo è puntuale.
 
 Non inventare elementi che non sono nel testo. Verifica che 'find' compaia letteralmente.`;
 
@@ -359,33 +418,42 @@ export const getScenePolish = createServerFn({ method: "GET" })
       // Build a small Fountain excerpt for the window
       const excerpt = sceneRows.value
         .map((r) => {
-          const marker = r.number === data.sceneNumber ? " ← SCENA CORRENTE" : "";
+          const marker =
+            r.number === data.sceneNumber ? " ← SCENA CORRENTE" : "";
           return `=== SC. ${r.number}${marker} ===\n${r.heading}\n${r.notes ?? ""}`;
         })
         .join("\n\n");
 
       const wantsMock =
-        process.env["MOCK_AI"] === "true" ||
-        !process.env["ANTHROPIC_API_KEY"];
+        process.env["MOCK_AI"] === "true" || !process.env["ANTHROPIC_API_KEY"];
 
       const suggestions = wantsMock
-        ? mockPolishForSceneNumber(data.sceneNumber, sceneRows.value[0]?.heading ?? "")
-        : await callScenePolish(excerpt, data.sceneNumber);
+        ? mockPolishForSceneNumber(
+            data.sceneNumber,
+            sceneRows.value[0]?.heading ?? "",
+          )
+        : await callScenePolish(
+            spResult.value.projectId,
+            excerpt,
+            data.sceneNumber,
+          );
 
       return toShape(ok({ suggestions }));
     },
   );
 
 const callScenePolish = async (
+  projectId: string,
   excerpt: string,
   sceneNumber: number,
 ): Promise<PolishSuggestion[]> => {
   void sceneNumber;
+  const context = await buildProjectContext(projectId);
   const result = await callHaiku(
     {
       system: SCENE_POLISH_SYSTEM_PROMPT,
       fewShot: [],
-      user: excerpt.slice(0, 6000),
+      user: `${context}\n\nFinestra scene:\n${excerpt.slice(0, 6000)}`,
       maxTokens: 1200,
       tools: [POLISH_TOOL],
       toolChoice: { type: "tool", name: POLISH_TOOL_NAME },
@@ -393,14 +461,22 @@ const callScenePolish = async (
     "cesare/scene-polish",
   );
   if (result.isErr()) {
-    console.warn("[cesare/scene-polish] callHaiku error:", result.error.message);
+    console.warn(
+      "[cesare/scene-polish] callHaiku error:",
+      result.error.message,
+    );
     return [];
   }
   const input = extractToolUse(result.value.content, POLISH_TOOL_NAME);
   if (input === null) return [];
-  const parsed = PolishResponseSchema.safeParse(input);
+  const parsed = EditorialAdviceListSchema.safeParse(input);
   if (!parsed.success) return [];
-  return parsed.data.suggestions;
+  return normalizeScreenplayAdvice(
+    parsed.data.suggestions.filter(
+      (item): item is PolishSuggestion =>
+        PolishSuggestionSchema.safeParse(item).success,
+    ),
+  );
 };
 
 const mockPolishForSceneNumber = (
@@ -409,18 +485,25 @@ const mockPolishForSceneNumber = (
 ): PolishSuggestion[] => [
   {
     id: `scene-mock-${sceneNumber}-1`,
-    kind: "dialogue",
-    severity: "suggestion",
+    area: "dialogue",
+    type: "optional",
+    severity: "low",
     scene: sceneNumber,
-    message: `Sc. ${sceneNumber}: controlla il ritmo del dialogo — se ci sono battute troppo simili considera di tagliarle.`,
+    title: "Dialogo da stringere appena",
+    body: `Il dialogo regge, ma se due battute dicono quasi la stessa cosa puoi tagliarne una senza perdere tensione.`,
+    minimalIntervention:
+      "Elimina la battuta meno sorprendente invece di riscrivere tutto lo scambio.",
     snippet: heading.slice(0, 80),
   },
   {
     id: `scene-mock-${sceneNumber}-2`,
-    kind: "pacing",
-    severity: "info",
+    area: "scene",
+    type: "approved",
+    severity: "optional",
+    status: "approved",
     scene: sceneNumber,
-    message: `Sc. ${sceneNumber}: ${heading.slice(0, 40)} — verifica coerenza luce/ora del giorno con le scene adiacenti.`,
+    title: "Scena sufficientemente risolta",
+    body: `${heading.slice(0, 40)} — la scena regge così. Non toccherei la struttura, salvo micro-rifiniture.`,
   },
 ];
 

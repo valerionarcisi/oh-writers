@@ -1,7 +1,7 @@
 // apps/web/app/features/documents/components/MarginNotesColumn.test.ts
 //
 // Spec 64 — the prompt that seeds a Cesare session from a margin suggestion.
-// Pins the contract the floating chat receives: "category: message" so Cesare
+// Pins the contract the floating chat receives: "title: body" so Cesare
 // starts working on exactly that point.
 import { describe, it, expect } from "vitest";
 import { suggestionPrompt } from "./MarginNotesColumn";
@@ -11,14 +11,16 @@ const memo = (
   over: Partial<NarrativePolishSuggestion> = {},
 ): NarrativePolishSuggestion => ({
   id: "s1",
-  group: "Struttura",
-  category: "Arco narrativo",
-  message: "Il climax arriva troppo presto.",
+  area: "structure",
+  title: "Arco narrativo",
+  body: "Il climax arriva troppo presto.",
+  type: "risk",
+  severity: "medium",
   ...over,
 });
 
 describe("suggestionPrompt", () => {
-  it("joins category and message so Cesare gets the full point", () => {
+  it("joins title and body so Cesare gets the full point", () => {
     expect(suggestionPrompt(memo())).toBe(
       "Arco narrativo: Il climax arriva troppo presto.",
     );
@@ -26,7 +28,7 @@ describe("suggestionPrompt", () => {
 
   it("reflects the specific suggestion's text", () => {
     expect(
-      suggestionPrompt(memo({ category: "Tono", message: "Troppo lirico." })),
+      suggestionPrompt(memo({ title: "Tono", body: "Troppo lirico." })),
     ).toBe("Tono: Troppo lirico.");
   });
 });

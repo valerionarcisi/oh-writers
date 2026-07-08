@@ -1,4 +1,9 @@
-import { DocumentTypes } from "@oh-writers/domain";
+import {
+  DocumentTypes,
+  EditorialAdviceSeveritySchema,
+  EditorialAdviceStatusSchema,
+  EditorialAdviceTypeSchema,
+} from "@oh-writers/domain";
 
 /**
  * Pure narrative-polish prompt assets: grounding rules, per-doc-type system
@@ -9,6 +14,7 @@ import { DocumentTypes } from "@oh-writers/domain";
  */
 
 export type NarrativePolishSuggestionDoc =
+  | typeof DocumentTypes.LOGLINE
   | typeof DocumentTypes.SOGGETTO
   | typeof DocumentTypes.SYNOPSIS
   | typeof DocumentTypes.OUTLINE
@@ -19,36 +25,67 @@ export const TOOL_NAME = "submit_narrative_suggestions";
 export const NARRATIVE_POLISH_TOOL = {
   name: TOOL_NAME,
   description:
-    "Restituisci da 3 a 5 suggerimenti di miglioramento concreti per il documento narrativo. Ogni suggerimento appartiene a un gruppo tematico (es. 'Struttura', 'Chiarezza', 'Tono') e ha una categoria più specifica.",
+    "Restituisci da 2 a 6 note editoriali per il documento narrativo. Non tutte devono essere problemi: puoi segnalare rischi, scelte autoriali, rifiniture opzionali o un vero OK editoriale.",
   input_schema: {
     type: "object",
     properties: {
       suggestions: {
         type: "array",
-        minItems: 3,
-        maxItems: 5,
+        minItems: 1,
+        maxItems: 6,
         items: {
           type: "object",
           properties: {
             id: { type: "string", description: "Unique slug, e.g. 'str-1'" },
-            group: {
+            area: {
               type: "string",
               description:
-                "Thematic group label in Italian (e.g. 'Struttura', 'Chiarezza', 'Tono', 'Ritmo', 'Target formato')",
+                "Narrative area in English slug form: structure, clarity, tone, rhythm, character, theme, ending, format, logline, synopsis, subject, outline, treatment.",
             },
-            category: {
+            title: {
               type: "string",
+              maxLength: 120,
               description:
-                "More specific label within the group (e.g. 'Finale', 'Presentazione', 'Antefatto'). Do NOT use act labels ('Atto I/II/III') unless the document itself explicitly declares acts.",
+                "Short editorial heading in Italian. It must read like an editor note, not a generic warning.",
             },
-            message: {
+            body: {
               type: "string",
-              maxLength: 300,
+              maxLength: 360,
               description:
-                "Concrete actionable suggestion in Italian, ≤ 300 characters. Must be grounded only in what the document actually says. Any new element you propose must be framed as a proposal (e.g. 'potresti introdurre…'), never asserted as if already present.",
+                "2-3 short sentences in Italian. Explain what Cesare notices, why it may matter, and whether it is really a problem or not.",
+            },
+            type: {
+              type: "string",
+              enum: [...EditorialAdviceTypeSchema.options],
+            },
+            severity: {
+              type: "string",
+              enum: [...EditorialAdviceSeveritySchema.options],
+            },
+            status: {
+              type: "string",
+              enum: [...EditorialAdviceStatusSchema.options],
+            },
+            whyItMatters: {
+              type: "string",
+              maxLength: 240,
+              description:
+                "Optional. Concrete risk in one sentence. Leave empty when redundant.",
+            },
+            whenToIgnore: {
+              type: "string",
+              maxLength: 240,
+              description:
+                "Optional. Explain when the writer can safely ignore this because it is a deliberate choice.",
+            },
+            minimalIntervention: {
+              type: "string",
+              maxLength: 240,
+              description:
+                "Optional. Always prefer a minimal, filmable intervention instead of a broad rewrite.",
             },
           },
-          required: ["id", "group", "category", "message"],
+          required: ["id", "area", "title", "body", "type", "severity"],
         },
       },
     },
@@ -68,28 +105,36 @@ export const GROUNDING_RULES = `REGOLE DI ANCORAGGIO (vincolanti, hanno la prece
 2. Non dare mai per esistente ciò che non è nel testo. Se suggerisci un elemento nuovo (un personaggio, una scena, una svolta), formulalo SEMPRE come proposta esplicita — "potresti introdurre…", "valuta se aggiungere…" — mai come se fosse già presente.
 3. Non imporre una struttura che il testo non dichiara. Se la prosa non parla esplicitamente di atti, NON citare "Atto I/II/III" né dare per scontata una struttura in tre atti; ragiona su ciò che c'è (apertura, svolta, chiusura) usando le parole del testo.
 4. Quando puoi, àncora la nota citando una breve porzione del testo (3-6 parole tra virgolette) così che l'autore riconosca a cosa ti riferisci.
-5. Niente complimenti generici. Ogni nota indica COSA migliorare e PERCHÉ, restando fedele al contenuto reale.`;
+5. Prima di criticare, chiediti se la scelta è coerente con intenzione, tono, genere e formato del progetto. Se una modifica renderebbe il testo solo più convenzionale, declassala a "optional" oppure non mostrarla.
+6. Non dare consigli per obbligo. Se il testo funziona, dillo apertamente con una nota di tipo "approved".
+7. Distingui chiarezza da spiegazione: preferisci interventi minimi, concreti, filmabili. Evita spiegoni psicologici o tematici.
+8. Se un rischio esiste ma appare coerente con l'intenzione del progetto, trattalo come "risk" o "authorial_choice", non come "real_problem".`;
 
 const DOC_PROMPT_BODIES: Record<NarrativePolishSuggestionDoc, string> = {
+  [DocumentTypes.LOGLINE]: `Sei Cesare, editor narrativo italiano sobrio. Stai leggendo la logline del progetto.
+Restituisci da 1 a 4 note editoriali in italiano.
+Concentrati su premessa, desiderio/ostacolo, tono, promessa di genere e leggibilità.
+Una logline sintetica o ellittica non è un difetto in sé. Se funziona, puoi dare un OK editoriale.`,
+
   [DocumentTypes.SOGGETTO]: `Sei Cesare, dramaturg italiano sobrio. Stai leggendo un soggetto cinematografico.
-Restituisci da 3 a 5 suggerimenti di miglioramento concreti, in italiano.
-Concentrati su ciò che è già nel testo: premessa, arco del protagonista, antagonista (se presente), coerenza di tono.
-Ogni suggerimento deve avere un gruppo tematico (es. "Struttura", "Chiarezza", "Tono") e una categoria specifica.`,
+Restituisci da 2 a 6 note editoriali in italiano.
+Concentrati su ciò che è già nel testo: premessa, arco del protagonista, pressione drammatica, coerenza di tono, leggibilità dei passaggi.
+Non trasformare automaticamente antagonista, spiegazione del prologo o chiusura più esplicita in richieste obbligatorie.`,
 
   [DocumentTypes.SYNOPSIS]: `Sei Cesare, dramaturg italiano sobrio. Stai leggendo una sinossi cinematografica.
-Restituisci da 3 a 5 suggerimenti di miglioramento concreti, in italiano.
-Concentrati su: lunghezza (target 1-2 cartelle), chiarezza del finale, presentazione dei personaggi presenti, antefatto, tono per produttori e organismi di finanziamento.
-Ogni suggerimento deve avere un gruppo tematico (es. "Target formato", "Struttura", "Chiarezza") e una categoria specifica.`,
+Restituisci da 2 a 6 note editoriali in italiano.
+Concentrati su leggibilità, tenuta del punto di vista, finale, presentazione dei personaggi effettivamente in pagina e adeguatezza al formato di lettura.
+Non confondere "più spiegato" con "più chiaro".`,
 
   [DocumentTypes.OUTLINE]: `Sei Cesare, dramaturg italiano sobrio. Stai leggendo una scaletta cinematografica.
-Restituisci da 3 a 5 suggerimenti di miglioramento concreti, in italiano.
+Restituisci da 2 a 6 note editoriali in italiano.
 Concentrati su ciò che la scaletta contiene: posizionamento dei momenti chiave, pacing tra le scene presenti, sequenze ridondanti. Parla di atti solo se la scaletta li dichiara.
-Ogni suggerimento deve avere un gruppo tematico (es. "Struttura", "Ritmo", "Copertura beat") e una categoria specifica.`,
+Se la progressione regge e i dubbi residui sono solo di gusto, chiudi con un OK editoriale.`,
 
   [DocumentTypes.TREATMENT]: `Sei Cesare, dramaturg italiano sobrio. Stai leggendo un trattamento cinematografico.
-Restituisci da 3 a 5 suggerimenti di miglioramento concreti, in italiano.
+Restituisci da 2 a 6 note editoriali in italiano.
 Concentrati su: densità del testo, coerenza del tono tra i capitoli, voce narrante, transizioni tra sequenze, ritmo della lettura.
-Ogni suggerimento deve avere un gruppo tematico (es. "Stile", "Lettura", "Chiarezza") e una categoria specifica.`,
+Evita di chiedere più spiegazione tematica se l'emozione e l'azione sono già leggibili.`,
 };
 
 /**
@@ -102,6 +147,7 @@ export const buildNarrativeSystemPrompt = (
 ): string => `${GROUNDING_RULES}\n\n${DOC_PROMPT_BODIES[docType]}`;
 
 export const SYSTEM_PROMPTS: Record<NarrativePolishSuggestionDoc, string> = {
+  [DocumentTypes.LOGLINE]: buildNarrativeSystemPrompt(DocumentTypes.LOGLINE),
   [DocumentTypes.SOGGETTO]: buildNarrativeSystemPrompt(DocumentTypes.SOGGETTO),
   [DocumentTypes.SYNOPSIS]: buildNarrativeSystemPrompt(DocumentTypes.SYNOPSIS),
   [DocumentTypes.OUTLINE]: buildNarrativeSystemPrompt(DocumentTypes.OUTLINE),

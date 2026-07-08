@@ -88,14 +88,16 @@ const DOCUMENT_PLACEHOLDER_KEYS: Record<DocumentType, TranslationKey | null> = {
 };
 
 // Maps each narrative document type to the visual layout of the shell.
-// SYNOPSIS → focus mode (single column).
-// OUTLINE → editor + Cesare panel.
-// TREATMENT → TOC + editor + Cesare panel.
-const layoutForType = (type: DocumentType): "single" | "two" | "three" => {
-  if (type === DocumentTypes.SYNOPSIS) return "single";
+// Narrative advice is available on every prose surface, so synopsis keeps the
+// same editor + editorial aside pattern as the other narrative documents.
+// Treatment still stacks TOC + advice in the same right lane.
+export const layoutForType = (
+  type: DocumentType,
+): "single" | "two" | "three" => {
   // Treatment keeps a single right aside (TOC + margin notes stacked) so the
   // document column gets the full remaining width — the TOC moved out of the
   // left column per UX review.
+  void type;
   return "two";
 };
 

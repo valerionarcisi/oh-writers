@@ -1,4 +1,11 @@
-import { type Tool, tool, generateText, stepCountIs, jsonSchema } from "ai";
+import {
+  type Tool,
+  tool,
+  generateText,
+  streamText,
+  stepCountIs,
+  jsonSchema,
+} from "ai";
 import { anthropic } from "@ai-sdk/anthropic";
 import { Effect } from "effect";
 import { repairMojibake, buildWordDiffSegments } from "@oh-writers/utils";
@@ -3142,12 +3149,12 @@ export const withCachedTools = (
 // the SDK's normalised read-hit count; the raw Anthropic write count lives in
 // providerMetadata. The cost-smoke test asserts a hit on the warm second turn.
 const logCacheUsage = (
-  result: Awaited<ReturnType<typeof generateText>>,
+  usage: Awaited<ReturnType<typeof streamText>["usage"]>,
+  providerMetadata: Awaited<ReturnType<typeof streamText>["providerMetadata"]>,
   model: string,
   projectId: string,
 ): void => {
-  const usage = result.usage;
-  const anthropicMeta = result.providerMetadata?.["anthropic"] as
+  const anthropicMeta = providerMetadata?.["anthropic"] as
     | { cacheCreationInputTokens?: number }
     | undefined;
   logger.info(
@@ -3163,34 +3170,46 @@ const logCacheUsage = (
   );
 };
 
-// ─── Production tool loop (AI SDK generateText) ───────────────────────────────
+// ─── Production tool loop (AI SDK streamText) ─────────────────────────────────
 //
-// Modelled as an `Effect` over a SINGLE `generateText` call. There is no manual
+// Modelled as an `Effect` over a SINGLE `streamText` call. There is no manual
 // await-loop to parallelise here: the AI SDK owns the multi-step tool loop
 // (`stopWhen: stepCountIs(5)`) AND already runs a step's independent tool
 // `execute` callbacks concurrently itself. Wrapping it in `Effect.all` would be
 // wrong — it is one async call — so this is `Effect.tryPromise`. The win at this
 // layer is the typed error channel + interruption (the bridged AbortSignal),
 // not concurrency; concurrency belongs to context assembly (W-E5), not the loop.
+//
+// Task 4 (streaming): generateText → streamText so the client can render the
+// final reply's tokens as they arrive instead of waiting for the whole turn.
+// onStepFinish's reasoning/tool-step/marker-extraction logic is UNCHANGED —
+// streamText supports the identical callback. textStream additionally forwards
+// text-delta events, additive to the existing step-trace contract. usage/
+// finishReason/providerMetadata become promises that resolve once the stream
+// drains, awaited below where generateText used to return them synchronously.
 const runProductionToolLoopEffect = (
   args: RunToolLoopArgs,
 ): Effect.Effect<string, CesareError> => {
   // Resolve the language model: mock model when MOCK_AI=true, real Anthropic
-  // model otherwise. Both paths go through the same generateText call.
+  // model otherwise. Both paths go through the same streamText call.
   const resolvedModel = args.mockModel ?? anthropic(args.model);
 
   return Effect.tryPromise({
     try: async (): Promise<string> => {
       const textAccumulator: string[] = [];
       let toolsExecuted = 0;
+      // Instrumentation only (no stopWhen change yet) — measure the real
+      // step-count distribution in production before picking a lower cap
+      // than the current stepCountIs(5).
+      let stepCount = 0;
 
-      const result = await generateText({
+      const result = streamText({
         model: resolvedModel,
         system: toSystemMessages(args.systemPrompt) as Parameters<
-          typeof generateText
+          typeof streamText
         >[0]["system"],
         messages: args.messages as Parameters<
-          typeof generateText
+          typeof streamText
         >[0]["messages"] &
           [],
         // Cast needed: ToolSet constrains Tool<any,any> to Tool<never,never> union;
@@ -3210,6 +3229,7 @@ const runProductionToolLoopEffect = (
         // stays clean ("Not found" noise) when it isn't.
         experimental_telemetry: aiTelemetry("cesare-tool-loop"),
         onStepFinish: (stepResult) => {
+          stepCount += 1;
           // Collect text produced in each step
           for (const part of stepResult.text
             ? [{ text: stepResult.text }]
@@ -3243,14 +3263,40 @@ const runProductionToolLoopEffect = (
         },
       });
 
-      logCacheUsage(result, args.model, args.projectId);
-
-      // Collect final text if not already captured in onStepFinish
-      if (result.text.trim() && !textAccumulator.includes(result.text.trim())) {
-        textAccumulator.push(result.text.trim());
+      // Forward token deltas as they arrive — additive to the reasoning/tool
+      // events onStepFinish already emits above. Consuming textStream here
+      // (rather than fullStream) keeps this scoped to Task 4's one job: the
+      // final reply's tokens, not a second copy of the step trace.
+      for await (const delta of result.textStream) {
+        if (delta.length > 0) {
+          args.onStreamEvent?.({ _tag: "text-delta", text: delta });
+        }
       }
 
-      if (result.finishReason === "length") {
+      const [usage, providerMetadata, finishReason, text] = await Promise.all([
+        result.usage,
+        result.providerMetadata,
+        result.finishReason,
+        result.text,
+      ]);
+
+      logCacheUsage(usage, providerMetadata, args.model, args.projectId);
+      logger.info(
+        {
+          model: args.model,
+          projectId: args.projectId,
+          stepCount,
+          finishReason,
+        },
+        "cesare.tool_loop.step_usage",
+      );
+
+      // Collect final text if not already captured in onStepFinish
+      if (text.trim() && !textAccumulator.includes(text.trim())) {
+        textAccumulator.push(text.trim());
+      }
+
+      if (finishReason === "length") {
         logger.warn(
           { model: args.model, projectId: args.projectId },
           "cesare.tool_loop.max_steps_hit",
