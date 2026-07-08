@@ -35,8 +35,20 @@ describe("[OHW-N72] activateVersionSet — narrative CRDT reseed", () => {
     expect("yjsState" in set).toBe(false);
   });
 
-  it("HTML content → leaves the CRDT untouched (needs a DOM to parse)", () => {
+  // parseCanonicalNarrativeHtml (#92) rebuilds the ProseMirror doc from our
+  // own editor's closed HTML vocabulary WITHOUT a DOM, so canonical HTML like
+  // this reseeds the CRDT same as plain text — it no longer bails to null.
+  it("canonical HTML content → reseeds yjsState (no DOM needed)", () => {
     const set = activateVersionSet(doc("treatment"), version("<p>html</p>"));
+    expect("yjsState" in set).toBe(true);
+    expect((set as { yjsState?: unknown }).yjsState).toBeInstanceOf(Buffer);
+  });
+
+  it("non-canonical HTML (foreign tag) → leaves the CRDT untouched", () => {
+    const set = activateVersionSet(
+      doc("treatment"),
+      version("<div>not canonical</div>"),
+    );
     expect("yjsState" in set).toBe(false);
   });
 });
