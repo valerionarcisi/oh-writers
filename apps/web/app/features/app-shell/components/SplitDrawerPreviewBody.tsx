@@ -13,11 +13,11 @@
 import { DocumentTypes } from "@oh-writers/domain";
 import type { SplitDrawerPreviewDiff } from "../split-drawer-context";
 import { useTranslation } from "~/features/i18n";
-import { OutlineEditor } from "~/features/documents";
 import {
+  OutlineEditor,
   OutlineContentSchema,
   type OutlineContent,
-} from "~/features/documents/documents.schema";
+} from "~/features/documents";
 import styles from "./SplitDrawerPreviewBody.module.css";
 
 const noop = () => {};
