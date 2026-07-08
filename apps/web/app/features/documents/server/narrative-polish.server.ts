@@ -21,6 +21,7 @@ import {
   type NarrativePolishSuggestionDoc,
   TOOL_NAME,
   NARRATIVE_POLISH_TOOL,
+  NARRATIVE_POLISH_MAX_TOKENS,
   GROUNDING_RULES,
   buildNarrativeSystemPrompt,
   SYSTEM_PROMPTS,
@@ -30,6 +31,7 @@ import {
 export {
   TOOL_NAME,
   NARRATIVE_POLISH_TOOL,
+  NARRATIVE_POLISH_MAX_TOKENS,
   GROUNDING_RULES,
   buildNarrativeSystemPrompt,
   SYSTEM_PROMPTS,
@@ -227,37 +229,35 @@ const callNarrativePolish = async (
       system: SYSTEM_PROMPTS[docType],
       fewShot: [],
       user: trimmed,
-      maxTokens: 1200,
+      maxTokens: NARRATIVE_POLISH_MAX_TOKENS,
       tools: [NARRATIVE_POLISH_TOOL],
       toolChoice: { type: "tool", name: TOOL_NAME },
     },
     "cesare/narrative-polish",
   );
 
+  // A failed call is NOT the same as a clean document. Throwing here surfaces a
+  // NarrativePolishError (via the caller's ResultAsync) → the panel shows its
+  // error state, instead of a fabricated "OK editoriale" indistinguishable from
+  // genuinely fine text. See #99.
   if (result.isErr()) {
-    console.warn(
-      "[cesare/narrative-polish] callHaiku error:",
-      result.error.message,
-    );
-    return [];
+    throw new Error(`callHaiku: ${result.error.message}`);
   }
 
   const input = extractToolUse(result.value.content, TOOL_NAME);
   if (input === null) {
-    console.warn(
-      "[cesare/narrative-polish] no tool_use block, stop_reason:",
-      result.value.stopReason,
+    // stop_reason=max_tokens leaves an empty/partial tool input; treat truncation
+    // as a failure to retry, never as "the text is fine".
+    throw new Error(
+      `no usable tool_use block (stop_reason=${result.value.stopReason})`,
     );
-    return [];
   }
 
   const parsed = EditorialAdviceListSchema.safeParse(input);
   if (!parsed.success) {
-    console.warn(
-      "[cesare/narrative-polish] schema parse error:",
-      parsed.error.issues.slice(0, 3),
+    throw new Error(
+      `schema parse: ${JSON.stringify(parsed.error.issues.slice(0, 3))}`,
     );
-    return [];
   }
 
   const deduped = sortEditorialAdvice(
@@ -303,9 +303,10 @@ const buildPromptInput = async (
     `Documento in revisione: ${data.docType}`,
     "",
     "Obiettivo editoriale:",
-    "- individua solo problemi reali o rischi concreti",
-    "- tratta le scelte autoriali come tali",
-    "- se il testo è abbastanza risolto, dillo",
+    "- individua i problemi reali e i rischi concreti, e mostrali sempre",
+    "- tratta le scelte autoriali come tali, ma non nasconderle: classificale",
+    "- non nascondere un rilievo reale: al più declassalo, mai ometterlo",
+    "- se il testo è genuinamente risolto, dillo apertamente con un OK editoriale",
     "",
     "Documento:",
     data.content,

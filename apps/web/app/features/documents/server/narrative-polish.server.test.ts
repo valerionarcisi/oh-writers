@@ -42,6 +42,16 @@ describe("GROUNDING_RULES", () => {
     expect(GROUNDING_RULES).toMatch(/àncora/i);
     expect(GROUNDING_RULES).toMatch(/virgolette/i);
   });
+
+  it("classifies but never hides a real note, and names the strongest as primary (#99)", () => {
+    // Regression guard for #99: the old escape hatch let the model omit notes
+    // ("declassala a 'optional' oppure non mostrarla") which collapsed the panel
+    // into a permanent "OK editoriale". The rules must now forbid hiding and
+    // require at least the strongest weaknesses to surface as high/medium.
+    expect(GROUNDING_RULES).not.toMatch(/non mostrarla/i);
+    expect(GROUNDING_RULES).toMatch(/non nascondere mai un rilievo reale/i);
+    expect(GROUNDING_RULES).toMatch(/severità "high" o "medium"/i);
+  });
 });
 
 describe("buildNarrativeSystemPrompt", () => {

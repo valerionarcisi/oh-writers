@@ -22,6 +22,12 @@ export type NarrativePolishSuggestionDoc =
 
 export const TOOL_NAME = "submit_narrative_suggestions";
 
+// 2-6 notes with title/body plus optional whyItMatters/whenToIgnore/
+// minimalIntervention run long in Italian; 1200 truncated mid-JSON
+// (stop_reason=max_tokens → empty tool input → silent [] → always-OK). See #99.
+// Shared so the real-AI grounding smoke validates the exact prod budget.
+export const NARRATIVE_POLISH_MAX_TOKENS = 2400;
+
 export const NARRATIVE_POLISH_TOOL = {
   name: TOOL_NAME,
   description:
@@ -105,10 +111,11 @@ export const GROUNDING_RULES = `REGOLE DI ANCORAGGIO (vincolanti, hanno la prece
 2. Non dare mai per esistente ciò che non è nel testo. Se suggerisci un elemento nuovo (un personaggio, una scena, una svolta), formulalo SEMPRE come proposta esplicita — "potresti introdurre…", "valuta se aggiungere…" — mai come se fosse già presente.
 3. Non imporre una struttura che il testo non dichiara. Se la prosa non parla esplicitamente di atti, NON citare "Atto I/II/III" né dare per scontata una struttura in tre atti; ragiona su ciò che c'è (apertura, svolta, chiusura) usando le parole del testo.
 4. Quando puoi, àncora la nota citando una breve porzione del testo (3-6 parole tra virgolette) così che l'autore riconosca a cosa ti riferisci.
-5. Prima di criticare, chiediti se la scelta è coerente con intenzione, tono, genere e formato del progetto. Se una modifica renderebbe il testo solo più convenzionale, declassala a "optional" oppure non mostrarla.
-6. Non dare consigli per obbligo. Se il testo funziona, dillo apertamente con una nota di tipo "approved".
+5. Prima di criticare, chiediti se la scelta è coerente con intenzione, tono, genere e formato del progetto. Se una modifica renderebbe il testo solo più convenzionale, declassala a "optional" o "authorial_choice" — ma mostrala comunque. Classifica sempre, non nascondere mai un rilievo reale.
+6. Non dare consigli per obbligo. Se il testo funziona davvero, dillo apertamente con una nota di tipo "approved". Ma non usare l'OK editoriale come scorciatoia: riservalo a un testo genuinamente pulito, non a un testo che ha rilievi che preferiresti non sollevare.
 7. Distingui chiarezza da spiegazione: preferisci interventi minimi, concreti, filmabili. Evita spiegoni psicologici o tematici.
-8. Se un rischio esiste ma appare coerente con l'intenzione del progetto, trattalo come "risk" o "authorial_choice", non come "real_problem".`;
+8. Se un rischio esiste ma appare coerente con l'intenzione del progetto, mostralo comunque come "risk" o "authorial_choice" (con "whenToIgnore"), non declassarlo a silenzio: la coerenza con l'intenzione cambia la classificazione, non l'esistenza del rilievo.
+9. Quando il testo ha debolezze reali, nomina almeno il rilievo o i due rilievi più forti come "real_problem" o "risk" a severità "high" o "medium". Non collassare tutto su "optional"/"approved": un documento sostanzioso ha quasi sempre almeno un nodo editoriale che merita di essere in primo piano.`;
 
 const DOC_PROMPT_BODIES: Record<NarrativePolishSuggestionDoc, string> = {
   [DocumentTypes.LOGLINE]: `Sei Cesare, editor narrativo italiano sobrio. Stai leggendo la logline del progetto.
