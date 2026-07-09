@@ -11,6 +11,12 @@ import {
 import { DocumentTypes, type DocumentType } from "@oh-writers/domain";
 import type { Db } from "~/server/db";
 import { callHaiku, extractText } from "~/features/ai";
+import {
+  parseOutline,
+  serializeOutline,
+  type OutlineContent,
+  type OutlineScene,
+} from "~/features/documents";
 import { repairMojibake, sanitizeAiText } from "@oh-writers/utils";
 import { SONNET_MODEL } from "./cesare-model-router";
 import { CesareError } from "./cesare.errors";
@@ -156,9 +162,10 @@ export const CESARE_DOCUMENT_GEN_TOOLS = [
   {
     name: "propose_scaletta_from_soggetto",
     description:
-      "Genera la scaletta (lista numerata di scene/sequenze) a partire dal soggetto corrente. " +
-      "Applica live la nuova scaletta al documento e crea automaticamente una versione. Usa quando l'utente chiede 'dato il " +
-      "soggetto fammi la scaletta' o simile.",
+      "Genera l'INTERA scaletta (lista numerata di scene/sequenze) DA ZERO a partire dal soggetto corrente. " +
+      "Sostituisce tutte le scene. Applica live la nuova scaletta al documento e crea automaticamente una versione. " +
+      "Usa SOLO quando l'utente vuole (ri)generare l'intera scaletta ('dato il soggetto fammi la scaletta', " +
+      "'rigenera tutta la scaletta'). Per modificare UNA scena esistente usa invece edit_outline_scene.",
     input_schema: {
       type: "object" as const,
       properties: {
@@ -171,6 +178,30 @@ export const CESARE_DOCUMENT_GEN_TOOLS = [
             "lunghezza precisa.",
         },
       },
+    },
+  },
+  {
+    name: "edit_outline_scene",
+    description:
+      "Modifica la descrizione di UNA singola scena esistente della scaletta, lasciando invariate tutte le altre. " +
+      "Applica live la modifica e crea automaticamente una versione. Usa SEMPRE questo tool (NON " +
+      "propose_scaletta_from_soggetto) quando l'utente chiede una modifica mirata a una scena specifica " +
+      "(es. 'accorcia la scena 1', 'rendi più tesa la scena 3', 'riscrivi la descrizione della scena 5').",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        scene_number: {
+          type: "integer",
+          description:
+            "Numero della scena da modificare (1-based, come compare nell'editor).",
+        },
+        instruction: {
+          type: "string",
+          description:
+            "Come modificare la scena, in linguaggio naturale (es. 'accorcia', 'rendi più teso', 'aggiungi il conflitto').",
+        },
+      },
+      required: ["scene_number", "instruction"],
     },
   },
   {
@@ -837,6 +868,7 @@ interface ProposeInput {
   label?: string;
   target_scene_count?: number;
   target_page_count?: number;
+  scene_number?: number;
   mode?: "auto" | "write" | "edit";
 }
 
@@ -1232,6 +1264,169 @@ const handleProposeScalettaFromSoggetto = (
     });
   });
 
+// ─── Scoped outline scene edit (#102) ────────────────────────────────────────
+// The outline is JSON (acts[].sequences[].scenes[]), so the markdown-based
+// surgical tools (apply_text_edit / compress_section) can't target one scene —
+// which is why a scoped ask like "accorcia la scena 1" used to fall through to
+// the whole-document regenerator. These helpers give the model a real
+// single-scene patch path: rewrite ONE scene's description in place and leave
+// every other scene byte-identical.
+
+interface FlatOutlineScene {
+  readonly scene: OutlineScene;
+  readonly actIndex: number;
+  readonly seqIndex: number;
+  readonly sceneIndex: number;
+}
+
+// Scenes in document order, so scene_number N (1-based) maps to the Nth scene
+// the way the user counts them in the editor.
+export const flattenOutlineScenes = (
+  outline: OutlineContent,
+): FlatOutlineScene[] => {
+  const flat: FlatOutlineScene[] = [];
+  outline.acts.forEach((act, actIndex) =>
+    act.sequences.forEach((seq, seqIndex) =>
+      seq.scenes.forEach((scene, sceneIndex) =>
+        flat.push({ scene, actIndex, seqIndex, sceneIndex }),
+      ),
+    ),
+  );
+  return flat;
+};
+
+// Returns a NEW outline with scene `sceneNumber` (1-based) patched. Every other
+// scene, and all ids/structure, are preserved. Out-of-range → null (caller
+// reports a clear error instead of silently touching the wrong scene).
+export const patchOutlineSceneAt = (
+  outline: OutlineContent,
+  sceneNumber: number,
+  patch: { heading?: string; description?: string },
+): OutlineContent | null => {
+  const flat = flattenOutlineScenes(outline);
+  const target = flat[sceneNumber - 1];
+  if (!target) return null;
+  return {
+    acts: outline.acts.map((act, ai) =>
+      ai !== target.actIndex
+        ? act
+        : {
+            ...act,
+            sequences: act.sequences.map((seq, si) =>
+              si !== target.seqIndex
+                ? seq
+                : {
+                    ...seq,
+                    scenes: seq.scenes.map((scene, sci) =>
+                      sci !== target.sceneIndex
+                        ? scene
+                        : {
+                            ...scene,
+                            ...(patch.heading !== undefined
+                              ? { heading: patch.heading }
+                              : {}),
+                            ...(patch.description !== undefined
+                              ? { description: patch.description }
+                              : {}),
+                          },
+                    ),
+                  },
+            ),
+          },
+    ),
+  };
+};
+
+const EDIT_SCENE_SYSTEM = `Sei Cesare, editor narrativo italiano. Riscrivi la DESCRIZIONE di UNA singola scena di scaletta seguendo l'istruzione dell'utente.
+
+REGOLE:
+- Restituisci SOLO la nuova descrizione della scena, 1-2 frasi, in italiano.
+- Nessun numero di scena, nessun heading, nessun preambolo, nessuna virgoletta.
+- Mantieni i fatti della scena a meno che l'istruzione non chieda esplicitamente di cambiarli.`;
+
+// Edits ONE outline scene's description in place. The nested generation prompt
+// is tiny (one scene, not the whole document), so this is fast and cheap — the
+// scoped counterpart to propose_scaletta_from_soggetto's full regeneration.
+const handleEditOutlineScene = (
+  input: ProposeInput & { scene_number?: number },
+  db: Db,
+  projectId: string,
+  userIdFallback: string | null,
+  sessionId: string | null = null,
+): ResultAsync<CreatedDraft, CesareError> => {
+  const sceneNumber = Number(input.scene_number);
+  if (!Number.isFinite(sceneNumber) || sceneNumber < 1) {
+    return errAsync(
+      new CesareError(
+        "Numero di scena mancante o non valido: indica quale scena modificare (es. 'la scena 1').",
+      ),
+    );
+  }
+  const instruction = (input.instruction ?? "").trim();
+  if (instruction.length === 0) {
+    return errAsync(
+      new CesareError(
+        "Istruzione mancante: dimmi come modificare la scena (es. 'accorcia', 'rendi più teso').",
+      ),
+    );
+  }
+
+  return loadDocumentForType(db, projectId, DocumentTypes.OUTLINE).andThen(
+    (outlineDoc) => {
+      if (!outlineDoc) {
+        return errAsync(
+          new CesareError("Documento scaletta non trovato per il progetto."),
+        );
+      }
+      const outline = parseOutline(outlineDoc.content);
+      const flat = flattenOutlineScenes(outline);
+      const target = flat[sceneNumber - 1];
+      if (!target) {
+        return errAsync(
+          new CesareError(
+            `La scaletta ha ${flat.length} scene: la scena ${sceneNumber} non esiste.`,
+          ),
+        );
+      }
+      const user = `Istruzione: ${instruction}\n\nScena ${sceneNumber} — ${target.scene.heading}\nDescrizione attuale:\n${target.scene.description}`;
+      return runGeneration(
+        EDIT_SCENE_SYSTEM,
+        user,
+        400,
+        "cesare.editOutlineScene",
+      ).andThen((newDescription) => {
+        const patched = patchOutlineSceneAt(outline, sceneNumber, {
+          description: newDescription.trim(),
+        });
+        if (!patched) {
+          return errAsync(
+            new CesareError(
+              `Impossibile applicare la modifica alla scena ${sceneNumber}.`,
+            ),
+          );
+        }
+        const creator = outlineDoc.ownerId ?? userIdFallback;
+        if (!creator) {
+          return errAsync(
+            new CesareError(
+              "Impossibile determinare l'autore della draft: documento senza createdBy.",
+            ),
+          );
+        }
+        return applyVersionLive(
+          db,
+          outlineDoc.id,
+          DocumentTypes.OUTLINE,
+          creator,
+          serializeOutline(patched),
+          buildDraftLabel(DocumentTypes.OUTLINE, `scena ${sceneNumber}`),
+          commitOptions(sessionId, instruction),
+        );
+      });
+    },
+  );
+};
+
 /**
  * Writes (or rewrites) the treatment from the upstream NARRATIVE chain
  * (scaletta → sinossi → soggetto → logline, nearest-first), with the screenplay
@@ -1546,6 +1741,15 @@ export const executeDocumentGenTool = (
       sessionId,
     ).map((outcome) => successResult(block.id, outcomePayload(outcome)));
   }
+  if (block.name === "edit_outline_scene") {
+    return handleEditOutlineScene(
+      input,
+      db,
+      projectId,
+      userIdFallback,
+      sessionId,
+    ).map((outcome) => successResult(block.id, outcomePayload(outcome)));
+  }
   if (block.name === "propose_treatment_from_narrative") {
     return handleProposeTreatment(
       input,
@@ -1580,6 +1784,7 @@ export const isDocumentGenToolName = (name: string): boolean =>
   name === "propose_synopsis_from_screenplay" ||
   name === "propose_soggetto_v2" ||
   name === "propose_scaletta_from_soggetto" ||
+  name === "edit_outline_scene" ||
   name === "propose_treatment_from_narrative" ||
   name === "generate_screenplay_from_narrative";
 
@@ -1710,9 +1915,9 @@ export const createDocumentGenTools = (
   }),
   propose_scaletta_from_soggetto: tool({
     description:
-      "Genera la scaletta (lista numerata di scene/sequenze) a partire dal soggetto corrente. " +
-      "Applica live la nuova scaletta al documento e crea automaticamente una versione. Usa quando l'utente chiede 'dato il " +
-      "soggetto fammi la scaletta' o simile.",
+      "Genera l'INTERA scaletta DA ZERO a partire dal soggetto corrente (sostituisce tutte le scene). " +
+      "Applica live la nuova scaletta e crea automaticamente una versione. Usa SOLO per (ri)generare " +
+      "l'intera scaletta. Per modificare UNA scena esistente usa edit_outline_scene.",
     inputSchema: z.object({
       target_scene_count: z
         .number()
@@ -1727,6 +1932,37 @@ export const createDocumentGenTools = (
     execute: async (input, _opts) => {
       const result = await handleProposeScalettaFromSoggetto(
         input as ProposeInput,
+        db,
+        projectId,
+        userIdFallback,
+        sessionId,
+      );
+      if (result.isErr()) return { error: result.error.message };
+      return outcomePayload(result.value);
+    },
+  }),
+  edit_outline_scene: tool({
+    description:
+      "Modifica la descrizione di UNA singola scena esistente della scaletta, lasciando invariate le altre. " +
+      "Applica live la modifica e crea automaticamente una versione. Usa SEMPRE questo tool (NON " +
+      "propose_scaletta_from_soggetto) per una modifica mirata a una scena specifica " +
+      "(es. 'accorcia la scena 1', 'rendi più tesa la scena 3').",
+    inputSchema: z.object({
+      scene_number: z
+        .number()
+        .int()
+        .describe(
+          "Numero della scena da modificare (1-based, come nell'editor).",
+        ),
+      instruction: z
+        .string()
+        .describe(
+          "Come modificare la scena (es. 'accorcia', 'rendi più teso').",
+        ),
+    }),
+    execute: async (input, _opts) => {
+      const result = await handleEditOutlineScene(
+        input as ProposeInput & { scene_number?: number },
         db,
         projectId,
         userIdFallback,

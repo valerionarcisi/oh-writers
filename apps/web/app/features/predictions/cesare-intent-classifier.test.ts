@@ -27,6 +27,7 @@ const DOC_TOOLS = new Set([
   "propose_soggetto_v2",
   "propose_synopsis_from_screenplay",
   "propose_scaletta_from_soggetto",
+  "edit_outline_scene",
   "propose_treatment_from_narrative",
   "generate_screenplay_from_narrative",
 ]);
@@ -109,6 +110,32 @@ describe("classifyIntent — document generation intents (Bug #4)", () => {
       availableTools: DOC_TOOLS,
     });
     expect(result._unsafeUnwrap().suggestedTool).toBe("propose_soggetto_v2");
+  });
+
+  it("maps a single-scene outline edit to edit_outline_scene, NOT the full regenerator (#102)", async () => {
+    callHaikuMock.mockReturnValue(
+      okAsync(haikuJson('{"type":"edit_outline_scene","confidence":0.93}')),
+    );
+    const result = await classifyIntent({
+      userMessage: "accorcia la descrizione della scena 1",
+      page: "outline",
+      availableTools: DOC_TOOLS,
+    });
+    expect(result._unsafeUnwrap().suggestedTool).toBe("edit_outline_scene");
+  });
+
+  it("still maps a whole-scaletta (re)generation to the full regenerator", async () => {
+    callHaikuMock.mockReturnValue(
+      okAsync(haikuJson('{"type":"write_outline","confidence":0.92}')),
+    );
+    const result = await classifyIntent({
+      userMessage: "rigenera tutta la scaletta dal soggetto",
+      page: "outline",
+      availableTools: DOC_TOOLS,
+    });
+    expect(result._unsafeUnwrap().suggestedTool).toBe(
+      "propose_scaletta_from_soggetto",
+    );
   });
 
   it("maps a treatment request to propose_treatment_from_narrative (F-A2)", async () => {

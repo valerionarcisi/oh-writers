@@ -4727,6 +4727,17 @@ const bridgeLegacyTools = (
   db: Db,
   projectId: string,
   access: ProjectAccess,
+  // BUG-101/#103 — the live trace sink. The document generators run a blocking
+  // nested model call inside the executor (runGeneration → callHaiku), during
+  // which the outer streamText loop can't advance and onStepFinish hasn't fired
+  // yet — so the "STO SCRIVENDO Scaletta" step used to appear only AFTER the
+  // whole generation returned, reading as a multi-second freeze. Emitting the
+  // step eagerly HERE (the moment the tool starts, before the blocking call)
+  // gives the user immediate feedback that Cesare is working on the entity. Full
+  // token-level streaming of the nested generation is a deeper change (see #103)
+  // that would thread a sink through the executor contract; this closes the
+  // perceived-freeze gap without touching every executor signature.
+  onStreamEvent?: (event: CesareStreamEvent) => void,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Record<string, Tool<any, any>> =>
   Object.fromEntries(
@@ -4738,6 +4749,11 @@ const bridgeLegacyTools = (
           t.input_schema as Parameters<typeof jsonSchema>[0],
         ),
         execute: async (input, opts) => {
+          // Surface the step the instant the tool starts, so a slow nested
+          // generation shows "sto scrivendo …" immediately rather than after it
+          // finishes. onStepFinish still emits the authoritative step later; the
+          // client's reducer dedupes a repeated step, so the eager one is free.
+          emitToolStep(t.name, onStreamEvent);
           const block: ToolUseBlock = {
             type: "tool_use",
             id: opts.toolCallId,
@@ -4780,6 +4796,7 @@ export const runUnifiedToolLoop = (
     db,
     projectId,
     access,
+    onStreamEvent,
   );
   return runGenericToolLoop({
     systemPrompt,

@@ -30,8 +30,9 @@ STRUMENTI DISPONIBILI SU QUESTO ${label.toUpperCase()}:
 - apply_text_edit(find, replace): sostituisce una stringa esatta del documento. Usa SEMPRE testo letterale presente nel DOCUMENTO ATTIVO sopra.
 - expand_section(heading): espande la sezione sotto un heading in 2-3 paragrafi.
 - compress_section(heading, target_words): comprime una sezione mantenendo i beat.
+- edit_outline_scene(scene_number, instruction): modifica UNA singola scena della SCALETTA (es. "accorcia la scena 1"). È il tool corretto per un edit mirato a una scena: la scaletta è strutturata a scene, quindi NON usare apply_text_edit/compress_section per una scena, e NON usare propose_scaletta_from_soggetto (rigenererebbe tutte le scene).
 
-Quando l'utente chiede una modifica concreta (riscrivi, cambia, espandi, accorcia, sostituisci) USA SEMPRE il tool appropriato — non limitarti a suggerire il testo nel chat. Conferma in italiano cosa hai fatto dopo ogni edit.
+Quando l'utente chiede una modifica concreta (riscrivi, cambia, espandi, accorcia, sostituisci) USA SEMPRE il tool appropriato — non limitarti a suggerire il testo nel chat. Se la richiesta nomina una scena specifica della scaletta ("la scena N", "la prima scena"), il tool corretto è SEMPRE edit_outline_scene, MAI propose_scaletta_from_soggetto. Conferma in italiano cosa hai fatto dopo ogni edit.
 
 GENERAZIONE DOCUMENTI (applica LIVE al documento):
 Per richieste che generano un documento intero (logline, sinossi, soggetto v2, scaletta, trattamento) USA I TOOLS dedicati. Ogni tool APPLICA DIRETTAMENTE il nuovo contenuto al documento aperto (si aggiorna live nell'editor) e crea automaticamente una nuova versione sotto il cofano. L'utente può ripristinare la versione precedente dal pannello Versioni. NON esiste più un banner di draft da promuovere o scartare.
@@ -41,7 +42,8 @@ WORKFLOW:
 - "genera la logline DALLA sceneggiatura" / "estrai la logline" → propose_logline_from_screenplay({ instruction? })
 - "scrivimi la sinossi" / "genera la sinossi" → propose_synopsis_from_screenplay({ instruction? })
 - "fammi un v2 del soggetto più [X]" / "riscrivi il soggetto in modo [X]" → propose_soggetto_v2({ instruction: "...", label: "v2 [hint]" })
-- "dato il soggetto fammi la scaletta" / "genera la scaletta dal soggetto" → propose_scaletta_from_soggetto({ target_scene_count? })
+- "dato il soggetto fammi la scaletta" / "genera/rigenera TUTTA la scaletta dal soggetto" → propose_scaletta_from_soggetto({ target_scene_count? })
+- "accorcia/riscrivi/rendi più teso la scena N" (modifica di UNA scena esistente della scaletta) → edit_outline_scene({ scene_number: N, instruction: "..." }) — NON usare propose_scaletta_from_soggetto per una scena singola: rigenererebbe l'intera scaletta.
 - "scrivi il trattamento" / "genera il trattamento dalla scaletta" → propose_treatment_from_narrative({ instruction? })
 
 ❌ SBAGLIATO:

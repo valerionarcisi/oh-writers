@@ -6,13 +6,16 @@ import {
   buildDraftLabel,
   defaultSceneCountForFormat,
   executeDocumentGenTool,
+  flattenOutlineScenes,
   formatUpstreamSource,
   isDocumentGenToolName,
   parseScalettaList,
+  patchOutlineSceneAt,
   resolveLoglineMode,
   scalettaToOutlineContent,
   sanitizeLogline,
 } from "./cesare-document-tools";
+import type { OutlineContent } from "~/features/documents";
 
 describe("buildDraftLabel", () => {
   it("returns the default label when no hint is given", () => {
@@ -564,5 +567,106 @@ describe("defaultSceneCountForFormat", () => {
     const feature = defaultSceneCountForFormat("feature");
     expect(defaultSceneCountForFormat(null)).toBe(feature);
     expect(defaultSceneCountForFormat("wat")).toBe(feature);
+  });
+});
+
+describe("outline scene scoped edit helpers (#102)", () => {
+  const outline = (): OutlineContent => ({
+    acts: [
+      {
+        id: "a1",
+        title: "Atto I",
+        sequences: [
+          {
+            id: "s1",
+            title: "Seq 1",
+            scenes: [
+              {
+                id: "sc1",
+                heading: "INT. A - GIORNO",
+                description: "alpha",
+                characters: [],
+                pageEstimate: null,
+                notes: null,
+              },
+              {
+                id: "sc2",
+                heading: "INT. B - NOTTE",
+                description: "beta",
+                characters: [],
+                pageEstimate: null,
+                notes: null,
+              },
+            ],
+          },
+        ],
+      },
+      {
+        id: "a2",
+        title: "Atto II",
+        sequences: [
+          {
+            id: "s2",
+            title: "Seq 2",
+            scenes: [
+              {
+                id: "sc3",
+                heading: "EXT. C - ALBA",
+                description: "gamma",
+                characters: [],
+                pageEstimate: null,
+                notes: null,
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  });
+
+  it("flattens scenes across acts/sequences in document order", () => {
+    const flat = flattenOutlineScenes(outline());
+    expect(flat.map((f) => f.scene.id)).toEqual(["sc1", "sc2", "sc3"]);
+    expect(flat[2]?.actIndex).toBe(1);
+    expect(flat[2]?.seqIndex).toBe(0);
+    expect(flat[2]?.sceneIndex).toBe(0);
+  });
+
+  it("patches exactly the targeted scene and leaves the rest byte-identical", () => {
+    const patched = patchOutlineSceneAt(outline(), 1, {
+      description: "alpha edited",
+    });
+    expect(patched).not.toBeNull();
+    const flat = flattenOutlineScenes(patched!);
+    expect(flat[0]?.scene.description).toBe("alpha edited");
+    expect(flat[0]?.scene.heading).toBe("INT. A - GIORNO"); // heading untouched
+    expect(flat[1]?.scene.description).toBe("beta");
+    expect(flat[2]?.scene.description).toBe("gamma");
+    // ids preserved on every scene
+    expect(flat.map((f) => f.scene.id)).toEqual(["sc1", "sc2", "sc3"]);
+  });
+
+  it("patches a scene in a later act (cross-act indexing)", () => {
+    const patched = patchOutlineSceneAt(outline(), 3, {
+      description: "gamma edited",
+    });
+    const flat = flattenOutlineScenes(patched!);
+    expect(flat[2]?.scene.description).toBe("gamma edited");
+    expect(flat[0]?.scene.description).toBe("alpha");
+  });
+
+  it("returns null for an out-of-range scene number", () => {
+    expect(patchOutlineSceneAt(outline(), 0, { description: "x" })).toBeNull();
+    expect(patchOutlineSceneAt(outline(), 4, { description: "x" })).toBeNull();
+  });
+
+  it("can patch heading and description together", () => {
+    const patched = patchOutlineSceneAt(outline(), 2, {
+      heading: "INT. B2 - SERA",
+      description: "beta2",
+    });
+    const flat = flattenOutlineScenes(patched!);
+    expect(flat[1]?.scene.heading).toBe("INT. B2 - SERA");
+    expect(flat[1]?.scene.description).toBe("beta2");
   });
 });

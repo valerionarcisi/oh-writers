@@ -41,6 +41,10 @@ export type IntentType =
   | "write_soggetto"
   | "write_synopsis"
   | "write_outline"
+  // #102 — a targeted edit of ONE existing outline scene (e.g. "accorcia la
+  // scena 1"). Distinct from write_outline, which (re)generates the WHOLE
+  // scaletta. Carved out so a single-scene ask doesn't force a full regen.
+  | "edit_outline_scene"
   | "write_treatment"
   // Screenplay-from-narrative (Spec 75 / BUG-N67): write the FIRST DRAFT of the
   // screenplay from the upstream narrative chain. Distinct from macro_rewrite,
@@ -87,6 +91,7 @@ const TOOL_BY_INTENT: Partial<Record<IntentType, string>> = {
   write_soggetto: "propose_soggetto_v2",
   write_synopsis: "propose_synopsis_from_screenplay",
   write_outline: "propose_scaletta_from_soggetto",
+  edit_outline_scene: "edit_outline_scene",
   write_treatment: "propose_treatment_from_narrative",
   write_screenplay: "generate_screenplay_from_narrative",
 };
@@ -99,7 +104,8 @@ const TOOL_BY_INTENT: Partial<Record<IntentType, string>> = {
 const DOCUMENT_INTENT_DEFINITIONS = `- write_logline: scrivere, generare o modificare la LOGLINE. Verbi/giri di frase: "scrivimi/scrivi/buttami giù/butta giù/fammi/abbozza/abbozzami/metti giù/mettimi giù/dammi/sviluppa/genera/generami/crea/preparami la logline", "una logline su/per/di…", oppure modifiche: "rendi la logline più tesa/corta/asciutta/incisiva", "accorcia la logline", "cambia il protagonista della logline", "riscrivi la logline".
 - write_soggetto: scrivere, generare, derivare o modificare il SOGGETTO. Frasi: "scrivimi/scrivi/buttami giù/fammi/abbozza/metti giù/dammi/sviluppa/genera/crea il soggetto", "fammi un v2 del soggetto", derivazioni: "genera il soggetto dalla logline", "dato lo spunto fammi il soggetto", modifiche: "rendi il soggetto più asciutto/corto/teso", "riscrivi il soggetto", "espandi il soggetto".
 - write_synopsis: scrivere, generare, derivare o RIASSUMERE la SINOSSI. Frasi: "scrivimi/scrivi/fammi/dammi/genera/buttami giù/abbozza la sinossi", derivazioni: "genera la sinossi dal soggetto", "dato il soggetto fammi la sinossi", riassunti: "fai un riassunto di cosa abbiamo scritto", "riassumi la storia", modifiche: "rendi la sinossi più commovente/asciutta", "accorcia la sinossi".
-- write_outline: scrivere, generare o derivare la SCALETTA (lista di scene/sequenze). Frasi: "fammi/scrivimi/dammi/genera/buttami giù/abbozza la scaletta", derivazioni: "genera la scaletta dal soggetto", "dato il soggetto fammi la scaletta", "dividi la storia in scene", "dammi la lista delle scene", modifiche: "espandi l'atto II della scaletta", "accorcia la scaletta".
+- write_outline: scrivere, generare, derivare o rigenerare l'INTERA SCALETTA (tutte le scene). Frasi: "fammi/scrivimi/dammi/genera/buttami giù/abbozza la scaletta", derivazioni: "genera la scaletta dal soggetto", "dato il soggetto fammi la scaletta", "dividi la storia in scene", "dammi la lista delle scene", "rigenera tutta la scaletta", "accorcia la scaletta" (l'intera scaletta). NON usare per una singola scena numerata → vedi edit_outline_scene.
+- edit_outline_scene: modifica di UNA SOLA scena esistente della scaletta, identificata da un numero o riferimento ("la scena N", "la prima/ultima scena"). Frasi: "accorcia la scena 1", "riscrivi la descrizione della scena 3", "rendi più tesa la scena 5", "espandi la scena 2". NON è la rigenerazione dell'intera scaletta.
 - write_treatment: scrivere, generare o derivare il TRATTAMENTO dal materiale a monte (scaletta, sinossi, soggetto). Frasi: "scrivi/scrivimi/fammi/dammi/genera/buttami giù/abbozza il trattamento", derivazioni: "genera il trattamento dalla scaletta", "trattamento a partire dalla scaletta/dal soggetto", modifiche: "espandi l'Atto II del trattamento", "rendi il trattamento più dettagliato". ATTENZIONE: vale SOLO per il TRATTAMENTO, MAI per la sceneggiatura.
 - write_screenplay: scrivere la PRIMA STESURA della SCENEGGIATURA derivandola dal materiale narrativo a monte (soggetto, sinossi, scaletta, trattamento). Frasi: "scrivi/scrivimi/fammi/dammi/genera/buttami giù/abbozza la sceneggiatura", "scrivimi la prima stesura della sceneggiatura", derivazioni: "partendo dal soggetto fammi la sceneggiatura", "dal soggetto/dalla scaletta scrivimi la sceneggiatura", "scrivimi il film in sceneggiatura". NON è un trattamento: se l'utente nomina la SCENEGGIATURA (o "il film in formato sceneggiatura"), è write_screenplay, mai write_treatment.`;
 
@@ -118,8 +124,12 @@ const DOCUMENT_INTENT_EXAMPLES = `"scrivimi una logline su un detective che non 
 "rendi la sinossi più commovente" → {"type":"write_synopsis","confidence":0.88}
 "fammi la scaletta" → {"type":"write_outline","confidence":0.9}
 "dato il soggetto fammi la scaletta" → {"type":"write_outline","confidence":0.95}
+"rigenera tutta la scaletta" → {"type":"write_outline","confidence":0.92}
 "dividi la storia in scene" → {"type":"write_outline","confidence":0.85}
 "espandi l'atto II" → {"type":"write_outline","confidence":0.7}
+"accorcia la scena 1" → {"type":"edit_outline_scene","confidence":0.93}
+"riscrivi la descrizione della scena 3" → {"type":"edit_outline_scene","confidence":0.92}
+"rendi più tesa la scena 5" → {"type":"edit_outline_scene","confidence":0.9}
 "scrivi il trattamento" → {"type":"write_treatment","confidence":0.92}
 "genera il trattamento dalla scaletta" → {"type":"write_treatment","confidence":0.95}
 "buttami giù il trattamento" → {"type":"write_treatment","confidence":0.88}
@@ -258,6 +268,7 @@ const parseJsonResponse = (text: string): IntentResult | null => {
       "write_soggetto",
       "write_synopsis",
       "write_outline",
+      "edit_outline_scene",
       "write_treatment",
       "write_screenplay",
       "question",
