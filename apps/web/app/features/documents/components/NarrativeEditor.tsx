@@ -141,13 +141,8 @@ export function NarrativeEditor({
     },
     [type],
   );
-  const { isDirty, isSaving, isError, lastSavedAt, flush } = useAutoSave(
-    save,
-    document.id,
-    content,
-    document.content,
-    normalizeContent,
-  );
+  const { isDirty, isSaving, isError, lastSavedAt, savedContent, flush } =
+    useAutoSave(save, document.id, content, document.content, normalizeContent);
   // Spec 49 W4: Versions open via the ROUTER (`?versions=<docId>`), not the
   // legacy context drawer — same routed SplitDrawer as soggetto. The host page
   // compresses beside the lane; `vcur` carries the current-version baseline so
@@ -230,6 +225,8 @@ export function NarrativeEditor({
   useSaveStatePublisher(publishedSaveState, undefined, flush);
 
   const plainContent = isSynopsis || isTreatment ? stripHtml(content) : content;
+  const plainSavedContent =
+    isSynopsis || isTreatment ? stripHtml(savedContent) : savedContent;
   const charCount = plainContent.length;
   const loglineOverCap = isLogline && charCount >= LOGLINE_MAX;
 
@@ -611,6 +608,8 @@ export function NarrativeEditor({
         projectId={document.projectId}
         docType={type}
         content={plainContent}
+        savedContent={plainSavedContent}
+        isWaitingForSave={isDirty}
       />
     </>
   );

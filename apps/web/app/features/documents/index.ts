@@ -33,7 +33,6 @@ export { OutlineEditor } from "./components/OutlineEditor";
 export { AIAssistantPanel } from "./components/AIAssistantPanel";
 export { NarrativeDocsShell } from "./components/NarrativeDocsShell";
 export type { NarrativeDocsShellProps } from "./components/NarrativeDocsShell";
-export { NarrativeCesarePanel } from "./components/NarrativeCesarePanel";
 export { MarginNotesColumn } from "./components/MarginNotesColumn";
 export type { MarginNotesColumnProps } from "./components/MarginNotesColumn";
 export { LoglinePill } from "./components/LoglinePill";

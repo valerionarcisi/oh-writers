@@ -354,6 +354,8 @@ function SoggettoPageReady({
             projectId={projectId}
             docType={DocumentTypes.SOGGETTO}
             content={soggettoContent}
+            savedContent={soggettoSave.savedContent}
+            isWaitingForSave={soggettoSave.isDirty}
           />
         }
       >

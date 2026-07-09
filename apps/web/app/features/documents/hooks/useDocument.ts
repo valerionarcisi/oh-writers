@@ -96,6 +96,13 @@ export const useAutoSave = (
   isSaving: boolean;
   isError: boolean;
   lastSavedAt: number | null;
+  /**
+   * The content as of the last confirmed save (falls back to the `savedContent`
+   * prop before any save has landed in this hook instance). Ambient AI features
+   * (editorial advice) key their query on THIS, not on `content`, so typing
+   * never fires a request — only a save does. See Spec 83.
+   */
+  savedContent: string;
   flush: () => void;
 } => {
   // Guard an empty document id: the logline autosave on a narrative page passes
@@ -105,13 +112,30 @@ export const useAutoSave = (
   const hasDoc = documentId !== "";
   const isDirty = hasDoc && normalize(content) !== normalize(savedContent);
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
+  // Confirmed-saved content as STATE, not a derivation of `save.data`:
+  // TanStack v5 clears `mutation.data` while a new mutate is in flight (the
+  // derived value would flip back to the stale prop and re-fire a PAID advice
+  // query on outdated content), and a document changed OUTSIDE this mutation
+  // (version restore, Cesare agentic apply) never passes through `save.data`
+  // at all. State updated on save success + resynced when the server-truth
+  // prop changes covers both — review finding, Spec 83 W1.
+  const [confirmedSavedContent, setConfirmedSavedContent] =
+    useState(savedContent);
+  useEffect(() => {
+    setConfirmedSavedContent(savedContent);
+  }, [savedContent]);
+
+  const markSaved = (saved: string): void => {
+    setLastSavedAt(Date.now());
+    setConfirmedSavedContent(saved);
+  };
 
   useEffect(() => {
     if (!isDirty) return;
     const handle = setTimeout(() => {
       save.mutate(
         { documentId, content },
-        { onSuccess: () => setLastSavedAt(Date.now()) },
+        { onSuccess: () => markSaved(content) },
       );
     }, getAutoSaveDelayMs());
     return () => clearTimeout(handle);
@@ -123,7 +147,7 @@ export const useAutoSave = (
     if (!isDirty || save.isPending) return;
     save.mutate(
       { documentId, content },
-      { onSuccess: () => setLastSavedAt(Date.now()) },
+      { onSuccess: () => markSaved(content) },
     );
   };
 
@@ -139,6 +163,7 @@ export const useAutoSave = (
     isSaving: save.isPending,
     isError: save.isError,
     lastSavedAt,
+    savedContent: confirmedSavedContent,
     flush,
   };
 };

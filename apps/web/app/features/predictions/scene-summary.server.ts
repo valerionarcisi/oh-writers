@@ -71,14 +71,7 @@ export const generateSceneSummary = (
 // for the same screenplay. Simple Set — good enough for a single Node.js process.
 const inFlight = new Set<string>();
 
-/**
- * Find every scene in the screenplay whose body hash differs from the stored
- * fingerprint (or has no summary yet) and regenerate those summaries with
- * bounded concurrency. Fire-and-forget from the save path — errors are logged,
- * not thrown. External contract unchanged:
- * `ResultAsync<number, DbError | SceneSummaryError>`.
- */
-export const refreshStaleSceneSummaries = (
+const runRefresh = (
   db: Db,
   screenplayId: string,
 ): ResultAsync<number, DbError | SceneSummaryError> => {
@@ -94,6 +87,74 @@ export const refreshStaleSceneSummaries = (
       inFlight.delete(screenplayId);
       return e;
     });
+};
+
+export const SCENE_SUMMARY_DEBOUNCE_MS = 60_000;
+
+/**
+ * Leading + trailing debounce keyed by an arbitrary string id. The FIRST
+ * {@link schedule} for an idle key runs immediately — a process restart or
+ * redeploy inside the window can therefore lose at most the tail of a burst,
+ * never a lone save (review finding, Spec 83 W1). Further calls within the
+ * window collapse into ONE trailing run, `delayMs` after the last one — a
+ * burst of N saves costs two runs (leading + trailing), not N (Spec 83 —
+ * ambient cost driver). Timer functions are injectable so tests can drive it
+ * with fake timers without a real `setTimeout`/`clearTimeout` pair.
+ */
+export const createKeyedTrailingDebounce = (
+  delayMs: number,
+  timers: {
+    set: typeof setTimeout;
+    clear: typeof clearTimeout;
+  } = { set: setTimeout, clear: clearTimeout },
+) => {
+  const pending = new Map<string, ReturnType<typeof setTimeout>>();
+  return {
+    schedule: (key: string, run: () => void): void => {
+      const existing = pending.get(key);
+      if (existing === undefined) {
+        run();
+        // Park a no-op window so the next save within delayMs becomes a
+        // trailing run instead of another immediate one.
+        const handle = timers.set(() => {
+          pending.delete(key);
+        }, delayMs);
+        pending.set(key, handle);
+        return;
+      }
+      timers.clear(existing);
+      const handle = timers.set(() => {
+        pending.delete(key);
+        run();
+      }, delayMs);
+      pending.set(key, handle);
+    },
+    pendingCount: (): number => pending.size,
+  };
+};
+
+// Composes with `inFlight` above rather than replacing it: the debounce timer
+// decides WHEN to start a run, `inFlight` still guards against two overlapping
+// runs (e.g. a run that takes longer than the debounce window).
+const sceneSummaryDebounce = createKeyedTrailingDebounce(
+  SCENE_SUMMARY_DEBOUNCE_MS,
+);
+
+/**
+ * Find every scene in the screenplay whose body hash differs from the stored
+ * fingerprint (or has no summary yet) and regenerate those summaries with
+ * bounded concurrency. Fire-and-forget from the save path — errors are logged,
+ * not thrown. Debounced 60s trailing per screenplay: callers no longer get a
+ * `ResultAsync` they can await for the actual run, since the run itself may
+ * not start for up to `SCENE_SUMMARY_DEBOUNCE_MS`.
+ */
+export const refreshStaleSceneSummaries = (
+  db: Db,
+  screenplayId: string,
+): void => {
+  sceneSummaryDebounce.schedule(screenplayId, () => {
+    void runRefresh(db, screenplayId);
+  });
 };
 
 // ─── Load summaries for distillation ─────────────────────────────────────────

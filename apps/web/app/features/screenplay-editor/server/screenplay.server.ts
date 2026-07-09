@@ -183,9 +183,11 @@ export const saveScreenplay = createServerFn({ method: "POST" })
           }),
           (e) => new DbError("saveScreenplay", e),
         ).map((updated) => {
-          // Fire-and-forget: regenerate stale scene summaries after save.
-          // Errors are swallowed — save must remain instant.
-          void refreshStaleSceneSummaries(db, updated.id);
+          // Fire-and-forget: schedule a scene-summary refresh 60s after the
+          // last save (Spec 83) — every autosave (2s cadence) resets the
+          // timer instead of triggering its own model call. Save stays
+          // instant either way.
+          refreshStaleSceneSummaries(db, updated.id);
           return stripYjsState(updated);
         }),
       );

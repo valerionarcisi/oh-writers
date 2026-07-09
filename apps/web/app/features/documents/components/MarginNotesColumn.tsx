@@ -11,7 +11,6 @@ import { useCesareOpen } from "~/features/app-shell";
 import { useTranslation } from "~/features/i18n";
 import {
   buildAdviceContentFingerprint,
-  useDebouncedValue,
   EditorialAdviceStack,
   useEditorialAdviceMemory,
 } from "~/features/predictions";
@@ -27,8 +26,22 @@ export function suggestionPrompt(memo: NarrativePolishSuggestion): string {
 export interface MarginNotesColumnProps {
   readonly projectId: string;
   readonly docType: DocumentType;
-  /** Current document content. */
+  /** Live editor content — used only to gate empty-state / char-count UI. */
   readonly content: string;
+  /**
+   * Content as of the last confirmed autosave. Editorial advice is keyed to
+   * THIS, not `content` — typing never fires a request, only a landed save
+   * does (Spec 83). REQUIRED: a fallback to the live `content` would silently
+   * reintroduce an undebounced per-keystroke model call (review finding).
+   */
+  readonly savedContent: string;
+  /**
+   * Whether unsaved edits exist, from the autosave's own canonical-normalized
+   * dirty check (`useAutoSave().isDirty`). A raw `content !== savedContent`
+   * fallback misreads pure re-serialisations (e.g. a Cesare plain-text apply
+   * re-entering the rich editor as HTML) as "waiting" forever.
+   */
+  readonly isWaitingForSave?: boolean;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -107,6 +120,8 @@ export const MarginNotesColumn: FC<MarginNotesColumnProps> = ({
   projectId,
   docType,
   content,
+  savedContent,
+  isWaitingForSave: isWaitingForSaveProp,
 }) => {
   if (!isNarrativeDocType(docType)) return null;
 
@@ -116,16 +131,17 @@ export const MarginNotesColumn: FC<MarginNotesColumnProps> = ({
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const openCesare = useCesareOpen();
 
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  const debouncedContent = useDebouncedValue(content);
-  const contentFingerprint = buildAdviceContentFingerprint(debouncedContent);
+  // Advice is keyed to the LAST SAVED content, never the live editor value —
+  // typing must not fire a request; only a landed autosave (or Rileggi) does
+  // (Spec 83).
+  const contentFingerprint = buildAdviceContentFingerprint(savedContent);
 
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const query = useQuery(
     narrativePolishQueryOptions(
       projectId,
       docType,
-      debouncedContent,
+      savedContent,
       contentFingerprint,
     ),
   );
@@ -143,8 +159,11 @@ export const MarginNotesColumn: FC<MarginNotesColumnProps> = ({
   const hasContent = content.length > 50;
   const isLoading = query.isFetching;
   const isError = query.isError || (query.data != null && !query.data.isOk);
-  const isWaitingForDebounce = content !== debouncedContent;
-  const statusLabel = isWaitingForDebounce
+  // Unsaved edits: the advice panel still reflects the last saved text, so the
+  // status reads "waiting" until the next autosave lands. Prefer the caller's
+  // canonical-normalized dirty flag; the raw compare is only the fallback.
+  const isWaitingForSave = isWaitingForSaveProp ?? content !== savedContent;
+  const statusLabel = isWaitingForSave
     ? t("documents.marginNotes.statusWaiting")
     : isLoading
       ? t("documents.marginNotes.statusReading")
