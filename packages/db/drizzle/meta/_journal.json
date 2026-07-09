@@ -323,6 +323,20 @@
       "when": 1779000000011,
       "tag": "0040_editorial_advice_decisions",
       "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1779000000012,
+      "tag": "0041_ai_usage",
+      "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1779000000013,
+      "tag": "0042_ai_usage_user_id",
+      "breakpoints": true
     }
   ]
 }

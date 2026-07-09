@@ -41,15 +41,18 @@
     "cost:smoke:location-rank": "tsx scripts/cost-smoke-location-rank.ts",
     "cost:smoke:scene-summary": "tsx scripts/cost-smoke-scene-summary.ts",
     "cost:smoke:bible": "tsx scripts/cost-smoke-bible.ts",
+    "ai:costs": "tsx scripts/ai-costs.mts",
     "prepare": "husky"
   },
   "devDependencies": {
+    "@oh-writers/db": "workspace:*",
     "@playwright/test": "1.58.2",
     "@typescript-eslint/parser": "8.59.0",
     "eslint": "10.0.2",
     "eslint-import-resolver-typescript": "4.4.4",
     "eslint-plugin-import-x": "4.16.2",
     "eslint-plugin-react-hooks": "7.1.1",
+    "drizzle-orm": "0.45.1",
     "husky": "^9.1.7",
     "lint-staged": "15.5.2",
     "prettier": "3.8.1",

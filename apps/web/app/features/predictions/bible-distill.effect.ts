@@ -199,6 +199,9 @@ const buildCallParams = (input: DistillInput): CallHaikuParams => ({
   maxTokens: 2048,
   tools: [EMIT_TOOL],
   toolChoice: { type: "tool", name: EMIT_TOOL_NAME },
+  // Ambient flow (stale-fingerprint re-distill, forkDaemon'd): hard-capped by
+  // the background daily budget (Spec 83).
+  trigger: "background",
 });
 
 // Route the forced-tool Sonnet call through the AiClient Layer (real

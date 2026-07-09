@@ -108,6 +108,9 @@ const buildCallParams = (
   maxTokens: 512,
   tools: [EMIT_TOOL],
   toolChoice: { type: "tool", name: EMIT_TOOL_NAME },
+  // Ambient flow (fires on save, not on a user ask): hard-capped by the
+  // background daily budget (Spec 83).
+  trigger: "background",
 });
 
 // Route the model call through the AiClient Layer (real retry/timeout, W-E3),

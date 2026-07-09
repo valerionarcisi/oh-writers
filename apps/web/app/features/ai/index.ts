@@ -5,6 +5,7 @@ export {
   extractToolUse,
   loadAnthropicStreamingClient,
   AnthropicError,
+  AiBudgetExceededError,
 } from "./anthropic-client";
 export type {
   CallHaikuParams,
@@ -12,4 +13,11 @@ export type {
   ContentBlock,
   ToolDefinition,
   ToolChoice,
+  AiUsageTrigger,
 } from "./anthropic-client";
+export {
+  computeCostUsd,
+  recordAiUsage,
+  checkDailyBudget,
+} from "./ai-usage.server";
+export type { TokenUsage, RecordAiUsageParams } from "./ai-usage.server";

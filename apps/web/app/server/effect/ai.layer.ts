@@ -116,11 +116,36 @@ export interface AiClient {
 
 export const AiClient = Context.GenericTag<AiClient>("ai/AiClient");
 
+// Spec 83 (Wave 1) — callHaiku's Result error channel now also carries
+// AiBudgetExceededError (the daily background-budget guard), but AiClient's
+// public contract stays AnthropicError-only so every existing Effect caller
+// (breakdown, predictions, locations) keeps compiling unchanged. A budget
+// block is folded into an AnthropicError here, at the seam — never
+// retryable (no `isRetryable` flag on the cause), and its `_tag` survives
+// inside `cause` for downstream diagnosis.
+const toAnthropicError = (
+  error: AnthropicError | { readonly _tag: string; readonly message: string },
+  operation: string,
+): AnthropicError =>
+  error instanceof AnthropicError
+    ? error
+    : // Pass the tagged message, not the object: AnthropicError stringifies
+      // non-Error causes, and String({...}) would yield "[object Object]" —
+      // tag+message keep a budget block diagnosable downstream.
+      new AnthropicError(operation, `${error._tag}: ${error.message}`);
+
 const callWithPolicy = (
   params: CallHaikuParams,
   operation: string,
 ): Effect.Effect<HaikuResult, AnthropicError> =>
-  withAiCallPolicy(fromResultAsync(callHaiku(params, operation)), operation);
+  withAiCallPolicy(
+    fromResultAsync(
+      callHaiku(params, operation).mapErr((error) =>
+        toAnthropicError(error, operation),
+      ),
+    ),
+    operation,
+  );
 
 export const AiClientLayer = Layer.succeed(AiClient, {
   callHaiku: callWithPolicy,

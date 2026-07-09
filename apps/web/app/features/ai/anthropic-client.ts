@@ -6,8 +6,18 @@ import {
   tool as sdkTool,
 } from "ai";
 import { anthropic } from "@ai-sdk/anthropic";
-import { ResultAsync } from "neverthrow";
+import { ResultAsync, errAsync } from "neverthrow";
 import { aiTelemetry } from "~/server/langfuse-config";
+import {
+  checkDailyBudget,
+  recordAiUsage,
+  AiBudgetExceededError,
+  type AiUsageTrigger,
+  type TokenUsage,
+} from "./ai-usage.server";
+
+export { AiBudgetExceededError };
+export type { AiUsageTrigger };
 
 const DEFAULT_MODEL = "claude-haiku-4-5";
 
@@ -49,6 +59,11 @@ export interface CallHaikuParams {
   readonly maxTokens: number;
   readonly tools?: ReadonlyArray<ToolDefinition>;
   readonly toolChoice?: ToolChoice;
+  // Spec 83 (Wave 1) — who asked: an explicit user action vs an ambient
+  // background flow. Feeds the daily budget guard (background flows are
+  // hard-capped; user flows never blocked) and the usage ledger. Defaults to
+  // "user" so existing callers are unaffected.
+  readonly trigger?: AiUsageTrigger;
 }
 
 export interface TextBlock {
@@ -152,13 +167,35 @@ const buildSdkTools = (
 // transient-error retry storm can't silently add tens of seconds on its own.
 const CALL_TIMEOUT_MS = 45_000;
 
-export const callHaiku = (
+// Normalises the AI SDK's usage/providerMetadata shape into the ledger's
+// TokenUsage. Cached tokens live in two different places depending on SDK
+// version/provider: `usage.cachedInputTokens` (normalised read count) and
+// `providerMetadata.anthropic.cacheCreationInputTokens` (raw write count) —
+// see the identical extraction in cesare-tools.ts's logCacheUsage.
+const extractUsage = (
+  usage: {
+    inputTokens?: number;
+    outputTokens?: number;
+    cachedInputTokens?: number;
+  },
+  providerMetadata:
+    | { anthropic?: { cacheCreationInputTokens?: number } }
+    | undefined,
+): TokenUsage => ({
+  inputTokens: usage.inputTokens ?? 0,
+  outputTokens: usage.outputTokens ?? 0,
+  cacheReadTokens: usage.cachedInputTokens ?? 0,
+  cacheWriteTokens: providerMetadata?.anthropic?.cacheCreationInputTokens ?? 0,
+});
+
+const runGenerateText = (
   params: CallHaikuParams,
+  model: string,
   operation: string,
 ): ResultAsync<HaikuResult, AnthropicError> =>
   ResultAsync.fromPromise(
     generateText({
-      model: anthropic(params.model ?? DEFAULT_MODEL),
+      model: anthropic(model),
       system: [
         {
           role: "system" as const,
@@ -208,6 +245,14 @@ export const callHaiku = (
       abortSignal: AbortSignal.timeout(CALL_TIMEOUT_MS),
       maxRetries: 1,
     }).then((result) => {
+      // Fire-and-forget: recordAiUsage never rejects (fully guarded) and must
+      // not add insert latency to the call path — review finding, Spec 83 W1.
+      void recordAiUsage({
+        operation,
+        model,
+        trigger: params.trigger ?? "user",
+        usage: extractUsage(result.usage, result.providerMetadata),
+      });
       const toolUseBlocks: ToolUseBlock[] = result.toolCalls.map((tc) => ({
         type: "tool_use" as const,
         name: tc.toolName,
@@ -227,6 +272,22 @@ export const callHaiku = (
     }),
     (e) => new AnthropicError(operation, e),
   );
+
+export const callHaiku = (
+  params: CallHaikuParams,
+  operation: string,
+): ResultAsync<HaikuResult, AnthropicError | AiBudgetExceededError> => {
+  const trigger: AiUsageTrigger = params.trigger ?? "user";
+  const model = params.model ?? DEFAULT_MODEL;
+  return ResultAsync.fromPromise(
+    checkDailyBudget(trigger),
+    (e) => new AnthropicError(operation, e),
+  ).andThen((budgetCheck) =>
+    budgetCheck.isErr()
+      ? errAsync(budgetCheck.error)
+      : runGenerateText(params, model, operation),
+  );
+};
 
 // #103 — streaming twin of callHaiku for the whole-document generators
 // (scaletta / treatment / screenplay). callHaiku is BLOCKING: the tracer shows
@@ -249,18 +310,16 @@ export interface StreamGenerationParams {
   readonly user: string;
   readonly model?: string;
   readonly maxTokens: number;
+  // Spec 83 (Wave 1) — see CallHaikuParams.trigger. Defaults to "user".
+  readonly trigger?: AiUsageTrigger;
 }
 
-export const streamGeneration = (
+const runStreamGeneration = (
   params: StreamGenerationParams,
+  model: string,
   operation: string,
   onDelta: (text: string) => void,
-  // #103 — the outer turn's cancel signal (drawer closed / navigation / dropped
-  // connection). Composed with the 45s timeout below via AbortSignal.any so a
-  // cancelled turn tears the nested generation's model call down immediately
-  // instead of leaking it to run — and keep billing — to its own timeout. Absent
-  // on the non-streaming / test paths, where only the timeout applies (unchanged).
-  abortSignal?: AbortSignal,
+  abortSignal: AbortSignal | undefined,
 ): ResultAsync<string, AnthropicError> =>
   ResultAsync.fromPromise(
     (async () => {
@@ -269,7 +328,7 @@ export const streamGeneration = (
         ? AbortSignal.any([abortSignal, timeoutSignal])
         : timeoutSignal;
       const result = streamText({
-        model: anthropic(params.model ?? DEFAULT_MODEL),
+        model: anthropic(model),
         system: [
           {
             role: "system" as const,
@@ -311,10 +370,47 @@ export const streamGeneration = (
             : new Error(String(part.error));
         }
       }
+      // Usage/providerMetadata resolve once the stream has fully drained —
+      // safe to await here since the fullStream loop above already ran to
+      // completion (or threw on the `error` part, in which case we never
+      // reach this line and nothing is recorded for a failed generation).
+      const [usage, providerMetadata] = await Promise.all([
+        result.usage,
+        result.providerMetadata,
+      ]);
+      void recordAiUsage({
+        operation,
+        model,
+        trigger: params.trigger ?? "user",
+        usage: extractUsage(usage, providerMetadata),
+      });
       return text;
     })(),
     (e) => new AnthropicError(operation, e),
   );
+
+export const streamGeneration = (
+  params: StreamGenerationParams,
+  operation: string,
+  onDelta: (text: string) => void,
+  // #103 — the outer turn's cancel signal (drawer closed / navigation / dropped
+  // connection). Composed with the 45s timeout below via AbortSignal.any so a
+  // cancelled turn tears the nested generation's model call down immediately
+  // instead of leaking it to run — and keep billing — to its own timeout. Absent
+  // on the non-streaming / test paths, where only the timeout applies (unchanged).
+  abortSignal?: AbortSignal,
+): ResultAsync<string, AnthropicError | AiBudgetExceededError> => {
+  const trigger: AiUsageTrigger = params.trigger ?? "user";
+  const model = params.model ?? DEFAULT_MODEL;
+  return ResultAsync.fromPromise(
+    checkDailyBudget(trigger),
+    (e) => new AnthropicError(operation, e),
+  ).andThen((budgetCheck) =>
+    budgetCheck.isErr()
+      ? errAsync(budgetCheck.error)
+      : runStreamGeneration(params, model, operation, onDelta, abortSignal),
+  );
+};
 
 const isTextBlock = (b: ContentBlock): b is TextBlock => b.type === "text";
 const isToolUseBlock = (b: ContentBlock): b is ToolUseBlock =>

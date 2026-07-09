@@ -20,6 +20,21 @@ vi.mock("~/server/langfuse-config", () => ({
   aiTelemetry: vi.fn(() => undefined),
 }));
 
+// Spec 83 (Wave 1) — callHaiku/streamGeneration now run the budget guard and
+// record usage on every call. These tests exercise the AI SDK call shape,
+// not the ledger, so both are mocked to hermetic no-ops (the ledger's own
+// behaviour is covered by ai-usage.server.test.ts).
+vi.mock("./ai-usage.server", () => ({
+  checkDailyBudget: vi.fn(async () => ({
+    isErr: () => false,
+    isOk: () => true,
+  })),
+  recordAiUsage: vi.fn(async () => undefined),
+  AiBudgetExceededError: class AiBudgetExceededError {
+    readonly _tag = "AiBudgetExceededError" as const;
+  },
+}));
+
 describe("callHaiku — timeout/retry bound (BUG-101)", () => {
   it("passes an abortSignal and a bounded maxRetries to generateText", async () => {
     generateTextMock.mockResolvedValue({
@@ -55,7 +70,7 @@ describe("callHaiku — timeout/retry bound (BUG-101)", () => {
     );
 
     expect(result.isErr()).toBe(true);
-    if (result.isErr()) {
+    if (result.isErr() && result.error._tag === "AnthropicError") {
       expect(result.error.retryable).toBe(false);
       expect(result.error.cause).toContain("timeout");
     }
@@ -64,10 +79,14 @@ describe("callHaiku — timeout/retry bound (BUG-101)", () => {
 
 // streamGeneration drains `fullStream` (not textStream) — mirror the AI SDK
 // part shapes: `text-delta` parts carry `.text`, an `error` part carries `.error`.
+// `usage`/`providerMetadata` are also read (post-drain, Spec 83 usage recording),
+// so the fake must expose them just like the real streamText result does.
 const fullStreamOf = (parts: ReadonlyArray<Record<string, unknown>>) => ({
   fullStream: (async function* () {
     for (const p of parts) yield p;
   })(),
+  usage: Promise.resolve({ inputTokens: 0, outputTokens: 0 }),
+  providerMetadata: Promise.resolve(undefined),
 });
 const textParts = (chunks: readonly string[]) =>
   fullStreamOf(chunks.map((text) => ({ type: "text-delta", text })));
@@ -125,7 +144,8 @@ describe("streamGeneration (#103)", () => {
     );
 
     expect(result.isErr()).toBe(true);
-    if (result.isErr()) expect(result.error.cause).toContain("stream broke");
+    if (result.isErr() && result.error._tag === "AnthropicError")
+      expect(result.error.cause).toContain("stream broke");
   });
 
   it("composes the outer cancel signal with the timeout — aborting the turn aborts the model call (#103 leak fix)", async () => {
