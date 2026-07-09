@@ -136,8 +136,8 @@ export const MarginNotesColumn: FC<MarginNotesColumnProps> = ({
     return query.data.value;
   }, [query.data]);
   const { statuses, setAdviceStatus } = useEditorialAdviceMemory(
-    `${projectId}:${docType}:margin`,
-    contentFingerprint,
+    projectId,
+    docType,
   );
 
   const hasContent = content.length > 50;

@@ -26,6 +26,7 @@ import {
   ScreenplayNotFoundError,
 } from "../screenplay.errors";
 import { callHaiku, extractToolUse } from "~/features/ai";
+import { fetchEditorialAdviceDecisionsBlock } from "~/features/predictions/editorial-advice-decisions.server";
 
 const PolishSuggestionSchema = EditorialAdviceSchema.extend({
   scene: z.number().int().positive(),
@@ -166,7 +167,16 @@ export const getScreenplayPolish = createServerFn({ method: "GET" })
     },
   );
 
-const buildProjectContext = async (projectId: string): Promise<string> => {
+/**
+ * `sceneId: undefined` scopes the anti-repetition block to whole-screenplay
+ * decisions; pass the current scene's real UUID to scope it to that scene
+ * instead (Spec 82 — a decision made in one scene must not suppress or
+ * resurface notes in a different, unrelated scene).
+ */
+const buildProjectContext = async (
+  projectId: string,
+  sceneId?: string | null,
+): Promise<string> => {
   const db = await getDb();
   const project = await db.query.projects.findFirst({
     where: eq(projects.id, projectId),
@@ -179,11 +189,18 @@ const buildProjectContext = async (projectId: string): Promise<string> => {
     ),
     columns: { content: true },
   });
+  const decisionsBlock = await fetchEditorialAdviceDecisionsBlock(
+    db,
+    projectId,
+    "screenplay",
+    sceneId ?? undefined,
+  );
   return [
     `Titolo progetto: ${project?.title ?? "N/D"}`,
     `Formato: ${project?.format ?? "N/D"}`,
     `Genere: ${project?.genre ?? "N/D"}`,
     `Logline del progetto: ${loglineDoc?.content?.trim() || "N/D"}`,
+    ...(decisionsBlock ? ["", decisionsBlock] : []),
   ].join("\n");
 };
 
@@ -371,7 +388,7 @@ export const getScenePolish = createServerFn({ method: "GET" })
       data,
     }): Promise<
       ResultShape<
-        { suggestions: PolishSuggestion[] },
+        { suggestions: PolishSuggestion[]; sceneId: string | null },
         ScreenplayNotFoundError | ForbiddenError | DbError
       >
     > => {
@@ -397,6 +414,7 @@ export const getScenePolish = createServerFn({ method: "GET" })
       const sceneRows = await ResultAsync.fromPromise(
         db
           .select({
+            id: scenes.id,
             number: scenes.number,
             heading: scenes.heading,
             notes: scenes.notes,
@@ -427,6 +445,9 @@ export const getScenePolish = createServerFn({ method: "GET" })
       const wantsMock =
         process.env["MOCK_AI"] === "true" || !process.env["ANTHROPIC_API_KEY"];
 
+      const currentSceneId =
+        sceneRows.value.find((r) => r.number === data.sceneNumber)?.id ?? null;
+
       const suggestions = wantsMock
         ? mockPolishForSceneNumber(
             data.sceneNumber,
@@ -436,9 +457,10 @@ export const getScenePolish = createServerFn({ method: "GET" })
             spResult.value.projectId,
             excerpt,
             data.sceneNumber,
+            currentSceneId,
           );
 
-      return toShape(ok({ suggestions }));
+      return toShape(ok({ suggestions, sceneId: currentSceneId }));
     },
   );
 
@@ -446,9 +468,10 @@ const callScenePolish = async (
   projectId: string,
   excerpt: string,
   sceneNumber: number,
+  sceneId: string | null,
 ): Promise<PolishSuggestion[]> => {
   void sceneNumber;
-  const context = await buildProjectContext(projectId);
+  const context = await buildProjectContext(projectId, sceneId);
   const result = await callHaiku(
     {
       system: SCENE_POLISH_SYSTEM_PROMPT,
@@ -513,10 +536,13 @@ export const scenePolishQueryOptions = (
   options: { hasContent?: boolean } = {},
 ) => ({
   queryKey: ["screenplay-polish", screenplayId, sceneNumber] as const,
-  queryFn: async (): Promise<{ suggestions: PolishSuggestion[] }> => {
-    if (!sceneNumber) return { suggestions: [] };
+  queryFn: async (): Promise<{
+    suggestions: PolishSuggestion[];
+    sceneId: string | null;
+  }> => {
+    if (!sceneNumber) return { suggestions: [], sceneId: null };
     const r = await getScenePolish({ data: { screenplayId, sceneNumber } });
-    if (!r.isOk) return { suggestions: [] };
+    if (!r.isOk) return { suggestions: [], sceneId: null };
     return r.value;
   },
   // Per-scene results are stable — cache for 10 minutes. Returning to a scene

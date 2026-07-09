@@ -1,32 +1,25 @@
 import {
-  adviceFingerprint,
+  buildEditorialAdviceDecisionKey,
+  editorialAdviceDecisionMemoryKey,
+  type DecidedEditorialAdviceStatus,
+  type EditorialAdvice,
   type EditorialAdviceStatus,
 } from "@oh-writers/domain";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
+import {
+  listEditorialAdviceDecisions,
+  recordEditorialAdviceDecision,
+} from "./editorial-advice-decisions.server";
 
-type PersistedState = {
-  contentFingerprint: string;
-  statuses: Record<string, EditorialAdviceStatus>;
-};
+type ListDecisionsResult = Awaited<
+  ReturnType<typeof listEditorialAdviceDecisions>
+>;
 
-const STORAGE_PREFIX = "ohw-editorial-advice";
 export const EDITORIAL_ADVICE_REFRESH_DEBOUNCE_MS = 1000;
 
-const safeParse = (raw: string | null): PersistedState | null => {
-  if (!raw) return null;
-  try {
-    const parsed = JSON.parse(raw) as PersistedState;
-    if (
-      typeof parsed.contentFingerprint === "string" &&
-      parsed.statuses &&
-      typeof parsed.statuses === "object"
-    ) {
-      return parsed;
-    }
-  } catch {}
-  return null;
-};
-
+// Retained only for existing content-based query keys elsewhere; decision
+// persistence itself no longer depends on this fingerprint (Spec 82).
 export const buildAdviceContentFingerprint = (content: string): string =>
   `${content.length}:${content.slice(0, 120)}:${content.slice(-80)}`;
 
@@ -47,52 +40,93 @@ export function useDebouncedValue<T>(
   return debouncedValue;
 }
 
+const decisionsQueryKey = (
+  projectId: string,
+  docType: string,
+  sceneId?: string,
+) => ["editorial-advice-decisions", projectId, docType, sceneId ?? null];
+
+/**
+ * DB-backed replacement for the original localStorage memory (Spec 82).
+ * Decisions are keyed to project+doc+scene+area+text-anchor, not to a
+ * whole-document content fingerprint, so they survive unrelated edits and
+ * double as Cesare's anti-repetition context server-side.
+ */
 export const useEditorialAdviceMemory = (
-  storageKey: string,
-  contentFingerprint: string,
+  projectId: string,
+  docType: string,
+  sceneId?: string,
 ) => {
-  const [statuses, setStatuses] = useState<
-    Record<string, EditorialAdviceStatus>
-  >({});
+  const queryClient = useQueryClient();
+  const queryKey = decisionsQueryKey(projectId, docType, sceneId);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const key = `${STORAGE_PREFIX}:${storageKey}`;
-    const persisted = safeParse(window.localStorage.getItem(key));
-    if (!persisted || persisted.contentFingerprint !== contentFingerprint) {
-      const resetState: PersistedState = {
-        contentFingerprint,
-        statuses: {},
-      };
-      window.localStorage.setItem(key, JSON.stringify(resetState));
-      setStatuses({});
-      return;
-    }
-    setStatuses(persisted.statuses);
-  }, [contentFingerprint, storageKey]);
+  const query = useQuery({
+    queryKey,
+    queryFn: () =>
+      listEditorialAdviceDecisions({ data: { projectId, docType, sceneId } }),
+    enabled: projectId.length > 0 && docType.length > 0,
+  });
 
-  const setAdviceStatus = useCallback(
-    (
-      advice: { area: string; type: string; title: string; body: string },
-      status: EditorialAdviceStatus,
-    ) => {
-      if (typeof window === "undefined") return;
-      const key = `${STORAGE_PREFIX}:${storageKey}`;
-      setStatuses((previous) => {
-        const next = {
-          ...previous,
-          [adviceFingerprint(advice as never)]: status,
-        };
-        const persisted: PersistedState = {
-          contentFingerprint,
-          statuses: next,
-        };
-        window.localStorage.setItem(key, JSON.stringify(persisted));
-        return next;
+  const decisions = query.data && query.data.isOk ? query.data.value : [];
+
+  const statuses: Record<string, EditorialAdviceStatus> = {};
+  for (const decision of decisions) {
+    statuses[editorialAdviceDecisionMemoryKey(decision)] = decision.status;
+  }
+
+  const mutation = useMutation({
+    mutationFn: (input: {
+      advice: EditorialAdvice;
+      status: DecidedEditorialAdviceStatus;
+    }) => {
+      const key = buildEditorialAdviceDecisionKey(input.advice, {
+        docType,
+        sceneId,
+      });
+      return recordEditorialAdviceDecision({
+        data: { projectId, key, status: input.status },
       });
     },
-    [contentFingerprint, storageKey],
+    // Optimistic update: hide the note instantly instead of waiting the full
+    // round-trip, and roll back to the previous list if the write fails so a
+    // failed mutation never leaves the UI silently out of sync.
+    onMutate: async (input) => {
+      await queryClient.cancelQueries({ queryKey });
+      const previous = queryClient.getQueryData<ListDecisionsResult>(queryKey);
+      const key = buildEditorialAdviceDecisionKey(input.advice, {
+        docType,
+        sceneId,
+      });
+      queryClient.setQueryData<ListDecisionsResult>(queryKey, (current) => {
+        if (!current || !current.isOk) return current;
+        const withoutExisting = current.value.filter(
+          (decision) =>
+            editorialAdviceDecisionMemoryKey(decision) !==
+            editorialAdviceDecisionMemoryKey(key),
+        );
+        return {
+          ...current,
+          value: [...withoutExisting, { ...key, status: input.status }],
+        };
+      });
+      return { previous };
+    },
+    onError: (_error, _input, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(queryKey, context.previous);
+      }
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey });
+    },
+  });
+
+  const setAdviceStatus = useCallback(
+    (advice: EditorialAdvice, status: DecidedEditorialAdviceStatus) => {
+      mutation.mutate({ advice, status });
+    },
+    [mutation],
   );
 
-  return { statuses, setAdviceStatus };
+  return { statuses, setAdviceStatus, isError: mutation.isError };
 };

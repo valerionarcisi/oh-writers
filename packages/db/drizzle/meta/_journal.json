@@ -316,6 +316,13 @@
       "when": 1779000000010,
       "tag": "0039_document_versions_kind",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1779000000011,
+      "tag": "0040_editorial_advice_decisions",
+      "breakpoints": true
     }
   ]
 }

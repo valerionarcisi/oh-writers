@@ -13,6 +13,7 @@ import {
 import { toShape, type ResultShape } from "@oh-writers/utils";
 import { withProjectAccess } from "~/server/pipeline";
 import { callHaiku, extractToolUse } from "~/features/ai";
+import { fetchEditorialAdviceDecisionsBlock } from "~/features/predictions/editorial-advice-decisions.server";
 import type { ProjectAccessError } from "~/server/access";
 import { getDb } from "~/server/db";
 import { documents, projects } from "@oh-writers/db/schema";
@@ -294,6 +295,11 @@ const buildPromptInput = async (
     ),
     columns: { content: true },
   });
+  const decisionsBlock = await fetchEditorialAdviceDecisionsBlock(
+    db,
+    data.projectId,
+    data.docType,
+  );
 
   return [
     `Titolo progetto: ${project?.title ?? "N/D"}`,
@@ -307,6 +313,7 @@ const buildPromptInput = async (
     "- tratta le scelte autoriali come tali, ma non nasconderle: classificale",
     "- non nascondere un rilievo reale: al più declassalo, mai ometterlo",
     "- se il testo è genuinamente risolto, dillo apertamente con un OK editoriale",
+    ...(decisionsBlock ? ["", decisionsBlock] : []),
     "",
     "Documento:",
     data.content,

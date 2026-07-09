@@ -153,8 +153,8 @@ export const NarrativeCesarePanel: FC<NarrativeCesarePanelProps> = ({
     return query.data.value;
   }, [query.data]);
   const { statuses, setAdviceStatus } = useEditorialAdviceMemory(
-    `${projectId}:${docType}:panel`,
-    contentFingerprint,
+    projectId,
+    docType,
   );
 
   const hasContent = content.length > 50;

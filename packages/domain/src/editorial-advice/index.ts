@@ -18,3 +18,16 @@ export type {
   EditorialAdviceStatus,
   EditorialAdviceType,
 } from "./schema.js";
+export {
+  EditorialAdviceDecisionKeySchema,
+  DecidedEditorialAdviceStatusSchema,
+  buildEditorialAdviceDecisionKey,
+  buildEditorialAdviceDecisionsBlock,
+  editorialAdviceDecisionMemoryKey,
+  editorialAdviceMemoryKey,
+} from "./decisions.js";
+export type {
+  EditorialAdviceDecision,
+  EditorialAdviceDecisionKey,
+  DecidedEditorialAdviceStatus,
+} from "./decisions.js";

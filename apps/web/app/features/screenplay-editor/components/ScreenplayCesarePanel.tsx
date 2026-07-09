@@ -72,8 +72,9 @@ function PanelBody({
   const staleQ = useQuery(staleScenesOptions(versionId ?? ""));
   const suggestions = polishQ.data?.suggestions ?? [];
   const { statuses, setAdviceStatus } = useEditorialAdviceMemory(
-    `${screenplayId}:${debouncedScene ?? "all"}:screenplay`,
-    `${versionId ?? "draft"}:${debouncedScene ?? "all"}:${pageTotal}:${sceneTotal}`,
+    projectId,
+    "screenplay",
+    polishQ.data?.sceneId ?? undefined,
   );
   const staleScenes = staleQ.data ?? [];
 

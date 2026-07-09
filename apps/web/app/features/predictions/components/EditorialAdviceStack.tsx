@@ -1,6 +1,6 @@
 import {
-  adviceFingerprint,
   createEditorialApprovalAdvice,
+  editorialAdviceMemoryKey,
   type EditorialAdvice,
   type EditorialAdviceStatus,
 } from "@oh-writers/domain";
@@ -48,7 +48,8 @@ export function EditorialAdviceStack({
   const visible = advice
     .map((item) => ({
       ...item,
-      status: rememberedStatuses?.[adviceFingerprint(item)] ?? item.status,
+      status:
+        rememberedStatuses?.[editorialAdviceMemoryKey(item)] ?? item.status,
     }))
     .filter((item) => !item.status || !hiddenStatuses.has(item.status));
 
