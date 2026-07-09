@@ -4737,6 +4737,11 @@ const bridgeLegacyTools = (
   // generation returns. Only the document-gen executor consumes `onDelta`; every
   // other executor ignores the optional param.
   onStreamEvent?: (event: CesareStreamEvent) => void,
+  // #103 — the outer turn's cancel signal (drawer closed / navigation / dropped
+  // connection). Forwarded to the document-gen executor so a cancelled turn tears
+  // the nested streaming generation's model call down instead of leaking it to
+  // run — and keep billing — to its own 45s timeout. Every other executor ignores it.
+  abortSignal?: AbortSignal,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Record<string, Tool<any, any>> =>
   Object.fromEntries(
@@ -4768,7 +4773,14 @@ const bridgeLegacyTools = (
             ? (chunk: string) =>
                 onStreamEvent({ _tag: "gen-delta", text: chunk })
             : undefined;
-          const result = await executor(block, db, projectId, access, onDelta);
+          const result = await executor(
+            block,
+            db,
+            projectId,
+            access,
+            onDelta,
+            abortSignal,
+          );
           if (result.isErr()) return { error: result.error.message };
           try {
             return JSON.parse(result.value.content) as unknown;
@@ -4805,6 +4817,7 @@ export const runUnifiedToolLoop = (
     projectId,
     access,
     onStreamEvent,
+    abortSignal,
   );
   return runGenericToolLoop({
     systemPrompt,

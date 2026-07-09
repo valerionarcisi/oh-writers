@@ -255,9 +255,19 @@ export const streamGeneration = (
   params: StreamGenerationParams,
   operation: string,
   onDelta: (text: string) => void,
+  // #103 — the outer turn's cancel signal (drawer closed / navigation / dropped
+  // connection). Composed with the 45s timeout below via AbortSignal.any so a
+  // cancelled turn tears the nested generation's model call down immediately
+  // instead of leaking it to run — and keep billing — to its own timeout. Absent
+  // on the non-streaming / test paths, where only the timeout applies (unchanged).
+  abortSignal?: AbortSignal,
 ): ResultAsync<string, AnthropicError> =>
   ResultAsync.fromPromise(
     (async () => {
+      const timeoutSignal = AbortSignal.timeout(CALL_TIMEOUT_MS);
+      const effectiveSignal = abortSignal
+        ? AbortSignal.any([abortSignal, timeoutSignal])
+        : timeoutSignal;
       const result = streamText({
         model: anthropic(params.model ?? DEFAULT_MODEL),
         system: [
@@ -285,7 +295,7 @@ export const streamGeneration = (
         ],
         maxOutputTokens: params.maxTokens,
         experimental_telemetry: aiTelemetry(`stream-generation:${operation}`),
-        abortSignal: AbortSignal.timeout(CALL_TIMEOUT_MS),
+        abortSignal: effectiveSignal,
         maxRetries: 1,
       });
       let text = "";

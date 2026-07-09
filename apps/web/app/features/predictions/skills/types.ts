@@ -72,6 +72,10 @@ export type SkillExecutor = (
   // stream whole-document generation into the tracer); every other executor
   // ignores it. Optional so no existing executor or callsite has to change.
   onDelta?: (text: string) => void,
+  // #103 — the outer turn's cancel signal, forwarded to the streaming generators
+  // so a cancelled turn tears their model call down instead of leaking a billed
+  // call. Same optionality contract as onDelta.
+  abortSignal?: AbortSignal,
 ) => ResultAsync<ToolResult, CesareError>;
 
 // ─── SkillBuildContext ────────────────────────────────────────────────────────

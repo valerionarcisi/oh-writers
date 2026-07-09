@@ -140,14 +140,21 @@ export const buildSkillRegistry = (
 
     combinedExecutor:
       (selected: readonly Skill[]) =>
-      (block, db, projectId, access, onDelta) => {
+      (block, db, projectId, access, onDelta, abortSignal) => {
         const owner = selected.find((s) =>
           s.tools.some((t) => t.name === block.name),
         );
         if (!owner) {
           return errAsync(new CesareError(`Unknown tool: ${block.name}`));
         }
-        return owner.executor(block, db, projectId, access, onDelta);
+        return owner.executor(
+          block,
+          db,
+          projectId,
+          access,
+          onDelta,
+          abortSignal,
+        );
       },
   };
 };

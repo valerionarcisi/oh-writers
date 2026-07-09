@@ -50,6 +50,7 @@ export const buildDocumentGenSkill = (
     projectId,
     _access,
     onDelta,
+    abortSignal,
   ): ReturnType<Skill["executor"]> => {
     if (isDocumentGenToolName(block.name)) {
       return executeDocumentGenTool(
@@ -60,6 +61,7 @@ export const buildDocumentGenSkill = (
         sessionId,
         userInstruction,
         onDelta,
+        abortSignal,
       );
     }
     const errorResult: ToolResult = {

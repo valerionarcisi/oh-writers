@@ -829,6 +829,10 @@ const runGeneration = (
   maxTokens: number,
   operation: string,
   onDelta?: (text: string) => void,
+  // #103 — the outer turn's cancel signal, forwarded to the streaming path so a
+  // cancelled turn tears the nested generation down instead of leaking a billed
+  // model call. Only meaningful alongside onDelta (the streaming path).
+  abortSignal?: AbortSignal,
 ): ResultAsync<string, CesareError> => {
   // Mock-mode escape hatch: short-circuit Sonnet calls when MOCK_AI=true or the
   // API key is missing. Keeps Vitest + Playwright deterministic and free.
@@ -862,6 +866,7 @@ const runGeneration = (
       },
       operation,
       onDelta,
+      abortSignal,
     )
       .mapErr((e) => new CesareError(`${operation} failed: ${e.message}`))
       .andThen((text) =>
@@ -1216,6 +1221,7 @@ const handleProposeScalettaFromSoggetto = (
   userIdFallback: string | null,
   sessionId: string | null = null,
   onDelta?: (text: string) => void,
+  abortSignal?: AbortSignal,
 ): ResultAsync<CreatedDraft, CesareError> =>
   loadDocumentForType(db, projectId, DocumentTypes.SOGGETTO).andThen((doc) => {
     if (!doc || doc.content.trim().length === 0) {
@@ -1250,6 +1256,7 @@ const handleProposeScalettaFromSoggetto = (
         3000,
         "cesare.proposeScaletta",
         onDelta,
+        abortSignal,
       )
         .map((raw) => {
           const parsed = parseScalettaList(raw);
@@ -1472,6 +1479,7 @@ const handleProposeTreatment = (
   sessionId: string | null = null,
   userInstruction: string | null = null,
   onDelta?: (text: string) => void,
+  abortSignal?: AbortSignal,
 ): ResultAsync<CommitOutcome, CesareError> =>
   ResultAsync.combine([
     loadDocumentForType(db, projectId, DocumentTypes.TREATMENT),
@@ -1504,6 +1512,7 @@ const handleProposeTreatment = (
       3000,
       "cesare.proposeTreatment",
       onDelta,
+      abortSignal,
     )
       .map((s) => s.trim())
       .andThen((treatment) => {
@@ -1587,6 +1596,7 @@ const handleGenerateScreenplay = (
   db: Db,
   projectId: string,
   onDelta?: (text: string) => void,
+  abortSignal?: AbortSignal,
 ): ResultAsync<GeneratedScreenplay, CesareError> =>
   ResultAsync.combine([
     loadScreenplayRowForProject(db, projectId),
@@ -1615,6 +1625,7 @@ const handleGenerateScreenplay = (
         6000,
         "cesare.generateScreenplay",
         onDelta,
+        abortSignal,
       )
         // NORMALISE to the editor's canonical Fountain dialect (BUG-N63 + #46/#53
         // root cause). The model is unreliable about element FORMATTING — it
@@ -1727,6 +1738,9 @@ export const executeDocumentGenTool = (
   // so the tracer fills progressively. Undefined for the short one-shots and on
   // the non-streaming path (behaviour identical to before).
   onDelta?: (text: string) => void,
+  // #103 — the outer turn's cancel signal, forwarded to the streaming generators
+  // so a cancelled turn tears their model call down instead of leaking it.
+  abortSignal?: AbortSignal,
 ): ResultAsync<ToolResult, CesareError> => {
   const input = block.input as ProposeInput;
   if (block.name === "propose_logline_from_screenplay") {
@@ -1777,6 +1791,7 @@ export const executeDocumentGenTool = (
       userIdFallback,
       sessionId,
       onDelta,
+      abortSignal,
     ).map((outcome) => successResult(block.id, outcomePayload(outcome)));
   }
   if (block.name === "edit_outline_scene") {
@@ -1797,12 +1812,17 @@ export const executeDocumentGenTool = (
       sessionId,
       userInstruction,
       onDelta,
+      abortSignal,
     ).map((outcome) => successResult(block.id, outcomePayload(outcome)));
   }
   if (block.name === "generate_screenplay_from_narrative") {
-    return handleGenerateScreenplay(input, db, projectId, onDelta).map((gen) =>
-      successResult(block.id, screenplayGenPayload(gen)),
-    );
+    return handleGenerateScreenplay(
+      input,
+      db,
+      projectId,
+      onDelta,
+      abortSignal,
+    ).map((gen) => successResult(block.id, screenplayGenPayload(gen)));
   }
   return okAsync(
     successResult(block.id, {

@@ -127,4 +127,40 @@ describe("streamGeneration (#103)", () => {
     expect(result.isErr()).toBe(true);
     if (result.isErr()) expect(result.error.cause).toContain("stream broke");
   });
+
+  it("composes the outer cancel signal with the timeout — aborting the turn aborts the model call (#103 leak fix)", async () => {
+    streamTextMock.mockReturnValue(textParts(["x"]));
+    const { streamGeneration } = await import("./anthropic-client");
+
+    const outer = new AbortController();
+    await streamGeneration(
+      { system: "sys", user: "u", maxTokens: 100 },
+      "test.op",
+      () => {},
+      outer.signal,
+    );
+
+    // The signal handed to streamText is a COMPOSITE (AbortSignal.any) of the
+    // outer turn signal + the 45s timeout. Cancelling the turn must abort it, so
+    // the in-flight generation tears down instead of leaking to its own timeout.
+    const passed = streamTextMock.mock.calls.at(-1)?.[0].abortSignal;
+    expect(passed).toBeInstanceOf(AbortSignal);
+    expect(passed.aborted).toBe(false);
+    outer.abort();
+    expect(passed.aborted).toBe(true);
+  });
+
+  it("still applies the timeout when NO outer signal is given (unchanged path)", async () => {
+    streamTextMock.mockReturnValue(textParts(["x"]));
+    const { streamGeneration } = await import("./anthropic-client");
+
+    await streamGeneration(
+      { system: "sys", user: "u", maxTokens: 100 },
+      "test.op",
+      () => {},
+    );
+
+    const passed = streamTextMock.mock.calls.at(-1)?.[0].abortSignal;
+    expect(passed).toBeInstanceOf(AbortSignal);
+  });
 });
