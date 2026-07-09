@@ -5,6 +5,7 @@ import { eq, sql } from "drizzle-orm";
 import {
   documents,
   documentVersions,
+  projects,
   screenplays,
 } from "@oh-writers/db/schema";
 import { DocumentTypes, type DocumentType } from "@oh-writers/domain";
@@ -164,7 +165,10 @@ export const CESARE_DOCUMENT_GEN_TOOLS = [
         target_scene_count: {
           type: "integer",
           description:
-            "Numero approssimativo di scene desiderate (default 40).",
+            "Numero approssimativo di scene desiderate. Ometti per usare un " +
+            "default adatto al formato del progetto (corto ~14, episodio ~28, " +
+            "lungometraggio ~45). Specificalo solo se l'utente chiede una " +
+            "lunghezza precisa.",
         },
       },
     },
@@ -1124,6 +1128,29 @@ ${doc.content.slice(0, 18_000)}
   });
 };
 
+// A scaletta's natural length follows the project FORMAT. Before this, the
+// default was a hardcoded 40 regardless of format — so a CORTO (short) got a
+// 40-scene feature-length outline (BUG: measured live on "Non fa ridere", a
+// short, generating 40 scenes). These are sensible mid-range defaults used only
+// when the model didn't pass an explicit target_scene_count; the model can still
+// override per request, and the hard [8,120] clamp still applies below.
+type ProjectFormat = "feature" | "short" | "series_episode" | "pilot";
+
+export const defaultSceneCountForFormat = (
+  format: ProjectFormat | string | null,
+): number => {
+  switch (format) {
+    case "short":
+      return 14; // ~10-18 scenes for a short
+    case "series_episode":
+    case "pilot":
+      return 28; // a TV episode sits between a short and a feature
+    case "feature":
+    default:
+      return 45; // full-length
+  }
+};
+
 const handleProposeScalettaFromSoggetto = (
   input: ProposeInput,
   db: Db,
@@ -1139,49 +1166,70 @@ const handleProposeScalettaFromSoggetto = (
         ),
       );
     }
-    const targetCount = Number.isFinite(input.target_scene_count)
-      ? Math.max(8, Math.min(120, Number(input.target_scene_count)))
-      : 40;
-    const user = `Numero di scene desiderate: circa ${targetCount}.\n\nSoggetto:\n---\n${doc.content.slice(0, 18_000)}\n---`;
-    return runGeneration(SCALETTA_SYSTEM, user, 3000, "cesare.proposeScaletta")
-      .map((raw) => {
-        const parsed = parseScalettaList(raw);
-        const outline = scalettaToOutlineContent(parsed);
-        return JSON.stringify(outline);
-      })
-      .andThen((content) =>
-        loadDocumentForType(db, projectId, DocumentTypes.OUTLINE).andThen(
-          (outlineDoc) => {
-            if (!outlineDoc) {
-              return errAsync(
-                new CesareError(
-                  "Documento scaletta non trovato per il progetto.",
-                ),
-              );
-            }
-            const creator = outlineDoc.ownerId ?? userIdFallback;
-            if (!creator) {
-              return errAsync(
-                new CesareError(
-                  "Impossibile determinare l'autore della draft: documento senza createdBy.",
-                ),
-              );
-            }
-            // A derive-from-soggetto regeneration is an explicit generation act,
-            // not an iterative edit, so it applies directly (overwrite/checkpoint
-            // as resolved) and never triggers the large-edit ask.
-            return applyVersionLive(
-              db,
-              outlineDoc.id,
-              DocumentTypes.OUTLINE,
-              creator,
-              content,
-              buildDraftLabel(DocumentTypes.OUTLINE, "da soggetto"),
-              commitOptions(sessionId, null),
-            );
-          },
+    // Load the project format so the default scene count matches the film
+    // length. A missing project row falls back to the feature default.
+    return ResultAsync.fromPromise(
+      db.query.projects.findFirst({
+        where: eq(projects.id, projectId),
+        columns: { format: true },
+      }),
+      (e) =>
+        new CesareError(
+          `Failed to load project format: ${
+            e instanceof Error ? e.message : String(e)
+          }`,
         ),
-      );
+    ).andThen((project) => {
+      const formatDefault = defaultSceneCountForFormat(project?.format ?? null);
+      const targetCount = Number.isFinite(input.target_scene_count)
+        ? Math.max(8, Math.min(120, Number(input.target_scene_count)))
+        : formatDefault;
+      const user = `Numero di scene desiderate: circa ${targetCount}.\n\nSoggetto:\n---\n${doc.content.slice(0, 18_000)}\n---`;
+      return runGeneration(
+        SCALETTA_SYSTEM,
+        user,
+        3000,
+        "cesare.proposeScaletta",
+      )
+        .map((raw) => {
+          const parsed = parseScalettaList(raw);
+          const outline = scalettaToOutlineContent(parsed);
+          return JSON.stringify(outline);
+        })
+        .andThen((content) =>
+          loadDocumentForType(db, projectId, DocumentTypes.OUTLINE).andThen(
+            (outlineDoc) => {
+              if (!outlineDoc) {
+                return errAsync(
+                  new CesareError(
+                    "Documento scaletta non trovato per il progetto.",
+                  ),
+                );
+              }
+              const creator = outlineDoc.ownerId ?? userIdFallback;
+              if (!creator) {
+                return errAsync(
+                  new CesareError(
+                    "Impossibile determinare l'autore della draft: documento senza createdBy.",
+                  ),
+                );
+              }
+              // A derive-from-soggetto regeneration is an explicit generation act,
+              // not an iterative edit, so it applies directly (overwrite/checkpoint
+              // as resolved) and never triggers the large-edit ask.
+              return applyVersionLive(
+                db,
+                outlineDoc.id,
+                DocumentTypes.OUTLINE,
+                creator,
+                content,
+                buildDraftLabel(DocumentTypes.OUTLINE, "da soggetto"),
+                commitOptions(sessionId, null),
+              );
+            },
+          ),
+        );
+    });
   });
 
 /**
@@ -1670,7 +1718,11 @@ export const createDocumentGenTools = (
         .number()
         .int()
         .optional()
-        .describe("Numero approssimativo di scene desiderate (default 40)."),
+        .describe(
+          "Numero approssimativo di scene desiderate. Ometti per un default " +
+            "adatto al formato (corto ~14, episodio ~28, lungometraggio ~45); " +
+            "specificalo solo se l'utente chiede una lunghezza precisa.",
+        ),
     }),
     execute: async (input, _opts) => {
       const result = await handleProposeScalettaFromSoggetto(

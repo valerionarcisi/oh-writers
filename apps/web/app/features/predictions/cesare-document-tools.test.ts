@@ -4,6 +4,7 @@ import { documents, screenplays } from "@oh-writers/db/schema";
 import type { Db } from "~/server/db";
 import {
   buildDraftLabel,
+  defaultSceneCountForFormat,
   executeDocumentGenTool,
   formatUpstreamSource,
   isDocumentGenToolName,
@@ -538,5 +539,30 @@ describe("executeDocumentGenTool — generate_screenplay_from_narrative (BUG-N67
     expect(result._unsafeUnwrapErr().message).toMatch(
       /materiale|sceneggiatura/i,
     );
+  });
+});
+
+describe("defaultSceneCountForFormat", () => {
+  it("gives a short a short-film-length default (not 40)", () => {
+    const n = defaultSceneCountForFormat("short");
+    expect(n).toBeLessThan(20);
+    expect(n).toBeGreaterThanOrEqual(10);
+  });
+
+  it("gives a feature a full-length default", () => {
+    expect(defaultSceneCountForFormat("feature")).toBeGreaterThanOrEqual(40);
+  });
+
+  it("puts an episode/pilot between a short and a feature", () => {
+    const ep = defaultSceneCountForFormat("series_episode");
+    expect(ep).toBeGreaterThan(defaultSceneCountForFormat("short"));
+    expect(ep).toBeLessThan(defaultSceneCountForFormat("feature"));
+    expect(defaultSceneCountForFormat("pilot")).toBe(ep);
+  });
+
+  it("falls back to the feature default for an unknown or null format", () => {
+    const feature = defaultSceneCountForFormat("feature");
+    expect(defaultSceneCountForFormat(null)).toBe(feature);
+    expect(defaultSceneCountForFormat("wat")).toBe(feature);
   });
 });

@@ -169,7 +169,26 @@ export const callHaiku = (
           },
         },
       ],
-      messages: [{ role: "user", content: params.user }],
+      // Cache the user turn too. The generators (scaletta / treatment /
+      // screenplay from the same upstream material) embed up to 18k chars of
+      // source text here and are frequently re-run on the same soggetto, so a
+      // breakpoint turns those repeats into cache reads (~0.1x) and shaves the
+      // re-processing latency. It silently no-ops for the small one-shot prompts
+      // (below the model's minimum cacheable prefix), so it's free there.
+      messages: [
+        {
+          role: "user" as const,
+          content: [
+            {
+              type: "text" as const,
+              text: params.user,
+              providerOptions: {
+                anthropic: { cacheControl: { type: "ephemeral" } },
+              },
+            },
+          ],
+        },
+      ],
       maxOutputTokens: params.maxTokens,
       ...(params.tools && params.tools.length > 0
         ? {
