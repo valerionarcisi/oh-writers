@@ -98,9 +98,6 @@ export function ScreenplayEditorPage() {
               pageTotal={metrics.pageTotal}
               sceneCurrent={metrics.sceneCurrent}
               sceneTotal={metrics.sceneTotal}
-              onApplyEdit={(find, replace) =>
-                editorRef.current?.applyEdit(find, replace) ?? false
-              }
             />
           }
           isCesarePanelOpen={isCesareOn}

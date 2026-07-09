@@ -26,17 +26,31 @@ export const EditorialAdviceStatusSchema = z.enum([
 
 export const EditorialAdviceAreaSchema = z.string().min(1).max(40);
 
+// The model routinely overshoots these ceilings on rich Italian notes. Rejecting
+// the whole batch for one long string (a `too_big` issue) threw away 5-6 good
+// notes → "Impossibile caricare le note". Clamp instead of reject: trim to the
+// limit (with an ellipsis) so a verbose note degrades to a shorter one, never to
+// a failed panel. Applied before .max() so validation always passes.
+const clampedText = (max: number) =>
+  z
+    .string()
+    .min(1)
+    .transform((value) =>
+      value.length > max ? `${value.slice(0, max - 1).trimEnd()}…` : value,
+    )
+    .pipe(z.string().max(max));
+
 export const EditorialAdviceSchema = z.object({
   id: z.string().min(1),
   area: EditorialAdviceAreaSchema,
-  title: z.string().min(1).max(120),
-  body: z.string().min(1).max(360),
+  title: clampedText(120),
+  body: clampedText(360),
   type: EditorialAdviceTypeSchema,
   severity: EditorialAdviceSeveritySchema,
   status: EditorialAdviceStatusSchema.optional(),
-  whyItMatters: z.string().min(1).max(240).optional(),
-  whenToIgnore: z.string().min(1).max(240).optional(),
-  minimalIntervention: z.string().min(1).max(240).optional(),
+  whyItMatters: clampedText(240).optional(),
+  whenToIgnore: clampedText(240).optional(),
+  minimalIntervention: clampedText(240).optional(),
   scene: z.number().int().positive().optional(),
   snippet: z.string().max(160).nullable().optional(),
   find: z.string().max(400).nullable().optional(),

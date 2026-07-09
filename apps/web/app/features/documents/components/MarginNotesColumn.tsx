@@ -33,11 +33,14 @@ export interface MarginNotesColumnProps {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+// Sinossi is deliberately excluded: it is a synthesis artefact, not a doc the
+// author edits with Cesare, so it shows no editorial-notes panel (product
+// decision 2026-07-09). Note SYNOPSIS stays a valid NarrativePolishSuggestionDoc
+// for the server fn; this gate only governs whether the margin column renders.
 const isNarrativeDocType = (
   type: DocumentType,
 ): type is NarrativePolishSuggestionDoc =>
   type === DocumentTypes.SOGGETTO ||
-  type === DocumentTypes.SYNOPSIS ||
   type === DocumentTypes.OUTLINE ||
   type === DocumentTypes.TREATMENT;
 

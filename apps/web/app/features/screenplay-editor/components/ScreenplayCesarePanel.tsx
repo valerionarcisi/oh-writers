@@ -25,10 +25,6 @@ interface ScreenplayCesarePanelProps {
   pageTotal: number;
   sceneCurrent: number | null;
   sceneTotal: number;
-  /** When provided, suggestions with both `find` and `replace` show an
-   *  'Applica' button that calls this. Returns true when the edit was
-   *  applied (the suggestion is then removed from the list locally). */
-  onApplyEdit?: (find: string, replace: string) => boolean;
 }
 
 export function ScreenplayCesarePanel(props: ScreenplayCesarePanelProps) {
@@ -60,7 +56,6 @@ function PanelBody({
   pageTotal,
   sceneCurrent,
   sceneTotal,
-  onApplyEdit,
 }: ScreenplayCesarePanelProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -75,34 +70,12 @@ function PanelBody({
     scenePolishQueryOptions(screenplayId, debouncedScene, { hasContent }),
   );
   const staleQ = useQuery(staleScenesOptions(versionId ?? ""));
-  const allSuggestions = polishQ.data?.suggestions ?? [];
-  const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
-  const [flash, setFlash] = useState<string | null>(null);
-  const [notFoundIds, setNotFoundIds] = useState<Set<string>>(new Set());
+  const suggestions = polishQ.data?.suggestions ?? [];
   const { statuses, setAdviceStatus } = useEditorialAdviceMemory(
     `${screenplayId}:${debouncedScene ?? "all"}:screenplay`,
     `${versionId ?? "draft"}:${debouncedScene ?? "all"}:${pageTotal}:${sceneTotal}`,
   );
-  const suggestions = allSuggestions.filter((s) => !appliedIds.has(s.id));
   const staleScenes = staleQ.data ?? [];
-
-  const handleApply = (id: string, find: string, replace: string) => {
-    if (!onApplyEdit) return;
-    const ok = onApplyEdit(find, replace);
-    if (ok) {
-      setAppliedIds((prev) => new Set(prev).add(id));
-      setNotFoundIds((prev) => {
-        if (!prev.has(id)) return prev;
-        const next = new Set(prev);
-        next.delete(id);
-        return next;
-      });
-      setFlash(t("screenplay.cesare.editApplied"));
-      window.setTimeout(() => setFlash(null), 2400);
-    } else {
-      setNotFoundIds((prev) => new Set(prev).add(id));
-    }
-  };
 
   const handleOpenBreakdown = () => {
     void navigate({
@@ -178,34 +151,12 @@ function PanelBody({
           </ul>
         )}
 
-        {flash && <p className={styles.flash}>{flash}</p>}
-
         {suggestions.length > 0 && (
           <EditorialAdviceStack
-            advice={suggestions.map((suggestion) =>
-              notFoundIds.has(suggestion.id)
-                ? {
-                    ...suggestion,
-                    whyItMatters: suggestion.whyItMatters
-                      ? `${suggestion.whyItMatters} ${t("screenplay.cesare.textNotFoundTitle")}.`
-                      : t("screenplay.cesare.textNotFoundTitle"),
-                  }
-                : suggestion,
-            )}
+            advice={suggestions}
             rememberedStatuses={statuses}
             fallbackArea="screenplay"
             scenePrefix={t("screenplay.cesare.scenePrefix")}
-            onApply={(advice) => {
-              if (
-                typeof advice.find !== "string" ||
-                advice.find.length === 0 ||
-                typeof advice.replace !== "string" ||
-                advice.replace.length === 0
-              ) {
-                return;
-              }
-              handleApply(advice.id, advice.find, advice.replace);
-            }}
             onMarkAuthorialChoice={(advice) =>
               setAdviceStatus(advice, "authorial_choice")
             }

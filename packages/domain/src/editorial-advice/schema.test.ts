@@ -23,6 +23,28 @@ describe("EditorialAdviceListSchema", () => {
     });
     expect(parsed.suggestions).toHaveLength(1);
   });
+
+  it("clamps an over-long body instead of rejecting the whole batch", () => {
+    // The model overshoots the 360-char body ceiling on rich Italian notes; the
+    // batch must survive (clamped), not fail — this is the #99 always-OK cause.
+    const longBody = "x".repeat(500);
+    const parsed = EditorialAdviceListSchema.parse({
+      suggestions: [
+        {
+          id: "a1",
+          area: "clarity",
+          title: "t",
+          body: longBody,
+          type: "real_problem",
+          severity: "medium",
+          minimalIntervention: "y".repeat(400),
+        },
+      ],
+    });
+    expect(parsed.suggestions[0]?.body).toHaveLength(360);
+    expect(parsed.suggestions[0]?.body.endsWith("…")).toBe(true);
+    expect(parsed.suggestions[0]?.minimalIntervention).toHaveLength(240);
+  });
 });
 
 describe("dedupeEditorialAdvice", () => {
