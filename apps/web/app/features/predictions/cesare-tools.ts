@@ -4727,16 +4727,15 @@ const bridgeLegacyTools = (
   db: Db,
   projectId: string,
   access: ProjectAccess,
-  // BUG-101/#103 — the live trace sink. The document generators run a blocking
-  // nested model call inside the executor (runGeneration → callHaiku), during
-  // which the outer streamText loop can't advance and onStepFinish hasn't fired
-  // yet — so the "STO SCRIVENDO Scaletta" step used to appear only AFTER the
-  // whole generation returned, reading as a multi-second freeze. Emitting the
-  // step eagerly HERE (the moment the tool starts, before the blocking call)
-  // gives the user immediate feedback that Cesare is working on the entity. Full
-  // token-level streaming of the nested generation is a deeper change (see #103)
-  // that would thread a sink through the executor contract; this closes the
-  // perceived-freeze gap without touching every executor signature.
+  // BUG-101/#103 — the live trace sink. The document generators run a nested
+  // model call inside the executor (runGeneration). We emit the "STO SCRIVENDO
+  // Scaletta" step eagerly the instant the tool starts (below), then stream the
+  // generation's tokens live: `onDelta` forwards each chunk as a `gen-delta`
+  // event (NOT `text-delta` — gen-delta feeds the tracer's writing-step preview,
+  // never the chat bubble, so the raw document stays behind the chat) so scenes
+  // appear progressively in the tracer instead of after the whole ~40s
+  // generation returns. Only the document-gen executor consumes `onDelta`; every
+  // other executor ignores the optional param.
   onStreamEvent?: (event: CesareStreamEvent) => void,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Record<string, Tool<any, any>> =>
@@ -4760,7 +4759,16 @@ const bridgeLegacyTools = (
             name: t.name,
             input,
           };
-          const result = await executor(block, db, projectId, access);
+          // #103 — forward nested-generation tokens as `gen-delta` (NOT
+          // text-delta): they feed the tracer's writing-step preview, never the
+          // chat bubble. Each event carries only the INCREMENTAL chunk (the
+          // client appends + tail-caps), so a 6k-char screenplay streams O(n)
+          // bytes, not O(n²) from re-sending the whole text-so-far each chunk.
+          const onDelta = onStreamEvent
+            ? (chunk: string) =>
+                onStreamEvent({ _tag: "gen-delta", text: chunk })
+            : undefined;
+          const result = await executor(block, db, projectId, access, onDelta);
           if (result.isErr()) return { error: result.error.message };
           try {
             return JSON.parse(result.value.content) as unknown;

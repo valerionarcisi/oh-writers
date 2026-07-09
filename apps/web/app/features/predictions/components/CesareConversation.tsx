@@ -1000,6 +1000,14 @@ export function LiveTrace({ steps }: { steps: ReadonlyArray<TraceStep> }) {
                 {step.entity ? step.entity.label : step.text}
               </span>
             )}
+            {step.preview ? (
+              <span
+                className={styles.liveTracePreview}
+                data-testid="cesare-gen-preview"
+              >
+                {step.preview}
+              </span>
+            ) : null}
           </li>
         ))}
       </ul>

@@ -1,5 +1,6 @@
 export {
   callHaiku,
+  streamGeneration,
   extractText,
   extractToolUse,
   loadAnthropicStreamingClient,

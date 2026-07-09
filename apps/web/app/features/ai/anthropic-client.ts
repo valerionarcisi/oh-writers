@@ -1,4 +1,10 @@
-import { APICallError, generateText, jsonSchema, tool as sdkTool } from "ai";
+import {
+  APICallError,
+  generateText,
+  jsonSchema,
+  streamText,
+  tool as sdkTool,
+} from "ai";
 import { anthropic } from "@ai-sdk/anthropic";
 import { ResultAsync } from "neverthrow";
 import { aiTelemetry } from "~/server/langfuse-config";
@@ -219,6 +225,84 @@ export const callHaiku = (
         stopReason: result.finishReason ?? null,
       };
     }),
+    (e) => new AnthropicError(operation, e),
+  );
+
+// #103 — streaming twin of callHaiku for the whole-document generators
+// (scaletta / treatment / screenplay). callHaiku is BLOCKING: the tracer shows
+// no progress for the ~40s the generation runs. streamGeneration uses streamText
+// and invokes `onDelta` for each text chunk as it arrives, so the caller can
+// forward tokens live. It is text-only (the generators never pass tools) and
+// reuses callHaiku's user-turn cache breakpoint (the generators pass fewShot: []
+// to callHaiku, so its second, empty fewShot system block is irrelevant here).
+//
+// It drains `fullStream`, NOT `textStream`, for two reasons the sibling loop
+// already learned the hard way (BUG-101, cesare-tools.ts): (1) `textStream` can
+// hang forever on a final step that yields no text deltas, whereas `fullStream`
+// always emits a terminal `finish` and closes; (2) `streamText`'s DEFAULT
+// onError only `console.error`s the error and lets `textStream` complete
+// normally — so a mid-stream API failure would be SWALLOWED and we'd return the
+// partial/empty text as a fake success. Re-throwing on the `error` part restores
+// callHaiku's fail-loud contract: the failure surfaces as an AnthropicError.
+export interface StreamGenerationParams {
+  readonly system: string;
+  readonly user: string;
+  readonly model?: string;
+  readonly maxTokens: number;
+}
+
+export const streamGeneration = (
+  params: StreamGenerationParams,
+  operation: string,
+  onDelta: (text: string) => void,
+): ResultAsync<string, AnthropicError> =>
+  ResultAsync.fromPromise(
+    (async () => {
+      const result = streamText({
+        model: anthropic(params.model ?? DEFAULT_MODEL),
+        system: [
+          {
+            role: "system" as const,
+            content: params.system,
+            providerOptions: {
+              anthropic: { cacheControl: { type: "ephemeral" } },
+            },
+          },
+        ],
+        messages: [
+          {
+            role: "user" as const,
+            content: [
+              {
+                type: "text" as const,
+                text: params.user,
+                providerOptions: {
+                  anthropic: { cacheControl: { type: "ephemeral" } },
+                },
+              },
+            ],
+          },
+        ],
+        maxOutputTokens: params.maxTokens,
+        experimental_telemetry: aiTelemetry(`stream-generation:${operation}`),
+        abortSignal: AbortSignal.timeout(CALL_TIMEOUT_MS),
+        maxRetries: 1,
+      });
+      let text = "";
+      for await (const part of result.fullStream) {
+        if (part.type === "text-delta") {
+          text += part.text;
+          onDelta(part.text);
+        } else if (part.type === "error") {
+          // streamText's default onError only logs; without this the failure
+          // would be swallowed and we'd return partial text as a fake success.
+          throw part.error instanceof Error
+            ? part.error
+            : new Error(String(part.error));
+        }
+      }
+      return text;
+    })(),
     (e) => new AnthropicError(operation, e),
   );
 

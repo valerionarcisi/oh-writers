@@ -10,7 +10,7 @@ import {
 } from "@oh-writers/db/schema";
 import { DocumentTypes, type DocumentType } from "@oh-writers/domain";
 import type { Db } from "~/server/db";
-import { callHaiku, extractText } from "~/features/ai";
+import { callHaiku, streamGeneration, extractText } from "~/features/ai";
 import {
   parseOutline,
   serializeOutline,
@@ -817,11 +817,18 @@ FADE TO BLACK.`,
 // Mock-only; never used on the real generation path.
 let mockGenerationNonce = 0;
 
+// #103 — when `onDelta` is supplied, the generation streams and forwards each
+// text chunk live (so scenes appear progressively in the tracer instead of after
+// a ~40s silent block). When absent, the blocking callHaiku path is used,
+// identical to before. Only the whole-document generators (scaletta / treatment
+// / screenplay) pass it; short one-shots (logline, single scene) leave it
+// undefined and gain nothing from streaming.
 const runGeneration = (
   systemPrompt: string,
   userPrompt: string,
   maxTokens: number,
   operation: string,
+  onDelta?: (text: string) => void,
 ): ResultAsync<string, CesareError> => {
   // Mock-mode escape hatch: short-circuit Sonnet calls when MOCK_AI=true or the
   // API key is missing. Keeps Vitest + Playwright deterministic and free.
@@ -842,7 +849,26 @@ const runGeneration = (
         `${text.slice(0, LOGLINE_HARD_CAP - suffix.length)}${suffix}`,
       );
     }
+    if (onDelta) onDelta(`${text}${suffix}`);
     return okAsync(`${text}${suffix}`);
+  }
+  if (onDelta) {
+    return streamGeneration(
+      {
+        system: systemPrompt,
+        user: userPrompt,
+        model: SONNET_MODEL,
+        maxTokens,
+      },
+      operation,
+      onDelta,
+    )
+      .mapErr((e) => new CesareError(`${operation} failed: ${e.message}`))
+      .andThen((text) =>
+        text.trim().length > 0
+          ? okAsync(repairMojibake(text))
+          : errAsync(new CesareError(`${operation}: model returned no text`)),
+      );
   }
   return callHaiku(
     {
@@ -1189,6 +1215,7 @@ const handleProposeScalettaFromSoggetto = (
   projectId: string,
   userIdFallback: string | null,
   sessionId: string | null = null,
+  onDelta?: (text: string) => void,
 ): ResultAsync<CreatedDraft, CesareError> =>
   loadDocumentForType(db, projectId, DocumentTypes.SOGGETTO).andThen((doc) => {
     if (!doc || doc.content.trim().length === 0) {
@@ -1222,6 +1249,7 @@ const handleProposeScalettaFromSoggetto = (
         user,
         3000,
         "cesare.proposeScaletta",
+        onDelta,
       )
         .map((raw) => {
           const parsed = parseScalettaList(raw);
@@ -1443,6 +1471,7 @@ const handleProposeTreatment = (
   userIdFallback: string | null,
   sessionId: string | null = null,
   userInstruction: string | null = null,
+  onDelta?: (text: string) => void,
 ): ResultAsync<CommitOutcome, CesareError> =>
   ResultAsync.combine([
     loadDocumentForType(db, projectId, DocumentTypes.TREATMENT),
@@ -1474,6 +1503,7 @@ const handleProposeTreatment = (
       user,
       3000,
       "cesare.proposeTreatment",
+      onDelta,
     )
       .map((s) => s.trim())
       .andThen((treatment) => {
@@ -1556,6 +1586,7 @@ const handleGenerateScreenplay = (
   input: ProposeInput,
   db: Db,
   projectId: string,
+  onDelta?: (text: string) => void,
 ): ResultAsync<GeneratedScreenplay, CesareError> =>
   ResultAsync.combine([
     loadScreenplayRowForProject(db, projectId),
@@ -1583,6 +1614,7 @@ const handleGenerateScreenplay = (
         user,
         6000,
         "cesare.generateScreenplay",
+        onDelta,
       )
         // NORMALISE to the editor's canonical Fountain dialect (BUG-N63 + #46/#53
         // root cause). The model is unreliable about element FORMATTING — it
@@ -1690,6 +1722,11 @@ export const executeDocumentGenTool = (
   // ("nuova versione" / "sovrascrivi") is honoured turn-wide rather than re-read
   // from each tool's paraphrased `instruction` (which caused the ask-loop).
   userInstruction: string | null = null,
+  // #103 — live token sink for the whole-document generators. When present, the
+  // scaletta / treatment / screenplay generation streams and forwards each chunk
+  // so the tracer fills progressively. Undefined for the short one-shots and on
+  // the non-streaming path (behaviour identical to before).
+  onDelta?: (text: string) => void,
 ): ResultAsync<ToolResult, CesareError> => {
   const input = block.input as ProposeInput;
   if (block.name === "propose_logline_from_screenplay") {
@@ -1739,6 +1776,7 @@ export const executeDocumentGenTool = (
       projectId,
       userIdFallback,
       sessionId,
+      onDelta,
     ).map((outcome) => successResult(block.id, outcomePayload(outcome)));
   }
   if (block.name === "edit_outline_scene") {
@@ -1758,10 +1796,11 @@ export const executeDocumentGenTool = (
       userIdFallback,
       sessionId,
       userInstruction,
+      onDelta,
     ).map((outcome) => successResult(block.id, outcomePayload(outcome)));
   }
   if (block.name === "generate_screenplay_from_narrative") {
-    return handleGenerateScreenplay(input, db, projectId).map((gen) =>
+    return handleGenerateScreenplay(input, db, projectId, onDelta).map((gen) =>
       successResult(block.id, screenplayGenPayload(gen)),
     );
   }

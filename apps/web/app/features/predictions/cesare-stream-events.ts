@@ -49,6 +49,16 @@ export type EntityRef = z.infer<typeof EntityRefSchema>;
  *                  can render tokens progressively instead of waiting for
  *                  `done`. Additive to the existing step-trace contract —
  *                  reasoning/reading/writing/tool events are unchanged.
+ * - `gen-delta`  — #103 — the accumulating text of a NESTED whole-document
+ *                  generation (scaletta / treatment / screenplay) as it streams.
+ *                  Distinct from `text-delta`: it does NOT append to the chat
+ *                  bubble (the raw document must not land in the chat — the doc
+ *                  updates live behind the chat, agentic-edit pattern). It feeds
+ *                  the live `preview` under the tail `writing` step so the tracer
+ *                  fills progressively instead of freezing for the ~40s the
+ *                  generation runs. Carries one raw INCREMENTAL chunk (the client
+ *                  appends + tail-caps), so a long document streams O(n) bytes,
+ *                  not O(n²) from re-sending the whole text-so-far each chunk.
  * - `done`       — terminal: carries the final assistant text (still embedding
  *                  the legacy `<!--ohw:…-->` markers) + the tool count.
  * - `error`      — terminal: the run failed; carries a user-facing message.
@@ -59,6 +69,7 @@ export const CesareStreamEventSchema = z.discriminatedUnion("_tag", [
   z.object({ _tag: z.literal("writing"), entity: EntityRefSchema }),
   z.object({ _tag: z.literal("tool"), name: z.string().min(1) }),
   z.object({ _tag: z.literal("text-delta"), text: z.string() }),
+  z.object({ _tag: z.literal("gen-delta"), text: z.string() }),
   z.object({
     _tag: z.literal("done"),
     result: z.string(),

@@ -314,6 +314,85 @@ describe("chatReducer — text-delta streaming (Task 4)", () => {
   });
 });
 
+describe("chatReducer — gen-delta streaming (#103)", () => {
+  const startWriting = (): ChatState => {
+    let state = send(
+      initialChatState(SESSION_A),
+      SESSION_A,
+      "rigenera tutta la scaletta",
+      { user: "u1", assistant: "a1" },
+    );
+    // The writing step is emitted eagerly before the nested generation runs.
+    state = chatReducer(state, {
+      type: "stream/step",
+      sessionId: SESSION_A,
+      assistantMessageId: "a1",
+      event: {
+        _tag: "writing",
+        entity: { domain: "outline", label: "Scaletta" },
+      },
+    });
+    return state;
+  };
+
+  it("accumulates incremental chunks into the tail writing step's preview, tail-capped", () => {
+    let state = startWriting();
+    // Each gen-delta carries a raw incremental chunk; the reducer appends them.
+    for (const chunk of ["1. INT. ", "CASA - ", "GIORNO"]) {
+      state = chatReducer(state, {
+        type: "stream/step",
+        sessionId: SESSION_A,
+        assistantMessageId: "a1",
+        event: { _tag: "gen-delta", text: chunk },
+      });
+    }
+    const assistant = activeThread(state)[1];
+    expect(assistant?.trace).toHaveLength(1);
+    expect(assistant?.trace[0]?.kind).toBe("writing");
+    expect(assistant?.trace[0]?.preview).toBe("1. INT. CASA - GIORNO");
+  });
+
+  it("keeps only the trailing 240 chars as chunks accumulate past the cap", () => {
+    let state = startWriting();
+    // 300 chars total across chunks → only the last 240 survive.
+    for (let i = 0; i < 6; i++) {
+      state = chatReducer(state, {
+        type: "stream/step",
+        sessionId: SESSION_A,
+        assistantMessageId: "a1",
+        event: { _tag: "gen-delta", text: "S".repeat(50) },
+      });
+    }
+    expect(activeThread(state)[1]?.trace[0]?.preview).toBe("S".repeat(240));
+  });
+
+  it("does NOT append the generated document to the chat bubble content", () => {
+    let state = startWriting();
+    state = chatReducer(state, {
+      type: "stream/step",
+      sessionId: SESSION_A,
+      assistantMessageId: "a1",
+      event: { _tag: "gen-delta", text: "1. INT. CASA - GIORNO" },
+    });
+    // The raw document stays behind the chat — the bubble is untouched.
+    expect(activeThread(state)[1]?.content).toBe("");
+  });
+
+  it("adds no phantom step when no writing step precedes the gen-delta", () => {
+    let state = send(initialChatState(SESSION_A), SESSION_A, "x", {
+      user: "u1",
+      assistant: "a1",
+    });
+    state = chatReducer(state, {
+      type: "stream/step",
+      sessionId: SESSION_A,
+      assistantMessageId: "a1",
+      event: { _tag: "gen-delta", text: "orphan" },
+    });
+    expect(activeThread(state)[1]?.trace).toHaveLength(0);
+  });
+});
+
 // [OHW-051] — hydration of a session thread from persisted history.
 
 const persisted = (id: string, content: string): ChatMessage => ({

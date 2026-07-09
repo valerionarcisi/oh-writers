@@ -68,6 +68,10 @@ export type SkillExecutor = (
   db: Db,
   projectId: string,
   access: ProjectAccess,
+  // #103 — optional live token sink. Only the document-gen executor uses it (to
+  // stream whole-document generation into the tracer); every other executor
+  // ignores it. Optional so no existing executor or callsite has to change.
+  onDelta?: (text: string) => void,
 ) => ResultAsync<ToolResult, CesareError>;
 
 // ─── SkillBuildContext ────────────────────────────────────────────────────────

@@ -44,7 +44,13 @@ export const buildDocumentGenSkill = (
   id: "document-gen",
   tools: [...CESARE_DOCUMENT_GEN_TOOLS] as Skill["tools"],
   guidanceBlock: buildDocumentGenGuidance(),
-  executor: (block, db, projectId): ReturnType<Skill["executor"]> => {
+  executor: (
+    block,
+    db,
+    projectId,
+    _access,
+    onDelta,
+  ): ReturnType<Skill["executor"]> => {
     if (isDocumentGenToolName(block.name)) {
       return executeDocumentGenTool(
         block,
@@ -53,6 +59,7 @@ export const buildDocumentGenSkill = (
         userIdFallback,
         sessionId,
         userInstruction,
+        onDelta,
       );
     }
     const errorResult: ToolResult = {

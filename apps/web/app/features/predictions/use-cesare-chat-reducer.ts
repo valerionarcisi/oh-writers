@@ -31,6 +31,9 @@ export interface TraceStep {
   readonly entity: EntityRef | null;
   /** Reasoning text or tool name. */
   readonly text: string;
+  /** #103 — live tail of a streaming whole-document generation, shown under the
+   *  `writing` step so the tracer fills progressively. Set by `gen-delta`. */
+  readonly preview?: string;
 }
 
 // State is keyed by session id so each thread is isolated. The active session's
@@ -137,9 +140,11 @@ const traceStepForEvent = (event: CesareStreamEvent): TraceStep | null =>
       entity: null,
       text: e.name,
     }))
-    // text-delta is not a trace step — handled separately in the reducer
-    // (appended to the message's content, see the "stream/step" case below).
+    // text-delta / gen-delta are not their own trace steps — handled separately
+    // in the reducer (text-delta appends to the message content; gen-delta feeds
+    // the tail writing step's preview). See the "stream/step" case below.
     .with({ _tag: "text-delta" }, () => null)
+    .with({ _tag: "gen-delta" }, () => null)
     .with({ _tag: "done" }, () => null)
     .with({ _tag: "error" }, () => null)
     .exhaustive();
@@ -174,6 +179,31 @@ const appendTraceStep = (
   const last = trace[trace.length - 1];
   if (last && isSamePhase(last, step)) return trace;
   return [...trace, step];
+};
+
+// #103 — how many trailing chars of the streaming generation to keep as the
+// live preview under the writing step. A screenplay can reach ~6k chars; the
+// tail is all the user needs to see it's alive and moving.
+const GEN_PREVIEW_TAIL = 240;
+
+/**
+ * #103 — append a streaming-generation chunk to the tail `writing` step's
+ * preview, keeping only the trailing `GEN_PREVIEW_TAIL` chars. Each `gen-delta`
+ * carries the raw incremental chunk (O(n) wire, not the whole text-so-far), so
+ * we accumulate here. The writing step is emitted eagerly the instant the tool
+ * starts (before the nested generation runs), so it's already the tail when
+ * chunks arrive. If — defensively — no writing step is present yet, the trace is
+ * returned untouched (the preview is a nice-to-have, never a phantom step).
+ */
+const appendTailWritingPreview = (
+  trace: ReadonlyArray<TraceStep>,
+  chunk: string,
+): ReadonlyArray<TraceStep> => {
+  const lastIndex = trace.length - 1;
+  const last = trace[lastIndex];
+  if (!last || last.kind !== "writing") return trace;
+  const preview = `${last.preview ?? ""}${chunk}`.slice(-GEN_PREVIEW_TAIL);
+  return trace.map((s, i) => (i === lastIndex ? { ...s, preview } : s));
 };
 
 // ─── Reducer ───────────────────────────────────────────────────────────────────
@@ -225,6 +255,23 @@ export const chatReducer = (state: ChatState, action: ChatAction): ChatState =>
           mapMessage(thread, a.assistantMessageId, (m) => ({
             ...m,
             content: m.content + delta,
+          })),
+        );
+      }
+      // #103 — the nested generation's incremental chunks feed the tail writing
+      // step's preview (a live tail shown under "STO SCRIVENDO Scaletta"), NOT
+      // the chat bubble: the raw document must stay behind the chat. Each event
+      // is one raw chunk; appendTailWritingPreview accumulates + tail-caps so a
+      // 6k-char screenplay never bloats the trace.
+      if (a.event._tag === "gen-delta") {
+        const chunk = a.event.text;
+        const thread = threadFor(state, a.sessionId);
+        return withThread(
+          state,
+          a.sessionId,
+          mapMessage(thread, a.assistantMessageId, (m) => ({
+            ...m,
+            trace: appendTailWritingPreview(m.trace, chunk),
           })),
         );
       }
