@@ -1,4 +1,11 @@
 import type { UserId } from "@oh-writers/domain";
+import type { Db } from "~/server/db";
+
+// ⚠️ Bundle-boundary rule (live regression, gate 2026-07-10): this module is
+// imported by the root-route server fn, whose file is reachable from the
+// client graph. `ai-providers.server` drags better-auth server context and
+// the db module — it must load LAZILY inside the function, never statically,
+// or the client bundle wedges at module init.
 
 /**
  * Spec 84 §5 — resolves whether the given user currently has a working AI
@@ -11,19 +18,41 @@ import type { UserId } from "@oh-writers/domain";
  * keep the signature. `db` is threaded explicitly (not imported ambiently)
  * so this stays trivially testable without a real database.
  *
- * Spec 84 Wave 2 wires this to provider state + trial quota. For this wave it
- * always returns true (AI stays on) unless overridden by the dev/test-only
- * mock hook below, so the AI-off state is reachable in E2E without shipping
- * real provider/quota resolution yet.
+ * Spec 84 Wave 2 (this change): TRUE when the user has a saved provider row
+ * (`hasAiProviderForUser` — cheap exists-query, no decryption), OR — the
+ * transitional de-platform-checkpoint fallback, same rationale as the
+ * gateway's own platform fallback in `features/ai/model-resolver.server.ts`
+ * — the platform's own Anthropic key is configured. Onboarding trial quota
+ * (`Features.AiTrialQuota`) is a separate, not-yet-built OR-branch; it is
+ * NOT this wave's concern (this function's own OR clause already covers
+ * "there is a working AI source" for the platform-fallback period).
+ * Fail-open on a DB error: a broken provider lookup must not itself hide
+ * every AI surface in the app — same fail-open contract as
+ * `checkDailyBudget`/`recordAiUsage` in features/ai.
  */
 export async function resolveAiEnabled(
   userId: UserId,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- Spec 84 Wave 2 wires the real per-user lookup through `db`.
-  db: unknown,
+  db: Db,
 ): Promise<boolean> {
   const override = readAiEnabledTestOverride();
   if (override !== null) return override;
-  return true;
+
+  // Mock mode IS an AI source: the scripted mock client answers every AI
+  // call, so the surfaces must stay on in dev/E2E even when the environment
+  // has no real key (CI never sets ANTHROPIC_API_KEY). The test override
+  // above still wins, so the AI-off E2E can force OFF under mock.
+  if (process.env["MOCK_AI"] === "true") return true;
+
+  const { hasAiProviderForUser } =
+    await import("~/features/ai-providers/ai-providers.server");
+  const hasProvider = await hasAiProviderForUser(userId, db).match(
+    (has) => has,
+    () => false,
+  );
+  if (hasProvider) return true;
+
+  // Spec 84 de-platform checkpoint removes this default once trial quota ships.
+  return Boolean(process.env["ANTHROPIC_API_KEY"]);
 }
 
 /**

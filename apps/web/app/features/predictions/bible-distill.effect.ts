@@ -81,7 +81,6 @@ export const computeBibleFingerprint = (
 
 // ─── Tool definition ─────────────────────────────────────────────────────────
 
-const SONNET_MODEL = "claude-sonnet-5";
 const EMIT_TOOL_NAME = "emit_film_bible";
 
 const EMIT_TOOL = {
@@ -195,7 +194,10 @@ const buildCallParams = (input: DistillInput): CallHaikuParams => ({
   system: DISTILL_SYSTEM_PROMPT,
   fewShot: {},
   user: buildDistillUserMessage(input),
-  model: SONNET_MODEL,
+  // Spec 84 (Wave 2) — tier, not a hardcoded model ID: resolves through the
+  // gateway's tier→model mapping (today the platform's, since this ambient
+  // flow has no userId in scope to resolve a BYOK provider for).
+  tier: "sonnet",
   maxTokens: 2048,
   tools: [EMIT_TOOL],
   toolChoice: { type: "tool", name: EMIT_TOOL_NAME },

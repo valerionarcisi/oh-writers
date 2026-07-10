@@ -1289,24 +1289,29 @@ function AppShellInner({
         }
       }
 
-      items.push(
-        {
-          id: "cesare:open",
-          label: t("shell.palette.openCesare"),
-          group: t("shell.palette.groupCesare"),
-          icon: "comment",
-          keywords: ["assistente", "chat", "ai"],
-          onSelect: () => openCesare(),
-        },
-        {
-          id: "cesare:new-session",
-          label: t("shell.palette.newCesareSession"),
-          group: t("shell.palette.groupCesare"),
-          icon: "plus",
-          keywords: ["sessione", "session", "nuova", "chat"],
-          onSelect: () => onCesareSessionNew?.(),
-        },
-      );
+      // Spec 84 §5 — the command palette is an AI surface too: with AI off,
+      // ⌘K must not offer Cesare entries (found live by the Chrome gate; the
+      // dock/rail gating alone left this reachable).
+      if (isAiEnabled) {
+        items.push(
+          {
+            id: "cesare:open",
+            label: t("shell.palette.openCesare"),
+            group: t("shell.palette.groupCesare"),
+            icon: "comment",
+            keywords: ["assistente", "chat", "ai"],
+            onSelect: () => openCesare(),
+          },
+          {
+            id: "cesare:new-session",
+            label: t("shell.palette.newCesareSession"),
+            group: t("shell.palette.groupCesare"),
+            icon: "plus",
+            keywords: ["sessione", "session", "nuova", "chat"],
+            onSelect: () => onCesareSessionNew?.(),
+          },
+        );
+      }
     }
 
     return items;
@@ -1318,6 +1323,7 @@ function AppShellInner({
     onCesareSessionNew,
     t,
     enabledFeatures,
+    isAiEnabled,
   ]);
 
   // ── Rail tools — empty since N-49: the last tool ("+", new project) moved

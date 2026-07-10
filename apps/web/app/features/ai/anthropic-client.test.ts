@@ -1,7 +1,15 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const generateTextMock = vi.fn();
 const streamTextMock = vi.fn();
+
+// Call counts must not leak between tests (several assert
+// `toHaveBeenCalledTimes(1)`); `mockResolvedValue`/`mockReturnValue` are
+// re-armed at the top of each test that needs them, so clearing (not
+// resetting, which would also wipe those factory functions) is enough.
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 
 vi.mock("ai", async () => {
   const actual = await vi.importActual<typeof import("ai")>("ai");
@@ -14,6 +22,7 @@ vi.mock("ai", async () => {
 
 vi.mock("@ai-sdk/anthropic", () => ({
   anthropic: vi.fn((model: string) => ({ modelId: model })),
+  createAnthropic: vi.fn(() => vi.fn((model: string) => ({ modelId: model }))),
 }));
 
 vi.mock("~/server/langfuse-config", () => ({
@@ -32,6 +41,27 @@ vi.mock("./ai-usage.server", () => ({
   recordAiUsage: vi.fn(async () => undefined),
   AiBudgetExceededError: class AiBudgetExceededError {
     readonly _tag = "AiBudgetExceededError" as const;
+  },
+}));
+
+// Spec 84 (Wave 2) — callHaiku's userId path resolves through
+// resolveModelClient. Mocked here so these tests stay focused on callHaiku's
+// OWN wiring (does it call the resolver, does it use the resolved model) —
+// the resolver's own branching is covered by model-resolver.server.test.ts.
+const resolveModelClientMock = vi.fn();
+vi.mock("./model-resolver.server", () => ({
+  resolveModelClient: (...args: unknown[]) => resolveModelClientMock(...args),
+  isProviderAuthError: vi.fn(() => false),
+  AiProviderAuthError: class AiProviderAuthError {
+    readonly _tag = "AiProviderAuthError" as const;
+    constructor(
+      readonly provider: string,
+      readonly statusCode: number | undefined,
+    ) {}
+  },
+  AiModelsNotChosenError: class AiModelsNotChosenError {
+    readonly _tag = "AiModelsNotChosenError" as const;
+    constructor(readonly userId: string) {}
   },
 }));
 
@@ -74,6 +104,75 @@ describe("callHaiku — timeout/retry bound (BUG-101)", () => {
       expect(result.error.retryable).toBe(false);
       expect(result.error.cause).toContain("timeout");
     }
+  });
+});
+
+// Minimal ResultAsync-shaped fake: only the methods resolveCallModel/callHaiku
+// actually invoke on the resolver's return value (`.mapErr`, `.andThen`, `then`
+// for the final await inside ResultAsync.fromPromise's PromiseLike contract).
+const fakeResolvedModelClientResult = (value: {
+  model: unknown;
+  modelId: string;
+  source: "user" | "platform";
+}) => ({
+  mapErr: () => fakeResolvedModelClientResult(value),
+  andThen: (f: (v: typeof value) => unknown) => f(value),
+  then: (resolve: (v: { isOk: () => true; value: typeof value }) => unknown) =>
+    Promise.resolve({ isOk: () => true as const, value }).then(resolve),
+});
+
+describe("callHaiku — BYOK model resolution (Spec 84 Wave 2)", () => {
+  it("with a userId, resolves the model through resolveModelClient instead of building anthropic(model) directly", async () => {
+    resolveModelClientMock.mockReturnValue(
+      fakeResolvedModelClientResult({
+        model: { modelId: "user-chosen-haiku" },
+        modelId: "user-chosen-haiku",
+        source: "user",
+      }),
+    );
+    generateTextMock.mockResolvedValue({
+      text: "ok",
+      toolCalls: [],
+      finishReason: "stop",
+    });
+    const { callHaiku } = await import("./anthropic-client");
+
+    await callHaiku(
+      {
+        system: "sys",
+        fewShot: [],
+        user: "hi",
+        maxTokens: 100,
+        userId: "user-1",
+        tier: "haiku",
+      },
+      "test.op",
+    );
+
+    expect(resolveModelClientMock).toHaveBeenCalledWith({
+      userId: "user-1",
+      tier: "haiku",
+      db: undefined,
+    });
+    expect(generateTextMock).toHaveBeenCalledTimes(1);
+    const call = generateTextMock.mock.calls[0]?.[0];
+    expect(call.model).toEqual({ modelId: "user-chosen-haiku" });
+  });
+
+  it("without a userId, never calls resolveModelClient — legacy path unchanged", async () => {
+    generateTextMock.mockResolvedValue({
+      text: "ok",
+      toolCalls: [],
+      finishReason: "stop",
+    });
+    const { callHaiku } = await import("./anthropic-client");
+
+    await callHaiku(
+      { system: "sys", fewShot: [], user: "hi", maxTokens: 100 },
+      "test.op",
+    );
+
+    expect(resolveModelClientMock).not.toHaveBeenCalled();
   });
 });
 

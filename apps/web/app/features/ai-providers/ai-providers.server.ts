@@ -191,6 +191,24 @@ export const deleteAiProvider = createServerFn({ method: "POST" }).handler(
   },
 );
 
+// ─── Existence check (Spec 84 §5, AI_ENABLED seam) ─────────────────────────
+
+// Cheap exists-query for `resolveAiEnabled` (features/feature-flags): whether
+// this user has a provider row at all, no decryption needed — the feature
+// flag only cares "is there a working AI source", not the key itself.
+export const hasAiProviderForUser = (
+  userId: string,
+  db: Db,
+): ResultAsync<boolean, DbError> =>
+  ResultAsync.fromPromise(
+    db
+      .select({ userId: aiProviders.userId })
+      .from(aiProviders)
+      .where(eq(aiProviders.userId, userId))
+      .limit(1),
+    (e) => new DbError("hasAiProviderForUser", e),
+  ).andThen((rows) => ok(rows.length > 0));
+
 // ─── Gateway-internal resolution (Spec 83 Wave 2 consumes this) ───────────
 
 export type ResolvedAiProvider = {

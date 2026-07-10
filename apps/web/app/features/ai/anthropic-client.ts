@@ -4,10 +4,12 @@ import {
   jsonSchema,
   streamText,
   tool as sdkTool,
+  type LanguageModel,
 } from "ai";
 import { anthropic } from "@ai-sdk/anthropic";
 import { ResultAsync, errAsync } from "neverthrow";
 import { aiTelemetry } from "~/server/langfuse-config";
+import type { Db } from "~/server/db";
 import {
   checkDailyBudget,
   recordAiUsage,
@@ -15,9 +17,17 @@ import {
   type AiUsageTrigger,
   type TokenUsage,
 } from "./ai-usage.server";
+import {
+  resolveModelClient,
+  isProviderAuthError,
+  AiProviderAuthError,
+  AiModelsNotChosenError,
+  type AiProviderResolutionError,
+} from "./model-resolver.server";
+import type { ModelTier } from "~/features/predictions/cesare-model-router";
 
-export { AiBudgetExceededError };
-export type { AiUsageTrigger };
+export { AiBudgetExceededError, AiProviderAuthError, AiModelsNotChosenError };
+export type { AiUsageTrigger, AiProviderResolutionError };
 
 const DEFAULT_MODEL = "claude-haiku-4-5";
 
@@ -64,6 +74,13 @@ export interface CallHaikuParams {
   // hard-capped; user flows never blocked) and the usage ledger. Defaults to
   // "user" so existing callers are unaffected.
   readonly trigger?: AiUsageTrigger;
+  // Spec 84 (Wave 2) — BYOK seam. When set together with `tier`, the call
+  // resolves through `resolveModelClient` (user's own provider, or platform
+  // fallback) instead of building `anthropic(model)` directly. Omitted
+  // callers keep the legacy `model`-only behaviour unchanged.
+  readonly userId?: string;
+  readonly tier?: ModelTier;
+  readonly db?: Db;
 }
 
 export interface TextBlock {
@@ -105,6 +122,33 @@ export class AnthropicError {
     this.retryable = isRetryableModelError(cause);
   }
 }
+
+// Spec 84 (Wave 2) — resolve the model client for a call:
+//   - true legacy: neither `userId` nor `tier` set → build `anthropic(model)`
+//     directly, byte-for-byte the pre-Spec-84 behaviour (never touches the
+//     resolver, never queries the DB). This is the escape hatch for callers
+//     that still pass a concrete model ID and nothing else.
+//   - tier-aware: `tier` and/or `userId` set → go through `resolveModelClient`,
+//     which resolves the user's own BYOK provider when `userId` is present,
+//     or the platform tier mapping otherwise (`tier` defaults to "haiku",
+//     callHaiku's own tier, when omitted alongside a `userId`).
+const resolveCallModel = (
+  params: Pick<CallHaikuParams, "model" | "userId" | "tier" | "db">,
+  operation: string,
+): ResultAsync<{ model: LanguageModel; modelId: string }, AnthropicError> => {
+  if (!params.userId && !params.tier) {
+    const modelId = params.model ?? DEFAULT_MODEL;
+    return ResultAsync.fromSafePromise(
+      Promise.resolve({ model: anthropic(modelId), modelId }),
+    );
+  }
+  const tier: ModelTier = params.tier ?? "haiku";
+  return resolveModelClient({
+    userId: params.userId,
+    tier,
+    db: params.db,
+  }).mapErr((e) => new AnthropicError(operation, `${e._tag}: ${e.message}`));
+};
 
 // Minimal typing for the streaming slice of the SDK used by llm-spoglio.
 // The SDK's MessageStream.on("inputJson", ...) fires for each partial JSON
@@ -190,12 +234,13 @@ const extractUsage = (
 
 const runGenerateText = (
   params: CallHaikuParams,
-  model: string,
+  model: LanguageModel,
+  modelId: string,
   operation: string,
-): ResultAsync<HaikuResult, AnthropicError> =>
+): ResultAsync<HaikuResult, AnthropicError | AiProviderAuthError> =>
   ResultAsync.fromPromise(
     generateText({
-      model: anthropic(model),
+      model,
       system: [
         {
           role: "system" as const,
@@ -249,9 +294,10 @@ const runGenerateText = (
       // not add insert latency to the call path — review finding, Spec 83 W1.
       void recordAiUsage({
         operation,
-        model,
+        model: modelId,
         trigger: params.trigger ?? "user",
         usage: extractUsage(result.usage, result.providerMetadata),
+        userId: params.userId,
       });
       const toolUseBlocks: ToolUseBlock[] = result.toolCalls.map((tc) => ({
         type: "tool_use" as const,
@@ -270,22 +316,36 @@ const runGenerateText = (
         stopReason: result.finishReason ?? null,
       };
     }),
-    (e) => new AnthropicError(operation, e),
+    // Spec 84 §6 — a user's own configured key that gets rejected (401/403)
+    // surfaces as AiProviderAuthError, never a silent fallback to the
+    // platform key. Every other failure keeps the existing AnthropicError
+    // shape unchanged.
+    (e) =>
+      params.userId && isProviderAuthError(e)
+        ? new AiProviderAuthError(
+            "anthropic",
+            APICallError.isInstance(e) ? e.statusCode : undefined,
+          )
+        : new AnthropicError(operation, e),
   );
 
 export const callHaiku = (
   params: CallHaikuParams,
   operation: string,
-): ResultAsync<HaikuResult, AnthropicError | AiBudgetExceededError> => {
+): ResultAsync<
+  HaikuResult,
+  AnthropicError | AiBudgetExceededError | AiProviderAuthError
+> => {
   const trigger: AiUsageTrigger = params.trigger ?? "user";
-  const model = params.model ?? DEFAULT_MODEL;
   return ResultAsync.fromPromise(
     checkDailyBudget(trigger),
     (e) => new AnthropicError(operation, e),
   ).andThen((budgetCheck) =>
     budgetCheck.isErr()
       ? errAsync(budgetCheck.error)
-      : runGenerateText(params, model, operation),
+      : resolveCallModel(params, operation).andThen(({ model, modelId }) =>
+          runGenerateText(params, model, modelId, operation),
+        ),
   );
 };
 
@@ -312,15 +372,20 @@ export interface StreamGenerationParams {
   readonly maxTokens: number;
   // Spec 83 (Wave 1) — see CallHaikuParams.trigger. Defaults to "user".
   readonly trigger?: AiUsageTrigger;
+  // Spec 84 (Wave 2) — see CallHaikuParams.userId/tier/db.
+  readonly userId?: string;
+  readonly tier?: ModelTier;
+  readonly db?: Db;
 }
 
 const runStreamGeneration = (
   params: StreamGenerationParams,
-  model: string,
+  model: LanguageModel,
+  modelId: string,
   operation: string,
   onDelta: (text: string) => void,
   abortSignal: AbortSignal | undefined,
-): ResultAsync<string, AnthropicError> =>
+): ResultAsync<string, AnthropicError | AiProviderAuthError> =>
   ResultAsync.fromPromise(
     (async () => {
       const timeoutSignal = AbortSignal.timeout(CALL_TIMEOUT_MS);
@@ -328,7 +393,7 @@ const runStreamGeneration = (
         ? AbortSignal.any([abortSignal, timeoutSignal])
         : timeoutSignal;
       const result = streamText({
-        model: anthropic(model),
+        model,
         system: [
           {
             role: "system" as const,
@@ -380,13 +445,20 @@ const runStreamGeneration = (
       ]);
       void recordAiUsage({
         operation,
-        model,
+        model: modelId,
         trigger: params.trigger ?? "user",
         usage: extractUsage(usage, providerMetadata),
+        userId: params.userId,
       });
       return text;
     })(),
-    (e) => new AnthropicError(operation, e),
+    (e) =>
+      params.userId && isProviderAuthError(e)
+        ? new AiProviderAuthError(
+            "anthropic",
+            APICallError.isInstance(e) ? e.statusCode : undefined,
+          )
+        : new AnthropicError(operation, e),
   );
 
 export const streamGeneration = (
@@ -399,16 +471,27 @@ export const streamGeneration = (
   // instead of leaking it to run — and keep billing — to its own timeout. Absent
   // on the non-streaming / test paths, where only the timeout applies (unchanged).
   abortSignal?: AbortSignal,
-): ResultAsync<string, AnthropicError | AiBudgetExceededError> => {
+): ResultAsync<
+  string,
+  AnthropicError | AiBudgetExceededError | AiProviderAuthError
+> => {
   const trigger: AiUsageTrigger = params.trigger ?? "user";
-  const model = params.model ?? DEFAULT_MODEL;
   return ResultAsync.fromPromise(
     checkDailyBudget(trigger),
     (e) => new AnthropicError(operation, e),
   ).andThen((budgetCheck) =>
     budgetCheck.isErr()
       ? errAsync(budgetCheck.error)
-      : runStreamGeneration(params, model, operation, onDelta, abortSignal),
+      : resolveCallModel(params, operation).andThen(({ model, modelId }) =>
+          runStreamGeneration(
+            params,
+            model,
+            modelId,
+            operation,
+            onDelta,
+            abortSignal,
+          ),
+        ),
   );
 };
 

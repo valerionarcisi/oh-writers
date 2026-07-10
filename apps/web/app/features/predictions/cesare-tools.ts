@@ -61,8 +61,9 @@ import {
 } from "@oh-writers/domain";
 import type { Db } from "~/server/db";
 import type { ProjectAccess } from "~/server/access";
-import { callHaiku, extractText } from "~/features/ai";
+import { callHaiku, extractText, resolveModelClient } from "~/features/ai";
 import { fromResultAsync } from "~/server/effect/interop";
+import { HAIKU_MODEL, type ModelTier } from "./cesare-model-router";
 import type { SkillExecutor, AnthropicTool } from "./skills/types";
 import { CesareError } from "./cesare.errors";
 import {
@@ -2652,6 +2653,14 @@ interface RunToolLoopArgs {
    * the non-streaming path, where behaviour is identical to before.
    */
   abortSignal?: AbortSignal;
+  /**
+   * Spec 84 (Wave 2) — the signed-in user this turn belongs to. When set, the
+   * production path resolves the model client through `resolveModelClient`
+   * (the user's own BYOK provider, or the platform fallback) instead of
+   * calling `anthropic(args.model)` directly. Undefined on paths that don't
+   * carry a user (legacy callers, tests) — behaviour there is unchanged.
+   */
+  userId?: string;
 }
 
 /**
@@ -3194,15 +3203,46 @@ const logCacheUsage = (
 // never hang unbounded and leave the tracer stuck.
 const LOOP_TIMEOUT_MS = 90_000;
 
+// Spec 84 (Wave 2) — the tool loop only ever runs the platform's own two
+// model IDs today (cesare-model-router's HAIKU_MODEL/SONNET_MODEL), so the
+// concrete `args.model` string can be mapped back to its tier deterministically.
+// Anything else (a mock ID, a future non-router caller) defaults to "haiku" —
+// the cheaper tier — rather than guessing sonnet.
+const tierForModelId = (modelId: string): ModelTier =>
+  modelId === HAIKU_MODEL ? "haiku" : "sonnet";
+
 const runProductionToolLoopEffect = (
   args: RunToolLoopArgs,
 ): Effect.Effect<string, CesareError> => {
-  // Resolve the language model: mock model when MOCK_AI=true, real Anthropic
-  // model otherwise. Both paths go through the same streamText call.
-  const resolvedModel = args.mockModel ?? anthropic(args.model);
-
   return Effect.tryPromise({
     try: async (): Promise<string> => {
+      // Resolve the language model: mock model when MOCK_AI=true; otherwise
+      // BYOK-aware resolution when a userId is available, falling back to the
+      // legacy `anthropic(args.model)` build when it is not (behaviour
+      // unchanged for callers that don't thread a user through yet).
+      const resolvedModel = args.mockModel
+        ? args.mockModel
+        : args.userId
+          ? (
+              await resolveModelClient({
+                userId: args.userId,
+                tier: tierForModelId(args.model),
+                db: args.db,
+              })
+            ).match(
+              (resolved) => resolved.model,
+              (e) => {
+                // Re-thrown as a plain Error (not CesareError — the outer
+                // `catch` below wraps whatever reaches it as `CesareError`,
+                // and CesareError is a plain value object so `String()`ing
+                // one directly would lose the message).
+                throw new Error(
+                  `Model resolution failed: ${e._tag}: ${e.message}`,
+                );
+              },
+            )
+          : anthropic(args.model);
+
       const textAccumulator: string[] = [];
       let toolsExecuted = 0;
       // Instrumentation only (no stopWhen change yet) — measure the real
@@ -4827,6 +4867,11 @@ export const runUnifiedToolLoop = (
     model,
     sdkTools,
     mockModel: resolveMockModel(),
+    // Spec 84 (Wave 2) — `access` already carries the signed-in user (it's
+    // the withProjectAccess pipeline's own identity), so this is the one
+    // place the unified tool loop needs to thread userId through to model
+    // resolution: no new parameter needed on this function's public surface.
+    userId: access.user.id,
     executor: (block, dbArg, projectIdArg) =>
       executor(block, dbArg, projectIdArg, access),
     ...(onStreamEvent ? { onStreamEvent } : {}),
