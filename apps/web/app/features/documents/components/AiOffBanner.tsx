@@ -10,13 +10,9 @@ import { useButton } from "react-aria";
 import { useRouter } from "@tanstack/react-router";
 import { Button } from "@oh-writers/ui";
 import { useTranslation } from "~/features/i18n";
+import { SETTINGS_ROUTE_PATH as AI_SETTINGS_ROUTE } from "~/features/ai-providers/openrouter-routes.const";
 import { useAiOffBannerDismissed } from "./use-ai-off-banner-dismissed";
 import styles from "./AiOffBanner.module.css";
-
-// Spec 84 Wave 3 wires the wizard route (the provider-connect flow, Spec 84
-// §2). Until then this points at the existing user-settings page, the
-// closest reachable real destination.
-const AI_SETTINGS_ROUTE = "/settings";
 
 export interface AiOffBannerProps {
   /** Current user id — scopes the dismissal to this user (localStorage key). */

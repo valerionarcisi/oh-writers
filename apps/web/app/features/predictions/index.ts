@@ -43,7 +43,10 @@ export {
   useCreateSession,
   useRenameSession,
   useDeleteSession,
+  usePinSession,
   DEFAULT_NEW_SESSION_TITLE,
+  MAX_PINNED_SESSIONS,
+  PinLimitReachedError,
 } from "./sessions";
 export type { CesareSession } from "./sessions";
 export { messagesQueryKey, messagesQueryOptions } from "./messages";

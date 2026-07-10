@@ -105,11 +105,11 @@ describe("selectRecommendedModels — the filter RULE, no hardcoded IDs (Spec 84
     const result = selectRecommendedModels(catalogue);
     expect(result).not.toBeNull();
     if (!result) return;
-    expect(result.haiku.id).toBe("anthropic/zephyr-nova-9-cheap");
+    expect(result.fast.id).toBe("anthropic/zephyr-nova-9-cheap");
     // NOT "-quality" (the priciest, flagship-class): the quality slot is the
     // next distinct price tier above the budget slot, so a new flagship never
     // silently becomes the recommended default.
-    expect(result.sonnet.id).toBe("anthropic/zephyr-nova-9-mid");
+    expect(result.quality.id).toBe("anthropic/zephyr-nova-9-mid");
   });
 
   it("adapts automatically when a new fictional model appears with a later created date and different price — no code change needed", () => {
@@ -136,8 +136,8 @@ describe("selectRecommendedModels — the filter RULE, no hardcoded IDs (Spec 84
 
     const beforeResult = selectRecommendedModels(before);
     const afterResult = selectRecommendedModels(afterRelease);
-    expect(beforeResult?.haiku.id).toBe("anthropic/model-alpha");
-    expect(afterResult?.haiku.id).toBe("anthropic/model-gamma-brand-new");
+    expect(beforeResult?.fast.id).toBe("anthropic/model-alpha");
+    expect(afterResult?.fast.id).toBe("anthropic/model-gamma-brand-new");
   });
 
   it("returns the same model for both slots when only one anthropic model exists", () => {
@@ -145,8 +145,8 @@ describe("selectRecommendedModels — the filter RULE, no hardcoded IDs (Spec 84
     const result = selectRecommendedModels(catalogue);
     expect(result).not.toBeNull();
     if (!result) return;
-    expect(result.haiku.id).toBe("anthropic/only-one");
-    expect(result.sonnet.id).toBe("anthropic/only-one");
+    expect(result.fast.id).toBe("anthropic/only-one");
+    expect(result.quality.id).toBe("anthropic/only-one");
   });
 });
 

@@ -25,9 +25,10 @@ export const aiProviders = pgTable(
     provider: text("provider", { enum: ["openrouter", "anthropic"] }).notNull(),
     apiKeyEncrypted: text("api_key_encrypted").notNull(),
     keyLast4: text("key_last4").notNull(),
-    // { haiku: string; sonnet: string } — tier -> concrete model ID, a user
-    // choice snapshot from the live catalogue, never a code constant.
-    models: jsonb("models").$type<{ haiku: string; sonnet: string }>(),
+    // { fast: string; quality: string } — tier -> concrete model ID, a user
+    // choice snapshot from the live catalogue, never a code constant. Tier
+    // keys are ROLES (budget vs quality), not model names.
+    models: jsonb("models").$type<{ fast: string; quality: string }>(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

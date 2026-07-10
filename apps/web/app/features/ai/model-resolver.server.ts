@@ -7,8 +7,8 @@ import type { Db } from "~/server/db";
 import type { AiProviderCryptoError } from "~/features/ai-providers/crypto.server";
 import type { ResolvedAiProvider } from "~/features/ai-providers/ai-providers.server";
 import {
-  HAIKU_MODEL,
-  SONNET_MODEL,
+  FAST_TIER_MODEL,
+  QUALITY_TIER_MODEL,
   type ModelTier,
 } from "~/features/predictions/cesare-model-router";
 
@@ -82,7 +82,7 @@ export interface ResolveModelClientParams {
 // quota ships; until then it is the only source of truth when no user
 // provider is configured.
 const platformModelId = (tier: ModelTier): string =>
-  tier === "haiku" ? HAIKU_MODEL : SONNET_MODEL;
+  tier === "fast" ? FAST_TIER_MODEL : QUALITY_TIER_MODEL;
 
 // Spec 84 de-platform checkpoint removes this default once trial quota ships.
 const buildPlatformClient = (tier: ModelTier): ResolvedModelClient => {

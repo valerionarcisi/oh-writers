@@ -12,6 +12,12 @@ import { logger } from "~/server/logger";
 
 export type AiUsageTrigger = "user" | "background";
 
+// Spec 84 (Wave 3) — which account paid for the call: the platform key
+// (onboarding trial) or the user's own BYOK provider. Threaded through from
+// `resolveModelClient`'s `ModelSource` (model-resolver.server.ts) at the two
+// anthropic-client.ts call sites.
+export type AiUsageSource = "platform" | "user";
+
 export interface TokenUsage {
   readonly inputTokens: number;
   readonly outputTokens: number;
@@ -64,6 +70,11 @@ export interface RecordAiUsageParams {
   // Wave 1 call sites do not thread a userId through yet — omitted/undefined
   // writes a null row, which is fine until that spec lands.
   readonly userId?: string;
+  // Spec 84 (Wave 3) — which account paid. Defaults to "platform": every
+  // pre-Wave-3 call site (no BYOK resolution) genuinely ran on the platform
+  // key, so the default matches the column's own DB default and existing
+  // rows' true history.
+  readonly source?: AiUsageSource;
 }
 
 // Fire-safe by construction: a ledger write failure must never fail the AI
@@ -87,6 +98,7 @@ export const recordAiUsage = async (
         model: params.model,
         trigger: params.trigger,
         userId: params.userId ?? null,
+        source: params.source ?? "platform",
         inputTokens: params.usage.inputTokens,
         outputTokens: params.usage.outputTokens,
         cacheReadTokens: params.usage.cacheReadTokens,
@@ -243,4 +255,103 @@ const checkDailyBudgetUnsafe = async (
 // which would otherwise leak between unit test cases.
 export const __resetSoftBudgetWarningForTests = (): void => {
   lastSoftWarningUtcDay = null;
+};
+
+// ─── Onboarding trial quota (Spec 84 §2.2, Wave 3) ─────────────────────────
+//
+// A small one-time platform-funded AI allowance per user, so a new director
+// can try Cesare before connecting their own provider (BYOK). Feature-flagged
+// (`AI_TRIAL_QUOTA_EUR` unset/0 = OFF) and metered from THIS SAME ledger,
+// scoped to `source = 'platform'` so a connected user's own BYOK spend never
+// counts against it.
+
+// Same approximate rate as `estimateEuroPerFeatureFilm` in
+// features/ai-providers/model-catalogue.server.ts (documented planning
+// constant, not a live FX lookup) — kept as a separate local constant rather
+// than importing across the features/ai ↔ features/ai-providers boundary,
+// which this change does not otherwise touch.
+const USD_TO_EUR_RATE = 0.92;
+
+const readTrialQuotaEurEnv = (): number => {
+  const raw = process.env["AI_TRIAL_QUOTA_EUR"];
+  if (!raw) return 0;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+};
+
+// The trial is OFF unless a positive allowance is configured — the flag and
+// its value are the same env var by design (no separate boolean to drift
+// out of sync with the amount). See `Features.AI_TRIAL_QUOTA` in
+// packages/domain/src/features/flags.ts.
+export const isTrialQuotaEnabled = (): boolean => readTrialQuotaEurEnv() > 0;
+
+// SUM(cost_usd) of this user's platform-funded calls, converted to EUR for
+// comparison against the EUR-denominated allowance. Scoped to
+// `source = 'platform'` (not `trigger`): a user-triggered Cesare turn on the
+// platform key still counts, because it is still platform-funded spend —
+// trigger answers "who asked", source answers "who pays".
+export const getUserTrialSpend = async (
+  userId: string,
+  db: Db,
+): Promise<number> => {
+  const spentUsd = await sumCostUsd(
+    db,
+    and(eq(aiUsage.userId, userId), eq(aiUsage.source, "platform")),
+  );
+  return spentUsd * USD_TO_EUR_RATE;
+};
+
+export class AiQuotaExceededError {
+  readonly _tag = "AiQuotaExceededError" as const;
+  readonly message: string;
+  constructor(
+    readonly userId: string,
+    readonly spentEur: number,
+    readonly allowanceEur: number,
+  ) {
+    this.message = `AI trial quota exhausted for user ${userId}: €${spentEur.toFixed(2)} spent of €${allowanceEur.toFixed(2)} allowance`;
+  }
+}
+
+// checkTrialQuota — the ONE user-blocking guard in the whole gateway (per
+// Spec 84 §2.2): a platform-funded call for a user with NO connected
+// provider is blocked once their trial allowance is spent, because there is
+// no ongoing platform-funded tier — the block's UI state sends them to
+// connect a provider. Never called for a user who has a configured provider
+// (that path never touches the platform key at all — see
+// model-resolver.server.ts's `resolveModelClient`), and a no-op when the
+// trial flag itself is off.
+//
+// Fail-open on infra errors (DB down, migration missing) — same contract as
+// `checkDailyBudget`/`recordAiUsage`: a broken ledger must not itself take
+// down the trial experience. Fail-CLOSED only for the genuine product
+// condition (allowance spent) — that is not an infra failure.
+export const checkTrialQuota = async (
+  userId: string,
+  db?: Db,
+): Promise<Result<void, AiQuotaExceededError>> => {
+  if (isMockMode()) return ok(undefined);
+  const allowanceEur = readTrialQuotaEurEnv();
+  if (allowanceEur <= 0) return ok(undefined);
+
+  const guarded = await ResultAsync.fromPromise(
+    (async () => {
+      const resolvedDb = db ?? (await getDb());
+      const spentEur = await getUserTrialSpend(userId, resolvedDb);
+      return spentEur >= allowanceEur
+        ? err(new AiQuotaExceededError(userId, spentEur, allowanceEur))
+        : ok(undefined);
+    })(),
+    (e) => e,
+  );
+  return guarded.match(
+    (result) => result,
+    (cause) => {
+      logger.warn(
+        { userId, cause: String(cause) },
+        "ai.usage.trial_quota_check_failed_open",
+      );
+      return ok(undefined);
+    },
+  );
 };

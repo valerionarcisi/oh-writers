@@ -5,6 +5,7 @@ import {
   getAiProviderStatusForUser,
   deleteAiProviderForUser,
   resolveAiProviderForUser,
+  checkAiProviderCreditsForUser,
 } from "./ai-providers.server";
 import { encryptApiKey } from "./crypto.server";
 import type { Db } from "~/server/db";
@@ -131,7 +132,7 @@ describe("saveAiProviderForUser (upsert)", () => {
 
 describe("setAiProviderModelsForUser", () => {
   it("updates only the models pair for the session user", async () => {
-    const models = { haiku: "some/haiku-model", sonnet: "some/sonnet-model" };
+    const models = { fast: "some/fast-model", quality: "some/quality-model" };
     const { db, chain } = buildUpdateDb([
       { provider: "openrouter", keyLast4: "1234", models },
     ]);
@@ -148,8 +149,8 @@ describe("setAiProviderModelsForUser", () => {
     const { db } = buildUpdateDb([]);
 
     const result = await setAiProviderModelsForUser(db, USER_ID, {
-      haiku: "x",
-      sonnet: "y",
+      fast: "x",
+      quality: "y",
     });
 
     expect(result.isErr()).toBe(true);
@@ -228,7 +229,7 @@ describe("resolveAiProviderForUser (gateway-internal, Wave 2)", () => {
     const { db } = buildSelectDb({
       provider: "openrouter",
       apiKeyEncrypted: encrypted.value,
-      models: { haiku: "h", sonnet: "s" },
+      models: { fast: "h", quality: "s" },
     });
 
     const result = await resolveAiProviderForUser(USER_ID, db);
@@ -238,7 +239,7 @@ describe("resolveAiProviderForUser (gateway-internal, Wave 2)", () => {
     expect(result.value).toEqual({
       provider: "openrouter",
       apiKey: "sk-or-v1-gateway-secret",
-      models: { haiku: "h", sonnet: "s" },
+      models: { fast: "h", quality: "s" },
     });
   });
 
@@ -264,5 +265,120 @@ describe("resolveAiProviderForUser (gateway-internal, Wave 2)", () => {
     expect(result.isErr()).toBe(true);
     if (!result.isErr()) return;
     expect(result.error._tag).toBe("AiProviderCryptoError");
+  });
+});
+
+describe("checkAiProviderCreditsForUser (Spec 84 §2.3 Step 3, Wave 3)", () => {
+  const ORIGINAL_FETCH = global.fetch;
+
+  afterEach(() => {
+    global.fetch = ORIGINAL_FETCH;
+  });
+
+  const jsonResponse = (body: unknown, status = 200): Response =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { "Content-Type": "application/json" },
+    });
+
+  it("returns the remaining OpenRouter balance for a connected openrouter user", async () => {
+    const encrypted = encryptApiKey("sk-or-v1-credit-check");
+    expect(encrypted.isOk()).toBe(true);
+    if (!encrypted.isOk()) return;
+
+    const { db } = buildSelectDb({
+      provider: "openrouter",
+      apiKeyEncrypted: encrypted.value,
+      models: null,
+    });
+    global.fetch = vi
+      .fn()
+      .mockResolvedValue(
+        jsonResponse({ data: { total_credits: 10, total_usage: 4 } }),
+      ) as unknown as typeof fetch;
+
+    const result = await checkAiProviderCreditsForUser(db, USER_ID);
+
+    expect(result.isOk()).toBe(true);
+    if (!result.isOk()) return;
+    expect(result.value).toEqual({ provider: "openrouter", remaining: 6 });
+    // The decrypted key must never leak into the returned shape.
+    expect(JSON.stringify(result.value)).not.toMatch(/sk-or-v1-/);
+  });
+
+  it("returns a zero balance as a real zero, not an error (sad-balance path)", async () => {
+    const encrypted = encryptApiKey("sk-or-v1-zero-balance");
+    expect(encrypted.isOk()).toBe(true);
+    if (!encrypted.isOk()) return;
+
+    const { db } = buildSelectDb({
+      provider: "openrouter",
+      apiKeyEncrypted: encrypted.value,
+      models: null,
+    });
+    global.fetch = vi
+      .fn()
+      .mockResolvedValue(
+        jsonResponse({ data: { total_credits: 5, total_usage: 5 } }),
+      ) as unknown as typeof fetch;
+
+    const result = await checkAiProviderCreditsForUser(db, USER_ID);
+
+    expect(result.isOk()).toBe(true);
+    if (!result.isOk()) return;
+    expect(result.value).toEqual({ provider: "openrouter", remaining: 0 });
+  });
+
+  it("reports remaining: null for an anthropic provider (no balance endpoint)", async () => {
+    const encrypted = encryptApiKey("sk-ant-credit-check");
+    expect(encrypted.isOk()).toBe(true);
+    if (!encrypted.isOk()) return;
+
+    const { db } = buildSelectDb({
+      provider: "anthropic",
+      apiKeyEncrypted: encrypted.value,
+      models: null,
+    });
+    global.fetch = vi.fn() as unknown as typeof fetch;
+
+    const result = await checkAiProviderCreditsForUser(db, USER_ID);
+
+    expect(result.isOk()).toBe(true);
+    if (!result.isOk()) return;
+    expect(result.value).toEqual({ provider: "anthropic", remaining: null });
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it("fails with a typed AiProviderNotConfiguredError when the user has no provider (sad path)", async () => {
+    const { db } = buildSelectDb(undefined);
+
+    const result = await checkAiProviderCreditsForUser(db, USER_ID);
+
+    expect(result.isErr()).toBe(true);
+    if (!result.isErr()) return;
+    expect(result.error._tag).toBe("AiProviderNotConfiguredError");
+  });
+
+  it("surfaces a typed OpenRouterApiError when the credits call fails (sad path)", async () => {
+    const encrypted = encryptApiKey("sk-or-v1-revoked");
+    expect(encrypted.isOk()).toBe(true);
+    if (!encrypted.isOk()) return;
+
+    const { db } = buildSelectDb({
+      provider: "openrouter",
+      apiKeyEncrypted: encrypted.value,
+      models: null,
+    });
+    global.fetch = vi
+      .fn()
+      .mockResolvedValue(
+        jsonResponse({ error: "unauthorized" }, 401),
+      ) as unknown as typeof fetch;
+
+    const result = await checkAiProviderCreditsForUser(db, USER_ID);
+
+    expect(result.isErr()).toBe(true);
+    if (!result.isErr()) return;
+    expect(result.error._tag).toBe("OpenRouterApiError");
   });
 });

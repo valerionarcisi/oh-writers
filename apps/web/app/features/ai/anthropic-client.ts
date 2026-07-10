@@ -12,9 +12,12 @@ import { aiTelemetry } from "~/server/langfuse-config";
 import type { Db } from "~/server/db";
 import {
   checkDailyBudget,
+  checkTrialQuota,
   recordAiUsage,
   AiBudgetExceededError,
+  AiQuotaExceededError,
   type AiUsageTrigger,
+  type AiUsageSource,
   type TokenUsage,
 } from "./ai-usage.server";
 import {
@@ -26,7 +29,12 @@ import {
 } from "./model-resolver.server";
 import type { ModelTier } from "~/features/predictions/cesare-model-router";
 
-export { AiBudgetExceededError, AiProviderAuthError, AiModelsNotChosenError };
+export {
+  AiBudgetExceededError,
+  AiProviderAuthError,
+  AiModelsNotChosenError,
+  AiQuotaExceededError,
+};
 export type { AiUsageTrigger, AiProviderResolutionError };
 
 const DEFAULT_MODEL = "claude-haiku-4-5";
@@ -130,24 +138,58 @@ export class AnthropicError {
 //     that still pass a concrete model ID and nothing else.
 //   - tier-aware: `tier` and/or `userId` set → go through `resolveModelClient`,
 //     which resolves the user's own BYOK provider when `userId` is present,
-//     or the platform tier mapping otherwise (`tier` defaults to "haiku",
+//     or the platform tier mapping otherwise (`tier` defaults to "fast",
 //     callHaiku's own tier, when omitted alongside a `userId`).
 const resolveCallModel = (
   params: Pick<CallHaikuParams, "model" | "userId" | "tier" | "db">,
   operation: string,
-): ResultAsync<{ model: LanguageModel; modelId: string }, AnthropicError> => {
+): ResultAsync<
+  { model: LanguageModel; modelId: string; source: AiUsageSource },
+  AnthropicError
+> => {
   if (!params.userId && !params.tier) {
     const modelId = params.model ?? DEFAULT_MODEL;
     return ResultAsync.fromSafePromise(
-      Promise.resolve({ model: anthropic(modelId), modelId }),
+      Promise.resolve({
+        model: anthropic(modelId),
+        modelId,
+        source: "platform" as const,
+      }),
     );
   }
-  const tier: ModelTier = params.tier ?? "haiku";
+  const tier: ModelTier = params.tier ?? "fast";
   return resolveModelClient({
     userId: params.userId,
     tier,
     db: params.db,
   }).mapErr((e) => new AnthropicError(operation, `${e._tag}: ${e.message}`));
+};
+
+// Spec 84 §2.2 (Wave 3) — the ONE user-blocking case in the whole gateway: a
+// platform-funded call (source === "platform", meaning this user has no
+// connected provider — see resolveModelClient's platform-fallback branch)
+// for a user whose trial allowance is spent. Checked AFTER model resolution
+// (so we know the source) and BEFORE the provider call — never after,
+// because the point is to not spend the call at all once exhausted.
+// No-op for a "user"-source call (BYOK spend never touches the trial) and
+// for the legacy no-userId path (no user to meter against).
+const checkTrialQuotaForCall = (
+  source: AiUsageSource,
+  userId: string | undefined,
+  db: Db | undefined,
+  operation: string,
+): ResultAsync<void, AnthropicError | AiQuotaExceededError> => {
+  if (source !== "platform" || !userId) {
+    return ResultAsync.fromSafePromise(Promise.resolve(undefined));
+  }
+  return ResultAsync.fromPromise(
+    checkTrialQuota(userId, db),
+    (e) => new AnthropicError(operation, e),
+  ).andThen((result) =>
+    result.isErr()
+      ? errAsync(result.error)
+      : ResultAsync.fromSafePromise(Promise.resolve(undefined)),
+  );
 };
 
 // Minimal typing for the streaming slice of the SDK used by llm-spoglio.
@@ -236,6 +278,7 @@ const runGenerateText = (
   params: CallHaikuParams,
   model: LanguageModel,
   modelId: string,
+  source: AiUsageSource,
   operation: string,
 ): ResultAsync<HaikuResult, AnthropicError | AiProviderAuthError> =>
   ResultAsync.fromPromise(
@@ -298,6 +341,7 @@ const runGenerateText = (
         trigger: params.trigger ?? "user",
         usage: extractUsage(result.usage, result.providerMetadata),
         userId: params.userId,
+        source,
       });
       const toolUseBlocks: ToolUseBlock[] = result.toolCalls.map((tc) => ({
         type: "tool_use" as const,
@@ -334,7 +378,10 @@ export const callHaiku = (
   operation: string,
 ): ResultAsync<
   HaikuResult,
-  AnthropicError | AiBudgetExceededError | AiProviderAuthError
+  | AnthropicError
+  | AiBudgetExceededError
+  | AiProviderAuthError
+  | AiQuotaExceededError
 > => {
   const trigger: AiUsageTrigger = params.trigger ?? "user";
   return ResultAsync.fromPromise(
@@ -343,8 +390,16 @@ export const callHaiku = (
   ).andThen((budgetCheck) =>
     budgetCheck.isErr()
       ? errAsync(budgetCheck.error)
-      : resolveCallModel(params, operation).andThen(({ model, modelId }) =>
-          runGenerateText(params, model, modelId, operation),
+      : resolveCallModel(params, operation).andThen(
+          ({ model, modelId, source }) =>
+            checkTrialQuotaForCall(
+              source,
+              params.userId,
+              params.db,
+              operation,
+            ).andThen(() =>
+              runGenerateText(params, model, modelId, source, operation),
+            ),
         ),
   );
 };
@@ -382,6 +437,7 @@ const runStreamGeneration = (
   params: StreamGenerationParams,
   model: LanguageModel,
   modelId: string,
+  source: AiUsageSource,
   operation: string,
   onDelta: (text: string) => void,
   abortSignal: AbortSignal | undefined,
@@ -449,6 +505,7 @@ const runStreamGeneration = (
         trigger: params.trigger ?? "user",
         usage: extractUsage(usage, providerMetadata),
         userId: params.userId,
+        source,
       });
       return text;
     })(),
@@ -473,7 +530,10 @@ export const streamGeneration = (
   abortSignal?: AbortSignal,
 ): ResultAsync<
   string,
-  AnthropicError | AiBudgetExceededError | AiProviderAuthError
+  | AnthropicError
+  | AiBudgetExceededError
+  | AiProviderAuthError
+  | AiQuotaExceededError
 > => {
   const trigger: AiUsageTrigger = params.trigger ?? "user";
   return ResultAsync.fromPromise(
@@ -482,15 +542,24 @@ export const streamGeneration = (
   ).andThen((budgetCheck) =>
     budgetCheck.isErr()
       ? errAsync(budgetCheck.error)
-      : resolveCallModel(params, operation).andThen(({ model, modelId }) =>
-          runStreamGeneration(
-            params,
-            model,
-            modelId,
-            operation,
-            onDelta,
-            abortSignal,
-          ),
+      : resolveCallModel(params, operation).andThen(
+          ({ model, modelId, source }) =>
+            checkTrialQuotaForCall(
+              source,
+              params.userId,
+              params.db,
+              operation,
+            ).andThen(() =>
+              runStreamGeneration(
+                params,
+                model,
+                modelId,
+                source,
+                operation,
+                onDelta,
+                abortSignal,
+              ),
+            ),
         ),
   );
 };

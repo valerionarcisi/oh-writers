@@ -23,7 +23,7 @@
 
 import { ResultAsync } from "neverthrow";
 import { callHaiku, extractText } from "~/features/ai";
-import { HAIKU_MODEL } from "./cesare-model-router";
+import { FAST_TIER_MODEL } from "./cesare-model-router";
 import { CesareError } from "./cesare.errors";
 
 export type IntentType =
@@ -336,7 +336,7 @@ export const classifyIntent = (
       system: systemPrompt,
       fewShot: [],
       user: opts.userMessage.slice(0, 800),
-      model: HAIKU_MODEL,
+      model: FAST_TIER_MODEL,
       maxTokens: 100,
     },
     "cesare.intent-classifier",

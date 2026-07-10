@@ -1,4 +1,6 @@
 import { createServerFn } from "@tanstack/start";
+import { queryOptions } from "@tanstack/react-query";
+import { z } from "zod";
 import { ResultAsync, okAsync, ok, err } from "neverthrow";
 import { toShape } from "@oh-writers/utils";
 import { requireUser } from "~/server/context";
@@ -98,12 +100,12 @@ export const getModelCatalogue = createServerFn({ method: "GET" }).handler(
 // ─── Recommended rule (Spec 84 §3) ─────────────────────────────────────────
 // "The latest Anthropic-family models from the live catalogue, grouped into
 // the two Cesare tiers by the catalogue's own pricing (cheapest recent ↔
-// haiku slot, quality recent ↔ sonnet slot)." ONE function, no hardcoded
+// fast slot, quality recent ↔ quality slot)." ONE function, no hardcoded
 // model IDs — proven by a fixture test using fictional model ids.
 
 export type RecommendedModels = {
-  readonly haiku: CatalogueModel;
-  readonly sonnet: CatalogueModel;
+  readonly fast: CatalogueModel;
+  readonly quality: CatalogueModel;
 };
 
 const ANTHROPIC_PREFIX = "anthropic/";
@@ -168,31 +170,31 @@ export const selectRecommendedModels = (
 
   const budgetBand = bands[0];
   if (!budgetBand) return null;
-  // Budget slot = the NEWEST model of the cheapest price band; quality slot =
+  // Fast slot = the NEWEST model of the cheapest price band; quality slot =
   // the NEWEST of the next band up. Bands (not a global recency sort) keep
   // each slot on its own tier: a brand-new flagship lands in a HIGHER band
   // and can never hijack either slot, and an older-but-current budget model
   // keeps its slot even when the newest releases are all premium-tier.
-  const haiku = newestOf(budgetBand);
+  const fast = newestOf(budgetBand);
   const qualityBand = bands[1];
-  // Cap the quality slot at ~4.5x the budget price: the sonnet→opus price gap
-  // (~1.67x) is below the band split ratio, so band 2 can contain flagship
-  // models too — without the cap, a flagship released after the current
-  // balanced model would take the slot. Known ceiling: a flagship priced
-  // within 4.5x of a future pricier budget tier could still slip through;
-  // prices are always shown in the picker, so the failure mode is a visible
-  // dearer default, never a hidden cost.
+  // Cap the quality slot at ~4.5x the fast-tier price: the Sonnet→Opus price
+  // gap (~1.67x) is below the band split ratio, so band 2 can contain
+  // flagship models too — without the cap, a flagship released after the
+  // current balanced model would take the slot. Known ceiling: a flagship
+  // priced within 4.5x of a future pricier budget tier could still slip
+  // through; prices are always shown in the picker, so the failure mode is a
+  // visible dearer default, never a hidden cost.
   const qualityCandidates = qualityBand?.filter(
-    (m) => m.euroPerFeatureFilm <= haiku.euroPerFeatureFilm * 4.5,
+    (m) => m.euroPerFeatureFilm <= fast.euroPerFeatureFilm * 4.5,
   );
-  const sonnet =
+  const quality =
     qualityCandidates && qualityCandidates.length > 0
       ? newestOf(qualityCandidates)
       : qualityBand
         ? newestOf(qualityBand)
-        : haiku;
+        : fast;
 
-  return { haiku, sonnet };
+  return { fast, quality };
 };
 
 export const getRecommendedModels = createServerFn({ method: "GET" }).handler(
@@ -270,3 +272,35 @@ export const validateProviderKey = (
   provider === "openrouter"
     ? getKeyInfo(apiKey).map(() => true as const)
     : validateAnthropicKey(apiKey);
+
+// ─── Client-callable wrapper (manual-key wizard step, Wave 3) ─────────────
+// The raw key is submitted here ONLY to run the one-shot validation probe —
+// it is never persisted by this call (saveAiProvider, called separately on
+// success, is what encrypts and stores it) and never echoed back in the
+// response (`toShape(true)` carries no key material either way).
+
+const ValidateProviderKeySchema = z.object({
+  provider: z.enum(["openrouter", "anthropic"]),
+  apiKey: z.string().min(1),
+});
+
+export const validateProviderKeyFn = createServerFn({ method: "POST" })
+  .validator(ValidateProviderKeySchema)
+  .handler(async ({ data }) => {
+    await requireUser();
+    return toShape(await validateProviderKey(data.provider, data.apiKey));
+  });
+
+// ─── queryOptions for TanStack Query (client) ──────────────────────────────
+
+export const modelCatalogueQueryOptions = () =>
+  queryOptions({
+    queryKey: ["ai-provider", "model-catalogue"],
+    queryFn: () => getModelCatalogue(),
+  });
+
+export const recommendedModelsQueryOptions = () =>
+  queryOptions({
+    queryKey: ["ai-provider", "recommended-models"],
+    queryFn: () => getRecommendedModels(),
+  });

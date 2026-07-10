@@ -3,7 +3,11 @@ import {
   computeCostUsd,
   recordAiUsage,
   checkDailyBudget,
+  checkTrialQuota,
+  getUserTrialSpend,
+  isTrialQuotaEnabled,
   AiBudgetExceededError,
+  AiQuotaExceededError,
   __resetSoftBudgetWarningForTests,
   type TokenUsage,
 } from "./ai-usage.server";
@@ -177,6 +181,42 @@ describe("recordAiUsage", () => {
     expect(written?.["userId"]).toBe("11111111-1111-1111-1111-111111111111");
   });
 
+  it("defaults source to 'platform' when omitted", async () => {
+    let written: Record<string, unknown> | undefined;
+    const db = makeFakeInsertDb((row) => (written = row));
+
+    await recordAiUsage(
+      {
+        operation: "op",
+        model: "claude-haiku-4-5",
+        trigger: "user",
+        usage: ZERO_USAGE,
+      },
+      db,
+    );
+
+    expect(written?.["source"]).toBe("platform");
+  });
+
+  it("writes the provided source ('user') when given", async () => {
+    let written: Record<string, unknown> | undefined;
+    const db = makeFakeInsertDb((row) => (written = row));
+
+    await recordAiUsage(
+      {
+        operation: "op",
+        model: "claude-haiku-4-5",
+        trigger: "user",
+        usage: ZERO_USAGE,
+        userId: "11111111-1111-1111-1111-111111111111",
+        source: "user",
+      },
+      db,
+    );
+
+    expect(written?.["source"]).toBe("user");
+  });
+
   it("does not throw when the DB write fails (fire-safe)", async () => {
     process.env["MOCK_AI"] = "false";
     await expect(
@@ -327,5 +367,120 @@ describe("checkDailyBudget — trigger semantics (Spec 83, corrected 2026-07-09)
 
     expect(result.isErr()).toBe(true);
     if (result.isErr()) expect(result.error.capUsd).toBe(1);
+  });
+});
+
+describe("onboarding trial quota (Spec 84 §2.2, Wave 3)", () => {
+  const USER_ID = "22222222-2222-2222-2222-222222222222";
+  const originalMockAi = process.env["MOCK_AI"];
+  const originalTrialQuota = process.env["AI_TRIAL_QUOTA_EUR"];
+
+  afterEach(() => {
+    if (originalMockAi === undefined) delete process.env["MOCK_AI"];
+    else process.env["MOCK_AI"] = originalMockAi;
+    if (originalTrialQuota === undefined) {
+      delete process.env["AI_TRIAL_QUOTA_EUR"];
+    } else {
+      process.env["AI_TRIAL_QUOTA_EUR"] = originalTrialQuota;
+    }
+  });
+
+  describe("isTrialQuotaEnabled", () => {
+    it("is OFF when AI_TRIAL_QUOTA_EUR is unset", () => {
+      delete process.env["AI_TRIAL_QUOTA_EUR"];
+      expect(isTrialQuotaEnabled()).toBe(false);
+    });
+
+    it("is OFF when AI_TRIAL_QUOTA_EUR is 0", () => {
+      process.env["AI_TRIAL_QUOTA_EUR"] = "0";
+      expect(isTrialQuotaEnabled()).toBe(false);
+    });
+
+    it("is ON for a positive allowance", () => {
+      process.env["AI_TRIAL_QUOTA_EUR"] = "1";
+      expect(isTrialQuotaEnabled()).toBe(true);
+    });
+  });
+
+  describe("getUserTrialSpend", () => {
+    it("sums cost_usd scoped to this user and source='platform', converted to EUR", async () => {
+      const db = makeFakeSelectDb(["1.000000"]); // $1.00 platform spend
+      const spentEur = await getUserTrialSpend(USER_ID, db);
+      expect(spentEur).toBeCloseTo(0.92, 6); // 1.00 * 0.92 USD->EUR
+    });
+
+    it("returns 0 for a user with no ledger rows (null sum)", async () => {
+      const db = makeFakeSelectDb([null]);
+      const spentEur = await getUserTrialSpend(USER_ID, db);
+      expect(spentEur).toBe(0);
+    });
+  });
+
+  describe("checkTrialQuota", () => {
+    it("is a no-op (ok) when the trial flag is OFF (unset)", async () => {
+      process.env["MOCK_AI"] = "false";
+      delete process.env["AI_TRIAL_QUOTA_EUR"];
+      // A huge spend would block if the flag were ON — proves the flag gate,
+      // not the spend comparison, is what short-circuits here.
+      const db = makeFakeSelectDb(["999.000000"]);
+
+      const result = await checkTrialQuota(USER_ID, db);
+
+      expect(result.isOk()).toBe(true);
+    });
+
+    it("allows a user under their allowance", async () => {
+      process.env["MOCK_AI"] = "false";
+      process.env["AI_TRIAL_QUOTA_EUR"] = "1";
+      const db = makeFakeSelectDb(["0.500000"]); // $0.50 -> €0.46, under €1
+
+      const result = await checkTrialQuota(USER_ID, db);
+
+      expect(result.isOk()).toBe(true);
+    });
+
+    it("blocks with a typed AiQuotaExceededError once spend reaches the allowance", async () => {
+      process.env["MOCK_AI"] = "false";
+      process.env["AI_TRIAL_QUOTA_EUR"] = "1";
+      // $2.00 * 0.92 = €1.84, over the €1 allowance
+      const db = makeFakeSelectDb(["2.000000"]);
+
+      const result = await checkTrialQuota(USER_ID, db);
+
+      expect(result.isErr()).toBe(true);
+      if (result.isErr()) {
+        expect(result.error).toBeInstanceOf(AiQuotaExceededError);
+        expect(result.error._tag).toBe("AiQuotaExceededError");
+        expect(result.error.userId).toBe(USER_ID);
+        expect(result.error.allowanceEur).toBe(1);
+      }
+    });
+
+    it("fails OPEN when the ledger query rejects — a broken ledger never blocks the trial", async () => {
+      process.env["MOCK_AI"] = "false";
+      process.env["AI_TRIAL_QUOTA_EUR"] = "1";
+      const throwingDb = {
+        select: () => ({
+          from: () => ({
+            where: () => Promise.reject(new Error("db down")),
+          }),
+        }),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any;
+
+      const result = await checkTrialQuota(USER_ID, throwingDb);
+
+      expect(result.isOk()).toBe(true);
+    });
+
+    it("MOCK_AI=true bypasses the trial guard entirely", async () => {
+      process.env["MOCK_AI"] = "true";
+      process.env["AI_TRIAL_QUOTA_EUR"] = "1";
+      const db = makeFakeSelectDb(["999.000000"]);
+
+      const result = await checkTrialQuota(USER_ID, db);
+
+      expect(result.isOk()).toBe(true);
+    });
   });
 });

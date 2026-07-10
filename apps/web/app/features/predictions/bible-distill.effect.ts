@@ -197,7 +197,7 @@ const buildCallParams = (input: DistillInput): CallHaikuParams => ({
   // Spec 84 (Wave 2) — tier, not a hardcoded model ID: resolves through the
   // gateway's tier→model mapping (today the platform's, since this ambient
   // flow has no userId in scope to resolve a BYOK provider for).
-  tier: "sonnet",
+  tier: "quality",
   maxTokens: 2048,
   tools: [EMIT_TOOL],
   toolChoice: { type: "tool", name: EMIT_TOOL_NAME },

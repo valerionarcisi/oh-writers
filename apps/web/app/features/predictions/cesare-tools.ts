@@ -63,7 +63,7 @@ import type { Db } from "~/server/db";
 import type { ProjectAccess } from "~/server/access";
 import { callHaiku, extractText, resolveModelClient } from "~/features/ai";
 import { fromResultAsync } from "~/server/effect/interop";
-import { HAIKU_MODEL, type ModelTier } from "./cesare-model-router";
+import { FAST_TIER_MODEL, type ModelTier } from "./cesare-model-router";
 import type { SkillExecutor, AnthropicTool } from "./skills/types";
 import { CesareError } from "./cesare.errors";
 import {
@@ -3204,12 +3204,12 @@ const logCacheUsage = (
 const LOOP_TIMEOUT_MS = 90_000;
 
 // Spec 84 (Wave 2) — the tool loop only ever runs the platform's own two
-// model IDs today (cesare-model-router's HAIKU_MODEL/SONNET_MODEL), so the
-// concrete `args.model` string can be mapped back to its tier deterministically.
-// Anything else (a mock ID, a future non-router caller) defaults to "haiku" —
-// the cheaper tier — rather than guessing sonnet.
+// model IDs today (cesare-model-router's FAST_TIER_MODEL/QUALITY_TIER_MODEL),
+// so the concrete `args.model` string can be mapped back to its tier
+// deterministically. Anything else (a mock ID, a future non-router caller)
+// defaults to "fast" — the cheaper tier — rather than guessing "quality".
 const tierForModelId = (modelId: string): ModelTier =>
-  modelId === HAIKU_MODEL ? "haiku" : "sonnet";
+  modelId === FAST_TIER_MODEL ? "fast" : "quality";
 
 const runProductionToolLoopEffect = (
   args: RunToolLoopArgs,

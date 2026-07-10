@@ -144,14 +144,14 @@ describe("callHaiku — BYOK model resolution (Spec 84 Wave 2)", () => {
         user: "hi",
         maxTokens: 100,
         userId: "user-1",
-        tier: "haiku",
+        tier: "fast",
       },
       "test.op",
     );
 
     expect(resolveModelClientMock).toHaveBeenCalledWith({
       userId: "user-1",
-      tier: "haiku",
+      tier: "fast",
       db: undefined,
     });
     expect(generateTextMock).toHaveBeenCalledTimes(1);

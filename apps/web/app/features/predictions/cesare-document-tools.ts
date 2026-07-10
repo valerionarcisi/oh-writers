@@ -18,7 +18,7 @@ import {
   type OutlineScene,
 } from "~/features/documents";
 import { repairMojibake, sanitizeAiText } from "@oh-writers/utils";
-import { SONNET_MODEL } from "./cesare-model-router";
+import { QUALITY_TIER_MODEL } from "./cesare-model-router";
 import { CesareError } from "./cesare.errors";
 import {
   applyVersionLive,
@@ -861,7 +861,7 @@ const runGeneration = (
       {
         system: systemPrompt,
         user: userPrompt,
-        model: SONNET_MODEL,
+        model: QUALITY_TIER_MODEL,
         maxTokens,
       },
       operation,
@@ -880,7 +880,7 @@ const runGeneration = (
       system: systemPrompt,
       fewShot: [],
       user: userPrompt,
-      model: SONNET_MODEL,
+      model: QUALITY_TIER_MODEL,
       maxTokens,
     },
     operation,

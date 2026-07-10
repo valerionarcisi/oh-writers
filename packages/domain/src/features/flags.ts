@@ -30,6 +30,19 @@ export const Features = {
    * `resolveAiEnabled` in `apps/web/app/features/feature-flags/`.
    */
   AI_ENABLED: "aiEnabled",
+  /**
+   * Spec 84 §2.2 (Wave 3) — the onboarding trial quota switch. ON means a
+   * small one-time platform-funded AI allowance exists for users with no
+   * connected provider, metered from the `ai_usage` ledger. Resolved from
+   * the `AI_TRIAL_QUOTA_EUR` env var server-side (see `checkTrialQuota` in
+   * `apps/web/app/features/ai/ai-usage.server.ts`) — this catalogue entry
+   * documents the switch; it is not driven through `resolveFeatures`'
+   * market/plan/user context like the UI-facing features above, because it
+   * gates a server-only allowance amount, not a rendered surface. Default
+   * OFF is the safe default (no platform-funded spend unless explicitly
+   * turned on).
+   */
+  AI_TRIAL_QUOTA: "aiTrialQuota",
   // Italy-only — detached on the international (EN) market
   SIAE_EXPORT: "siaeExport",
   FUNDRAISING: "fundraising",

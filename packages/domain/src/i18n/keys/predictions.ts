@@ -131,6 +131,8 @@ export const predictionsKeys = {
     "cesare.landing.lastActivity": "Last activity",
     "cesare.landing.countOne": "conversation",
     "cesare.landing.countMany": "conversations",
+    "cesare.landing.pinnedSection": "Pinned",
+    "cesare.landing.recentSection": "Recent",
     // Next-step chip
     "cesare.nextStep.kicker": "Next step",
     "cesare.nextStep.aria": "Next step:",
@@ -319,6 +321,8 @@ export const predictionsKeys = {
     "cesare.landing.lastActivity": "Ultima attività",
     "cesare.landing.countOne": "conversazione",
     "cesare.landing.countMany": "conversazioni",
+    "cesare.landing.pinnedSection": "Fissate",
+    "cesare.landing.recentSection": "Recenti",
     // Next-step chip
     "cesare.nextStep.kicker": "Prossimo passo",
     "cesare.nextStep.aria": "Prossimo passo:",

@@ -22,8 +22,16 @@ export {
   computeCostUsd,
   recordAiUsage,
   checkDailyBudget,
+  getUserTrialSpend,
+  checkTrialQuota,
+  isTrialQuotaEnabled,
+  AiQuotaExceededError,
 } from "./ai-usage.server";
-export type { TokenUsage, RecordAiUsageParams } from "./ai-usage.server";
+export type {
+  TokenUsage,
+  RecordAiUsageParams,
+  AiUsageSource,
+} from "./ai-usage.server";
 export {
   resolveModelClient,
   isProviderAuthError,

@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/start";
+import { queryOptions } from "@tanstack/react-query";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { ResultAsync, ok, err } from "neverthrow";
@@ -8,6 +9,7 @@ import { requireUser } from "~/server/context";
 import { getDb } from "~/server/db";
 import type { Db } from "~/server/db";
 import { encryptApiKey, decryptApiKey } from "./crypto.server";
+import { getCredits, OpenRouterApiError } from "./openrouter-api.server";
 import {
   DbError,
   AiProviderCryptoError,
@@ -28,9 +30,11 @@ const AiProviderEnum = z.enum(["openrouter", "anthropic"]);
 
 // Spec 84 §3 — model IDs are never hardcoded: this schema only validates
 // shape (two non-empty strings), it never supplies or suggests a default.
+// Tier keys are ROLES ("fast"/"quality"), not model names — see the comment
+// on ModelTier in cesare-model-router.ts.
 const AiProviderModelsSchema = z.object({
-  haiku: z.string().min(1),
-  sonnet: z.string().min(1),
+  fast: z.string().min(1),
+  quality: z.string().min(1),
 });
 
 export type AiProviderModels = z.infer<typeof AiProviderModelsSchema>;
@@ -249,3 +253,69 @@ export const resolveAiProviderForUser = (
         }))
       : err(new AiProviderNotConfiguredError(userId)),
   );
+
+// ─── Credit check (Spec 84 §2.3 Step 3, wizard) ────────────────────────────
+
+// Spec 84 §2.3 — after the OAuth callback stores the key, the wizard checks
+// the account's OpenRouter balance server-side (the key is decrypted here and
+// never crosses back to the client) and shows a zero-balance warning with a
+// deep-link to top up, or the current balance on success. Only meaningful for
+// "openrouter" (the only provider with a balance endpoint today) — an
+// "anthropic" BYOK connection has no equivalent, so the caller reports
+// `remaining: null` to mean "not applicable", distinct from a real zero.
+export type AiProviderCreditStatus = {
+  readonly provider: "openrouter" | "anthropic";
+  readonly remaining: number | null;
+};
+
+export const checkAiProviderCreditsForUser = (
+  db: Db,
+  userId: string,
+): ResultAsync<
+  AiProviderCreditStatus,
+  | DbError
+  | AiProviderCryptoError
+  | AiProviderNotConfiguredError
+  | OpenRouterApiError
+> =>
+  resolveAiProviderForUser(userId, db).andThen(
+    (provider): ResultAsync<AiProviderCreditStatus, OpenRouterApiError> =>
+      provider.provider === "openrouter"
+        ? getCredits(provider.apiKey).map(
+            (credits): AiProviderCreditStatus => ({
+              provider: "openrouter",
+              remaining: credits.remaining,
+            }),
+          )
+        : ResultAsync.fromSafePromise(
+            Promise.resolve({ provider: "anthropic", remaining: null }),
+          ),
+  );
+
+export const checkAiProviderCredits = createServerFn({
+  method: "GET",
+}).handler(async () => {
+  const user = await requireUser();
+  return toShape(
+    await ResultAsync.fromSafePromise(getDb()).andThen((db) =>
+      checkAiProviderCreditsForUser(db, user.id),
+    ),
+  );
+});
+
+// ─── queryOptions for TanStack Query (client) ──────────────────────────────
+
+export const aiProviderStatusQueryOptions = () =>
+  queryOptions({
+    queryKey: ["ai-provider", "status"],
+    queryFn: () => getAiProviderStatus(),
+  });
+
+export const aiProviderCreditsQueryOptions = () =>
+  queryOptions({
+    queryKey: ["ai-provider", "credits"],
+    queryFn: () => checkAiProviderCredits(),
+    // The wizard re-checks on demand ("Ricontrolla") — don't serve a stale
+    // cached zero-balance after the user tops up on OpenRouter and comes back.
+    staleTime: 0,
+  });

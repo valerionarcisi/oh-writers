@@ -78,7 +78,7 @@ describe("resolveModelClient", () => {
   it("no userId — resolves the platform client for the given tier without touching the DB", async () => {
     const { resolveModelClient } = await import("./model-resolver.server");
 
-    const result = await resolveModelClient({ tier: "haiku" });
+    const result = await resolveModelClient({ tier: "fast" });
 
     expect(resolveAiProviderForUserMock).not.toHaveBeenCalled();
     expect(result.isOk()).toBe(true);
@@ -93,14 +93,14 @@ describe("resolveModelClient", () => {
       ok({
         provider: "openrouter",
         apiKey: "sk-or-v1-user-key",
-        models: { haiku: "meta/llama-haiku", sonnet: "anthropic/claude-x" },
+        models: { fast: "meta/llama-haiku", quality: "anthropic/claude-x" },
       }),
     );
     const { resolveModelClient } = await import("./model-resolver.server");
 
     const result = await resolveModelClient({
       userId: USER_ID,
-      tier: "sonnet",
+      tier: "quality",
       db: FAKE_DB,
     });
 
@@ -118,14 +118,14 @@ describe("resolveModelClient", () => {
       ok({
         provider: "anthropic",
         apiKey: "sk-ant-user-key",
-        models: { haiku: "claude-haiku-user", sonnet: "claude-sonnet-user" },
+        models: { fast: "claude-haiku-user", quality: "claude-sonnet-user" },
       }),
     );
     const { resolveModelClient } = await import("./model-resolver.server");
 
     const result = await resolveModelClient({
       userId: USER_ID,
-      tier: "haiku",
+      tier: "fast",
       db: FAKE_DB,
     });
 
@@ -150,7 +150,7 @@ describe("resolveModelClient", () => {
 
     const result = await resolveModelClient({
       userId: USER_ID,
-      tier: "haiku",
+      tier: "fast",
       db: FAKE_DB,
     });
 
@@ -173,7 +173,7 @@ describe("resolveModelClient", () => {
 
     const result = await resolveModelClient({
       userId: USER_ID,
-      tier: "haiku",
+      tier: "fast",
       db: FAKE_DB,
     });
 
@@ -194,7 +194,7 @@ describe("resolveModelClient", () => {
 
     const result = await resolveModelClient({
       userId: USER_ID,
-      tier: "sonnet",
+      tier: "quality",
       db: FAKE_DB,
     });
 
@@ -212,7 +212,7 @@ describe("resolveModelClient", () => {
 
     const result = await resolveModelClient({
       userId: USER_ID,
-      tier: "haiku",
+      tier: "fast",
       db: FAKE_DB,
     });
 
@@ -232,7 +232,7 @@ describe("resolveModelClient", () => {
 
     const result = await resolveModelClient({
       userId: USER_ID,
-      tier: "haiku",
+      tier: "fast",
       db: FAKE_DB,
     });
 

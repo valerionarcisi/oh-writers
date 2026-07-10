@@ -30,6 +30,12 @@ export const aiUsage = pgTable(
     userId: uuid("user_id").references(() => users.id, {
       onDelete: "set null",
     }),
+    // Spec 84 (Wave 3) — which account paid: the platform key (onboarding
+    // trial) or the user's own BYOK provider. Scopes the trial-quota SUM to
+    // platform-funded spend only, so BYOK usage never counts against it.
+    source: text("source", { enum: ["platform", "user"] })
+      .notNull()
+      .default("platform"),
     inputTokens: integer("input_tokens").notNull(),
     outputTokens: integer("output_tokens").notNull(),
     cacheReadTokens: integer("cache_read_tokens").notNull().default(0),

@@ -18,17 +18,24 @@ import type { Db } from "~/server/db";
  * keep the signature. `db` is threaded explicitly (not imported ambiently)
  * so this stays trivially testable without a real database.
  *
- * Spec 84 Wave 2 (this change): TRUE when the user has a saved provider row
- * (`hasAiProviderForUser` — cheap exists-query, no decryption), OR — the
- * transitional de-platform-checkpoint fallback, same rationale as the
- * gateway's own platform fallback in `features/ai/model-resolver.server.ts`
- * — the platform's own Anthropic key is configured. Onboarding trial quota
- * (`Features.AiTrialQuota`) is a separate, not-yet-built OR-branch; it is
- * NOT this wave's concern (this function's own OR clause already covers
- * "there is a working AI source" for the platform-fallback period).
- * Fail-open on a DB error: a broken provider lookup must not itself hide
- * every AI surface in the app — same fail-open contract as
- * `checkDailyBudget`/`recordAiUsage` in features/ai.
+ * Spec 84 Wave 3 (this change) — the chain, in order:
+ *   1. test override (unchanged)
+ *   2. MOCK_AI (unchanged) — the mock client answers every call
+ *   3. `hasAiProviderForUser` — a connected BYOK provider always wins
+ *   4. trial quota (`AI_TRIAL_QUOTA_EUR` ON && not yet exhausted for this
+ *      user) — `isTrialQuotaEnabled`/`getUserTrialSpend` in
+ *      `features/ai/ai-usage.server.ts`, the same ledger the gateway's own
+ *      `checkTrialQuota` guard reads before a platform-funded call.
+ *   5. the transitional `ANTHROPIC_API_KEY` env fallback — ONLY reached when
+ *      the trial flag is entirely UNSET (not merely exhausted): once
+ *      `AI_TRIAL_QUOTA_EUR` is configured, trial is the sole platform-funded
+ *      path and an exhausted trial correctly resolves AI_ENABLED to false
+ *      (routing the user to the connect-provider gate), instead of quietly
+ *      reviving on the platform key.
+ *
+ * Fail-open on a DB error at every lookup: a broken provider/ledger query
+ * must not itself hide every AI surface in the app — same fail-open contract
+ * as `checkDailyBudget`/`recordAiUsage`/`checkTrialQuota` in features/ai.
  */
 export async function resolveAiEnabled(
   userId: UserId,
@@ -51,7 +58,16 @@ export async function resolveAiEnabled(
   );
   if (hasProvider) return true;
 
-  // Spec 84 de-platform checkpoint removes this default once trial quota ships.
+  const { isTrialQuotaEnabled, getUserTrialSpend } =
+    await import("~/features/ai/ai-usage.server");
+  if (isTrialQuotaEnabled()) {
+    const allowanceEur = Number(process.env["AI_TRIAL_QUOTA_EUR"]);
+    const spentEur = await getUserTrialSpend(userId, db).catch(() => 0);
+    return spentEur < allowanceEur;
+  }
+
+  // Spec 84 de-platform: when AI_TRIAL_QUOTA_EUR is set, the env-key fallback
+  // is retired — trial is the only platform-funded path.
   return Boolean(process.env["ANTHROPIC_API_KEY"]);
 }
 

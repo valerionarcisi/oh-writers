@@ -24,6 +24,7 @@ import { Route as AppCrashTestImport } from "./routes/_app.crash-test";
 import { Route as AppTeamsIndexImport } from "./routes/_app.teams.index";
 import { Route as AppTeamsNewImport } from "./routes/_app.teams.new";
 import { Route as AppTeamsSlugImport } from "./routes/_app.teams.$slug";
+import { Route as AppSettingsAiImport } from "./routes/_app.settings_.ai";
 import { Route as AppProjectsNewImport } from "./routes/_app.projects.new";
 import { Route as AppProjectsIdImport } from "./routes/_app.projects.$id";
 import { Route as AppTeamsSlugSettingsImport } from "./routes/_app.teams.$slug_.settings";
@@ -128,6 +129,12 @@ const AppTeamsNewRoute = AppTeamsNewImport.update({
 const AppTeamsSlugRoute = AppTeamsSlugImport.update({
   id: "/teams/$slug",
   path: "/teams/$slug",
+  getParentRoute: () => AppRoute,
+} as any);
+
+const AppSettingsAiRoute = AppSettingsAiImport.update({
+  id: "/settings_/ai",
+  path: "/settings/ai",
   getParentRoute: () => AppRoute,
 } as any);
 
@@ -391,6 +398,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AppProjectsNewImport;
       parentRoute: typeof AppImport;
     };
+    "/_app/settings_/ai": {
+      id: "/_app/settings_/ai";
+      path: "/settings/ai";
+      fullPath: "/settings/ai";
+      preLoaderRoute: typeof AppSettingsAiImport;
+      parentRoute: typeof AppImport;
+    };
     "/_app/teams/$slug": {
       id: "/_app/teams/$slug";
       path: "/teams/$slug";
@@ -650,6 +664,7 @@ interface AppRouteChildren {
   AppSettingsRoute: typeof AppSettingsRoute;
   AppProjectsIdRoute: typeof AppProjectsIdRoute;
   AppProjectsNewRoute: typeof AppProjectsNewRoute;
+  AppSettingsAiRoute: typeof AppSettingsAiRoute;
   AppTeamsSlugRoute: typeof AppTeamsSlugRoute;
   AppTeamsNewRoute: typeof AppTeamsNewRoute;
   AppTeamsIndexRoute: typeof AppTeamsIndexRoute;
@@ -680,6 +695,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppSettingsRoute: AppSettingsRoute,
   AppProjectsIdRoute: AppProjectsIdRoute,
   AppProjectsNewRoute: AppProjectsNewRoute,
+  AppSettingsAiRoute: AppSettingsAiRoute,
   AppTeamsSlugRoute: AppTeamsSlugRoute,
   AppTeamsNewRoute: AppTeamsNewRoute,
   AppTeamsIndexRoute: AppTeamsIndexRoute,
@@ -719,6 +735,7 @@ export interface FileRoutesByFullPath {
   "/invite/$token": typeof InviteTokenRoute;
   "/projects/$id": typeof AppProjectsIdRoute;
   "/projects/new": typeof AppProjectsNewRoute;
+  "/settings/ai": typeof AppSettingsAiRoute;
   "/teams/$slug": typeof AppTeamsSlugRoute;
   "/teams/new": typeof AppTeamsNewRoute;
   "/teams": typeof AppTeamsIndexRoute;
@@ -762,6 +779,7 @@ export interface FileRoutesByTo {
   "/invite/$token": typeof InviteTokenRoute;
   "/projects/$id": typeof AppProjectsIdRoute;
   "/projects/new": typeof AppProjectsNewRoute;
+  "/settings/ai": typeof AppSettingsAiRoute;
   "/teams/$slug": typeof AppTeamsSlugRoute;
   "/teams/new": typeof AppTeamsNewRoute;
   "/teams": typeof AppTeamsIndexRoute;
@@ -804,6 +822,7 @@ export interface FileRoutesById {
   "/invite/$token": typeof InviteTokenRoute;
   "/_app/projects/$id": typeof AppProjectsIdRoute;
   "/_app/projects/new": typeof AppProjectsNewRoute;
+  "/_app/settings_/ai": typeof AppSettingsAiRoute;
   "/_app/teams/$slug": typeof AppTeamsSlugRoute;
   "/_app/teams/new": typeof AppTeamsNewRoute;
   "/_app/teams/": typeof AppTeamsIndexRoute;
@@ -849,6 +868,7 @@ export interface FileRouteTypes {
     | "/invite/$token"
     | "/projects/$id"
     | "/projects/new"
+    | "/settings/ai"
     | "/teams/$slug"
     | "/teams/new"
     | "/teams"
@@ -891,6 +911,7 @@ export interface FileRouteTypes {
     | "/invite/$token"
     | "/projects/$id"
     | "/projects/new"
+    | "/settings/ai"
     | "/teams/$slug"
     | "/teams/new"
     | "/teams"
@@ -931,6 +952,7 @@ export interface FileRouteTypes {
     | "/invite/$token"
     | "/_app/projects/$id"
     | "/_app/projects/new"
+    | "/_app/settings_/ai"
     | "/_app/teams/$slug"
     | "/_app/teams/new"
     | "/_app/teams/"
@@ -1010,6 +1032,7 @@ export const routeTree = rootRoute
         "/_app/settings",
         "/_app/projects/$id",
         "/_app/projects/new",
+        "/_app/settings_/ai",
         "/_app/teams/$slug",
         "/_app/teams/new",
         "/_app/teams/",
@@ -1067,6 +1090,10 @@ export const routeTree = rootRoute
     },
     "/_app/projects/new": {
       "filePath": "_app.projects.new.tsx",
+      "parent": "/_app"
+    },
+    "/_app/settings_/ai": {
+      "filePath": "_app.settings_.ai.tsx",
       "parent": "/_app"
     },
     "/_app/teams/$slug": {
