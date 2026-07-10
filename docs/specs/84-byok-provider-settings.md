@@ -22,7 +22,7 @@ Two consequences drive the design:
   AI allowance (~€1) on the platform key at signup, metered by the [[Spec 83]]
   ledger (`user_id`), so the user experiences Cesare BEFORE meeting the wizard.
   The wow moment must precede the credit card. This is marketing cost, not
-  inference reselling, and `Features.AiTrialQuota` OFF removes it entirely.
+  inference reselling, and `Features.AiTrialQuota` OFF removes it entirely. (Implemented: env `AI_TRIAL_QUOTA_EUR`, per-user lifetime allowance metered from `ai_usage` via the `source` column.)
 
 ### The "AI SSO" landscape (verified 2026-07-09 — revisit before implementing)
 
@@ -55,7 +55,7 @@ A user (account-level, not per-project) has a provider configuration:
 ```
 provider:  "openrouter" | "anthropic" | "platform"
 apiKey:    encrypted at rest (see §4); absent for "platform"
-models:    { haiku: string; sonnet: string }   // tier → concrete model ID
+models:    { fast: string; quality: string }   // tier (ROLE, not model name) → concrete model ID
 ```
 
 The [[Spec 83]] gateway resolves `ModelIntent.tier` through this config (pipeline
@@ -170,6 +170,21 @@ A revoked/exhausted user key surfaces as a typed `AiProviderError` (neverthrow,
 `_tag`) with a UI state that links back to the provider settings — never a silent
 failure, never a fallback to the platform key (that would silently move costs back
 to us).
+
+### Implementation notes (as built, 2026-07-10)
+
+- Tiers renamed to **`fast`/`quality`** (roles, not model names) across router,
+  resolver, provider config — decided with Valerio: BYOK makes Anthropic-named
+  tiers misleading.
+- Settings route is **`/settings/ai`** (file `_app.settings_.ai.tsx` — the
+  trailing-underscore escape is required or TanStack nests it under the
+  outlet-less `_app.settings.tsx`).
+- The AI-off banner and every Cesare surface use the **`--ds-agent`** (leaf)
+  token family; `--color-cesare` (violet) in tokens.css is dead CSS — do not
+  seed new surfaces with it.
+- `page.route()` cannot intercept server-side Node fetches to openrouter.ai —
+  the manual-key/credit round-trips are covered by unit tests; the live
+  round-trip is exercised at the de-platform checkpoint with a real key.
 
 ## Non-goals
 
