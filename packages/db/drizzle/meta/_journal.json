@@ -337,6 +337,13 @@
       "when": 1779000000013,
       "tag": "0042_ai_usage_user_id",
       "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1779000000014,
+      "tag": "0043_ai_providers",
+      "breakpoints": true
     }
   ]
 }
