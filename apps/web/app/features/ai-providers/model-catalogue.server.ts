@@ -107,14 +107,45 @@ export type RecommendedModels = {
 };
 
 const ANTHROPIC_PREFIX = "anthropic/";
-// "Latest" is a recency THRESHOLD relative to the newest release in the
-// catalogue, not a fixed top-N count — a count alone doesn't exclude old
-// models when the catalogue happens to be small (e.g. only 4 Anthropic
-// models total: a fixed top-6 window would let a years-old model slip in as
-// "recent" simply for lack of competition). A ~120-day gap from the newest
-// release comfortably spans one Anthropic release cycle while still
-// dropping clearly superseded generations.
-const RECENCY_WINDOW_SECONDS = 120 * 24 * 60 * 60;
+// Anti-fossil window ONLY — generous on purpose (~18 months). A tight
+// "recent releases" window is the wrong concept here: the price tiers ship on
+// DIFFERENT cadences (a budget-tier model can be a year older than the
+// newest flagship and still be the current budget generation — verified
+// against the live catalogue, where a 120-day window left NO budget-class
+// model and the whole recommended pair silently slid one tier up). The
+// window's only job is dropping retired generations that providers keep
+// listed.
+const FOSSIL_WINDOW_SECONDS = 550 * 24 * 60 * 60;
+// Anthropic price tiers are discrete and far apart (each step is ≥ ~2x on
+// €/film). A gap ratio of 1.8 splits tiers without splitting same-tier
+// sibling models (whose prices differ by well under 1.8x).
+const PRICE_BAND_GAP_RATIO = 1.8;
+
+// Group price-sorted models into bands: a new band starts where the price
+// jumps by more than PRICE_BAND_GAP_RATIO from the previous model.
+const splitIntoPriceBands = (
+  byPriceAsc: readonly CatalogueModel[],
+): CatalogueModel[][] => {
+  const bands: CatalogueModel[][] = [];
+  for (const model of byPriceAsc) {
+    const band = bands[bands.length - 1];
+    const previous = band?.[band.length - 1];
+    if (
+      band &&
+      previous &&
+      model.euroPerFeatureFilm <=
+        previous.euroPerFeatureFilm * PRICE_BAND_GAP_RATIO
+    ) {
+      band.push(model);
+    } else {
+      bands.push([model]);
+    }
+  }
+  return bands;
+};
+
+const newestOf = (band: readonly CatalogueModel[]): CatalogueModel =>
+  band.reduce((a, b) => (b.created > a.created ? b : a));
 
 export const selectRecommendedModels = (
   models: readonly OpenRouterModel[],
@@ -126,24 +157,40 @@ export const selectRecommendedModels = (
   if (anthropicModels.length === 0) return null;
 
   const newestCreated = Math.max(...anthropicModels.map((m) => m.created));
-  const mostRecent = anthropicModels.filter(
-    (m) => newestCreated - m.created <= RECENCY_WINDOW_SECONDS,
+  const current = anthropicModels.filter(
+    (m) => newestCreated - m.created <= FOSSIL_WINDOW_SECONDS,
   );
 
-  const byPriceAsc = [...mostRecent].sort(
+  const byPriceAsc = [...current].sort(
     (a, b) => a.euroPerFeatureFilm - b.euroPerFeatureFilm,
   );
+  const bands = splitIntoPriceBands(byPriceAsc);
 
-  const haiku = byPriceAsc[0];
-  if (!haiku) return null;
-  // Quality slot = the NEXT distinct price tier up from the budget slot, not
-  // the priciest of the range: the top of the range is flagship pricing
-  // (Opus/Fable-class), and picking it would silently turn the recommended
-  // default into a 3-5x-cost model the day a new flagship ships. Falls back
-  // to the budget model itself when the catalogue has one price tier only.
+  const budgetBand = bands[0];
+  if (!budgetBand) return null;
+  // Budget slot = the NEWEST model of the cheapest price band; quality slot =
+  // the NEWEST of the next band up. Bands (not a global recency sort) keep
+  // each slot on its own tier: a brand-new flagship lands in a HIGHER band
+  // and can never hijack either slot, and an older-but-current budget model
+  // keeps its slot even when the newest releases are all premium-tier.
+  const haiku = newestOf(budgetBand);
+  const qualityBand = bands[1];
+  // Cap the quality slot at ~4.5x the budget price: the sonnet→opus price gap
+  // (~1.67x) is below the band split ratio, so band 2 can contain flagship
+  // models too — without the cap, a flagship released after the current
+  // balanced model would take the slot. Known ceiling: a flagship priced
+  // within 4.5x of a future pricier budget tier could still slip through;
+  // prices are always shown in the picker, so the failure mode is a visible
+  // dearer default, never a hidden cost.
+  const qualityCandidates = qualityBand?.filter(
+    (m) => m.euroPerFeatureFilm <= haiku.euroPerFeatureFilm * 4.5,
+  );
   const sonnet =
-    byPriceAsc.find((m) => m.euroPerFeatureFilm > haiku.euroPerFeatureFilm) ??
-    haiku;
+    qualityCandidates && qualityCandidates.length > 0
+      ? newestOf(qualityCandidates)
+      : qualityBand
+        ? newestOf(qualityBand)
+        : haiku;
 
   return { haiku, sonnet };
 };
