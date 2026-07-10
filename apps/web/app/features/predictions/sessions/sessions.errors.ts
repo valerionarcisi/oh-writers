@@ -15,3 +15,16 @@ export class CesareSessionNotFoundError {
     this.message = `Cesare session not found: ${id}`;
   }
 }
+
+// Pin limit reached — the caller tried to pin a 4th session while 3 are
+// already pinned for the project. Not a validation error: the request shape
+// is valid, the domain rule (max 3 pinned per project) blocked it.
+export class PinLimitReachedError {
+  readonly _tag = "PinLimitReachedError" as const;
+  readonly message: string;
+  readonly limit: number;
+  constructor(limit: number) {
+    this.limit = limit;
+    this.message = `Pin limit reached: at most ${limit} sessions can be pinned`;
+  }
+}

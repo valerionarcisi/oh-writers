@@ -6,7 +6,7 @@
 // by id so the same access pipeline runs without extra columns in the input.
 import { createServerFn } from "@tanstack/start";
 import { ResultAsync, okAsync, errAsync } from "neverthrow";
-import { and, desc, eq } from "drizzle-orm";
+import { and, asc, count, desc, eq, isNotNull, ne, sql } from "drizzle-orm";
 import { cesareSessions } from "@oh-writers/db/schema";
 import type { CesareSessionRow } from "@oh-writers/db/schema";
 import { toShape, type ResultShape } from "@oh-writers/utils";
@@ -20,11 +20,17 @@ import {
   DeleteSessionInput,
   TouchSessionInput,
   GetSessionInput,
+  PinSessionInput,
+  MAX_PINNED_SESSIONS,
   DEFAULT_NEW_SESSION_TITLE,
   DEFAULT_PRIMARY_SESSION_TITLE,
   type CesareSession,
 } from "./sessions.schema";
-import { CesareSessionNotFoundError, DbError } from "./sessions.errors";
+import {
+  CesareSessionNotFoundError,
+  PinLimitReachedError,
+  DbError,
+} from "./sessions.errors";
 
 // ─── Ownership guard ─────────────────────────────────────────────────────────
 // Pure predicate so the central `/sessions/:sessionId` route's access decision
@@ -47,6 +53,7 @@ const toWire = (row: CesareSessionRow): CesareSession => ({
   title: row.title,
   lastMessageAt: row.lastMessageAt.toISOString(),
   createdAt: row.createdAt.toISOString(),
+  pinnedAt: row.pinnedAt ? row.pinnedAt.toISOString() : null,
 });
 
 const findSessionById = (
@@ -114,7 +121,16 @@ export const listSessions = createServerFn({ method: "GET" })
                   eq(cesareSessions.userId, access.user.id),
                 ),
               )
-              .orderBy(desc(cesareSessions.lastMessageAt)),
+              // Pinned sessions first (most-recently-pinned first), then the
+              // rest by recency. Postgres sorts NULLs FIRST under a plain
+              // `DESC` (the opposite of ASC), so `desc(pinnedAt)` alone would
+              // put every UNpinned session at the top — order explicitly by
+              // "is unpinned" (false/pinned sorts before true/unpinned) first.
+              .orderBy(
+                asc(sql`${cesareSessions.pinnedAt} IS NULL`),
+                desc(cesareSessions.pinnedAt),
+                desc(cesareSessions.lastMessageAt),
+              ),
             (e) => new DbError("listSessions", e),
           )
             .andThen((rows) => {
@@ -340,6 +356,113 @@ export const touchSession = createServerFn({ method: "POST" })
                     | DbError,
                 );
           });
+        }),
+      );
+      return toShape(result);
+    },
+  );
+
+// ─── Pin ─────────────────────────────────────────────────────────────────────
+// LeftRail pinning (rail 5-row cap + "Vedi tutte"). Plain, DB-taking core
+// function so the max-3 enforcement + ordering can be unit-tested without a
+// `createServerFn`/`withProjectAccess` round-trip (mirrors the
+// `upsertEditorialAdviceDecision` extraction pattern).
+
+const countPinned = (
+  db: Db,
+  projectId: string,
+  userId: string,
+  excludeSessionId: string,
+): ResultAsync<number, DbError> =>
+  ResultAsync.fromPromise(
+    db
+      .select({ value: count() })
+      .from(cesareSessions)
+      .where(
+        and(
+          eq(cesareSessions.projectId, projectId),
+          eq(cesareSessions.userId, userId),
+          isNotNull(cesareSessions.pinnedAt),
+          // Exclude the session being pinned: re-pinning an already-pinned
+          // session must be the idempotent no-op the contract promises, not a
+          // limit error (review finding — reachable via a two-tab race).
+          ne(cesareSessions.id, excludeSessionId),
+        ),
+      )
+      .then((rows) => rows[0]?.value ?? 0),
+    (e) => new DbError("countPinned", e),
+  );
+
+/**
+ * Sets or clears `pinned_at` on a session already known to belong to
+ * (projectId, userId) — the caller runs the ownership check first. Pinning
+ * beyond `maxPinned` fails with `PinLimitReachedError`; unpinning is always
+ * allowed. Re-pinning an already-pinned session is a no-op success (idempotent).
+ */
+export const setSessionPinned = (
+  db: Db,
+  session: { id: string; projectId: string; userId: string },
+  pinned: boolean,
+  maxPinned: number = MAX_PINNED_SESSIONS,
+): ResultAsync<CesareSessionRow, PinLimitReachedError | DbError> => {
+  const applyUpdate = (): ResultAsync<CesareSessionRow, DbError> =>
+    ResultAsync.fromPromise(
+      db
+        .update(cesareSessions)
+        .set({ pinnedAt: pinned ? new Date() : null })
+        .where(eq(cesareSessions.id, session.id))
+        .returning(),
+      (e) => new DbError("setSessionPinned", e),
+    ).andThen((rows) => {
+      const updated = rows[0];
+      return updated
+        ? okAsync(updated)
+        : errAsync(new DbError("setSessionPinned:noReturn", null));
+    });
+
+  if (!pinned) return applyUpdate();
+
+  return countPinned(db, session.projectId, session.userId, session.id).andThen(
+    (pinnedCount) =>
+      pinnedCount >= maxPinned
+        ? errAsync(new PinLimitReachedError(maxPinned))
+        : applyUpdate(),
+  );
+};
+
+export const pinCesareSession = createServerFn({ method: "POST" })
+  .validator(PinSessionInput)
+  .handler(
+    async ({
+      data,
+    }): Promise<
+      ResultShape<
+        CesareSession,
+        | ProjectAccessError
+        | CesareSessionNotFoundError
+        | PinLimitReachedError
+        | DbError
+      >
+    > => {
+      const db = await getDb();
+      const result = await findSessionById(db, data.id).andThen((row) =>
+        withProjectAccess(row.projectId, "view", ({ db: gatedDb, access }) => {
+          if (row.userId !== access.user.id) {
+            return errAsync(
+              new CesareSessionNotFoundError(data.id) as
+                | CesareSessionNotFoundError
+                | PinLimitReachedError
+                | DbError,
+            );
+          }
+          return setSessionPinned(
+            gatedDb,
+            { id: row.id, projectId: row.projectId, userId: row.userId },
+            data.pinned,
+          ).map(toWire) as ResultAsync<
+            CesareSession,
+            CesareSessionNotFoundError | PinLimitReachedError | DbError
+          >;
         }),
       );
       return toShape(result);

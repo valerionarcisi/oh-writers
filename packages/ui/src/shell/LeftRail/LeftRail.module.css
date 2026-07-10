@@ -323,6 +323,42 @@
   font-weight: 500;
 }
 
+/* Pin indicator inside a pinned session row — sits right after the title,
+   before the trailing relative-time meta. */
+.sessionPinGlyph {
+  flex-shrink: 0;
+  color: var(--ds-text-faint);
+}
+
+.sessionActive .sessionPinGlyph {
+  color: var(--ds-agent);
+}
+
+/* "Vedi tutte (N)" — styled like the existing rail secondary links
+   (`.newSession`) so the capped-list affordance reads as part of the same
+   chrome family. */
+.seeAllSessions {
+  border: none;
+  background: transparent;
+  color: var(--ds-text-faint);
+  font-family: var(--ds-font-sans);
+  font-size: 11.5px;
+  text-align: start;
+  cursor: pointer;
+  padding: 5px 10px;
+  border-radius: 6px;
+
+  &:hover {
+    color: var(--ds-action);
+    background: var(--ds-surface-deep);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: -2px;
+  }
+}
+
 /* ── Session row: activate button + …-menu (Spec 53) ───────── */
 /* The row wraps the activate button and the hover-revealed … menu so the menu
    never widens the button itself. The button keeps `inline-size: 100%` and the

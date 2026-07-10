@@ -1,5 +1,36 @@
+import { execSync } from "node:child_process";
+import path from "node:path";
 import { type Page, expect } from "@playwright/test";
 import { BASE_URL } from "../fixtures";
+
+/**
+ * Seed N Cesare sessions for (projectId, userId) directly against the test
+ * DB, with the first `pinnedCount` marked pinned. Session rows are otherwise
+ * only created on a real first-message send (see `NewSessionLandingPage`),
+ * which is too slow to drive N times through the UI in a rail-cap test —
+ * this mirrors `reseedTestDb`'s direct-DB-script pattern instead.
+ */
+export const seedCesareSessions = (
+  projectId: string,
+  userId: string,
+  count: number,
+  pinnedCount = 0,
+): void => {
+  const root = path.resolve(__dirname, "..", "..");
+  execSync(
+    `pnpm --filter @oh-writers/db exec tsx src/seed/seed-cesare-sessions.ts ${projectId} ${userId} ${count} ${pinnedCount}`,
+    {
+      cwd: root,
+      stdio: "ignore",
+      env: {
+        ...process.env,
+        DATABASE_URL:
+          process.env["DATABASE_URL_TEST"] ??
+          "postgresql://oh-writers:oh-writers@localhost:5432/oh-writers_test",
+      },
+    },
+  );
+};
 
 /**
  * Open the floating Cesare chat sheet via the BottomDock pill.

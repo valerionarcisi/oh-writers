@@ -8,6 +8,8 @@ export {
   DeleteSessionInput,
   TouchSessionInput,
   GetSessionInput,
+  PinSessionInput,
+  MAX_PINNED_SESSIONS,
   DEFAULT_NEW_SESSION_TITLE,
   DEFAULT_PRIMARY_SESSION_TITLE,
   PLACEHOLDER_SESSION_TITLES,
@@ -20,7 +22,10 @@ export {
   resolveSessionSendTarget,
   type SessionSendTarget,
 } from "./session-send-target";
-export { CesareSessionNotFoundError } from "./sessions.errors";
+export {
+  CesareSessionNotFoundError,
+  PinLimitReachedError,
+} from "./sessions.errors";
 export {
   sessionsQueryKey,
   sessionQueryKey,
@@ -31,6 +36,7 @@ export {
   useCreateSession,
   useRenameSession,
   useDeleteSession,
+  usePinSession,
 } from "./useSessions";
 // server fns intentionally NOT re-exported here — import directly from
 // ./sessions.server in server-only code paths.

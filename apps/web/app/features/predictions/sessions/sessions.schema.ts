@@ -40,6 +40,15 @@ export const TouchSessionInput = z.object({
   id: z.string().uuid(),
 });
 
+// LeftRail pinning (rail cap + "Vedi tutte"). At most MAX_PINNED_SESSIONS
+// sessions per project can be pinned at once — enforced server-side.
+export const MAX_PINNED_SESSIONS = 3;
+
+export const PinSessionInput = z.object({
+  id: z.string().uuid(),
+  pinned: z.boolean(),
+});
+
 // Wire shape: Date fields become ISO strings once they cross the createServerFn
 // boundary. We expose them as strings so the consuming TanStack Query cache
 // stores a plain JSON value (no Date instances re-hydrating mid-flight).
@@ -50,6 +59,8 @@ export interface CesareSession {
   title: string;
   lastMessageAt: string;
   createdAt: string;
+  /** ISO timestamp when the session was pinned, or `null` when unpinned. */
+  pinnedAt: string | null;
 }
 
 export const DEFAULT_NEW_SESSION_TITLE = "Nuova sessione";

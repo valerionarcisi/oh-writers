@@ -33,6 +33,8 @@ export type CesareSessionItem = {
   /** Relative time label, e.g. "ora", "2h", "ieri" */
   lastAt: string;
   active?: boolean;
+  /** True when the session is pinned — sorts first and shows the pin glyph. */
+  pinned?: boolean;
 };
 
 export type RailToolItem = {
@@ -62,6 +64,13 @@ export type RailLabels = {
   newSession?: string;
   /** Aria-label for the rail navigation landmark. */
   nav?: string;
+  /** Label for the "pin session" row-menu action. */
+  pinSession?: string;
+  /** Label for the "unpin session" row-menu action. */
+  unpinSession?: string;
+  /** Visible label for the "Vedi tutte (N)" link shown when the rail caps the
+   *  session list. `{n}` is replaced with the total session count. */
+  seeAllSessions?: string;
   /** Visible label for the "new session" button (the "+ Nuova" pill). */
   newSessionShort?: string;
   /** Aria-labels for the footer account row + tools toolbar. */
@@ -125,6 +134,10 @@ export type LeftRailProps = {
    *  affordance is hidden. The rail does NOT confirm — it asks the consumer to
    *  open the confirmation modal (DS Dialog) and run the mutation. */
   onSessionDelete?: (sessionId: string) => void;
+  /** Toggle pin/unpin for a session. When omitted, the pin affordance is
+   *  hidden. The rail does not enforce the max-3 cap — the consumer runs the
+   *  mutation and surfaces the limit feedback (toast) on rejection. */
+  onSessionPin?: (sessionId: string, pinned: boolean) => void;
   /** Click handler for the "+ Nuova" affordance in the sessions section
    *  label. Optional — when omitted, the affordance is hidden. */
   onSessionNew?: () => void;
@@ -282,11 +295,17 @@ function SessionRow({
   onActivate,
   onRename,
   onDelete,
+  onPin,
+  pinLabel,
+  unpinLabel,
 }: {
   session: CesareSessionItem;
   onActivate: () => void;
   onRename?: (title: string) => void;
   onDelete?: () => void;
+  onPin?: (pinned: boolean) => void;
+  pinLabel?: string;
+  unpinLabel?: string;
 }) {
   const ref = useRef<HTMLButtonElement>(null);
   const [isEditing, setEditing] = useState(false);
@@ -303,8 +322,18 @@ function SessionRow({
     .join(" ");
 
   // Build the …-menu items from the wired affordances. Rename starts the inline
-  // edit; delete asks the consumer to open the confirmation modal.
+  // edit; delete asks the consumer to open the confirmation modal; pin/unpin
+  // toggles based on the session's current state.
   const menuItems = [
+    onPin
+      ? {
+          label: session.pinned
+            ? (unpinLabel ?? "Rimuovi dai fissati")
+            : (pinLabel ?? "Fissa in alto"),
+          onClick: () => onPin(!session.pinned),
+          testId: "session-pin-item",
+        }
+      : null,
     onRename
       ? {
           label: "Rinomina",
@@ -342,7 +371,11 @@ function SessionRow({
   }
 
   return (
-    <div className={styles.sessionRow} data-session-id={session.id}>
+    <div
+      className={styles.sessionRow}
+      data-session-id={session.id}
+      data-session-pinned={session.pinned ? "true" : undefined}
+    >
       <button
         ref={ref}
         {...buttonProps}
@@ -354,6 +387,14 @@ function SessionRow({
       >
         <RailGlyph icon="agent-spark" />
         <span className={styles.itemLabel}>{session.title}</span>
+        {session.pinned && (
+          <Icon
+            name="pin"
+            size={11}
+            aria-hidden={true}
+            className={styles.sessionPinGlyph}
+          />
+        )}
         <span className={styles.itemMeta}>{session.lastAt}</span>
       </button>
       {hasMenu && (
@@ -411,6 +452,34 @@ function SessionsSectionTitle({
     >
       <RailGlyph icon="agent-spark" />
       <span data-testid="rail-sessions-title">{title}</span>
+    </button>
+  );
+}
+
+// "Vedi tutte (N)" — shown below the capped session list, styled like the
+// rail's other secondary links. Navigates to the full Cesare sessions page
+// (same destination as the section title's `onOpen`).
+function SeeAllSessionsLink({
+  onOpen,
+  label,
+}: {
+  onOpen: () => void;
+  label: string;
+}) {
+  const ref = useRef<HTMLButtonElement>(null);
+  const { buttonProps } = useButton(
+    { onPress: onOpen, "aria-label": label },
+    ref,
+  );
+  return (
+    <button
+      ref={ref}
+      {...buttonProps}
+      type="button"
+      className={styles.seeAllSessions}
+      data-testid="rail-sessions-see-all"
+    >
+      {label}
     </button>
   );
 }
@@ -548,6 +617,31 @@ function RailGlyph({ icon }: { icon: string }) {
   );
 }
 
+// Rail visible-rows policy: at most 3 pinned + as many unpinned as fit,
+// capped at 5 rows total. When the full session list exceeds 5, the rail
+// shows the capped slice plus a "Vedi tutte (N)" link to the full sessions
+// page. `sessions` is expected pre-sorted pinned-first (the server fn already
+// orders `pinned_at desc, last_message_at desc`), so pinned rows are simply
+// the leading run.
+const MAX_RAIL_ROWS = 5;
+const MAX_RAIL_PINNED = 3;
+
+function visibleRailSessions(sessions: ReadonlyArray<CesareSessionItem>): {
+  visible: ReadonlyArray<CesareSessionItem>;
+  hasMore: boolean;
+} {
+  if (sessions.length <= MAX_RAIL_ROWS) {
+    return { visible: sessions, hasMore: false };
+  }
+  const pinned = sessions.filter((s) => s.pinned).slice(0, MAX_RAIL_PINNED);
+  const unpinned = sessions.filter((s) => !s.pinned);
+  const remainingSlots = Math.max(0, MAX_RAIL_ROWS - pinned.length);
+  return {
+    visible: [...pinned, ...unpinned.slice(0, remainingSlots)],
+    hasMore: true,
+  };
+}
+
 export function LeftRail({
   brand,
   project,
@@ -556,6 +650,7 @@ export function LeftRail({
   onSessionSelect,
   onSessionRename,
   onSessionDelete,
+  onSessionPin,
   onSessionNew,
   onSessionsOpen,
   onNavigate,
@@ -575,6 +670,9 @@ export function LeftRail({
   const projectFallbackLabel = labels?.projectFallback ?? "Progetto";
   const newSessionLabel = labels?.newSession ?? "Nuova sessione Cesare";
   const navLabel = labels?.nav ?? "Navigazione progetto";
+  const pinSessionLabel = labels?.pinSession ?? "Fissa in alto";
+  const unpinSessionLabel = labels?.unpinSession ?? "Rimuovi dai fissati";
+  const seeAllSessionsLabel = labels?.seeAllSessions ?? "Vedi tutte ({n})";
   const newSessionShortLabel = labels?.newSessionShort ?? "+ Nuova";
   const profileLabel = labels?.profile ?? "Profilo";
   const accountLabel = labels?.account ?? "Account";
@@ -651,6 +749,9 @@ export function LeftRail({
     // "open Cesare page" entry is wired — so the Cesare entry stays reachable
     // even from an empty list.
     if (!hasSessions && !onSessionsOpen) return null;
+    const { visible, hasMore } = hasSessions
+      ? visibleRailSessions(sessions!)
+      : { visible: [], hasMore: false };
     return (
       <section className={styles.section} data-rail-section="sessions">
         <header className={styles.sectionLabel}>
@@ -673,7 +774,7 @@ export function LeftRail({
         </header>
         {hasSessions && (
           <div className={styles.sessions}>
-            {sessions!.map((s) => (
+            {visible.map((s) => (
               <SessionRow
                 key={s.id}
                 session={s}
@@ -686,8 +787,24 @@ export function LeftRail({
                 onDelete={
                   onSessionDelete ? () => onSessionDelete(s.id) : undefined
                 }
+                onPin={
+                  onSessionPin
+                    ? (pinned) => onSessionPin(s.id, pinned)
+                    : undefined
+                }
+                pinLabel={pinSessionLabel}
+                unpinLabel={unpinSessionLabel}
               />
             ))}
+            {hasMore && onSessionsOpen && (
+              <SeeAllSessionsLink
+                onOpen={onSessionsOpen}
+                label={seeAllSessionsLabel.replace(
+                  "{n}",
+                  String(sessions!.length),
+                )}
+              />
+            )}
           </div>
         )}
       </section>

@@ -17,6 +17,7 @@ import {
   createSession,
   renameSession,
   deleteSession,
+  pinCesareSession,
 } from "./sessions.server";
 import type { CesareSession } from "./sessions.schema";
 
@@ -109,6 +110,22 @@ export const useDeleteSession = (projectId: string) => {
   return useMutation({
     mutationFn: async (id: string): Promise<{ id: string }> =>
       unwrapResult(await deleteSession({ data: { id } })),
+    onSuccess: () => invalidateSessions(qc, projectId),
+  });
+};
+
+// Pin/unpin a session (LeftRail cap + "Vedi tutte"). On a `PinLimitReachedError`
+// the thrown error carries `_tag`/`limit` (see `unwrapResult`) so callers can
+// pattern-match it in `onError` to show the "Puoi fissare fino a 3 sessioni"
+// toast instead of a generic failure message.
+export const usePinSession = (projectId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      id: string;
+      pinned: boolean;
+    }): Promise<CesareSession> =>
+      unwrapResult(await pinCesareSession({ data: input })),
     onSuccess: () => invalidateSessions(qc, projectId),
   });
 };

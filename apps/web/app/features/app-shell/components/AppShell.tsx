@@ -176,6 +176,8 @@ interface AppShellProps {
   onCesareSessionRename?: (sessionId: string, title: string) => void;
   /** Request deletion of a session (Spec 53) — opens the confirmation modal. */
   onCesareSessionDelete?: (sessionId: string) => void;
+  /** Toggle pin/unpin for a session (LeftRail cap + "Vedi tutte"). */
+  onCesareSessionPin?: (sessionId: string, pinned: boolean) => void;
   onCesareSessionNew?: () => void;
   /** Raw `?peek` search param (Spec 46). `null` when absent. AppShell
    *  validates it (same-project guard, fail closed) before acting. */
@@ -277,6 +279,7 @@ function AppShellInner({
   onCesareSessionSelect,
   onCesareSessionRename,
   onCesareSessionDelete,
+  onCesareSessionPin,
   onCesareSessionNew,
   peek = null,
   onOpenCesarePeek,
@@ -1553,6 +1556,7 @@ function AppShellInner({
             onSessionSelect={onCesareSessionSelect}
             onSessionRename={onCesareSessionRename}
             onSessionDelete={onCesareSessionDelete}
+            onSessionPin={isAiEnabled ? onCesareSessionPin : undefined}
             onSessionNew={isAiEnabled ? onCesareSessionNew : undefined}
             onSessionsOpen={isAiEnabled ? onCesareSessionsOpen : undefined}
             tools={railTools}
@@ -1565,6 +1569,9 @@ function AppShellInner({
               projectFallback: t("shell.rail.projectFallback"),
               newSession: t("shell.rail.newSession"),
               nav: t("shell.rail.nav"),
+              pinSession: t("shell.rail.pinSession"),
+              unpinSession: t("shell.rail.unpinSession"),
+              seeAllSessions: t("shell.rail.seeAllSessions"),
               newSessionShort: t("shell.rail.newSessionShort"),
               profile: t("shell.rail.profile"),
               account: t("shell.rail.account"),

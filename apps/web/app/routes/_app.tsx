@@ -11,7 +11,7 @@ import { createServerFn } from "@tanstack/start";
 import type { Locale, UserId, TranslationKey } from "@oh-writers/domain";
 import { useTranslation } from "~/features/i18n";
 import type { TopBarSectionGroup, DropdownMenuItem } from "@oh-writers/ui";
-import { ConfirmDialog } from "@oh-writers/ui";
+import { ConfirmDialog, useToast } from "@oh-writers/ui";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "~/features/app-shell";
 import {
@@ -26,6 +26,7 @@ import {
   useSessions as useCesareSessions,
   useRenameSession as useRenameCesareSession,
   useDeleteSession as useDeleteCesareSession,
+  usePinSession as usePinCesareSession,
 } from "~/features/predictions";
 import { useProject, personalProjectsQueryOptions } from "~/features/projects";
 import type { AppUser } from "~/server/context";
@@ -343,6 +344,7 @@ function AppLayout() {
     active: activeSessionIdFromRoute
       ? s.id === activeSessionIdFromRoute
       : idx === 0,
+    pinned: s.pinnedAt !== null,
   }));
 
   // Spec 47-A5 — clicking a session row opens its full conversation at the
@@ -364,6 +366,8 @@ function AppLayout() {
   // mutation; if the open session is removed we navigate away.
   const renameCesareSession = useRenameCesareSession(projectId ?? "");
   const deleteCesareSession = useDeleteCesareSession(projectId ?? "");
+  const pinCesareSession = usePinCesareSession(projectId ?? "");
+  const { showToast } = useToast();
   // The session queued for deletion (drives the confirmation modal). `null`
   // when the modal is closed.
   const [sessionPendingDelete, setSessionPendingDelete] = useState<{
@@ -373,6 +377,27 @@ function AppLayout() {
 
   const handleCesareSessionRename = (sessionId: string, title: string) => {
     renameCesareSession.mutate({ id: sessionId, title });
+  };
+
+  // LeftRail pin/unpin (rail 5-row cap + "Vedi tutte"). The server enforces
+  // the max-3-pinned rule; a 4th pin attempt rejects with a typed
+  // `PinLimitReachedError` (see `unwrapResult`, which throws it as an Error
+  // carrying `_tag`) — surfaced here as our own toast, never `window.alert`.
+  const handleCesareSessionPin = (sessionId: string, pinned: boolean) => {
+    pinCesareSession.mutate(
+      { id: sessionId, pinned },
+      {
+        onError: (error) => {
+          const tag = (error as { _tag?: string })._tag;
+          if (tag === "PinLimitReachedError") {
+            showToast({
+              message: t("shell.rail.pinLimitReached"),
+              variant: "info",
+            });
+          }
+        },
+      },
+    );
   };
 
   const handleCesareSessionDeleteRequest = (sessionId: string) => {
@@ -462,6 +487,7 @@ function AppLayout() {
         onCesareSessionSelect={handleCesareSessionSelect}
         onCesareSessionRename={handleCesareSessionRename}
         onCesareSessionDelete={handleCesareSessionDeleteRequest}
+        onCesareSessionPin={handleCesareSessionPin}
         onCesareSessionNew={handleCesareSessionNew}
         peek={peek ?? null}
         onOpenCesarePeek={openCesarePeek}

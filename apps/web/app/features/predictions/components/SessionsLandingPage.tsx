@@ -7,9 +7,9 @@
 import { useRef } from "react";
 import { useButton } from "react-aria";
 import { useNavigate } from "@tanstack/react-router";
-import { SkeletonCard } from "@oh-writers/ui";
+import { SkeletonCard, Icon, useToast } from "@oh-writers/ui";
 import type { TranslationKey } from "@oh-writers/domain";
-import { useSessions } from "../sessions";
+import { useSessions, usePinSession } from "../sessions";
 import type { CesareSession } from "../sessions";
 import { useTranslation } from "~/features/i18n";
 import styles from "./SessionsLandingPage.module.css";
@@ -29,19 +29,23 @@ function formatRelative(iso: string, t: Translate): string {
   return `${days}${t("cesare.time.days")}`;
 }
 
-function SessionCard({
-  session,
-  onOpen,
+function SessionPinButton({
+  pinned,
+  onToggle,
+  pinLabel,
+  unpinLabel,
 }: {
-  session: CesareSession;
-  onOpen: (id: string) => void;
+  pinned: boolean;
+  onToggle: () => void;
+  pinLabel: string;
+  unpinLabel: string;
 }) {
-  const { t } = useTranslation();
   const ref = useRef<HTMLButtonElement>(null);
+  const label = pinned ? unpinLabel : pinLabel;
   const { buttonProps } = useButton(
     {
-      onPress: () => onOpen(session.id),
-      "aria-label": `${t("cesare.landing.openPrefix")} ${session.title}`,
+      onPress: onToggle,
+      "aria-label": label,
     },
     ref,
   );
@@ -50,23 +54,73 @@ function SessionCard({
       ref={ref}
       {...buttonProps}
       type="button"
+      className={[styles.cardPin, pinned ? styles.cardPinActive : ""]
+        .filter(Boolean)
+        .join(" ")}
+      title={label}
+      data-testid="session-card-pin"
+    >
+      <Icon name="pin" size={14} aria-hidden={true} />
+    </button>
+  );
+}
+
+function SessionCard({
+  session,
+  onOpen,
+  onPin,
+  pinLabel,
+  unpinLabel,
+}: {
+  session: CesareSession;
+  onOpen: (id: string) => void;
+  onPin: (pinned: boolean) => void;
+  pinLabel: string;
+  unpinLabel: string;
+}) {
+  const { t } = useTranslation();
+  const ref = useRef<HTMLButtonElement>(null);
+  const pinned = session.pinnedAt !== null;
+  const { buttonProps } = useButton(
+    {
+      onPress: () => onOpen(session.id),
+      "aria-label": `${t("cesare.landing.openPrefix")} ${session.title}`,
+    },
+    ref,
+  );
+  return (
+    <div
       className={styles.card}
       data-session-id={session.id}
+      data-session-pinned={pinned ? "true" : undefined}
     >
-      <span className={styles.cardGlyph} aria-hidden="true">
-        ✦
-      </span>
-      <span className={styles.cardBody}>
-        <span className={styles.cardTitle}>{session.title}</span>
-        <span className={styles.cardMeta}>
-          {t("cesare.landing.lastActivity")} ·{" "}
-          {formatRelative(session.lastMessageAt, t)}
+      <button
+        ref={ref}
+        {...buttonProps}
+        type="button"
+        className={styles.cardMain}
+      >
+        <span className={styles.cardGlyph} aria-hidden="true">
+          ✦
         </span>
-      </span>
+        <span className={styles.cardBody}>
+          <span className={styles.cardTitle}>{session.title}</span>
+          <span className={styles.cardMeta}>
+            {t("cesare.landing.lastActivity")} ·{" "}
+            {formatRelative(session.lastMessageAt, t)}
+          </span>
+        </span>
+      </button>
+      <SessionPinButton
+        pinned={pinned}
+        onToggle={() => onPin(!pinned)}
+        pinLabel={pinLabel}
+        unpinLabel={unpinLabel}
+      />
       <span className={styles.cardChevron} aria-hidden="true">
         →
       </span>
-    </button>
+    </div>
   );
 }
 
@@ -74,6 +128,27 @@ export function SessionsLandingPage({ projectId }: { projectId: string }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const sessionsQuery = useSessions(projectId);
+  const pinSession = usePinSession(projectId);
+  const { showToast } = useToast();
+
+  // Mirrors the LeftRail's pin handler: the server enforces max-3-pinned and
+  // rejects a 4th pin with a typed `PinLimitReachedError` — surfaced as our
+  // own toast (never `window.alert`).
+  const handlePin = (sessionId: string, pinned: boolean) => {
+    pinSession.mutate(
+      { id: sessionId, pinned },
+      {
+        onError: (error) => {
+          if ((error as { _tag?: string })._tag === "PinLimitReachedError") {
+            showToast({
+              message: t("shell.rail.pinLimitReached"),
+              variant: "info",
+            });
+          }
+        },
+      },
+    );
+  };
 
   // Spec 52 — "+ Nuova" opens the full-screen glowy landing (`/sessions/new`).
   // The session row is created only when the user sends their first message
@@ -111,6 +186,11 @@ export function SessionsLandingPage({ projectId }: { projectId: string }) {
   };
 
   const sessions = sessionsQuery.data ?? [];
+  // The server already orders pinned-first (pinned_at desc, then recency);
+  // splitting into two lists here just adds the visible section label —
+  // it does not re-sort.
+  const pinnedSessions = sessions.filter((s) => s.pinnedAt !== null);
+  const unpinnedSessions = sessions.filter((s) => s.pinnedAt === null);
 
   return (
     <div className={styles.page} data-testid="cesare-sessions-landing">
@@ -163,13 +243,54 @@ export function SessionsLandingPage({ projectId }: { projectId: string }) {
               ? `1 ${t("cesare.landing.countOne")}`
               : `${sessions.length} ${t("cesare.landing.countMany")}`}
           </p>
-          <ul className={styles.list} aria-label={t("cesare.landing.listAria")}>
-            {sessions.map((session) => (
-              <li key={session.id}>
-                <SessionCard session={session} onOpen={openSession} />
-              </li>
-            ))}
-          </ul>
+          {pinnedSessions.length > 0 && (
+            <>
+              <p className={styles.sectionLabel}>
+                {t("cesare.landing.pinnedSection")}
+              </p>
+              <ul
+                className={styles.list}
+                aria-label={t("cesare.landing.pinnedSection")}
+              >
+                {pinnedSessions.map((session) => (
+                  <li key={session.id}>
+                    <SessionCard
+                      session={session}
+                      onOpen={openSession}
+                      onPin={(pinned) => handlePin(session.id, pinned)}
+                      pinLabel={t("shell.rail.pinSession")}
+                      unpinLabel={t("shell.rail.unpinSession")}
+                    />
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+          {unpinnedSessions.length > 0 && (
+            <>
+              {pinnedSessions.length > 0 && (
+                <p className={styles.sectionLabel}>
+                  {t("cesare.landing.recentSection")}
+                </p>
+              )}
+              <ul
+                className={styles.list}
+                aria-label={t("cesare.landing.listAria")}
+              >
+                {unpinnedSessions.map((session) => (
+                  <li key={session.id}>
+                    <SessionCard
+                      session={session}
+                      onOpen={openSession}
+                      onPin={(pinned) => handlePin(session.id, pinned)}
+                      pinLabel={t("shell.rail.pinSession")}
+                      unpinLabel={t("shell.rail.unpinSession")}
+                    />
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
         </>
       )}
     </div>

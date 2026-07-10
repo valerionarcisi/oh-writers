@@ -23,6 +23,11 @@ export const cesareSessions = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
+    // NULL = not pinned. Set to the pin moment so pinned sessions can sort
+    // by pinned_at desc (most-recently-pinned first). Capped at 3 per
+    // project — enforced in sessions.server.ts, not here (a CHECK can't
+    // count sibling rows).
+    pinnedAt: timestamp("pinned_at", { withTimezone: true }),
   },
   (t) => [index("cesare_sessions_project_user_idx").on(t.projectId, t.userId)],
 );

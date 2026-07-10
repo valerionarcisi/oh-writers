@@ -419,4 +419,181 @@ describe("LeftRail", () => {
     fireEvent.click(getByTestId("rail-lock-open"));
     expect(onLockOpen).toHaveBeenCalledTimes(1);
   });
+
+  // ── Pinning + the 5-row cap ──────────────────────────────────────────────
+
+  const manySessions = (n: number, pinnedCount = 0) =>
+    Array.from({ length: n }, (_, i) => ({
+      id: `s${i}`,
+      title: `Sessione ${i}`,
+      lastAt: `${i}h`,
+      pinned: i < pinnedCount,
+    }));
+
+  it("shows a pin glyph on pinned session rows", () => {
+    const sessions = [
+      { id: "s1", title: "Fissata", lastAt: "ora", pinned: true },
+      { id: "s2", title: "Non fissata", lastAt: "1h" },
+    ];
+    render(
+      <LeftRail
+        brand={{ label: "Oh Writers", onPress: vi.fn() }}
+        sections={SECTIONS}
+        sessions={sessions}
+        onSessionSelect={vi.fn()}
+        onNavigate={vi.fn()}
+      />,
+    );
+    const row = document.querySelector('[data-session-id="s1"]');
+    expect(row?.getAttribute("data-session-pinned")).toBe("true");
+    const unpinnedRow = document.querySelector('[data-session-id="s2"]');
+    expect(unpinnedRow?.getAttribute("data-session-pinned")).toBeNull();
+  });
+
+  it("renders a pin/unpin action in the row menu and fires onSessionPin", () => {
+    const onSessionPin = vi.fn();
+    const sessions = [{ id: "s1", title: "Sessione", lastAt: "ora" }];
+    const { getByTestId, getByText } = render(
+      <LeftRail
+        brand={{ label: "Oh Writers", onPress: vi.fn() }}
+        sections={SECTIONS}
+        sessions={sessions}
+        onSessionSelect={vi.fn()}
+        onSessionPin={onSessionPin}
+        onNavigate={vi.fn()}
+      />,
+    );
+    fireEvent.click(getByTestId("session-actions-btn"));
+    expect(getByText("Fissa in alto")).toBeTruthy();
+    fireEvent.click(getByText("Fissa in alto"));
+    expect(onSessionPin).toHaveBeenCalledWith("s1", true);
+  });
+
+  it("shows 'Rimuovi dai fissati' for an already-pinned session", () => {
+    const onSessionPin = vi.fn();
+    const sessions = [
+      { id: "s1", title: "Sessione", lastAt: "ora", pinned: true },
+    ];
+    const { getByTestId, getByText } = render(
+      <LeftRail
+        brand={{ label: "Oh Writers", onPress: vi.fn() }}
+        sections={SECTIONS}
+        sessions={sessions}
+        onSessionSelect={vi.fn()}
+        onSessionPin={onSessionPin}
+        onNavigate={vi.fn()}
+      />,
+    );
+    fireEvent.click(getByTestId("session-actions-btn"));
+    fireEvent.click(getByText("Rimuovi dai fissati"));
+    expect(onSessionPin).toHaveBeenCalledWith("s1", false);
+  });
+
+  it("does not render a pin action when onSessionPin is omitted", () => {
+    const sessions = [{ id: "s1", title: "Sessione", lastAt: "ora" }];
+    const { queryByText, queryByTestId } = render(
+      <LeftRail
+        brand={{ label: "Oh Writers", onPress: vi.fn() }}
+        sections={SECTIONS}
+        sessions={sessions}
+        onSessionSelect={vi.fn()}
+        onNavigate={vi.fn()}
+      />,
+    );
+    // No rename/delete either, so the whole …-menu never renders.
+    expect(queryByTestId("session-actions-btn")).toBeNull();
+    expect(queryByText("Fissa in alto")).toBeNull();
+  });
+
+  it("renders all rows and no 'Vedi tutte' link when total sessions <= 5", () => {
+    const sessions = manySessions(5, 2);
+    const { getByText, queryByTestId } = render(
+      <LeftRail
+        brand={{ label: "Oh Writers", onPress: vi.fn() }}
+        sections={SECTIONS}
+        sessions={sessions}
+        onSessionSelect={vi.fn()}
+        onSessionsOpen={vi.fn()}
+        onNavigate={vi.fn()}
+      />,
+    );
+    for (const s of sessions) expect(getByText(s.title)).toBeTruthy();
+    expect(queryByTestId("rail-sessions-see-all")).toBeNull();
+  });
+
+  it("caps the rail at 3 pinned + up to 5 total rows, with a 'Vedi tutte (N)' link", () => {
+    // 3 pinned + 5 unpinned = 8 total. Rail shows 3 pinned + 2 unpinned = 5 rows.
+    const sessions = manySessions(8, 3);
+    const { getByText, queryByText, getByTestId } = render(
+      <LeftRail
+        brand={{ label: "Oh Writers", onPress: vi.fn() }}
+        sections={SECTIONS}
+        sessions={sessions}
+        onSessionSelect={vi.fn()}
+        onSessionsOpen={vi.fn()}
+        onNavigate={vi.fn()}
+      />,
+    );
+    // All 3 pinned rows are visible.
+    expect(getByText("Sessione 0")).toBeTruthy();
+    expect(getByText("Sessione 1")).toBeTruthy();
+    expect(getByText("Sessione 2")).toBeTruthy();
+    // Only the 2 most-recent unpinned rows (indices 3, 4) are visible.
+    expect(getByText("Sessione 3")).toBeTruthy();
+    expect(getByText("Sessione 4")).toBeTruthy();
+    expect(queryByText("Sessione 5")).toBeNull();
+    expect(queryByText("Sessione 6")).toBeNull();
+    expect(queryByText("Sessione 7")).toBeNull();
+    // "Vedi tutte (8)" link is present and reflects the full count.
+    const link = getByTestId("rail-sessions-see-all");
+    expect(link.textContent).toBe("Vedi tutte (8)");
+  });
+
+  it("invokes onSessionsOpen when 'Vedi tutte' is clicked", () => {
+    const onSessionsOpen = vi.fn();
+    const sessions = manySessions(6);
+    const { getByTestId } = render(
+      <LeftRail
+        brand={{ label: "Oh Writers", onPress: vi.fn() }}
+        sections={SECTIONS}
+        sessions={sessions}
+        onSessionSelect={vi.fn()}
+        onSessionsOpen={onSessionsOpen}
+        onNavigate={vi.fn()}
+      />,
+    );
+    fireEvent.click(getByTestId("rail-sessions-see-all"));
+    expect(onSessionsOpen).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not render 'Vedi tutte' when onSessionsOpen is omitted, even past the cap", () => {
+    const sessions = manySessions(6);
+    const { queryByTestId } = render(
+      <LeftRail
+        brand={{ label: "Oh Writers", onPress: vi.fn() }}
+        sections={SECTIONS}
+        sessions={sessions}
+        onSessionSelect={vi.fn()}
+        onNavigate={vi.fn()}
+      />,
+    );
+    expect(queryByTestId("rail-sessions-see-all")).toBeNull();
+  });
+
+  it("caps unpinned-only lists at 5 rows (no pinned sessions)", () => {
+    const sessions = manySessions(7, 0);
+    const { getByText, queryByText } = render(
+      <LeftRail
+        brand={{ label: "Oh Writers", onPress: vi.fn() }}
+        sections={SECTIONS}
+        sessions={sessions}
+        onSessionSelect={vi.fn()}
+        onSessionsOpen={vi.fn()}
+        onNavigate={vi.fn()}
+      />,
+    );
+    for (let i = 0; i < 5; i++) expect(getByText(`Sessione ${i}`)).toBeTruthy();
+    expect(queryByText("Sessione 5")).toBeNull();
+    expect(queryByText("Sessione 6")).toBeNull();
+  });
 });

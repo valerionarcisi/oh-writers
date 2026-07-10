@@ -180,6 +180,11 @@ export const appShellKeys = {
     "shell.rail.newSession": "New Cesare session",
     "shell.rail.nav": "Project navigation",
     "shell.rail.openSidebar": "Open sidebar",
+    // Session pin/unpin (LeftRail cap + "Vedi tutte")
+    "shell.rail.pinSession": "Pin to top",
+    "shell.rail.unpinSession": "Remove from pinned",
+    "shell.rail.seeAllSessions": "See all ({n})",
+    "shell.rail.pinLimitReached": "You can pin up to 3 sessions",
     // Project switcher popover
     "shell.projectSwitcher.switch": "Switch project",
     "shell.projectSwitcher.empty": "No project",
@@ -436,6 +441,11 @@ export const appShellKeys = {
     "shell.rail.newSession": "Nuova sessione Cesare",
     "shell.rail.nav": "Navigazione progetto",
     "shell.rail.openSidebar": "Apri sidebar",
+    // Session pin/unpin (cap rail + "Vedi tutte")
+    "shell.rail.pinSession": "Fissa in alto",
+    "shell.rail.unpinSession": "Rimuovi dai fissati",
+    "shell.rail.seeAllSessions": "Vedi tutte ({n})",
+    "shell.rail.pinLimitReached": "Puoi fissare fino a 3 sessioni",
     // Project switcher popover
     "shell.projectSwitcher.switch": "Cambia progetto",
     "shell.projectSwitcher.empty": "Nessun progetto",

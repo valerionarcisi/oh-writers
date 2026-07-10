@@ -89,6 +89,17 @@
   color: var(--ds-text-faint);
 }
 
+/* "Fissate" / "Recenti" section dividers above the pinned/unpinned groups. */
+.sectionLabel {
+  margin: 0;
+  margin-block-start: var(--ds-space-2);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ds-text-faint);
+}
+
 .list {
   display: flex;
   flex-direction: column;
@@ -101,22 +112,18 @@
 .card {
   display: flex;
   align-items: center;
-  gap: var(--ds-space-4);
+  gap: var(--ds-space-2);
   inline-size: 100%;
   border: 1px solid var(--ds-line);
   background: var(--ds-surface);
-  font: inherit;
-  text-align: start;
   padding-block: var(--ds-space-4);
   padding-inline: var(--ds-space-4);
   border-radius: var(--ds-radius-lg);
-  cursor: pointer;
   color: var(--ds-text);
   box-shadow: var(--ds-shadow-0);
   transition:
     border-color var(--ds-duration-2) var(--ds-ease),
-    box-shadow var(--ds-duration-2) var(--ds-ease),
-    transform var(--ds-duration-2) var(--ds-ease);
+    box-shadow var(--ds-duration-2) var(--ds-ease);
 
   &:hover {
     border-color: color-mix(in oklch, var(--ds-agent) 50%, transparent);
@@ -127,11 +134,61 @@
       transform: translateX(var(--ds-space-1));
     }
   }
+}
+
+/* The activate button inside the card — everything except the pin action.
+   Unstyled (border/background come from the parent `.card`) so the pin
+   button reads as a separate control, not a nested duplicate card. */
+.cardMain {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-4);
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  border: none;
+  background: transparent;
+  font: inherit;
+  text-align: start;
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-agent);
+    outline-offset: 2px;
+    border-radius: var(--ds-radius-sm);
+  }
+}
+
+.cardPin {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--ds-space-8);
+  block-size: var(--ds-space-8);
+  border: none;
+  background: transparent;
+  border-radius: var(--ds-radius-md);
+  color: var(--ds-text-faint);
+  cursor: pointer;
+  transition:
+    background var(--ds-duration-2) var(--ds-ease),
+    color var(--ds-duration-2) var(--ds-ease);
+
+  &:hover {
+    background: var(--ds-surface-deep);
+    color: var(--ds-text);
+  }
 
   &:focus-visible {
     outline: 2px solid var(--ds-agent);
     outline-offset: 2px;
   }
+}
+
+.cardPinActive {
+  color: var(--ds-agent);
 }
 
 .cardGlyph {
