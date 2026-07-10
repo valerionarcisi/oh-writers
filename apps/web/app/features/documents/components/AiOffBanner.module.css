@@ -1,8 +1,9 @@
 /* Spec 84 §5 — the AI-off state's single trace of AI: a slim strip above the
-   document offering to turn Cesare's AI back on. Purple Cesare accent
-   (--color-cesare token family) distinguishes it from the green agent-tinted
-   CesareUpdatedBanner — this banner is about AI being OFF, not a completed
-   edit. */
+   document offering to turn Cesare's AI back on. Uses the --ds-agent token
+   family: the LIVE Cesare identity is the leaf-green agent accent (screenplay
+   panel, schedule banner, breakdown) — the violet --color-cesare token in
+   tokens.css is dead CSS with a stale comment and must not seed new
+   surfaces (design-system check, 2026-07-10). */
 .banner {
   display: flex;
   align-items: center;
@@ -12,9 +13,9 @@
   margin-inline: auto;
   margin-block-end: var(--space-4);
   padding: var(--space-2) var(--space-4);
-  border: var(--border-width) solid var(--color-cesare);
+  border: var(--border-width) solid var(--ds-agent);
   border-radius: var(--radius-md);
-  background: var(--color-cesare-subtle);
+  background: var(--ds-agent-soft);
   color: var(--ds-text);
   font-family: var(--font-sans);
   font-size: var(--text-sm);
@@ -23,7 +24,7 @@
 
 .glyph {
   flex-shrink: 0;
-  color: var(--color-cesare);
+  color: var(--ds-agent);
   font-size: var(--text-lg);
   line-height: 1;
 }
@@ -47,12 +48,12 @@
 
 .cta {
   flex-shrink: 0;
-  background: var(--color-cesare);
+  background: var(--ds-agent);
   border-color: transparent;
   color: var(--ds-text-on-dark);
 
   &:hover {
-    background: var(--color-cesare);
+    background: var(--ds-agent);
     opacity: 0.85;
   }
 }
