@@ -68,6 +68,7 @@ When in doubt about an architectural decision, stop and ask.
 - **This file (CLAUDE.md)**: if a decision is made during a session that contradicts or extends a rule here, update the relevant section before ending the session. One clear rule, not a paragraph. If the change is detailed, put the body in the matching `docs/conventions/<topic>.md` and keep CLAUDE.md as the pointer.
 - **The relevant convention file** in `docs/conventions/`: if a rule changes or gets refined, update the file directly — CLAUDE.md only carries the index.
 - **The spec for the feature being worked on** (`docs/specs/NN-feature.md`): if implementation reveals an error, missing case, or schema change, update the spec to match reality. The spec must always reflect what was actually built, not the original plan.
+- **The `/manual-test` journeys** (`.claude/skills/manual-test/JOURNEYS.md`): when a new feature or user story lands on main, add or update its journey (Percorso / Verifiche / Blindata da) in the same session. The list is living by contract — it must reflect the shipped product.
 
 ### Update only when explicitly asked
 
