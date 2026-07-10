@@ -31,11 +31,13 @@ import {
   BREAKDOWN_CATEGORIES,
   CATEGORY_META,
   ContextActionIds,
+  Features,
   extractScenesFromFountain,
   type BreakdownCategory,
   type TranslationKey,
 } from "@oh-writers/domain";
 import { useTranslation } from "~/features/i18n";
+import { useFeature } from "~/features/feature-flags";
 import {
   breakdownContextOptions,
   breakdownForSceneOptions,
@@ -171,6 +173,9 @@ function BreakdownPageContent({ projectId }: Props) {
   const versionId = ctx.screenplayVersionId;
   const { data: syncState } = useQuery(syncStateQueryOptions(projectId));
   const canEdit = ctx.canEdit;
+  // Spec 84 §5 — hides the "Ri-spogliare con AI" CTA and skips the auto-spoglio
+  // mount effect entirely when AI is off (no dead button, no background call).
+  const isAiEnabled = useFeature(Features.AI_ENABLED);
   const scenes = ctx.scenes;
   // Cesare is now driven exclusively by the shell-level BottomDock — the
   // local pill was removed (TKT-LEAD-01). Hook stays mounted so future
@@ -261,7 +266,7 @@ function BreakdownPageContent({ projectId }: Props) {
   const breakdownActions = useMemo(
     () => (
       <div className={styles.topbarActions}>
-        {canEdit && (
+        {canEdit && isAiEnabled && (
           <Button
             variant="secondary"
             size="sm"
@@ -282,20 +287,21 @@ function BreakdownPageContent({ projectId }: Props) {
     // handleRespoglio is recreated each render but closes only over stable refs;
     // depending on the pending flag + canEdit keeps the disabled state correct.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [canEdit, fullSpoglio.isPending, contextActionItems, t],
+    [canEdit, isAiEnabled, fullSpoglio.isPending, contextActionItems, t],
   );
   useTopBarSlotPublisher("actions", breakdownActions);
 
   const autoSpoglioStartedRef = useRef(false);
   useEffect(() => {
     if (import.meta.env.MOCK_AI) return;
+    if (!isAiEnabled) return;
     if (!canEdit) return;
     if (versionId.length === 0) return;
     if (autoSpoglioStartedRef.current) return;
     if (!autoSpoglio.isIdle) return;
     autoSpoglioStartedRef.current = true;
     autoSpoglio.mutate();
-  }, [autoSpoglio, canEdit, versionId]);
+  }, [autoSpoglio, canEdit, isAiEnabled, versionId]);
 
   // Project-wide breakdown rows → highlight elements (all scenes).
   const { data: projectRows } = useQuery(
@@ -919,7 +925,9 @@ function BreakdownPageContent({ projectId }: Props) {
         </Viewbar>
       </div>
 
-      {syncState?.breakdownStale && !autoSpoglio.isPending && (
+      {/* Spec 84 §5: both banners exist only to prompt the (now hidden)
+          re-spoglio AI action — a dead-end notice with AI off. */}
+      {isAiEnabled && syncState?.breakdownStale && !autoSpoglio.isPending && (
         <div
           className={styles.statusBanner}
           role="alert"
@@ -929,7 +937,7 @@ function BreakdownPageContent({ projectId }: Props) {
         </div>
       )}
 
-      {autoSpoglio.isPending && (
+      {isAiEnabled && autoSpoglio.isPending && (
         <div
           className={styles.statusBanner}
           role="status"

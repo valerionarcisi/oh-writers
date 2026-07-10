@@ -87,6 +87,7 @@ import { pulseAffectedEntities } from "../cesare-pulse";
 import { buildRailNav } from "../nav";
 import { useTranslation } from "~/features/i18n";
 import { useFeatures } from "~/features/feature-flags";
+import { Features } from "@oh-writers/domain";
 import {
   NotificationCenterDrawerHeader,
   NotificationCenterDrawerContent,
@@ -1248,6 +1249,11 @@ function AppShellInner({
   // Gates the rail nav (and everything derived from it below — palette
   // section jumps) through DEV_ONLY/market rules.
   const enabledFeatures = useFeatures();
+  // Spec 84 §5 — the master AI switch. OFF hides the Cesare drawer, its
+  // BottomDock/dock affordance, and the LeftRail "Sessioni Cesare" section
+  // entirely (not disabled — absent), leaving only the AI-off banner
+  // (rendered per-page, not here) as the sole trace of AI.
+  const isAiEnabled = enabledFeatures.has(Features.AI_ENABLED);
 
   const paletteItems = useMemo<CommandPaletteItem[]>(() => {
     const items: CommandPaletteItem[] = [
@@ -1533,12 +1539,16 @@ function AppShellInner({
                 : undefined
             }
             sections={fullSections}
-            sessions={cesareSessions}
+            // The rail renders the "Sessioni Cesare" section whenever
+            // `onSessionsOpen` is set, even with an empty `sessions` list (it
+            // stays reachable from zero sessions) — so AI-off must clear
+            // BOTH props, not just the list, or an empty section survives.
+            sessions={isAiEnabled ? cesareSessions : undefined}
             onSessionSelect={onCesareSessionSelect}
             onSessionRename={onCesareSessionRename}
             onSessionDelete={onCesareSessionDelete}
-            onSessionNew={onCesareSessionNew}
-            onSessionsOpen={onCesareSessionsOpen}
+            onSessionNew={isAiEnabled ? onCesareSessionNew : undefined}
+            onSessionsOpen={isAiEnabled ? onCesareSessionsOpen : undefined}
             tools={railTools}
             labels={{
               sessionsTitle: t("shell.rail.sessionsTitle"),
@@ -1611,8 +1621,10 @@ function AppShellInner({
         {/* Cesare split column (Spec 46 ?peek=, Spec 47 A4). A REAL third
               grid column — the main lane reflows narrower beside it (the page
               collapses). Hosts the single split CesareSheet; closing it clears
-              `?peek`. */}
-        {isCesareSplitActive && (
+              `?peek`. Spec 84 §5: gated behind `isAiEnabled` like every other
+              Cesare surface — OFF hides it even if `?peek=cesare` is still in
+              the URL (a stale deep link never resurrects the drawer). */}
+        {isAiEnabled && isCesareSplitActive && (
           <CesarePeekLane onClose={handleCloseCesarePeek}>
             {renderCesareSheet("split", sharedHistoryNav)}
           </CesarePeekLane>
@@ -1646,7 +1658,10 @@ function AppShellInner({
               prose by a per-document <CesareLiveDiff/> (mounted in the document
               bodies). The shell only relays the broadcast. */}
 
-        {!isCesareSplitActive && !isCesareSurfaceActive && (
+        {/* Spec 84 §5: the dock is Cesare-only (bell/avatar/gear live in
+              TopBarAccount) — AI off means no dock at all, not a disabled
+              one. */}
+        {isAiEnabled && !isCesareSplitActive && !isCesareSurfaceActive && (
           <BottomDock
             onCesareToggle={toggleCesare}
             openCesareLabel={t("shell.dock.openCesare")}
@@ -1670,7 +1685,8 @@ function AppShellInner({
               launcher dock stays reachable (it promotes Cesare into the shared
               navigable host while a lane is open — see `toggleCesare`). The chat
               is never duplicated. Session-focus props per Spec 47-A5. */}
-        {!isAnyAuxLaneActive &&
+        {isAiEnabled &&
+          !isAnyAuxLaneActive &&
           !isCesareSurfaceActive &&
           renderCesareSheet("floating")}
         <SplitDrawerHost

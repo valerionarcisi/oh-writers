@@ -1,6 +1,7 @@
 import { useRef, useState, useMemo } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { match } from "ts-pattern";
+import { Features } from "@oh-writers/domain";
 import {
   ScreenplayEditor,
   ScreenplayCesarePanel,
@@ -12,6 +13,7 @@ import {
 } from "~/features/screenplay-editor";
 import { ResultErrorView } from "~/components/ResultErrorView";
 import { Skeleton } from "@oh-writers/ui";
+import { useFeature } from "~/features/feature-flags";
 import styles from "./_app.projects.$id_.editor.module.css";
 import { Route as appRoute } from "./_app";
 
@@ -23,6 +25,9 @@ export function ScreenplayEditorPage() {
   const { id } = Route.useParams();
   const { user } = appRoute.useLoaderData();
   const { data: result, isLoading } = useScreenplay(id);
+  // Spec 84 §5 — the screenplay Cesare panel (+ its shell toggle button) is an
+  // AI surface: hidden entirely when off, never a disabled toggle.
+  const isAiEnabled = useFeature(Features.AI_ENABLED);
   const [isCesareOn, setIsCesareOn] = useState(true);
   const [currentElement, setCurrentElement] = useState<ElementType>("action");
   const [metrics, setMetrics] = useState({
@@ -89,19 +94,23 @@ export function ScreenplayEditorPage() {
           projectId={id}
           acts={acts}
           viewbarCenter={legendNode}
-          cesarePanel={
-            <ScreenplayCesarePanel
-              projectId={id}
-              screenplayId={value.id}
-              versionId={value.currentVersionId}
-              pageCurrent={metrics.pageCurrent}
-              pageTotal={metrics.pageTotal}
-              sceneCurrent={metrics.sceneCurrent}
-              sceneTotal={metrics.sceneTotal}
-            />
-          }
-          isCesarePanelOpen={isCesareOn}
-          onToggleCesarePanel={() => setIsCesareOn((prev) => !prev)}
+          {...(isAiEnabled
+            ? {
+                cesarePanel: (
+                  <ScreenplayCesarePanel
+                    projectId={id}
+                    screenplayId={value.id}
+                    versionId={value.currentVersionId}
+                    pageCurrent={metrics.pageCurrent}
+                    pageTotal={metrics.pageTotal}
+                    sceneCurrent={metrics.sceneCurrent}
+                    sceneTotal={metrics.sceneTotal}
+                  />
+                ),
+                isCesarePanelOpen: isCesareOn,
+                onToggleCesarePanel: () => setIsCesareOn((prev) => !prev),
+              }
+            : {})}
         >
           <ScreenplayEditor
             // Remount when the active version changes (Attiva / + Nuova
@@ -113,7 +122,7 @@ export function ScreenplayEditorPage() {
             key={value.currentVersionId ?? "live"}
             ref={editorRef}
             screenplay={value}
-            isCesareOn={isCesareOn}
+            isCesareOn={isAiEnabled && isCesareOn}
             onToggleCesare={setIsCesareOn}
             onCurrentElementChange={setCurrentElement}
             onMetricsChange={setMetrics}

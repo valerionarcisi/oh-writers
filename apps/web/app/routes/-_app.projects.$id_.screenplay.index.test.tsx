@@ -9,6 +9,7 @@ import {
   ScreenplayEditorPage,
 } from "./_app.projects.$id_.screenplay.index";
 import { Route as appRoute } from "./_app";
+import { FeatureProvider } from "~/features/feature-flags";
 
 const useScreenplayMock = vi.fn();
 
@@ -58,7 +59,11 @@ describe("ScreenplayEditorPage", () => {
       user: { id: "user-1", name: "User" },
     } as never);
 
-    render(<ScreenplayEditorPage />);
+    render(
+      <FeatureProvider locale="it" isDevEnvironment={false} isAiEnabled={true}>
+        <ScreenplayEditorPage />
+      </FeatureProvider>,
+    );
 
     expect(
       screen.getByTestId("screenplay-shell").getAttribute("data-open"),

@@ -10,6 +10,8 @@ import { Plans } from "./plan.js";
 const ctx = (over: Partial<FeatureContext>): FeatureContext => ({
   market: "it",
   plan: Plans.STUDIO,
+  isDevEnvironment: false,
+  isAiEnabled: true,
   ...over,
 });
 
@@ -78,5 +80,19 @@ describe("resolveFeatures", () => {
         ctx({ market: "intl", plan: Plans.STUDIO }),
       ),
     ).toBe(false);
+  });
+
+  it("enables Features.AI_ENABLED when isAiEnabled is true", () => {
+    const enabled = resolveFeatures(ctx({ isAiEnabled: true }));
+    expect(enabled.has(Features.AI_ENABLED)).toBe(true);
+  });
+
+  it("hides ONLY Features.AI_ENABLED when isAiEnabled is false — every other feature stays on", () => {
+    const enabled = resolveFeatures(ctx({ isAiEnabled: false }));
+    expect(enabled.has(Features.AI_ENABLED)).toBe(false);
+    expect(enabled.has(Features.CESARE)).toBe(true);
+    expect(enabled.has(Features.SCREENPLAY)).toBe(true);
+    expect(enabled.has(Features.BREAKDOWN)).toBe(true);
+    expect(enabled.has(Features.SOGGETTO)).toBe(true);
   });
 });

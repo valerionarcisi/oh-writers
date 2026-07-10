@@ -26,12 +26,23 @@ export const Route = createRootRoute({
   // Resolve the UI locale server-side (user.locale → Accept-Language → 'en')
   // so `<html lang>`, the first paint, and feature/route gates are correct and
   // the client never has to re-detect (which would flip lang on hydration).
-  loader: async (): Promise<{ locale: Locale; isDevEnvironment: boolean }> => {
+  loader: async (): Promise<{
+    locale: Locale;
+    isDevEnvironment: boolean;
+    isAiEnabled: boolean;
+  }> => {
     // resolveLocale is a createServerFn: on client-side navigation TanStack
     // re-runs this loader, and the server fn is invoked via RPC instead of
     // calling getWebRequest() directly (which throws off-server). See ALTO-1.
     const { resolveLocale } =
       await import("~/features/i18n/resolve-locale.server");
+    // Spec 84 §5: AI-enabled state is resolved the same way — server-side, in
+    // this loader, threaded down as a concrete prop (never re-derived on the
+    // client). Resolve it via a createServerFn too, for the same ALTO-1
+    // reason resolveLocale is one (getWebRequest() is unreliable on
+    // client-side re-navigation loaders).
+    const { resolveAiEnabledForCurrentUser } =
+      await import("~/features/feature-flags/resolve-ai-enabled-for-current-user.server");
     // Feature flags convention: resolve server-side, never on the client.
     // Vite inlines import.meta.env.DEV at build time — reading it here (not
     // inside FeatureProvider's render) keeps it on the same loader-resolution
@@ -39,6 +50,7 @@ export const Route = createRootRoute({
     return {
       locale: await resolveLocale(),
       isDevEnvironment: import.meta.env.DEV,
+      isAiEnabled: await resolveAiEnabledForCurrentUser(),
     };
   },
   component: RootLayout,
@@ -46,7 +58,7 @@ export const Route = createRootRoute({
 
 function RootLayout() {
   const [queryClient] = useState(() => new QueryClient());
-  const { locale, isDevEnvironment } = Route.useLoaderData();
+  const { locale, isDevEnvironment, isAiEnabled } = Route.useLoaderData();
 
   return (
     <html lang={locale}>
@@ -68,7 +80,11 @@ function RootLayout() {
       <body>
         <SpriteLoader />
         <LocaleProvider locale={locale}>
-          <FeatureProvider locale={locale} isDevEnvironment={isDevEnvironment}>
+          <FeatureProvider
+            locale={locale}
+            isDevEnvironment={isDevEnvironment}
+            isAiEnabled={isAiEnabled}
+          >
             <QueryClientProvider client={queryClient}>
               <ToastProvider>
                 <ConfirmDialogProvider>

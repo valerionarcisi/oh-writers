@@ -33,6 +33,12 @@ export const documentsKeys = {
     // Cesare-updated banner (entity page) — Spec 78 §A2: one discreet line.
     "documents.cesareUpdated.message": "✦ Cesare updated the {entity}",
     "documents.cesareUpdated.dismiss": "Dismiss",
+    // AI-off banner (Spec 84 §5) — the only trace of AI when Features.AI_ENABLED is off.
+    "documents.aiOffBanner.title": "Turn on Cesare's AI",
+    "documents.aiOffBanner.message":
+      "Connect an AI account to get writing help, editorial notes, and automatic breakdown.",
+    "documents.aiOffBanner.cta": "Turn on",
+    "documents.aiOffBanner.dismiss": "Dismiss",
     // Draft banner
     "documents.draftBanner.ariaLabel": "Cesare drafts",
     "documents.draftBanner.readyOne": "✦ Cesare has 1 draft ready",
@@ -233,6 +239,11 @@ export const documentsKeys = {
 
     "documents.cesareUpdated.message": "✦ Cesare ha aggiornato il {entity}",
     "documents.cesareUpdated.dismiss": "Ho visto",
+    "documents.aiOffBanner.title": "Attiva l'AI di Cesare",
+    "documents.aiOffBanner.message":
+      "Collega un account AI per avere aiuto nella scrittura, note editoriali e spoglio automatico.",
+    "documents.aiOffBanner.cta": "Attiva",
+    "documents.aiOffBanner.dismiss": "Chiudi",
     "documents.draftBanner.ariaLabel": "Bozze di Cesare",
     "documents.draftBanner.readyOne": "✦ Cesare ha pronto un draft",
     "documents.draftBanner.readyMany": "✦ Cesare ha pronto {count} draft",

@@ -4,10 +4,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { assertValidProjectId } from "~/lib/project-route";
 import { match } from "ts-pattern";
-import { ContextActionIds, DocumentTypes } from "@oh-writers/domain";
+import { ContextActionIds, DocumentTypes, Features } from "@oh-writers/domain";
 import { ActionsMenu, Skeleton, computeSaveStatus } from "@oh-writers/ui";
 import {
   canonicalNarrativeHtml,
+  AiOffBanner,
   CesareUpdatedBanner,
   ExportPdfModal,
   ExportSiaeModal,
@@ -36,6 +37,7 @@ import {
 import type { ContextActionHandlers } from "~/features/app-shell";
 import { useSession } from "~/lib/auth-client";
 import { useTranslation } from "~/features/i18n";
+import { useFeature } from "~/features/feature-flags";
 import { titleHead } from "~/lib/document-title";
 import type { DocumentViewWithPermission } from "~/features/documents";
 import styles from "./_app.projects.$id_.soggetto.module.css";
@@ -134,6 +136,9 @@ function SoggettoPageReady({
   // Spec 44 TKT-LEAD-01: Cesare opens via shell BottomDock.
   const _openCesare = useCesareOpen();
   void _openCesare;
+  // Spec 84 §5 — hides the margin-notes column and shows the AI-off banner
+  // instead when Features.AI_ENABLED is off.
+  const isAiEnabled = useFeature(Features.AI_ENABLED);
   const setActiveDocument = useSetActiveDocument();
   const [loglineContent, setLoglineContent] = useState(loglineDoc.content);
   const saveSoggetto = useSaveDocument();
@@ -350,17 +355,23 @@ function SoggettoPageReady({
         onOpenVersions={toggleVersions}
         topBarActions={topBarActions}
         rightAside={
-          <MarginNotesColumn
-            projectId={projectId}
-            docType={DocumentTypes.SOGGETTO}
-            content={soggettoContent}
-            savedContent={soggettoSave.savedContent}
-            isWaitingForSave={soggettoSave.isDirty}
-          />
+          isAiEnabled ? (
+            <MarginNotesColumn
+              projectId={projectId}
+              docType={DocumentTypes.SOGGETTO}
+              content={soggettoContent}
+              savedContent={soggettoSave.savedContent}
+              isWaitingForSave={soggettoSave.isDirty}
+            />
+          ) : undefined
         }
       >
         <div className={styles.pageShell}>
-          <CesareUpdatedBanner documentType={DocumentTypes.SOGGETTO} />
+          {isAiEnabled ? (
+            <CesareUpdatedBanner documentType={DocumentTypes.SOGGETTO} />
+          ) : (
+            <AiOffBanner userId={currentUser.id} />
+          )}
           <FreeNarrativeEditor
             content={soggettoContent}
             onChange={setSoggettoContent}

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { EditorView } from "prosemirror-view";
-import { ContextActionIds, DocumentTypes } from "@oh-writers/domain";
+import { ContextActionIds, DocumentTypes, Features } from "@oh-writers/domain";
 import type { DocumentType, TranslationKey } from "@oh-writers/domain";
+import { useFeature } from "~/features/feature-flags";
 import {
   ActionsMenu,
   CopyButton,
@@ -36,6 +37,7 @@ import { useSession } from "~/lib/auth-client";
 import { OutlineEditor } from "./OutlineEditor";
 import { NarrativeDocsShell } from "./NarrativeDocsShell";
 import { MarginNotesColumn } from "./MarginNotesColumn";
+import { AiOffBanner } from "./AiOffBanner";
 import { TreatmentToc } from "./TreatmentToc";
 import { getNarrativeSchema } from "../lib/narrative-schema";
 import { canonicalNarrativeHtml } from "../lib/narrative-html";
@@ -114,6 +116,9 @@ export function NarrativeEditor({
   // Spec 44 TKT-LEAD-01: Cesare opens via shell BottomDock.
   const _openCesare = useCesareOpen();
   void _openCesare;
+  // Spec 84 §5 — hides the margin-notes column (editorial advice, Cesare
+  // entry point) entirely when AI is off.
+  const isAiEnabled = useFeature(Features.AI_ENABLED);
   const setActiveDocument = useSetActiveDocument();
 
   // Publish the active document so Cesare's tool router knows which doc to
@@ -600,17 +605,21 @@ export function NarrativeEditor({
   const layout = layoutForType(type);
   // Treatment shows the chapter index (H2/H3 TOC) stacked above the margin notes
   // in the SAME right aside, so the document column isn't squeezed by a separate
-  // left column.
+  // left column. Spec 84 §5: the margin notes column is a Cesare surface
+  // (editorial advice + "Esplora con Cesare" entry point) — hidden entirely
+  // when AI is off, not just emptied.
   const rightAside = (
     <>
       {isTreatment && <TreatmentToc content={content} />}
-      <MarginNotesColumn
-        projectId={document.projectId}
-        docType={type}
-        content={plainContent}
-        savedContent={plainSavedContent}
-        isWaitingForSave={isDirty}
-      />
+      {isAiEnabled && (
+        <MarginNotesColumn
+          projectId={document.projectId}
+          docType={type}
+          content={plainContent}
+          savedContent={plainSavedContent}
+          isWaitingForSave={isDirty}
+        />
+      )}
     </>
   );
   const leftAside = undefined;
@@ -665,6 +674,9 @@ export function NarrativeEditor({
         rightAside={rightAside}
         topBarActions={docActionsMenu}
       >
+        {!isAiEnabled && realtimeUser && (
+          <AiOffBanner userId={realtimeUser.id} />
+        )}
         {draftBanner}
         {editorBody}
       </NarrativeDocsShell>

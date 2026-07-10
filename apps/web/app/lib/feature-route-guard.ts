@@ -18,11 +18,17 @@ export async function requireFeature(
 ): Promise<void> {
   const { resolveLocale } =
     await import("~/features/i18n/resolve-locale.server");
-  const locale = await resolveLocale();
+  const { resolveAiEnabledForCurrentUser } =
+    await import("~/features/feature-flags/resolve-ai-enabled-for-current-user.server");
+  const [locale, isAiEnabled] = await Promise.all([
+    resolveLocale(),
+    resolveAiEnabledForCurrentUser(),
+  ]);
   const enabled = resolveFeatures({
     market: marketFromLocale(locale),
     plan: DEFAULT_PLAN,
     isDevEnvironment: import.meta.env.DEV,
+    isAiEnabled,
   });
   if (!enabled.has(feature)) {
     throw redirect({ to: "/projects/$id", params: { id: projectId } });

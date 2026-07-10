@@ -1,6 +1,7 @@
 export { NarrativeEditor, stripHtml } from "./components/NarrativeEditor";
 export { DraftBanner } from "./components/DraftBanner";
 export { CesareUpdatedBanner } from "./components/CesareUpdatedBanner";
+export { AiOffBanner } from "./components/AiOffBanner";
 export {
   useDocumentDrafts,
   usePromoteDocumentDraft,

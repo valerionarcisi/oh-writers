@@ -6,10 +6,12 @@ import {
   CATEGORY_META,
   CAST_TIER_ORDER,
   CAST_TIER_META,
+  Features,
   type BreakdownCategory,
   type CastTier,
 } from "@oh-writers/domain";
 import { useTranslation } from "~/features/i18n";
+import { useFeature } from "~/features/feature-flags";
 import {
   breakdownForSceneOptions,
   useCesareSuggest,
@@ -38,6 +40,9 @@ export function BreakdownPanel({
   canEdit,
 }: Props) {
   const { t } = useTranslation();
+  // Spec 84 §5 — hides the per-scene "Suggerisci" (Cesare) CTA and the
+  // pending-suggestion accept/ignore banner when AI is off.
+  const isAiEnabled = useFeature(Features.AI_ENABLED);
   const sceneId = scene?.id ?? "";
   const { data: occurrences = [] } = useQuery(
     breakdownForSceneOptions(sceneId, versionId),
@@ -74,17 +79,19 @@ export function BreakdownPanel({
         </h3>
         {canEdit && (
           <div className={styles.actions}>
-            <button
-              type="button"
-              className={styles.action}
-              data-testid="cesare-suggest-scene"
-              onClick={() => suggest.mutate()}
-              disabled={suggest.isPending}
-            >
-              {suggest.isPending
-                ? t("breakdown.panel.cesareLoading")
-                : t("breakdown.panel.suggest")}
-            </button>
+            {isAiEnabled && (
+              <button
+                type="button"
+                className={styles.action}
+                data-testid="cesare-suggest-scene"
+                onClick={() => suggest.mutate()}
+                disabled={suggest.isPending}
+              >
+                {suggest.isPending
+                  ? t("breakdown.panel.cesareLoading")
+                  : t("breakdown.panel.suggest")}
+              </button>
+            )}
             <button
               type="button"
               className={styles.action}
@@ -97,7 +104,7 @@ export function BreakdownPanel({
         )}
       </div>
 
-      {suggest.isError && canEdit && (
+      {suggest.isError && canEdit && isAiEnabled && (
         <p className={styles.error} role="alert">
           {suggest.error instanceof Error
             ? suggest.error.message
@@ -105,7 +112,7 @@ export function BreakdownPanel({
         </p>
       )}
 
-      {pending.length > 0 && canEdit && (
+      {pending.length > 0 && canEdit && isAiEnabled && (
         <CesareSuggestionBanner
           pendingCount={pending.length}
           onAcceptAll={() =>
