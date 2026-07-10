@@ -113,14 +113,27 @@ side.
 > the documented fallback if per-user limit enforcement ever needs to move
 > provider-side.
 
-### 3. Model choice: free, but guided
+### 3. Model choice: free, guided, and NEVER hardcoded
 
-- Settings show a **curated list** (default): Claude Haiku / Sonnet tiers via the
-  user's provider — the models Cesare's prompts, tool loop, and cache breakpoints
-  are tuned for.
-- An **"Avanzate"** section allows any model ID the provider serves. Choosing an
-  untested model shows a persistent notice that Cesare quality is only guaranteed
-  on the recommended models. UI copy Italian, as always.
+Decision (2026-07-10, Valerio): **no model ID is hardcoded anywhere in the UI or
+in defaults** — new models must appear as providers ship them, with zero code
+changes.
+
+- The picker is fed **entirely by the live catalogue** (`GET /api/v1/models`),
+  fetched server-side and cached briefly (~1h). Prices shown are computed from
+  the catalogue's own pricing metadata, translated to €/feature-film.
+- **"Consigliati" is a filter rule, not a list**: the latest Anthropic-family
+  models from the live catalogue, grouped into the two Cesare tiers by the
+  catalogue's own pricing (cheapest tier ↔ `haiku` slot, quality tier ↔
+  `sonnet` slot). The rule lives in ONE server-side function; when Anthropic
+  ships a new model it appears automatically.
+- **"Avanzate"** exposes the full catalogue (all providers). Choosing an
+  untested model shows a persistent notice that Cesare quality is only
+  guaranteed on the recommended models. UI copy Italian, as always.
+- **Per-user defaults are resolved at connect time** from the same rule (the
+  then-current recommended pair) and stored on `ai_providers.models`; the user
+  can change them anytime. The stored pair is a user choice snapshot, not a
+  code constant.
 - Prompt-caching note: OpenRouter passes `cache_control` through to Anthropic
   models — verify at implementation time and record the outcome here.
 
