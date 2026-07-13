@@ -298,9 +298,23 @@ function AppShellInner({
 }: AppShellProps) {
   // Save-state is published by the page editors via `useSaveStateValue` and
   // consumed by the per-page SavePill (the slim TopBar no longer hosts it).
-  // Keep the call so the provider stays mounted and other consumers continue
-  // to read the live state.
-  useSaveStateValue();
+  const saveState = useSaveStateValue();
+  // ⌘S / Ctrl+S (live request 2026-07-13) — save now, app-wide. Always
+  // preventDefault inside the app (the browser's "save page" dialog is never
+  // what a writer means); flush the active editor's pending save when one is
+  // published. Read through a ref so the listener binds ONCE.
+  const saveStateRef = useRef(saveState);
+  saveStateRef.current = saveState;
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey) || e.shiftKey || e.altKey) return;
+      if (e.key !== "s" && e.key !== "S") return;
+      e.preventDefault();
+      saveStateRef.current.onFlush?.();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
   // Per-page TopBar slots — currently only the Sceneggiatura element legend.
   const topBarSlots = useTopBarSlots();
   const activeScene = useActiveScene();
