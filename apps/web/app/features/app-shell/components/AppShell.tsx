@@ -1364,7 +1364,10 @@ function AppShellInner({
     () => ({
       onBell: handleBell,
       onAvatar: handleUserSettings,
-      onGear: handleProjectSettings,
+      // No project open → no gear: outside a project it would only duplicate
+      // the avatar's /settings destination (live report 2026-07-13, refines
+      // N-22's fallback).
+      ...(projectId ? { onGear: handleProjectSettings } : {}),
       hasUnreadNotifications: hasUnseen,
       avatarLabel: deriveInitials(user.name),
       // The ⊟ split toggle belongs to the chat surface only (the session
@@ -1382,6 +1385,7 @@ function AppShellInner({
       handleBell,
       handleUserSettings,
       handleProjectSettings,
+      projectId,
       hasUnseen,
       user.name,
       isCesareSurfaceActive,

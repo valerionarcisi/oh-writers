@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { Button, Input, FormField, SegmentedControl } from "@oh-writers/ui";
@@ -48,6 +49,8 @@ export function UserSettingsPage({
         />
 
         <LanguageSection />
+
+        <AiSection />
 
         <PasswordSection />
 
@@ -260,6 +263,23 @@ function LanguageSection() {
         onSelect={onSelect}
         ariaLabel={t("settings.language.ariaLabel")}
       />
+    </section>
+  );
+}
+
+// ── AI ─────────────────────────────────────────────────────────────────────
+
+function AiSection() {
+  const { t } = useTranslation();
+  return (
+    <section className={styles.section} data-testid="ai-section">
+      <h2 className={styles.sectionTitle}>
+        {t("settings.aiSection.sectionTitle")}
+      </h2>
+      <p className={styles.emptyState}>{t("settings.aiSection.description")}</p>
+      <Link to="/settings/ai" data-testid="ai-settings-link">
+        {t("settings.aiSection.manageLink")}
+      </Link>
     </section>
   );
 }

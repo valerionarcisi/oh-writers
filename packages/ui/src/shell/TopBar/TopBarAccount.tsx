@@ -22,8 +22,9 @@ export type TopBarAccountActions = {
   onBell: () => void;
   /** Open user settings (avatar). */
   onAvatar: () => void;
-  /** Open project settings (gear). */
-  onGear: () => void;
+  /** Open project settings (gear). Omitted (no project open) → the gear is
+   *  hidden: outside a project it would only duplicate the avatar. */
+  onGear?: () => void;
   /** Renders the unread dot on the bell. */
   hasUnreadNotifications: boolean;
   /** 1–2 letter initials shown in the avatar circle. */
@@ -70,7 +71,10 @@ export function TopBarAccount({ account, labels }: TopBarAccountProps) {
     avatarRef,
   );
   const { buttonProps: gearProps } = useButton(
-    { onPress: account.onGear, "aria-label": labels.settings },
+    {
+      onPress: account.onGear ?? (() => undefined),
+      "aria-label": labels.settings,
+    },
     gearRef,
   );
   const splitRef = useRef<HTMLButtonElement>(null);
@@ -126,16 +130,18 @@ export function TopBarAccount({ account, labels }: TopBarAccountProps) {
       >
         <span aria-hidden="true">{account.avatarLabel}</span>
       </button>
-      <button
-        ref={gearRef}
-        {...gearProps}
-        className={styles.accountBtn}
-        title={labels.settings}
-        data-topbar-account="gear"
-        data-testid="settings-btn"
-      >
-        <GearGlyph />
-      </button>
+      {account.onGear && (
+        <button
+          ref={gearRef}
+          {...gearProps}
+          className={styles.accountBtn}
+          title={labels.settings}
+          data-topbar-account="gear"
+          data-testid="settings-btn"
+        >
+          <GearGlyph />
+        </button>
+      )}
     </div>
   );
 }
