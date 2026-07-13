@@ -3369,12 +3369,17 @@ const runProductionToolLoopEffect = (
         }
       }
 
-      const [usage, providerMetadata, finishReason, text] = await Promise.all([
-        result.usage,
-        result.providerMetadata,
-        result.finishReason,
-        result.text,
-      ]);
+      // `usage` is the LAST step only; `totalUsage` sums every step of the
+      // multi-step loop. The ledger must bill the whole turn (verified against
+      // the Langfuse trace, 2026-07-13: 3 steps = ~99k input, `usage` said 39k).
+      const [usage, totalUsage, providerMetadata, finishReason, text] =
+        await Promise.all([
+          result.usage,
+          result.totalUsage,
+          result.providerMetadata,
+          result.finishReason,
+          result.text,
+        ]);
 
       logCacheUsage(usage, providerMetadata, args.model, args.projectId);
       // Ledger write (Spec 83): the loop is the main money path — every turn
@@ -3389,9 +3394,9 @@ const runProductionToolLoopEffect = (
           model: resolved.modelId,
           trigger: "user",
           usage: {
-            inputTokens: usage.inputTokens ?? 0,
-            outputTokens: usage.outputTokens ?? 0,
-            cacheReadTokens: usage.cachedInputTokens ?? 0,
+            inputTokens: totalUsage.inputTokens ?? 0,
+            outputTokens: totalUsage.outputTokens ?? 0,
+            cacheReadTokens: totalUsage.cachedInputTokens ?? 0,
             cacheWriteTokens: anthropicCacheMeta?.cacheCreationInputTokens ?? 0,
           },
           userId: args.userId ?? undefined,
