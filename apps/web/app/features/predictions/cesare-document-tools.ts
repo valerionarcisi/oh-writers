@@ -823,20 +823,32 @@ let mockGenerationNonce = 0;
 // identical to before. Only the whole-document generators (scaletta / treatment
 // / screenplay) pass it; short one-shots (logline, single scene) leave it
 // undefined and gain nothing from streaming.
+interface RunGenerationOpts {
+  readonly onDelta?: (text: string) => void;
+  // #103 — the outer turn's cancel signal, forwarded to the streaming path so a
+  // cancelled turn tears the nested generation down instead of leaking a billed
+  // model call. Only meaningful alongside onDelta (the streaming path).
+  readonly abortSignal?: AbortSignal;
+  // Spec 84 gateway — the requesting user, so the call resolves THEIR BYOK
+  // provider (tier "quality"). Without it the call could only use the platform
+  // key; with the platform key retired (de-platform 2026-07-13) that meant
+  // every document generation silently fell into the MOCK branch and produced
+  // the Marco/Falerone fixtures on real projects (live regression).
+  readonly userId?: string | null;
+}
+
 const runGeneration = (
   systemPrompt: string,
   userPrompt: string,
   maxTokens: number,
   operation: string,
-  onDelta?: (text: string) => void,
-  // #103 — the outer turn's cancel signal, forwarded to the streaming path so a
-  // cancelled turn tears the nested generation down instead of leaking a billed
-  // model call. Only meaningful alongside onDelta (the streaming path).
-  abortSignal?: AbortSignal,
+  opts: RunGenerationOpts = {},
 ): ResultAsync<string, CesareError> => {
-  // Mock-mode escape hatch: short-circuit Sonnet calls when MOCK_AI=true or the
-  // API key is missing. Keeps Vitest + Playwright deterministic and free.
-  if (process.env["MOCK_AI"] === "true" || !process.env["ANTHROPIC_API_KEY"]) {
+  const { onDelta, abortSignal, userId } = opts;
+  // Mock-mode escape hatch: ONLY the explicit MOCK_AI flag. A missing platform
+  // key is NOT mock — BYOK users have no platform key at all; the gateway
+  // resolves their own provider below.
+  if (process.env["MOCK_AI"] === "true") {
     const text = MOCK_OUTPUTS[operation] ?? "Bozza generata da Cesare (mock).";
     // Any document-generation op can be exercised repeatedly across E2E cases
     // against the same project (e.g. show-changes [A6] and universal-dispatch
@@ -863,6 +875,8 @@ const runGeneration = (
         user: userPrompt,
         model: QUALITY_TIER_MODEL,
         maxTokens,
+        userId: userId ?? undefined,
+        tier: "quality",
       },
       operation,
       onDelta,
@@ -882,6 +896,8 @@ const runGeneration = (
       user: userPrompt,
       model: QUALITY_TIER_MODEL,
       maxTokens,
+      userId: userId ?? undefined,
+      tier: "quality",
     },
     operation,
   )
@@ -920,7 +936,9 @@ const handleProposeLogline = (
       );
     }
     const user = `${input.instruction ? `Istruzione: ${input.instruction}\n\n` : ""}Sceneggiatura:\n---\n${screenplay.slice(0, 18_000)}\n---`;
-    return runGeneration(LOGLINE_SYSTEM, user, 200, "cesare.proposeLogline")
+    return runGeneration(LOGLINE_SYSTEM, user, 200, "cesare.proposeLogline", {
+      userId: userIdFallback,
+    })
       .map(sanitizeLogline)
       .andThen((logline) =>
         loadDocumentForType(db, projectId, DocumentTypes.LOGLINE).andThen(
@@ -1002,7 +1020,9 @@ const handleWriteLogline = (
         mode === "edit"
           ? `Istruzione: ${instruction}\n\nLogline attuale (NON ritornarla identica):\n---\n${existing}\n---`
           : `Istruzione: ${instruction}\n\nScrivi la logline.`;
-      return runGeneration(systemPrompt, user, 200, operation)
+      return runGeneration(systemPrompt, user, 200, operation, {
+        userId: userIdFallback,
+      })
         .map(sanitizeLogline)
         .andThen((logline) => {
           if (logline.length === 0) {
@@ -1058,6 +1078,9 @@ const handleProposeSynopsis = (
         user,
         1200,
         "cesare.proposeSynopsis",
+        {
+          userId: userIdFallback,
+        },
       )
         .map((s) => s.trim())
         .andThen((synopsis) =>
@@ -1155,6 +1178,9 @@ ${doc.content.slice(0, 18_000)}
       user,
       2000,
       "cesare.proposeSoggettoV2",
+      {
+        userId: userIdFallback,
+      },
     )
       .map((s) => s.trim())
       .andThen((next) => {
@@ -1255,8 +1281,11 @@ const handleProposeScalettaFromSoggetto = (
         user,
         3000,
         "cesare.proposeScaletta",
-        onDelta,
-        abortSignal,
+        {
+          onDelta,
+          abortSignal,
+          userId: userIdFallback,
+        },
       )
         .map((raw) => {
           const parsed = parseScalettaList(raw);
@@ -1429,6 +1458,9 @@ const handleEditOutlineScene = (
         user,
         400,
         "cesare.editOutlineScene",
+        {
+          userId: userIdFallback,
+        },
       ).andThen((newDescription) => {
         const patched = patchOutlineSceneAt(outline, sceneNumber, {
           description: newDescription.trim(),
@@ -1511,8 +1543,11 @@ const handleProposeTreatment = (
       user,
       3000,
       "cesare.proposeTreatment",
-      onDelta,
-      abortSignal,
+      {
+        onDelta,
+        abortSignal,
+        userId: userIdFallback,
+      },
     )
       .map((s) => s.trim())
       .andThen((treatment) => {
@@ -1595,6 +1630,7 @@ const handleGenerateScreenplay = (
   input: ProposeInput,
   db: Db,
   projectId: string,
+  userIdFallback: string | null,
   onDelta?: (text: string) => void,
   abortSignal?: AbortSignal,
 ): ResultAsync<GeneratedScreenplay, CesareError> =>
@@ -1624,8 +1660,11 @@ const handleGenerateScreenplay = (
         user,
         6000,
         "cesare.generateScreenplay",
-        onDelta,
-        abortSignal,
+        {
+          onDelta,
+          abortSignal,
+          userId: userIdFallback,
+        },
       )
         // NORMALISE to the editor's canonical Fountain dialect (BUG-N63 + #46/#53
         // root cause). The model is unreliable about element FORMATTING — it
@@ -1820,6 +1859,7 @@ export const executeDocumentGenTool = (
       input,
       db,
       projectId,
+      userIdFallback,
       onDelta,
       abortSignal,
     ).map((gen) => successResult(block.id, screenplayGenPayload(gen)));
@@ -2083,6 +2123,7 @@ export const createDocumentGenTools = (
         input as ProposeInput,
         db,
         projectId,
+        userIdFallback,
       );
       if (result.isErr()) return { error: result.error.message };
       return screenplayGenPayload(result.value);

@@ -36,6 +36,7 @@ import {
   resolveSessionSendTarget,
   type CesareSession,
 } from "~/features/predictions/sessions";
+import { DocumentTypes } from "@oh-writers/domain";
 import type { TranslationKey } from "@oh-writers/domain";
 import { useTranslation } from "~/features/i18n";
 import { setHighlight, clearHighlight } from "~/features/documents";
@@ -538,7 +539,16 @@ export function CesareSheet({
       // floating chat, "Mostra modifiche" UNDERLINES the change INSIDE the
       // document prose (Spec 63) — same as the in-editor banner, never the split
       // (which would duplicate the document the writer is already reading).
-      if (firstDocType && documentTypeMatchesPage(firstDocType, page)) {
+      // ONLY prose editors consume the highlight store (the ProseMirror
+      // highlight plugin lives in NarrativeProseMirrorView): the Scaletta is a
+      // structured form with no prose, so its "same-page" highlight was a
+      // guaranteed silent no-op (live report 2026-07-13) — route it to the
+      // split preview below instead.
+      if (
+        firstDocType &&
+        firstDocType !== DocumentTypes.OUTLINE &&
+        documentTypeMatchesPage(firstDocType, page)
+      ) {
         const added = diffs
           .filter((d) => d.documentType === firstDocType)
           .flatMap((d) =>
@@ -577,7 +587,14 @@ export function CesareSheet({
       const firstDocType = (args.liveDiffs ?? []).find(
         (d) => d.documentType,
       )?.documentType;
-      if (firstDocType && documentTypeMatchesPage(firstDocType, page)) {
+      // Symmetric with handleShowChanges: the Scaletta never armed an
+      // in-document highlight (no prose), so "Nascondi" must close the split
+      // preview that "Mostra" opened.
+      if (
+        firstDocType &&
+        firstDocType !== DocumentTypes.OUTLINE &&
+        documentTypeMatchesPage(firstDocType, page)
+      ) {
         clearHighlight(firstDocType);
         return;
       }

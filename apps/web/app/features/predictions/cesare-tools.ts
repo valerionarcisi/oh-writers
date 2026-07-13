@@ -61,7 +61,12 @@ import {
 } from "@oh-writers/domain";
 import type { Db } from "~/server/db";
 import type { ProjectAccess } from "~/server/access";
-import { callHaiku, extractText, resolveModelClient } from "~/features/ai";
+import {
+  callHaiku,
+  extractText,
+  recordAiUsage,
+  resolveModelClient,
+} from "~/features/ai";
 import { fromResultAsync } from "~/server/effect/interop";
 import { FAST_TIER_MODEL, type ModelTier } from "./cesare-model-router";
 import type { SkillExecutor, AnthropicTool } from "./skills/types";
@@ -3220,8 +3225,15 @@ const runProductionToolLoopEffect = (
       // BYOK-aware resolution when a userId is available, falling back to the
       // legacy `anthropic(args.model)` build when it is not (behaviour
       // unchanged for callers that don't thread a user through yet).
-      const resolvedModel = args.mockModel
-        ? args.mockModel
+      // Keep the FULL resolution (modelId + who pays), not just the client:
+      // the ledger write at stream end needs both (stats-at-zero regression,
+      // 2026-07-13 — the loop logged usage but never recorded it).
+      const resolved = args.mockModel
+        ? {
+            model: args.mockModel,
+            modelId: args.model,
+            source: "platform" as const,
+          }
         : args.userId
           ? (
               await resolveModelClient({
@@ -3230,7 +3242,7 @@ const runProductionToolLoopEffect = (
                 db: args.db,
               })
             ).match(
-              (resolved) => resolved.model,
+              (r) => r,
               (e) => {
                 // Re-thrown as a plain Error (not CesareError — the outer
                 // `catch` below wraps whatever reaches it as `CesareError`,
@@ -3241,7 +3253,12 @@ const runProductionToolLoopEffect = (
                 );
               },
             )
-          : anthropic(args.model);
+          : {
+              model: anthropic(args.model),
+              modelId: args.model,
+              source: "platform" as const,
+            };
+      const resolvedModel = resolved.model;
 
       const textAccumulator: string[] = [];
       let toolsExecuted = 0;
@@ -3360,6 +3377,28 @@ const runProductionToolLoopEffect = (
       ]);
 
       logCacheUsage(usage, providerMetadata, args.model, args.projectId);
+      // Ledger write (Spec 83): the loop is the main money path — every turn
+      // must land in ai_usage or the stats page reads zero while the balance
+      // drains. Fire-and-forget, same contract as the callHaiku sites.
+      const anthropicCacheMeta = providerMetadata?.["anthropic"] as
+        | { cacheCreationInputTokens?: number }
+        | undefined;
+      void recordAiUsage(
+        {
+          operation: "cesare.toolLoop",
+          model: resolved.modelId,
+          trigger: "user",
+          usage: {
+            inputTokens: usage.inputTokens ?? 0,
+            outputTokens: usage.outputTokens ?? 0,
+            cacheReadTokens: usage.cachedInputTokens ?? 0,
+            cacheWriteTokens: anthropicCacheMeta?.cacheCreationInputTokens ?? 0,
+          },
+          userId: args.userId ?? undefined,
+          source: resolved.source,
+        },
+        args.db,
+      );
       logger.info(
         {
           model: args.model,

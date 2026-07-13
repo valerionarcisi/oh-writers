@@ -45,9 +45,16 @@ const PRICING_TABLE: ReadonlyArray<{ prefix: string; rate: ModelRate }> = [
 // (sonnet-5) so cost is at least approximated rather than silently zero.
 const FALLBACK_RATE: ModelRate = { input: 3.0, output: 15.0 };
 
-const resolveRate = (model: string): ModelRate =>
-  PRICING_TABLE.find((entry) => model.startsWith(entry.prefix))?.rate ??
-  FALLBACK_RATE;
+const resolveRate = (model: string): ModelRate => {
+  // BYOK model IDs carry a provider prefix ("anthropic/claude-sonnet-5" via
+  // OpenRouter) — price on the bare model name so a haiku-tier call is not
+  // billed at the sonnet fallback rate in the ledger.
+  const bare = model.slice(model.lastIndexOf("/") + 1);
+  return (
+    PRICING_TABLE.find((entry) => bare.startsWith(entry.prefix))?.rate ??
+    FALLBACK_RATE
+  );
+};
 
 export const computeCostUsd = (model: string, usage: TokenUsage): number => {
   const rate = resolveRate(model);
