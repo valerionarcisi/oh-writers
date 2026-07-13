@@ -29,6 +29,7 @@ import { Route as AppProjectsNewImport } from "./routes/_app.projects.new";
 import { Route as AppProjectsIdImport } from "./routes/_app.projects.$id";
 import { Route as AppTeamsSlugSettingsImport } from "./routes/_app.teams.$slug_.settings";
 import { Route as AppTeamsSlugMembersImport } from "./routes/_app.teams.$slug_.members";
+import { Route as AppSettingsAiStatsImport } from "./routes/_app.settings_.ai_.stats";
 import { Route as AppProjectsIdTreatmentImport } from "./routes/_app.projects.$id_.treatment";
 import { Route as AppProjectsIdTitlePageImport } from "./routes/_app.projects.$id_.title-page";
 import { Route as AppProjectsIdSynopsisImport } from "./routes/_app.projects.$id_.synopsis";
@@ -159,6 +160,12 @@ const AppTeamsSlugSettingsRoute = AppTeamsSlugSettingsImport.update({
 const AppTeamsSlugMembersRoute = AppTeamsSlugMembersImport.update({
   id: "/teams/$slug_/members",
   path: "/teams/$slug/members",
+  getParentRoute: () => AppRoute,
+} as any);
+
+const AppSettingsAiStatsRoute = AppSettingsAiStatsImport.update({
+  id: "/settings_/ai_/stats",
+  path: "/settings/ai/stats",
   getParentRoute: () => AppRoute,
 } as any);
 
@@ -531,6 +538,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AppProjectsIdTreatmentImport;
       parentRoute: typeof AppImport;
     };
+    "/_app/settings_/ai_/stats": {
+      id: "/_app/settings_/ai_/stats";
+      path: "/settings/ai/stats";
+      fullPath: "/settings/ai/stats";
+      preLoaderRoute: typeof AppSettingsAiStatsImport;
+      parentRoute: typeof AppImport;
+    };
     "/_app/teams/$slug_/members": {
       id: "/_app/teams/$slug_/members";
       path: "/teams/$slug/members";
@@ -683,6 +697,7 @@ interface AppRouteChildren {
   AppProjectsIdSynopsisRoute: typeof AppProjectsIdSynopsisRoute;
   AppProjectsIdTitlePageRoute: typeof AppProjectsIdTitlePageRoute;
   AppProjectsIdTreatmentRoute: typeof AppProjectsIdTreatmentRoute;
+  AppSettingsAiStatsRoute: typeof AppSettingsAiStatsRoute;
   AppTeamsSlugMembersRoute: typeof AppTeamsSlugMembersRoute;
   AppTeamsSlugSettingsRoute: typeof AppTeamsSlugSettingsRoute;
   AppProjectsIdShootingPlanBlockingEditorRoute: typeof AppProjectsIdShootingPlanBlockingEditorRoute;
@@ -714,6 +729,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppProjectsIdSynopsisRoute: AppProjectsIdSynopsisRoute,
   AppProjectsIdTitlePageRoute: AppProjectsIdTitlePageRoute,
   AppProjectsIdTreatmentRoute: AppProjectsIdTreatmentRoute,
+  AppSettingsAiStatsRoute: AppSettingsAiStatsRoute,
   AppTeamsSlugMembersRoute: AppTeamsSlugMembersRoute,
   AppTeamsSlugSettingsRoute: AppTeamsSlugSettingsRoute,
   AppProjectsIdShootingPlanBlockingEditorRoute:
@@ -754,6 +770,7 @@ export interface FileRoutesByFullPath {
   "/projects/$id/synopsis": typeof AppProjectsIdSynopsisRoute;
   "/projects/$id/title-page": typeof AppProjectsIdTitlePageRoute;
   "/projects/$id/treatment": typeof AppProjectsIdTreatmentRoute;
+  "/settings/ai/stats": typeof AppSettingsAiStatsRoute;
   "/teams/$slug/members": typeof AppTeamsSlugMembersRoute;
   "/teams/$slug/settings": typeof AppTeamsSlugSettingsRoute;
   "/projects/$id/screenplay/versions": typeof AppProjectsIdScreenplayVersionsRouteWithChildren;
@@ -796,6 +813,7 @@ export interface FileRoutesByTo {
   "/projects/$id/synopsis": typeof AppProjectsIdSynopsisRoute;
   "/projects/$id/title-page": typeof AppProjectsIdTitlePageRoute;
   "/projects/$id/treatment": typeof AppProjectsIdTreatmentRoute;
+  "/settings/ai/stats": typeof AppSettingsAiStatsRoute;
   "/teams/$slug/members": typeof AppTeamsSlugMembersRoute;
   "/teams/$slug/settings": typeof AppTeamsSlugSettingsRoute;
   "/projects/$id/screenplay/versions": typeof AppProjectsIdScreenplayVersionsRouteWithChildren;
@@ -841,6 +859,7 @@ export interface FileRoutesById {
   "/_app/projects/$id_/synopsis": typeof AppProjectsIdSynopsisRoute;
   "/_app/projects/$id_/title-page": typeof AppProjectsIdTitlePageRoute;
   "/_app/projects/$id_/treatment": typeof AppProjectsIdTreatmentRoute;
+  "/_app/settings_/ai_/stats": typeof AppSettingsAiStatsRoute;
   "/_app/teams/$slug_/members": typeof AppTeamsSlugMembersRoute;
   "/_app/teams/$slug_/settings": typeof AppTeamsSlugSettingsRoute;
   "/_app/projects/$id_/screenplay/versions": typeof AppProjectsIdScreenplayVersionsRouteWithChildren;
@@ -887,6 +906,7 @@ export interface FileRouteTypes {
     | "/projects/$id/synopsis"
     | "/projects/$id/title-page"
     | "/projects/$id/treatment"
+    | "/settings/ai/stats"
     | "/teams/$slug/members"
     | "/teams/$slug/settings"
     | "/projects/$id/screenplay/versions"
@@ -928,6 +948,7 @@ export interface FileRouteTypes {
     | "/projects/$id/synopsis"
     | "/projects/$id/title-page"
     | "/projects/$id/treatment"
+    | "/settings/ai/stats"
     | "/teams/$slug/members"
     | "/teams/$slug/settings"
     | "/projects/$id/screenplay/versions"
@@ -971,6 +992,7 @@ export interface FileRouteTypes {
     | "/_app/projects/$id_/synopsis"
     | "/_app/projects/$id_/title-page"
     | "/_app/projects/$id_/treatment"
+    | "/_app/settings_/ai_/stats"
     | "/_app/teams/$slug_/members"
     | "/_app/teams/$slug_/settings"
     | "/_app/projects/$id_/screenplay/versions"
@@ -1051,6 +1073,7 @@ export const routeTree = rootRoute
         "/_app/projects/$id_/synopsis",
         "/_app/projects/$id_/title-page",
         "/_app/projects/$id_/treatment",
+        "/_app/settings_/ai_/stats",
         "/_app/teams/$slug_/members",
         "/_app/teams/$slug_/settings",
         "/_app/projects/$id_/shooting-plan_/blocking-editor"
@@ -1176,6 +1199,10 @@ export const routeTree = rootRoute
     },
     "/_app/projects/$id_/treatment": {
       "filePath": "_app.projects.$id_.treatment.tsx",
+      "parent": "/_app"
+    },
+    "/_app/settings_/ai_/stats": {
+      "filePath": "_app.settings_.ai_.stats.tsx",
       "parent": "/_app"
     },
     "/_app/teams/$slug_/members": {

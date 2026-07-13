@@ -52,6 +52,22 @@ export const userSettingsKeys = {
     // AI usage chart (settings/ai)
     "settings.ai.usage.title": "AI spend — last 14 days",
     "settings.ai.usage.total": "${n} total",
+    // AI usage stats page (settings/ai/stats)
+    "settings.ai.stats.pageTitle": "AI usage statistics",
+    "settings.ai.stats.backToAi": "← AI settings",
+    "settings.ai.stats.viewStats": "Full usage statistics →",
+    "settings.ai.stats.totalCost": "Cost (30 days)",
+    "settings.ai.stats.totalCalls": "Calls",
+    "settings.ai.stats.totalInputTokens": "Input tokens",
+    "settings.ai.stats.totalOutputTokens": "Output tokens",
+    "settings.ai.stats.byModel": "By model",
+    "settings.ai.stats.byOperation": "By operation",
+    "settings.ai.stats.colKey": "Name",
+    "settings.ai.stats.colCalls": "Calls",
+    "settings.ai.stats.colInput": "Input",
+    "settings.ai.stats.colOutput": "Output",
+    "settings.ai.stats.colCost": "Cost",
+    "settings.ai.stats.empty": "No AI usage recorded in the last 30 days.",
     // AI provider (Spec 84 Wave 3) — connect wizard, disconnected step 1
     "settings.ai.pageTitle": "AI",
     "settings.ai.disconnected.eyebrow": "Cesare, powered by your own account",
@@ -185,6 +201,23 @@ export const userSettingsKeys = {
     // AI usage chart (settings/ai)
     "settings.ai.usage.title": "Consumi AI — ultimi 14 giorni",
     "settings.ai.usage.total": "${n} totali",
+    // AI usage stats page (settings/ai/stats)
+    "settings.ai.stats.pageTitle": "Statistiche di utilizzo AI",
+    "settings.ai.stats.backToAi": "← Impostazioni AI",
+    "settings.ai.stats.viewStats": "Statistiche complete →",
+    "settings.ai.stats.totalCost": "Costo (30 giorni)",
+    "settings.ai.stats.totalCalls": "Chiamate",
+    "settings.ai.stats.totalInputTokens": "Token input",
+    "settings.ai.stats.totalOutputTokens": "Token output",
+    "settings.ai.stats.byModel": "Per modello",
+    "settings.ai.stats.byOperation": "Per operazione",
+    "settings.ai.stats.colKey": "Nome",
+    "settings.ai.stats.colCalls": "Chiamate",
+    "settings.ai.stats.colInput": "Input",
+    "settings.ai.stats.colOutput": "Output",
+    "settings.ai.stats.colCost": "Costo",
+    "settings.ai.stats.empty":
+      "Nessun utilizzo AI registrato negli ultimi 30 giorni.",
     // AI provider (Spec 84 Wave 3) — connect wizard, disconnected step 1
     "settings.ai.pageTitle": "AI",
     "settings.ai.disconnected.eyebrow": "Cesare, con il tuo account",

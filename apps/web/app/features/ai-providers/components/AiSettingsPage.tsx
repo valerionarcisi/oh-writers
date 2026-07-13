@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { Skeleton } from "@oh-writers/ui";
 import { useTranslation } from "~/features/i18n";
 import { aiProviderStatusQueryOptions } from "../ai-providers.server";
@@ -70,6 +71,9 @@ export function AiSettingsPage({
             onModelsChanged={invalidateStatus}
           />
           <AiUsageChart />
+          <Link to="/settings/ai/stats" data-testid="ai-stats-link">
+            {t("settings.ai.stats.viewStats")}
+          </Link>
         </>
       )}
     </div>

@@ -273,7 +273,6 @@ function AppShellInner({
   projectName = "",
   sectionName = "",
   activeSegment = "",
-  sectionGroups,
   projects,
   projectId,
   cesarePage,
@@ -1225,22 +1224,13 @@ function AppShellInner({
     }
   }, [projectId, router]);
 
-  // Gear dropdown (live request 2026-07-13) — the gear is a menu, not a bare
-  // link: every project page, then project settings / account settings / AI.
-  // Built only inside a project (outside one the gear is hidden entirely).
+  // Gear dropdown (live request 2026-07-13, slimmed same day) — settings
+  // destinations ONLY: project / account / AI. The project pages already live
+  // in the LeftRail; duplicating them here was noise. Built only inside a
+  // project (outside one the gear is hidden entirely).
   const gearMenuItems = useMemo<DropdownMenuItem[] | undefined>(() => {
-    if (!projectId || !sectionGroups) return undefined;
-    const pageItems = sectionGroups.flatMap((group) =>
-      group.items.map(
-        (s): DropdownMenuItem => ({
-          label: s.label,
-          onClick: () => handleNavigate(s.href),
-          disabled: s.isActive,
-        }),
-      ),
-    );
+    if (!projectId) return undefined;
     return [
-      ...pageItems,
       {
         label: t("shell.projectMenu.settings"),
         icon: "⚙",
@@ -1260,14 +1250,7 @@ function AppShellInner({
         testId: "gear-menu-ai-credits",
       },
     ];
-  }, [
-    projectId,
-    sectionGroups,
-    handleNavigate,
-    handleProjectSettings,
-    handleUserSettings,
-    t,
-  ]);
+  }, [projectId, handleNavigate, handleProjectSettings, handleUserSettings, t]);
 
   // N-24 — the rail project header carries a chevron-down (the universal
   // "opens a menu" affordance), so it opens a project menu rather than a bare

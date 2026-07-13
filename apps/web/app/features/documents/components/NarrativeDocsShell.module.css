@@ -74,7 +74,12 @@
 .right {
   min-inline-size: 0;
   position: sticky;
-  inset-block-start: 96px;
+  /* `.layout` is the scroll container: any positive offset here displaces the
+     column by that amount ALREADY at scroll 0 (measured live 2026-07-13 —
+     the old 96px, tuned for the pre-full-width TopBar, left a dead band above
+     the cards). 0 aligns the column's top with the paper's top edge; while
+     scrolling it pins to the scrollport top, which is the same visual line. */
+  inset-block-start: 0;
   align-self: start;
 }
 

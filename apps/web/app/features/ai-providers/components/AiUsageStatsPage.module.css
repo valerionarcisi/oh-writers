@@ -1,0 +1,113 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-5);
+  max-inline-size: 720px;
+  margin-inline: auto;
+  padding: var(--ds-space-8) var(--ds-space-6);
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--ds-space-2);
+}
+
+.title {
+  font-family: var(--ds-font-display);
+  font-size: var(--text-2xl);
+  color: var(--ds-text);
+}
+
+.backLink {
+  font-size: var(--text-sm);
+  color: var(--ds-text-3);
+
+  &:hover {
+    color: var(--ds-text);
+  }
+}
+
+.totalsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-space-3);
+}
+
+.tile {
+  flex: 1;
+  min-inline-size: 8rem;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-1);
+  padding: var(--ds-space-4);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-surface);
+}
+
+.tileValue {
+  font-family: var(--ds-font-mono);
+  font-size: var(--text-xl);
+  color: var(--ds-text);
+}
+
+.tileLabel {
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ds-text-3);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-2);
+}
+
+.sectionTitle {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--ds-text);
+}
+
+.table {
+  inline-size: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+
+  & th {
+    text-align: end;
+    font-family: var(--ds-font-mono);
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--ds-text-3);
+    padding: var(--ds-space-1) var(--ds-space-2);
+    border-block-end: 1px solid var(--ds-border);
+  }
+
+  & td {
+    text-align: end;
+    font-family: var(--ds-font-mono);
+    color: var(--ds-text-2);
+    padding: var(--ds-space-1) var(--ds-space-2);
+    border-block-end: 1px solid var(--ds-line);
+  }
+}
+
+.table .thLeft {
+  text-align: start;
+}
+
+.table .tdKey {
+  text-align: start;
+  color: var(--ds-text);
+  overflow-wrap: anywhere;
+}
+
+.empty {
+  color: var(--ds-text-3);
+  font-size: var(--text-sm);
+}

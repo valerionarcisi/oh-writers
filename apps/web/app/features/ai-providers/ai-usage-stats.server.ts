@@ -42,3 +42,90 @@ export const aiUsageDailyQueryOptions = () =>
     queryFn: () => getMyAiUsageDaily(),
     staleTime: 60_000,
   });
+
+// ─── Full stats (settings/ai/stats) ─────────────────────────────────────────
+
+export interface AiUsageBreakdownRow {
+  readonly key: string;
+  readonly calls: number;
+  readonly inputTokens: number;
+  readonly outputTokens: number;
+  readonly costUsd: number;
+}
+
+export interface AiUsageStats {
+  readonly windowDays: number;
+  readonly totals: Omit<AiUsageBreakdownRow, "key">;
+  readonly byModel: AiUsageBreakdownRow[];
+  readonly byOperation: AiUsageBreakdownRow[];
+}
+
+const STATS_WINDOW_DAYS = 30;
+
+export const getMyAiUsageStats = createServerFn({ method: "GET" }).handler(
+  async (): Promise<AiUsageStats> => {
+    const { requireUser } = await import("~/server/context");
+    const { getDb } = await import("~/server/db");
+    const user = await requireUser();
+    const db = await getDb();
+    const since = new Date(Date.now() - STATS_WINDOW_DAYS * 24 * 60 * 60_000);
+    const scope = and(
+      eq(aiUsage.userId, user.id),
+      gte(aiUsage.createdAt, since),
+    );
+
+    const aggregate = {
+      calls: sql<string>`count(*)`,
+      inputTokens: sql<string>`sum(${aiUsage.inputTokens})`,
+      outputTokens: sql<string>`sum(${aiUsage.outputTokens})`,
+      costUsd: sql<string>`sum(${aiUsage.costUsd})`,
+    };
+    const toRow = (r: {
+      key?: string;
+      calls: string;
+      inputTokens: string | null;
+      outputTokens: string | null;
+      costUsd: string | null;
+    }): AiUsageBreakdownRow => ({
+      key: r.key ?? "",
+      calls: Number(r.calls),
+      inputTokens: Number(r.inputTokens ?? 0),
+      outputTokens: Number(r.outputTokens ?? 0),
+      costUsd: Number(r.costUsd ?? 0),
+    });
+
+    const [totals] = await db.select(aggregate).from(aiUsage).where(scope);
+    const byModel = await db
+      .select({ key: aiUsage.model, ...aggregate })
+      .from(aiUsage)
+      .where(scope)
+      .groupBy(aiUsage.model)
+      .orderBy(sql`sum(${aiUsage.costUsd}) DESC`);
+    const byOperation = await db
+      .select({ key: aiUsage.operation, ...aggregate })
+      .from(aiUsage)
+      .where(scope)
+      .groupBy(aiUsage.operation)
+      .orderBy(sql`sum(${aiUsage.costUsd}) DESC`);
+
+    const { key: _unused, ...totalsRow } = toRow({
+      calls: totals?.calls ?? "0",
+      inputTokens: totals?.inputTokens ?? null,
+      outputTokens: totals?.outputTokens ?? null,
+      costUsd: totals?.costUsd ?? null,
+    });
+    return {
+      windowDays: STATS_WINDOW_DAYS,
+      totals: totalsRow,
+      byModel: byModel.map(toRow),
+      byOperation: byOperation.map(toRow),
+    };
+  },
+);
+
+export const aiUsageStatsQueryOptions = () =>
+  queryOptions({
+    queryKey: ["ai-usage", "stats"],
+    queryFn: () => getMyAiUsageStats(),
+    staleTime: 60_000,
+  });
