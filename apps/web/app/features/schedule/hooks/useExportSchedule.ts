@@ -9,9 +9,7 @@ import {
 export const useExportSchedule = (projectId: string) => {
   const csvMut = useMutation({
     mutationFn: async () =>
-      unwrapResult(
-        await exportScheduleCsv({ data: { projectId } }),
-      ),
+      unwrapResult(await exportScheduleCsv({ data: { projectId } })),
     onSuccess: ({ csv, filename }) => {
       const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
       downloadBlob(blob, filename);
@@ -20,9 +18,7 @@ export const useExportSchedule = (projectId: string) => {
 
   const pdfMut = useMutation({
     mutationFn: async () =>
-      unwrapResult(
-        await exportSchedulePdf({ data: { projectId } }),
-      ),
+      unwrapResult(await exportSchedulePdf({ data: { projectId } })),
     onSuccess: ({ pdfBase64, filename }) => {
       const bytes = Uint8Array.from(atob(pdfBase64), (c) => c.charCodeAt(0));
       const blob = new Blob([bytes], { type: "application/pdf" });
