@@ -33,9 +33,12 @@ export const useExportShotList = (projectId: string) => {
     },
   });
 
+  // `mutate` is referentially stable — fresh arrow wrappers would break the
+  // TopBar actions memo chain into a publish loop (same defect as
+  // useExportSchedule, fixed 2026-07-13).
   return {
-    exportCsv: () => csvMutation.mutate(),
-    exportPdf: () => pdfMutation.mutate(),
+    exportCsv: csvMutation.mutate,
+    exportPdf: pdfMutation.mutate,
     isCsvPending: csvMutation.isPending,
     isPdfPending: pdfMutation.isPending,
   };

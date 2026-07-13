@@ -382,14 +382,19 @@ export function LocationsPage({ projectId }: LocationsPageProps) {
   const exportMutation = useExportLocations(projectId);
 
   // Spec 67 — the page's CSV export lives in the standard TopBar `⋯` menu.
+  // Depend on the stable `mutate` + `isPending`, never the whole mutation
+  // object: its identity changes every render and re-published the TopBar
+  // slot into a "Maximum update depth" loop (live regression, 2026-07-13).
+  const exportLocationsCsvAction = exportMutation.mutate;
+  const isExportPending = exportMutation.isPending;
   const contextActionHandlers = useMemo<ContextActionHandlers>(
     () => ({
       [ContextActionIds.EXPORT_CSV]: {
-        onSelect: () => exportMutation.mutate(),
-        disabled: exportMutation.isPending,
+        onSelect: () => exportLocationsCsvAction(),
+        disabled: isExportPending,
       },
     }),
-    [exportMutation],
+    [exportLocationsCsvAction, isExportPending],
   );
   const contextActionItems = useContextActions(
     "locations",

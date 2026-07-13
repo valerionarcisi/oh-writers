@@ -30,9 +30,13 @@ export const useExportSchedule = (projectId: string) => {
     },
   });
 
+  // `mutate` is referentially stable (TanStack Query). Returning fresh arrow
+  // wrappers here broke every downstream `useMemo` chain and re-published the
+  // TopBar actions slot each render — the /schedule "Maximum update depth"
+  // loop (live regression, 2026-07-13).
   return {
-    exportCsv: () => csvMut.mutate(),
-    exportPdf: () => pdfMut.mutate(),
+    exportCsv: csvMut.mutate,
+    exportPdf: pdfMut.mutate,
     isCsvPending: csvMut.isPending,
     isPdfPending: pdfMut.isPending,
   };
