@@ -49,7 +49,6 @@ import {
 } from "../lib/narrative-plugins";
 import { useDocumentVersions } from "~/features/documents";
 import {
-  useHasEdited,
   useSaveStatePublisher,
   useCesareOpen,
   useContextActions,
@@ -212,19 +211,17 @@ export function NarrativeEditor({
     resetKey: document.id,
   });
 
-  // Track whether the user has actually edited (vs just loaded an empty doc).
-  // We only publish a saveState after the first real edit — otherwise the
-  // TopBar pill would show a stale "Salvato" on an empty page (V7 bug). Sticky
-  // + reset on document change (BUG-N55 — see useHasEdited).
-  const hasEdited = useHasEdited(content !== document.content, document.id);
-
   // Single publisher for the TopBar pill (Spec 63 P2): derived from the MAIN
   // document's autosave only — never the logline autosave — and computing the
   // full state so `dirty` (porcelain) is distinct from `saving` (in flight) and
   // `error` surfaces a failed save. `flush` lets the pill act as a "save now"
   // button (F3).
-  const shouldPublishSave = hasEdited && !isReadOnly;
-  const publishedSaveState = shouldPublishSave
+  //
+  // 2026-07-13 (supersedes the BUG-N55 edit-gate): the pill is ALWAYS visible
+  // on an editable document, starting from "Salvato" — the loaded content IS
+  // persisted, and a pill that only appears after the first keystroke read as
+  // "the save button is missing". Read-only stays hidden (nothing to save).
+  const publishedSaveState = !isReadOnly
     ? computeSaveStatus({ isDirty, isSaving, isError, isOffline: false })
     : undefined;
   useSaveStatePublisher(publishedSaveState, undefined, flush);

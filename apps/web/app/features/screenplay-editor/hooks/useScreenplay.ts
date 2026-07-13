@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { unwrapResult } from "@oh-writers/utils";
 import { computeSaveStatus, type SaveState } from "@oh-writers/ui";
-import { useHasEdited, useSaveStatePublisher } from "~/features/app-shell";
+import { useSaveStatePublisher } from "~/features/app-shell";
 import {
   getScreenplay,
   saveScreenplay,
@@ -130,19 +130,20 @@ export const useAutoSave = (
   // and the editor's own SaveIndicator agree: `dirty` is distinct from `saving`,
   // and a failed save surfaces `error` (previously both collapsed into
   // "saving"). `flush` makes the pill a "save now" button.
-  // Publish only after a real edit (sticky, resets per screenplay): an
-  // untouched editor must not flash a stale "Salvato" — same gate as the
-  // narrative docs (OHW-140, BUG-N55 semantics).
-  const hasEdited = useHasEdited(isDirty, screenplayId);
+  // 2026-07-13 (supersedes the OHW-140/BUG-N55 edit-gate): published whenever
+  // the editor is enabled, starting from "Salvato" — the loaded screenplay IS
+  // persisted, and the pill doubles as the "save now" button, so it must not
+  // wait for the first keystroke to exist. Same decision on narrative docs
+  // (see NarrativeEditor).
   const publishedState = useMemo<SaveState | undefined>(() => {
-    if (disabled || !hasEdited) return undefined;
+    if (disabled) return undefined;
     return computeSaveStatus({
       isDirty,
       isSaving: save.isPending,
       isError: save.isError,
       isOffline,
     });
-  }, [disabled, hasEdited, isOffline, save.isPending, save.isError, isDirty]);
+  }, [disabled, isOffline, save.isPending, save.isError, isDirty]);
   const secondsAgo = useMemo(() => {
     if (!lastSavedAt) return undefined;
     return Math.floor((Date.now() - lastSavedAt) / 1000);

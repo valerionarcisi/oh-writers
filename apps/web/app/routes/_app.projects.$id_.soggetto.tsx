@@ -31,7 +31,6 @@ import {
   useSetActiveDocument,
   useRoutedSurface,
   reportCurrentVersion,
-  useHasEdited,
   useSaveStatePublisher,
 } from "~/features/app-shell";
 import type { ContextActionHandlers } from "~/features/app-shell";
@@ -245,12 +244,11 @@ function SoggettoPageReady({
     normalizeSoggetto,
   );
   // Single publisher for the TopBar pill (Spec 63 P2): the soggetto document is
-  // the page's primary save state — never the logline autosave. Publish only
-  // after a real edit so an untouched page shows no stale "Salvato"; the flag
-  // is sticky (BUG-N55 — see useHasEdited).
-  const soggettoEdited = useHasEdited(soggettoSave.isDirty, soggettoDoc.id);
+  // the page's primary save state — never the logline autosave.
+  // 2026-07-13 (supersedes the BUG-N55 edit-gate): always published on an
+  // editable document, starting from "Salvato" — see NarrativeEditor.
   useSaveStatePublisher(
-    soggettoEdited
+    soggettoDoc.canEdit
       ? computeSaveStatus({
           isDirty: soggettoSave.isDirty,
           isSaving: soggettoSave.isSaving,
