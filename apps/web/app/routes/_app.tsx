@@ -7,8 +7,7 @@ import {
   useNavigate,
 } from "@tanstack/react-router";
 import { useCallback, useRef, useState } from "react";
-import { createServerFn } from "@tanstack/start";
-import type { Locale, UserId, TranslationKey } from "@oh-writers/domain";
+import type { UserId, TranslationKey } from "@oh-writers/domain";
 import { useTranslation } from "~/features/i18n";
 import type { TopBarSectionGroup, DropdownMenuItem } from "@oh-writers/ui";
 import { ConfirmDialog, useToast } from "@oh-writers/ui";
@@ -31,27 +30,11 @@ import {
 import { useProject, personalProjectsQueryOptions } from "~/features/projects";
 import type { AppUser } from "~/server/context";
 import { signOut } from "~/lib/auth-client";
-
-type SerializableUser = {
-  id: string;
-  name: string;
-  email: string;
-  locale: Locale;
-};
-
-const fetchUser = createServerFn({ method: "GET" }).handler(
-  async (): Promise<SerializableUser | null> => {
-    const { getUser } = await import("~/server/context");
-    const user = await getUser();
-    if (!user) return null;
-    return {
-      id: user.id as string,
-      name: user.name,
-      email: user.email,
-      locale: user.locale,
-    };
-  },
-);
+// The user server fn lives in its own module (bundle-boundary rule): defining
+// it here made vinxi extract a use-server module that evaluated this file's
+// top-level app-shell barrel imports in the server-fn graph and broke every
+// RPC. See `features/auth/fetch-current-user.server.ts`.
+import { fetchCurrentUser } from "~/features/auth/fetch-current-user.server";
 
 // The shell layout carries every routed auxiliary surface as search params:
 // `?peek=` (Spec 46 Cesare/page side-peek) and
@@ -63,7 +46,7 @@ const appSearchSchema = peekSearchSchema.merge(versionsSearchSchema);
 export const Route = createFileRoute("/_app")({
   validateSearch: appSearchSchema,
   loader: async (): Promise<{ user: AppUser }> => {
-    const user = await fetchUser();
+    const user = await fetchCurrentUser();
     if (!user) throw redirect({ to: "/login" });
     return {
       user: {
