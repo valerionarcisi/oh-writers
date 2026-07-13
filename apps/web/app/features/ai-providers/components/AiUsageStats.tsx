@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
 import { Skeleton } from "@oh-writers/ui";
 import type { TranslationKey } from "@oh-writers/domain";
 import { useTranslation } from "~/features/i18n";
@@ -8,24 +7,20 @@ import {
   type AiUsageBreakdownRow,
 } from "../ai-usage-stats.server";
 import { AiUsageChart } from "./AiUsageChart";
-import styles from "./AiUsageStatsPage.module.css";
+import styles from "./AiUsageStats.module.css";
 
 // Token/cost usage statistics (live request 2026-07-13): 30-day totals plus
 // per-model and per-operation breakdowns from the Spec 83 `ai_usage` ledger,
-// with the 14-day daily chart on top.
-export function AiUsageStatsPage() {
+// with the 14-day daily chart. Rendered INLINE in /settings/ai below the
+// provider card — one page for everything AI, no separate stats route.
+export function AiUsageStats() {
   const { t } = useTranslation();
   const statsQuery = useQuery(aiUsageStatsQueryOptions());
   const stats = statsQuery.data;
 
   return (
-    <div className={styles.page} data-testid="ai-usage-stats-page">
-      <div className={styles.header}>
-        <h1 className={styles.title}>{t("settings.ai.stats.pageTitle")}</h1>
-        <Link to="/settings/ai" className={styles.backLink}>
-          {t("settings.ai.stats.backToAi")}
-        </Link>
-      </div>
+    <div className={styles.page} data-testid="ai-usage-stats">
+      <h2 className={styles.title}>{t("settings.ai.stats.pageTitle")}</h2>
 
       {statsQuery.isLoading || !stats ? (
         <Skeleton

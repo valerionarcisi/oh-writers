@@ -1,12 +1,11 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
 import { Skeleton } from "@oh-writers/ui";
 import { useTranslation } from "~/features/i18n";
 import { aiProviderStatusQueryOptions } from "../ai-providers.server";
 import { AiConnectWizard } from "./AiConnectWizard";
 import { AiPostConnectWizard } from "./AiPostConnectWizard";
 import { AiConnectedCard } from "./AiConnectedCard";
-import { AiUsageChart } from "./AiUsageChart";
+import { AiUsageStats } from "./AiUsageStats";
 import styles from "./AiSettingsPage.module.css";
 
 export interface AiSettingsPageProps {
@@ -70,10 +69,7 @@ export function AiSettingsPage({
             onDisconnected={invalidateStatus}
             onModelsChanged={invalidateStatus}
           />
-          <AiUsageChart />
-          <Link to="/settings/ai/stats" data-testid="ai-stats-link">
-            {t("settings.ai.stats.viewStats")}
-          </Link>
+          <AiUsageStats />
         </>
       )}
     </div>

@@ -52,10 +52,8 @@ export const userSettingsKeys = {
     // AI usage chart (settings/ai)
     "settings.ai.usage.title": "AI spend — last 14 days",
     "settings.ai.usage.total": "${n} total",
-    // AI usage stats page (settings/ai/stats)
+    // AI usage stats (inline in settings/ai)
     "settings.ai.stats.pageTitle": "AI usage statistics",
-    "settings.ai.stats.backToAi": "← AI settings",
-    "settings.ai.stats.viewStats": "Full usage statistics →",
     "settings.ai.stats.totalCost": "Cost (30 days)",
     "settings.ai.stats.totalCalls": "Calls",
     "settings.ai.stats.totalInputTokens": "Input tokens",
@@ -201,10 +199,8 @@ export const userSettingsKeys = {
     // AI usage chart (settings/ai)
     "settings.ai.usage.title": "Consumi AI — ultimi 14 giorni",
     "settings.ai.usage.total": "${n} totali",
-    // AI usage stats page (settings/ai/stats)
+    // AI usage stats (inline in settings/ai)
     "settings.ai.stats.pageTitle": "Statistiche di utilizzo AI",
-    "settings.ai.stats.backToAi": "← Impostazioni AI",
-    "settings.ai.stats.viewStats": "Statistiche complete →",
     "settings.ai.stats.totalCost": "Costo (30 giorni)",
     "settings.ai.stats.totalCalls": "Chiamate",
     "settings.ai.stats.totalInputTokens": "Token input",

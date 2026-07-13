@@ -9,8 +9,6 @@
 
 .lane {
   grid-column: 3;
-  /* Row 2: the lane starts BELOW the full-width TopBar strip (2026-07-13). */
-  grid-row: 2;
   min-inline-size: 0;
   block-size: 100%;
   display: flex;

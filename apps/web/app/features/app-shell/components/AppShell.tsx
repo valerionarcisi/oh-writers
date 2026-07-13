@@ -333,23 +333,6 @@ function AppShellInner({
   // to avoid a duplicate chat container.
   const { isCesareSurfaceActive } = useCesareSurface();
   const [splitDrawerWidth, setSplitDrawerWidth] = useState<number>(480);
-
-  // Full-width TopBar strip (grid row 1). Its measured height feeds
-  // `--ohw-topbar-h` on the shell so the sticky aux lanes can pin themselves
-  // exactly below it whatever the strip's height is (legend row included).
-  const shellRef = useRef<HTMLDivElement>(null);
-  const topBarRowRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const row = topBarRowRef.current;
-    const shell = shellRef.current;
-    if (!row || !shell) return;
-    const update = () =>
-      shell.style.setProperty("--ohw-topbar-h", `${row.offsetHeight}px`);
-    update();
-    const observer = new ResizeObserver(update);
-    observer.observe(row);
-    return () => observer.disconnect();
-  }, []);
   // Notion-style rail overlay: when shell is `collapsed` the rail is hidden
   // by default and a top-left hamburger toggles it as a sliding overlay.
   // No hover-reveal sentinel — outside-click / ESC / hamburger again close
@@ -1579,7 +1562,7 @@ function AppShellInner({
 
   return (
     <CesareProvider openCesare={openCesare}>
-      <div className={styles.shell} ref={shellRef}>
+      <div className={styles.shell}>
         <SkipLink targetId="main-content" label={t("shell.skipLink")} />
         <div className={styles.rail}>
           <LeftRail
@@ -1649,11 +1632,7 @@ function AppShellInner({
           />
         </div>
 
-        {/* Full-width TopBar strip (grid row 1, spans main + aux lane): the
-            account zone stays at the viewport's top-right even when a split
-            surface owns the third column (live report 2026-07-13). Its live
-            height feeds `--ohw-topbar-h` so the sticky lanes start below it. */}
-        <div className={styles.topBarRow} ref={topBarRowRef}>
+        <main id="main-content" className={styles.main}>
           <TopBar
             start={
               <RailHamburger
@@ -1687,9 +1666,6 @@ function AppShellInner({
               </>
             }
           />
-        </div>
-
-        <main id="main-content" className={styles.main}>
           {children}
         </main>
 
