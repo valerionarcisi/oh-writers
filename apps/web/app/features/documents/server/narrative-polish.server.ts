@@ -349,7 +349,11 @@ const handlePolishNarrativeDoc = (
 
 // ─── Server function ──────────────────────────────────────────────────────────
 
-export const polishNarrativeDoc = createServerFn({ method: "GET" })
+// POST, not GET: the input carries the FULL document content — as a GET the
+// serialized payload lands in the query string and a real-size outline blows
+// past Node's header limit (431 Request Header Fields Too Large, live
+// regression on /outline 2026-07-13).
+export const polishNarrativeDoc = createServerFn({ method: "POST" })
   .validator(NarrativePolishInput)
   .handler(
     async ({
