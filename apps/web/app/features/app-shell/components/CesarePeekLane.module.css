@@ -11,6 +11,8 @@
      Cesare / Versioni / Notifiche so switching surfaces never reflows the page
      (Spec 78 A6 / refound). */
   grid-column: 3;
+  /* Row 2: the lane starts BELOW the full-width TopBar strip (2026-07-13). */
+  grid-row: 2;
   min-inline-size: 0;
   /* N-06 — pin the lane to the viewport. The shell grid is `min-block-size:
      100vh` and GROWS with the main document, so a tall soggetto stretched the
@@ -21,14 +23,14 @@
      and the `100dvh` cap bounds it to the visible height so the footer
      (composer) is always in view — the Notion side-peek model. */
   position: sticky;
-  inset-block-start: 0;
+  inset-block-start: var(--ohw-topbar-h, 0px);
   /* `align-self: start` so the grid track's `stretch` default does not override
      the explicit viewport-bounded height (which sticky positioning needs). */
   align-self: start;
-  block-size: 100vh;
-  block-size: 100dvh;
-  max-block-size: 100vh;
-  max-block-size: 100dvh;
+  block-size: calc(100vh - var(--ohw-topbar-h, 0px));
+  block-size: calc(100dvh - var(--ohw-topbar-h, 0px));
+  max-block-size: calc(100vh - var(--ohw-topbar-h, 0px));
+  max-block-size: calc(100dvh - var(--ohw-topbar-h, 0px));
   display: flex;
   flex-direction: column;
   background: var(--ds-surface);

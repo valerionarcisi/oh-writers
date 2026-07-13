@@ -49,6 +49,9 @@ export const userSettingsKeys = {
     "settings.aiSection.description":
       "Cesare runs on your own AI account: connect a provider and choose your models.",
     "settings.aiSection.manageLink": "Manage AI settings →",
+    // AI usage chart (settings/ai)
+    "settings.ai.usage.title": "AI spend — last 14 days",
+    "settings.ai.usage.total": "${n} total",
     // AI provider (Spec 84 Wave 3) — connect wizard, disconnected step 1
     "settings.ai.pageTitle": "AI",
     "settings.ai.disconnected.eyebrow": "Cesare, powered by your own account",
@@ -179,6 +182,9 @@ export const userSettingsKeys = {
     "settings.aiSection.description":
       "Cesare funziona con il tuo account AI: collega un provider e scegli i modelli.",
     "settings.aiSection.manageLink": "Gestisci impostazioni AI →",
+    // AI usage chart (settings/ai)
+    "settings.ai.usage.title": "Consumi AI — ultimi 14 giorni",
+    "settings.ai.usage.total": "${n} totali",
     // AI provider (Spec 84 Wave 3) — connect wizard, disconnected step 1
     "settings.ai.pageTitle": "AI",
     "settings.ai.disconnected.eyebrow": "Cesare, con il tuo account",

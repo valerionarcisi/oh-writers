@@ -86,6 +86,7 @@ import { useWebPush } from "../hooks/useWebPush";
 import { pulseAffectedEntities } from "../cesare-pulse";
 import { buildRailNav } from "../nav";
 import { useTranslation } from "~/features/i18n";
+import { TopBarCredits } from "~/features/ai-providers";
 import { useFeatures } from "~/features/feature-flags";
 import { Features } from "@oh-writers/domain";
 import {
@@ -272,6 +273,7 @@ function AppShellInner({
   projectName = "",
   sectionName = "",
   activeSegment = "",
+  sectionGroups,
   projects,
   projectId,
   cesarePage,
@@ -332,6 +334,23 @@ function AppShellInner({
   // to avoid a duplicate chat container.
   const { isCesareSurfaceActive } = useCesareSurface();
   const [splitDrawerWidth, setSplitDrawerWidth] = useState<number>(480);
+
+  // Full-width TopBar strip (grid row 1). Its measured height feeds
+  // `--ohw-topbar-h` on the shell so the sticky aux lanes can pin themselves
+  // exactly below it whatever the strip's height is (legend row included).
+  const shellRef = useRef<HTMLDivElement>(null);
+  const topBarRowRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const row = topBarRowRef.current;
+    const shell = shellRef.current;
+    if (!row || !shell) return;
+    const update = () =>
+      shell.style.setProperty("--ohw-topbar-h", `${row.offsetHeight}px`);
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(row);
+    return () => observer.disconnect();
+  }, []);
   // Notion-style rail overlay: when shell is `collapsed` the rail is hidden
   // by default and a top-left hamburger toggles it as a sliding overlay.
   // No hover-reveal sentinel — outside-click / ESC / hamburger again close
@@ -1206,6 +1225,50 @@ function AppShellInner({
     }
   }, [projectId, router]);
 
+  // Gear dropdown (live request 2026-07-13) — the gear is a menu, not a bare
+  // link: every project page, then project settings / account settings / AI.
+  // Built only inside a project (outside one the gear is hidden entirely).
+  const gearMenuItems = useMemo<DropdownMenuItem[] | undefined>(() => {
+    if (!projectId || !sectionGroups) return undefined;
+    const pageItems = sectionGroups.flatMap((group) =>
+      group.items.map(
+        (s): DropdownMenuItem => ({
+          label: s.label,
+          onClick: () => handleNavigate(s.href),
+          disabled: s.isActive,
+        }),
+      ),
+    );
+    return [
+      ...pageItems,
+      {
+        label: t("shell.projectMenu.settings"),
+        icon: "⚙",
+        onClick: handleProjectSettings,
+        testId: "gear-menu-project-settings",
+      },
+      {
+        label: t("shell.gearMenu.accountSettings"),
+        icon: "⚙",
+        onClick: handleUserSettings,
+        testId: "gear-menu-account-settings",
+      },
+      {
+        label: t("shell.gearMenu.aiCredits"),
+        icon: "✦",
+        onClick: () => handleNavigate("/settings/ai"),
+        testId: "gear-menu-ai-credits",
+      },
+    ];
+  }, [
+    projectId,
+    sectionGroups,
+    handleNavigate,
+    handleProjectSettings,
+    handleUserSettings,
+    t,
+  ]);
+
   // N-24 — the rail project header carries a chevron-down (the universal
   // "opens a menu" affordance), so it opens a project menu rather than a bare
   // link. Open project / project settings / switch project — each a clear
@@ -1366,8 +1429,9 @@ function AppShellInner({
       onAvatar: handleUserSettings,
       // No project open → no gear: outside a project it would only duplicate
       // the avatar's /settings destination (live report 2026-07-13, refines
-      // N-22's fallback).
-      ...(projectId ? { onGear: handleProjectSettings } : {}),
+      // N-22's fallback). Inside a project the gear opens the pages/settings
+      // dropdown.
+      ...(projectId ? { onGear: handleProjectSettings, gearMenuItems } : {}),
       hasUnreadNotifications: hasUnseen,
       avatarLabel: deriveInitials(user.name),
       // The ⊟ split toggle belongs to the chat surface only (the session
@@ -1385,6 +1449,7 @@ function AppShellInner({
       handleBell,
       handleUserSettings,
       handleProjectSettings,
+      gearMenuItems,
       projectId,
       hasUnseen,
       user.name,
@@ -1531,7 +1596,7 @@ function AppShellInner({
 
   return (
     <CesareProvider openCesare={openCesare}>
-      <div className={styles.shell}>
+      <div className={styles.shell} ref={shellRef}>
         <SkipLink targetId="main-content" label={t("shell.skipLink")} />
         <div className={styles.rail}>
           <LeftRail
@@ -1601,7 +1666,11 @@ function AppShellInner({
           />
         </div>
 
-        <main id="main-content" className={styles.main}>
+        {/* Full-width TopBar strip (grid row 1, spans main + aux lane): the
+            account zone stays at the viewport's top-right even when a split
+            surface owns the third column (live report 2026-07-13). Its live
+            height feeds `--ohw-topbar-h` so the sticky lanes start below it. */}
+        <div className={styles.topBarRow} ref={topBarRowRef}>
           <TopBar
             start={
               <RailHamburger
@@ -1619,19 +1688,25 @@ function AppShellInner({
             onSearch={openPalette}
             elementLegend={topBarSlots.elementLegend ?? undefined}
             accountZone={
-              <TopBarAccount
-                account={topBarAccount}
-                labels={{
-                  notifications: t("shell.rail.notifications"),
-                  notificationsUnread: t("shell.rail.notificationsUnread"),
-                  profile: t("shell.rail.profile"),
-                  settings: t("shell.rail.settings"),
-                  account: t("shell.rail.account"),
-                  toggleSplit: t("shell.topbar.toggleSplit"),
-                }}
-              />
+              <>
+                {isAiEnabled && <TopBarCredits />}
+                <TopBarAccount
+                  account={topBarAccount}
+                  labels={{
+                    notifications: t("shell.rail.notifications"),
+                    notificationsUnread: t("shell.rail.notificationsUnread"),
+                    profile: t("shell.rail.profile"),
+                    settings: t("shell.rail.settings"),
+                    account: t("shell.rail.account"),
+                    toggleSplit: t("shell.topbar.toggleSplit"),
+                  }}
+                />
+              </>
             }
           />
+        </div>
+
+        <main id="main-content" className={styles.main}>
           {children}
         </main>
 

@@ -14,6 +14,10 @@
 import { useRef } from "react";
 import { useButton } from "react-aria";
 import { Icon } from "../../icons/Icon";
+import {
+  DropdownMenu,
+  type DropdownMenuItem,
+} from "../../components/DropdownMenu";
 import { GearGlyph } from "./GearGlyph";
 import styles from "./TopBarAccount.module.css";
 
@@ -25,6 +29,9 @@ export type TopBarAccountActions = {
   /** Open project settings (gear). Omitted (no project open) → the gear is
    *  hidden: outside a project it would only duplicate the avatar. */
   onGear?: () => void;
+  /** When provided, the gear opens a dropdown menu (pages + settings + AI)
+   *  instead of navigating directly; `onGear` is ignored. */
+  gearMenuItems?: DropdownMenuItem[];
   /** Renders the unread dot on the bell. */
   hasUnreadNotifications: boolean;
   /** 1–2 letter initials shown in the avatar circle. */
@@ -130,7 +137,18 @@ export function TopBarAccount({ account, labels }: TopBarAccountProps) {
       >
         <span aria-hidden="true">{account.avatarLabel}</span>
       </button>
-      {account.onGear && (
+      {account.gearMenuItems ? (
+        <DropdownMenu
+          trigger={<GearGlyph />}
+          items={account.gearMenuItems}
+          align="end"
+          triggerClassName={styles.accountBtn}
+          triggerLabel={labels.settings}
+          triggerTitle={labels.settings}
+          triggerTestId="settings-btn"
+          data-testid="gear-menu"
+        />
+      ) : account.onGear ? (
         <button
           ref={gearRef}
           {...gearProps}
@@ -141,7 +159,7 @@ export function TopBarAccount({ account, labels }: TopBarAccountProps) {
         >
           <GearGlyph />
         </button>
-      )}
+      ) : null}
     </div>
   );
 }

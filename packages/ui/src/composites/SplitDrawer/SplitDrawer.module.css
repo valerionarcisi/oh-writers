@@ -93,13 +93,16 @@
      viewport-bounded height keeps the lane anchored on screen while the page
      scrolls beside it (the Notion side-peek model; same fix as CesarePeekLane). */
   position: sticky;
-  inset-block-start: 0;
+  /* `--ohw-topbar-h` is set by the app shell: the full-width TopBar strip
+     occupies the grid row above, so the pinned lane starts below it
+     (2026-07-13). Falls back to 0 for hosts without the strip. */
+  inset-block-start: var(--ohw-topbar-h, 0px);
   align-self: start;
   inline-size: 100%;
-  block-size: 100vh;
-  block-size: 100dvh;
-  max-block-size: 100vh;
-  max-block-size: 100dvh;
+  block-size: calc(100vh - var(--ohw-topbar-h, 0px));
+  block-size: calc(100dvh - var(--ohw-topbar-h, 0px));
+  max-block-size: calc(100vh - var(--ohw-topbar-h, 0px));
+  max-block-size: calc(100dvh - var(--ohw-topbar-h, 0px));
   /* No entrance animation on lane content: navigating between surfaces
      (Cesare ↔ Versioni ↔ Notifiche) must not slide/shift the panel on each
      click. The base `[data-state="open"]` rule sets `split-slide-from-right`;

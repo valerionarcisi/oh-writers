@@ -16,6 +16,15 @@
 
   display: grid;
   grid-template-columns: 240px 1fr;
+  /* Row 1 is the full-width TopBar strip (spans main + aux lane, live report
+     2026-07-13: opening the split must not squeeze the TopBar into the main
+     lane); row 2 hosts the content lanes. The rail spans both rows. Children
+     are placed EXPLICITLY (grid-row/column), never auto-placed. */
+  grid-template-rows: auto minmax(0, 1fr);
+  /* Measured live from the TopBar row (ResizeObserver in AppShell) so the
+     sticky aux lane can start below it whatever the TopBar's height is
+     (legend row included). */
+  --ohw-topbar-h: 53px;
   min-block-size: 100vh;
   background: var(--ds-bg);
   transition: grid-template-columns var(--ds-duration-3) var(--ds-ease);
@@ -36,7 +45,11 @@
    auto-places into the empty first track and collapses to 0 (Spec 52). The
    split variants below re-add their own tracks via more specific selectors. */
 :global(body[data-shell="focus"]) .shell {
-  grid-template-columns: minmax(0, 1fr);
+  /* The rail leaves the grid (`display: none`), but its 0-width track stays in
+     the template because .main/.topBarRow are placed EXPLICITLY in column 2 —
+     no auto-placement to protect anymore (pre-2026-07-13 this had to be a
+     single column). */
+  grid-template-columns: 0 minmax(0, 1fr);
 }
 
 /* ── The single auxiliary split track (Spec 78 A6 / refound) ─────────────────
@@ -111,17 +124,35 @@
 
 .rail {
   min-width: 0;
+  grid-column: 1;
+  grid-row: 1 / -1;
 }
 
 :global(body[data-shell="focus"]) .rail {
   display: none;
 }
 
+/* Full-width TopBar strip: row 1, spanning the main lane AND the auxiliary
+   split track, so the account zone (credits/bell/avatar/gear) stays at the
+   viewport's top-right whatever surface is open. Sticky to the viewport —
+   the document scrolls underneath. */
+.topBarRow {
+  grid-column: 2 / -1;
+  grid-row: 1;
+  min-width: 0;
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 45;
+  background: var(--ds-bg);
+}
+
 .main {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  min-block-size: 100vh;
+  grid-column: 2;
+  grid-row: 2;
+  min-block-size: calc(100vh - var(--ohw-topbar-h));
   transition: box-shadow var(--ds-duration-3) var(--ds-ease);
 }
 
@@ -129,8 +160,8 @@
    so the thread scrolls internally and the composer stays docked at the bottom,
    instead of the whole page growing with the conversation. */
 :global(body[data-cesare-surface="active"]) .main {
-  block-size: 100vh;
-  block-size: 100dvh;
+  block-size: calc(100vh - var(--ohw-topbar-h));
+  block-size: calc(100dvh - var(--ohw-topbar-h));
   min-block-size: 0;
   overflow: hidden;
 }

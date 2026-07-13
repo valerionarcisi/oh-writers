@@ -5,6 +5,7 @@ import { aiProviderStatusQueryOptions } from "../ai-providers.server";
 import { AiConnectWizard } from "./AiConnectWizard";
 import { AiPostConnectWizard } from "./AiPostConnectWizard";
 import { AiConnectedCard } from "./AiConnectedCard";
+import { AiUsageChart } from "./AiUsageChart";
 import styles from "./AiSettingsPage.module.css";
 
 export interface AiSettingsPageProps {
@@ -60,13 +61,16 @@ export function AiSettingsPage({
           onModelsSaved={invalidateStatus}
         />
       ) : (
-        <AiConnectedCard
-          provider={statusQuery.data.value.provider}
-          keyLast4={statusQuery.data.value.keyLast4}
-          models={statusQuery.data.value.models}
-          onDisconnected={invalidateStatus}
-          onModelsChanged={invalidateStatus}
-        />
+        <>
+          <AiConnectedCard
+            provider={statusQuery.data.value.provider}
+            keyLast4={statusQuery.data.value.keyLast4}
+            models={statusQuery.data.value.models}
+            onDisconnected={invalidateStatus}
+            onModelsChanged={invalidateStatus}
+          />
+          <AiUsageChart />
+        </>
       )}
     </div>
   );

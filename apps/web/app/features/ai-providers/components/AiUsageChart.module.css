@@ -1,0 +1,61 @@
+.section {
+  margin-block-start: var(--ds-space-6);
+  padding: var(--ds-space-4);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-surface);
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--ds-space-2);
+  margin-block-end: var(--ds-space-3);
+}
+
+.title {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--ds-text);
+}
+
+.total {
+  font-family: var(--ds-font-mono);
+  font-size: var(--text-xs);
+  color: var(--ds-text-3);
+}
+
+.bars {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--ds-space-1);
+  /* Chart plot height: tall enough to read 14 daily bars, short enough to
+     stay a card detail rather than a page hero. */
+  block-size: 6rem;
+}
+
+.barCol {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  block-size: 100%;
+  min-inline-size: 0;
+}
+
+.bar {
+  inline-size: 100%;
+  min-block-size: 0.125rem;
+  border-radius: var(--ds-radius-sm) var(--ds-radius-sm) 0 0;
+  background: var(--ds-agent);
+  opacity: 0.85;
+}
+
+.dayLabel {
+  margin-block-start: var(--ds-space-1);
+  font-family: var(--ds-font-mono);
+  font-size: var(--text-xs);
+  color: var(--ds-text-faint);
+}

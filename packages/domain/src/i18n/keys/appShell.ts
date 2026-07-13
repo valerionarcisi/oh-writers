@@ -232,6 +232,9 @@ export const appShellKeys = {
     "shell.rail.profile": "Profile",
     "shell.rail.account": "Account",
     "shell.topbar.toggleSplit": "Toggle side panel",
+    "shell.topbar.aiCredits": "AI credits remaining — open AI settings",
+    "shell.gearMenu.accountSettings": "Account settings",
+    "shell.gearMenu.aiCredits": "AI · credits & models",
     "shell.rail.tools": "Tools",
     "shell.skipLink": "Skip to content",
     // Relative time buckets for the session list ({n} = number)
@@ -493,6 +496,9 @@ export const appShellKeys = {
     "shell.rail.profile": "Profilo",
     "shell.rail.account": "Account",
     "shell.topbar.toggleSplit": "Mostra/nascondi pannello",
+    "shell.topbar.aiCredits": "Crediti AI residui — apri impostazioni AI",
+    "shell.gearMenu.accountSettings": "Impostazioni account",
+    "shell.gearMenu.aiCredits": "AI · crediti e modelli",
     "shell.rail.tools": "Strumenti",
     "shell.skipLink": "Salta al contenuto",
     // Relative time buckets for the session list ({n} = number)
