@@ -15,6 +15,7 @@ import { eq, and, desc, sql, isNull, inArray } from "drizzle-orm";
 import { logger } from "~/server/logger";
 import { aiTelemetry } from "~/server/langfuse-config";
 import { commitOrAsk, isAsked } from "./auto-version.effect";
+import { replaceLenient } from "./lenient-text-match";
 import {
   userRequestedNewVersion,
   userConfirmedOverwrite,
@@ -1526,15 +1527,18 @@ const executeApplyTextEdit = (
   if (!input.find) {
     return okAsync({ ok: false, reason: "empty find string" });
   }
-  if (!doc.content.includes(input.find)) {
+  const previousContent = doc.content;
+  // #106 — lenient match: the stored content is HTML-ish (typographic quotes,
+  // entities, collapsed spaces) while the model quotes what it read; exact
+  // indexOf made correct quotes miss and the model flail through retries.
+  const next = replaceLenient(previousContent, input.find, input.replace);
+  if (next === null) {
     return okAsync({
       ok: false,
       reason:
-        "`find` string not found verbatim in the document — re-read the document and use an exact substring",
+        "`find` string not found in the document — re-read the document and use an exact substring",
     });
   }
-  const previousContent = doc.content;
-  const next = previousContent.replace(input.find, input.replace);
   // Spec 76 — route the surgical edit through the SAME commit policy as the
   // generation tools (kills the second seam): a small find/replace overwrites
   // the working version in place; a large one asks before minting.
@@ -3203,10 +3207,11 @@ const logCacheUsage = (
 // drains, awaited below where generateText used to return them synchronously.
 // BUG-101 — hard ceiling on the whole streamText consumption (up to 5 steps,
 // each a model round-trip, plus tool execution). Sized above the nested
-// callHaiku 45s bound so a legitimate multi-step turn with a from-scratch
-// generation inside it isn't cut short, while still guaranteeing the turn can
-// never hang unbounded and leave the tracer stuck.
-const LOOP_TIMEOUT_MS = 90_000;
+// call bound — which scales with the requested output (callTimeoutMs: up to
+// ~135s for a 9000-token screenplay generation) — so a legitimate multi-step
+// turn with a from-scratch generation inside it isn't cut short, while still
+// guaranteeing the turn can never hang unbounded and leave the tracer stuck.
+const LOOP_TIMEOUT_MS = 240_000;
 
 // Spec 84 (Wave 2) — the tool loop only ever runs the platform's own two
 // model IDs today (cesare-model-router's FAST_TIER_MODEL/QUALITY_TIER_MODEL),
