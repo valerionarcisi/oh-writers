@@ -86,9 +86,18 @@ const finalizeLines = (lines: string[]): string =>
  */
 export const docToFountain = (doc: Node): string => {
   const lines: string[] = [];
-  doc.forEach((scene) => {
-    if (scene.type.name !== "scene") return;
-    pushSceneLines(scene, lines);
+  doc.forEach((child) => {
+    if (child.type.name === "scene") {
+      pushSceneLines(child, lines);
+      return;
+    }
+    // #63 — the schema allows top-level transitions (opening FADE IN:,
+    // trailing FADE OUT.) and fountainToDoc produces them; skipping them
+    // here silently lost content on every export and round-trip.
+    if (child.type.name === "transition") {
+      if (lines.length > 0) lines.push("");
+      lines.push(child.textContent);
+    }
   });
   return finalizeLines(lines);
 };

@@ -67,6 +67,20 @@ describe("fountain roundtrip", () => {
     expect(stableRoundtrip("\n\n\n")).toBe(true);
   });
 
+  // #63 — top-level transitions (opening FADE IN:) were dropped by
+  // docToFountain, losing content on every export and round-trip.
+  it("a leading FADE IN: survives the round-trip", () => {
+    const input = [
+      "FADE IN:",
+      "",
+      "INT. KITCHEN - DAY",
+      "",
+      "A kettle whistles.",
+    ].join("\n");
+    expect(docToFountain(fountainToDoc(input))).toContain("FADE IN:");
+    expect(stableRoundtrip(input)).toBe(true);
+  });
+
   it("docToFountain output re-parses to the same structure as the original doc", () => {
     const input = [
       "EXT. ROOFTOP - DUSK",
