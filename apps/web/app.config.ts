@@ -17,10 +17,10 @@ export default defineConfig({
     // client bundle. createServerFn handlers are server-only but static analysis
     // can still include transitive server imports in the client chunk.
     optimizeDeps: {
-      exclude: ["postgres", "@oh-writers/db", "pdfkit", "pdf-parse"],
+      exclude: ["postgres", "@oh-writers/db", "pdfkit", "pdf-parse", "jszip"],
     },
     ssr: {
-      external: ["postgres", "@oh-writers/db", "pdfkit", "pdf-parse"],
+      external: ["postgres", "@oh-writers/db", "pdfkit", "pdf-parse", "jszip"],
     },
     // Expose the MOCK_AI build-env flag to the client bundle so the UI
     // can opt out of side effects that race the test harness (e.g. the

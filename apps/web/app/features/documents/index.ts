@@ -41,6 +41,8 @@ export type { LoglinePillProps } from "./components/LoglinePill";
 export { TreatmentToc } from "./components/TreatmentToc";
 export { SaveStatus } from "./components/SaveStatus";
 export * from "./hooks/useDocument";
+export { useImportSubject } from "./hooks/useImportSubject";
+export * from "./import.errors";
 export * from "./hooks/useExportSubjectDocx";
 export { ExportPdfModal } from "./components/ExportPdfModal";
 export { ExportSiaeModal } from "./components/ExportSiaeModal";

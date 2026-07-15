@@ -40,6 +40,7 @@
     "docx": "9.6.1",
     "drizzle-orm": "0.45.1",
     "effect": "3.21.2",
+    "jszip": "3.10.1",
     "langfuse-vercel": "3.38.20",
     "lucide-react": "0.468.0",
     "neverthrow": "8.2.0",

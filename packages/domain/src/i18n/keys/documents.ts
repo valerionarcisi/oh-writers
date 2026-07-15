@@ -162,7 +162,31 @@ export const documentsKeys = {
     "documents.editor.exportSiae": "Export SIAE",
     "documents.editor.versions": "Versions",
     "documents.editor.import": "Import",
+    "documents.editor.importFile": "Import PDF/DOCX",
     "documents.editor.titlePage": "Title page",
+
+    // Document import (PDF/DOCX/TXT/MD into a narrative document)
+    "documents.import.confirmTitle": "Replace current content?",
+    "documents.import.confirmBody":
+      "The current content of this document will be replaced. The current text stays available in previous versions.",
+    "documents.import.confirmAction": "Replace",
+    "documents.import.importing": "Importing…",
+    "documents.import.error.invalid": "Not a valid file.",
+    "documents.import.error.encrypted":
+      "This PDF is password-protected and cannot be imported.",
+    "documents.import.error.unsupported": "Unsupported file format.",
+    "documents.import.error.empty":
+      "No extractable text in this file. It might be a scan (image).",
+    "documents.import.error.tooLarge": "The file must be under 25 MB.",
+    "documents.import.error.tooLong":
+      "The imported text is too long for this document.",
+    "documents.import.error.notFound":
+      "This document no longer exists. Reload the page.",
+    "documents.import.error.forbidden":
+      "You no longer have permission to edit this document.",
+    "documents.import.error.generic":
+      "Something went wrong while importing the file.",
+    "documents.import.dismissError": "Dismiss",
 
     // Outline editor
     "documents.outline.removeCharacterAria": "Remove {character}",
@@ -362,7 +386,30 @@ export const documentsKeys = {
     "documents.editor.exportSiae": "Esporta SIAE",
     "documents.editor.versions": "Versioni",
     "documents.editor.import": "Importa",
+    "documents.editor.importFile": "Importa PDF/DOCX",
     "documents.editor.titlePage": "Frontespizio",
+
+    "documents.import.confirmTitle": "Sostituire il contenuto attuale?",
+    "documents.import.confirmBody":
+      "Il contenuto attuale del documento verrà sostituito. Il testo attuale resta disponibile nelle versioni precedenti.",
+    "documents.import.confirmAction": "Sostituisci",
+    "documents.import.importing": "Importazione…",
+    "documents.import.error.invalid": "File non valido.",
+    "documents.import.error.encrypted":
+      "Questo PDF è protetto da password e non può essere importato.",
+    "documents.import.error.unsupported": "Formato file non supportato.",
+    "documents.import.error.empty":
+      "Nessun testo estraibile da questo file. Potrebbe essere una scansione (immagine).",
+    "documents.import.error.tooLarge": "Il file deve essere inferiore a 25 MB.",
+    "documents.import.error.tooLong":
+      "Il testo importato è troppo lungo per questo documento.",
+    "documents.import.error.notFound":
+      "Questo documento non esiste più. Ricarica la pagina.",
+    "documents.import.error.forbidden":
+      "Non hai più i permessi per modificare questo documento.",
+    "documents.import.error.generic":
+      "Si è verificato un errore durante l'importazione del file.",
+    "documents.import.dismissError": "Ignora",
 
     "documents.outline.removeCharacterAria": "Rimuovi {character}",
     "documents.outline.charactersPlaceholder": "Personaggi…",

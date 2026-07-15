@@ -5,7 +5,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import { assertValidProjectId } from "~/lib/project-route";
 import { match } from "ts-pattern";
 import { ContextActionIds, DocumentTypes, Features } from "@oh-writers/domain";
-import { ActionsMenu, Skeleton, computeSaveStatus } from "@oh-writers/ui";
+import {
+  ActionsMenu,
+  ConfirmDialog,
+  Skeleton,
+  computeSaveStatus,
+} from "@oh-writers/ui";
 import {
   canonicalNarrativeHtml,
   AiOffBanner,
@@ -18,6 +23,7 @@ import {
   useAutoSave,
   useDocument,
   useExportSubjectDocx,
+  useImportSubject,
   useSaveDocument,
   useSiaeMetadata,
   useVersionResync,
@@ -193,6 +199,12 @@ function SoggettoPageReady({
   };
 
   const exportDocx = useExportSubjectDocx();
+  const importSubject = useImportSubject({
+    documentId: soggettoDoc.id,
+    projectId,
+    type: DocumentTypes.SOGGETTO,
+    hasExistingContent: soggettoContent.trim().length > 0,
+  });
   // Spec 49 W2: Versions open via the ROUTER (`?versions=<docId>`), not the
   // legacy context drawer. The host page compresses beside the routed
   // SplitDrawer. `vcur` carries the current-version baseline for the
@@ -276,6 +288,15 @@ function SoggettoPageReady({
     );
   };
 
+  // The import hook rebuilds its `openPicker` closure every render, which
+  // would make `contextActionHandlers` (and the published TopBar node) a new
+  // reference each render → the slot publisher re-fires → "Maximum update
+  // depth exceeded". Route the picker call through a ref so the handler
+  // identity stays stable, mirroring the pattern in ScreenplayEditor.tsx.
+  const importPickerRef = useRef(importSubject.openPicker);
+  importPickerRef.current = importSubject.openPicker;
+  const openImportPicker = useCallback(() => importPickerRef.current(), []);
+
   // TopBar context actions come from the shared registry (Spec 55). The page
   // wires runtime handlers per `ContextActionId`; the registry owns order +
   // feature gating (SIAE only in the IT market). The DOCX handler carries a
@@ -300,9 +321,22 @@ function SoggettoPageReady({
         },
         testId: "action-export-siae",
       },
+      [ContextActionIds.IMPORT_DOCUMENT]: {
+        onSelect: openImportPicker,
+        disabled: !canEdit,
+        testId: "action-import-document",
+      },
       [ContextActionIds.VERSIONS]: { onSelect: toggleVersions },
     }),
-    [exportDocxPending, isVersionsOpen, versionsClose, toggleVersions, t],
+    [
+      exportDocxPending,
+      isVersionsOpen,
+      versionsClose,
+      toggleVersions,
+      openImportPicker,
+      canEdit,
+      t,
+    ],
   );
   const contextActionItems = useContextActions(
     "soggetto",
@@ -338,6 +372,39 @@ function SoggettoPageReady({
           onClose={() => setIsExportOpen(false)}
           onGenerate={handleExport}
         />
+      )}
+
+      <input
+        {...importSubject.fileInputProps}
+        className={styles.hiddenInput}
+        data-testid="subject-import-input"
+      />
+      <ConfirmDialog
+        isOpen={importSubject.status.type === "confirm"}
+        title={t("documents.import.confirmTitle")}
+        message={t("documents.import.confirmBody")}
+        confirmLabel={t("documents.import.confirmAction")}
+        destructive
+        onConfirm={importSubject.confirm}
+        onCancel={importSubject.cancel}
+        testId="subject-import-confirm"
+      />
+      {importSubject.status.type === "error" && (
+        <div
+          className={styles.importError}
+          role="alert"
+          data-testid="subject-import-error"
+        >
+          {importSubject.status.message}
+          <button
+            type="button"
+            className={styles.importErrorDismiss}
+            onClick={importSubject.cancel}
+            aria-label={t("documents.import.dismissError")}
+          >
+            ✕
+          </button>
+        </div>
       )}
 
       <NarrativeDocsShell

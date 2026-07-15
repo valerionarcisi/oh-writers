@@ -25,6 +25,7 @@ export const ContextActionIds = {
   EXPORT_CSV: "export-csv",
   IMPORT_FOUNTAIN: "import-fountain",
   IMPORT_PDF: "import-pdf",
+  IMPORT_DOCUMENT: "import-document",
   VERSIONS: "versions",
   // A page-level "Esporta" action that launches the page's own export modal
   // (which then picks the format). Used by budget + breakdown; pages with direct
@@ -69,6 +70,11 @@ export const CONTEXT_ACTIONS: Readonly<
       labelKey: "documents.editor.exportSiae",
       feature: "siaeExport",
       order: 20,
+    },
+    {
+      id: ContextActionIds.IMPORT_DOCUMENT,
+      labelKey: "documents.editor.importFile",
+      order: 30,
     },
   ],
   synopsis: [

@@ -76,3 +76,41 @@
   color: var(--ds-danger);
   font-size: var(--text-sm);
 }
+
+/* Import file input is driven from the TopBar actions menu. */
+.hiddenInput {
+  display: none;
+}
+
+/* ─── Import error banner ────────────────────────────────── */
+.importError {
+  position: fixed;
+  inset-block-end: var(--space-6);
+  inset-inline-start: 50%;
+  translate: -50% 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-danger);
+  border-radius: var(--radius-md);
+  color: var(--ds-danger);
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-sm);
+  z-index: var(--z-toast);
+  box-shadow: var(--shadow-lg);
+}
+
+.importErrorDismiss {
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  font-size: var(--text-sm);
+  padding: 0;
+  line-height: 1;
+
+  &:hover {
+    color: var(--ds-text);
+  }
+}

@@ -12,6 +12,8 @@ import { requireUser } from "~/server/context";
 import { getDb } from "~/server/db";
 import type { Db } from "~/server/db";
 import { canEdit, getMembership } from "~/server/permissions";
+import { requireProjectAccess } from "~/server/access";
+import { ContentMaxByType } from "../documents.schema";
 import {
   DocumentNotFoundError,
   ForbiddenError,
@@ -117,7 +119,9 @@ const assertCanRead = (db: Db, doc: DocumentRow, userId: string) =>
         : err(new ForbiddenError("read document versions"));
     });
 
-const nextNumber = (db: Db, documentId: string) =>
+type TxOrDb = Parameters<Parameters<Db["transaction"]>[0]>[0] | Db;
+
+const nextNumber = (db: TxOrDb, documentId: string) =>
   ResultAsync.fromPromise(
     db
       .select({
@@ -339,6 +343,87 @@ export const duplicateVersion = createServerFn({ method: "POST" })
                 : err(new DbError("versions.duplicate", "no row returned")),
             ),
           ),
+      );
+    },
+  );
+
+// ─── importNarrativeVersion ────────────────────────────────────────────────────
+
+export const ImportNarrativeVersionInput = z.object({
+  documentId: z.string().uuid(),
+  content: z.string(),
+  sourceFileName: z.string().max(255),
+});
+
+export const importNarrativeVersion = createServerFn({ method: "POST" })
+  .validator(ImportNarrativeVersionInput)
+  .handler(
+    async ({
+      data,
+    }): Promise<
+      ResultShape<
+        DocumentVersion,
+        DocumentNotFoundError | ForbiddenError | ValidationError | DbError
+      >
+    > => {
+      const user = await requireUser();
+      const db = await getDb();
+
+      const docResult = await findDocument(db, data.documentId);
+      if (docResult.isErr()) return toShape(err(docResult.error));
+      const doc = docResult.value;
+
+      const accessResult = await requireProjectAccess(
+        db,
+        doc.projectId,
+        "edit",
+      );
+      if (accessResult.isErr()) {
+        const e = accessResult.error;
+        if (e._tag === "ProjectNotFoundError")
+          return toShape(err(new DocumentNotFoundError(data.documentId)));
+        return toShape(err(e));
+      }
+
+      const maxLength = ContentMaxByType[doc.type];
+      if (data.content.length > maxLength) {
+        return toShape(
+          err(
+            new ValidationError(
+              "content",
+              `exceeds ${doc.type} limit of ${maxLength} characters`,
+            ),
+          ),
+        );
+      }
+
+      return toShape(
+        await ResultAsync.fromPromise(
+          db.transaction(async (tx) => {
+            const numberResult = await nextNumber(tx, doc.id);
+            if (numberResult.isErr()) throw numberResult.error;
+            const [version] = await tx
+              .insert(documentVersions)
+              .values({
+                documentId: doc.id,
+                number: numberResult.value,
+                content: data.content,
+                label: `Importato da ${data.sourceFileName}`,
+                createdBy: user.id,
+              })
+              .returning();
+            if (!version) throw new Error("Import returned no rows");
+            await tx
+              .update(documents)
+              .set(activateVersionSet(doc, version))
+              .where(eq(documents.id, doc.id));
+            return version;
+          }),
+          (e) => new DbError("versions.import", e),
+        ).map((version) => {
+          if (isPmRoomDocType(doc.type)) void notifyRoomReseed(doc.id);
+          return version;
+        }),
       );
     },
   );
