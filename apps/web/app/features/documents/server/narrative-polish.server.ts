@@ -15,7 +15,7 @@ import { withProjectAccess } from "~/server/pipeline";
 import { callHaiku, extractToolUse } from "~/features/ai";
 import { fetchEditorialAdviceDecisionsBlock } from "~/features/predictions/editorial-advice-decisions.server";
 import type { ProjectAccessError } from "~/server/access";
-import { getDb } from "~/server/db";
+import { getDb, type Db } from "~/server/db";
 import { documents, projects } from "@oh-writers/db/schema";
 import { and, eq } from "drizzle-orm";
 import {
@@ -223,6 +223,7 @@ const MOCK_SUGGESTIONS: Record<
 const callNarrativePolish = async (
   docType: NarrativePolishSuggestionDoc,
   prompt: string,
+  gateway: PolishGatewayCtx,
 ): Promise<NarrativePolishSuggestion[]> => {
   const trimmed = prompt.slice(0, 12_000);
   const result = await callHaiku(
@@ -233,6 +234,13 @@ const callNarrativePolish = async (
       maxTokens: NARRATIVE_POLISH_MAX_TOKENS,
       tools: [NARRATIVE_POLISH_TOOL],
       toolChoice: { type: "tool", name: TOOL_NAME },
+      // #105 — route through the BYOK gateway: ambient flow, fast tier, the
+      // caller's own provider. Without userId/tier the call bypassed
+      // resolveModelClient and BYOK users silently got the mock cards.
+      trigger: "background",
+      userId: gateway.userId,
+      tier: "fast",
+      db: gateway.db,
     },
     "cesare/narrative-polish",
   );
@@ -320,11 +328,18 @@ const buildPromptInput = async (
   ].join("\n");
 };
 
+type PolishGatewayCtx = {
+  readonly userId: string;
+  readonly db: Db;
+};
+
 const handlePolishNarrativeDoc = (
   data: NarrativePolishInputData,
+  gateway: PolishGatewayCtx,
 ): ResultAsync<NarrativePolishSuggestion[], NarrativePolishError> => {
-  const wantsMock =
-    process.env["MOCK_AI"] === "true" || !process.env["ANTHROPIC_API_KEY"];
+  // #105 — only the explicit flag mocks. A missing platform key is a normal
+  // state for BYOK users; the gateway resolves their own provider.
+  const wantsMock = process.env["MOCK_AI"] === "true";
 
   if (wantsMock) {
     return ResultAsync.fromSafePromise(
@@ -340,7 +355,7 @@ const handlePolishNarrativeDoc = (
       ),
   ).andThen((prompt) =>
     ResultAsync.fromPromise(
-      callNarrativePolish(data.docType, prompt),
+      callNarrativePolish(data.docType, prompt, gateway),
       (e) =>
         new NarrativePolishError(e instanceof Error ? e.message : String(e)),
     ),
@@ -365,8 +380,8 @@ export const polishNarrativeDoc = createServerFn({ method: "POST" })
       >
     > =>
       toShape(
-        await withProjectAccess(data.projectId, "view", () =>
-          handlePolishNarrativeDoc(data),
+        await withProjectAccess(data.projectId, "view", ({ db, access }) =>
+          handlePolishNarrativeDoc(data, { userId: access.user.id, db }),
         ),
       ),
   );
