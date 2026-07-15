@@ -253,6 +253,14 @@ const buildSdkTools = (
 // transient-error retry storm can't silently add tens of seconds on its own.
 const CALL_TIMEOUT_MS = 45_000;
 
+// A whole-screenplay generation legitimately streams for minutes: the fixed
+// 45s bound (sized for chat-scale outputs) would abort it mid-stream, which
+// is WORSE than the truncation it replaced. Scale the ceiling with the
+// requested output budget — 15ms/token ≈ a conservative 67 tok/s floor —
+// while keeping 45s as the minimum for small calls.
+const callTimeoutMs = (maxTokens: number): number =>
+  Math.max(CALL_TIMEOUT_MS, maxTokens * 15);
+
 // Normalises the AI SDK's usage/providerMetadata shape into the ledger's
 // TokenUsage. Cached tokens live in two different places depending on SDK
 // version/provider: `usage.cachedInputTokens` (normalised read count) and
@@ -330,7 +338,7 @@ const runGenerateText = (
           }
         : {}),
       experimental_telemetry: aiTelemetry(`call-haiku:${operation}`),
-      abortSignal: AbortSignal.timeout(CALL_TIMEOUT_MS),
+      abortSignal: AbortSignal.timeout(callTimeoutMs(params.maxTokens)),
       maxRetries: 1,
     }).then((result) => {
       // Fire-and-forget: recordAiUsage never rejects (fully guarded) and must
@@ -444,7 +452,9 @@ const runStreamGeneration = (
 ): ResultAsync<string, AnthropicError | AiProviderAuthError> =>
   ResultAsync.fromPromise(
     (async () => {
-      const timeoutSignal = AbortSignal.timeout(CALL_TIMEOUT_MS);
+      const timeoutSignal = AbortSignal.timeout(
+        callTimeoutMs(params.maxTokens),
+      );
       const effectiveSignal = abortSignal
         ? AbortSignal.any([abortSignal, timeoutSignal])
         : timeoutSignal;

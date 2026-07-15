@@ -1658,7 +1658,10 @@ const handleGenerateScreenplay = (
       runGeneration(
         SCREENPLAY_FROM_NARRATIVE_SYSTEM,
         user,
-        6000,
+        // 9000 output tokens ≈ 20+ screenplay pages: room for a full short
+        // film in one pass (6000 truncated a ~15-page corto). Feature-length
+        // needs chunked generation, out of scope here.
+        9000,
         "cesare.generateScreenplay",
         {
           onDelta,
