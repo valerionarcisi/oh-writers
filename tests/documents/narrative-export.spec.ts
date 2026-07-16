@@ -8,7 +8,7 @@
  * ⋯ menu's "Esporta PDF" item. The export modal itself is unchanged
  * (narrative-export-modal / -generate / -include-title-page).
  *
- * [225] Owner ⋯ → Esporta PDF → Genera → PDF delivered + preview tab opens
+ * [225] Owner ⋯ → Esporta PDF → Genera → PDF downloads directly
  * [226] PDF contains LOGLINE / SYNOPSIS / TREATMENT headers + bodies
  * [227] Export PDF item is disabled on the outline (non-narrative) surface
  * [228] Viewer on team project can export (read-op)
@@ -18,7 +18,7 @@
 
 import { test, expect, TEST_TEAM_PROJECT_ID } from "../fixtures";
 import { BASE_URL } from "../helpers";
-import type { Page, Response } from "@playwright/test";
+import type { Download, Page, Response } from "@playwright/test";
 // @ts-expect-error — pdf-parse has no types for its internal entry
 import pdfParse from "pdf-parse/lib/pdf-parse.js";
 
@@ -45,12 +45,13 @@ const openExportModal = async (page: Page): Promise<void> => {
 /**
  * Drives the modal: opens it via the ⋯ menu, optionally toggles the
  * `Includi title page` checkbox, clicks Genera, and returns the export
- * response together with the popup page that opens for the PDF preview.
+ * response together with the browser download it triggers directly (no
+ * preview tab — the client downloads the PDF via an anchor `download` click).
  */
 const openExportModalAndGenerate = async (
   page: Page,
   opts: { includeTitlePage?: boolean } = {},
-): Promise<{ response: Response; popup: Page }> => {
+): Promise<{ response: Response; download: Download }> => {
   await openExportModal(page);
 
   if (opts.includeTitlePage) {
@@ -63,28 +64,28 @@ const openExportModalAndGenerate = async (
   const generateButton = page.getByTestId("narrative-export-generate");
   await expect(generateButton).toBeEnabled();
 
-  const [response, popup] = await Promise.all([
+  const [response, download] = await Promise.all([
     page.waitForResponse(
       (r) =>
         r.url().includes("exportNarrativePdf") &&
         r.request().method() === "POST",
       { timeout: 10_000 },
     ),
-    page.context().waitForEvent("page", { timeout: 10_000 }),
+    page.waitForEvent("download", { timeout: 10_000 }),
     generateButton.click(),
   ]);
 
-  return { response, popup };
+  return { response, download };
 };
 
 test.describe("Narrative Export — Spec 04c", () => {
-  test("[225] owner exports via modal → preview tab opens with the PDF", async ({
+  test("[225] owner exports via modal → PDF downloads directly", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {
     await page.goto(SYNOPSIS_PATH(testProjectId));
 
-    const { response, popup } = await openExportModalAndGenerate(page);
+    const { response, download } = await openExportModalAndGenerate(page);
 
     expect(response.status()).toBe(200);
     const body = await response.json();
@@ -93,12 +94,10 @@ test.describe("Narrative Export — Spec 04c", () => {
     expect(body.result.value.pdfBase64.length).toBeGreaterThan(200);
     expect(body.result.value.filename).toMatch(/\.pdf$/);
 
-    // The popup event firing is itself the contract: the client invoked
-    // window.open(blobUrl). Headless Chromium has no inline PDF viewer
-    // and closes the popup almost immediately, so we don't assert on the
-    // URL — the response payload above already proves the PDF is real.
-    expect(popup).toBeTruthy();
-    if (!popup.isClosed()) await popup.close();
+    // The download event firing is itself the contract: the client invoked
+    // an anchor `download` click on the blob URL — the response payload
+    // above already proves the PDF is real.
+    expect(download.suggestedFilename()).toBe(body.result.value.filename);
   });
 
   test("[226] PDF payload contains the three section markers", async ({
@@ -107,8 +106,7 @@ test.describe("Narrative Export — Spec 04c", () => {
   }) => {
     await page.goto(SYNOPSIS_PATH(testProjectId));
 
-    const { response, popup } = await openExportModalAndGenerate(page);
-    await popup.close();
+    const { response } = await openExportModalAndGenerate(page);
     const body = await response.json();
     const buffer = Buffer.from(body.result.value.pdfBase64, "base64");
     expect(buffer.subarray(0, 4).toString()).toBe("%PDF");
@@ -137,8 +135,7 @@ test.describe("Narrative Export — Spec 04c", () => {
   }) => {
     await page.goto(SYNOPSIS_PATH(TEST_TEAM_PROJECT_ID));
 
-    const { response, popup } = await openExportModalAndGenerate(page);
-    await popup.close();
+    const { response } = await openExportModalAndGenerate(page);
     expect(response.status()).toBe(200);
     const body = await response.json();
     expect(body).toMatchObject({ result: { isOk: true } });
@@ -158,8 +155,7 @@ test.describe("Narrative Export — Spec 04c", () => {
   }) => {
     await page.goto(SYNOPSIS_PATH(testProjectId));
 
-    const { response, popup } = await openExportModalAndGenerate(page);
-    if (!popup.isClosed()) await popup.close();
+    const { response } = await openExportModalAndGenerate(page);
     const body = await response.json();
     expect(body, `export body: ${JSON.stringify(body)}`).toMatchObject({
       result: { isOk: true },

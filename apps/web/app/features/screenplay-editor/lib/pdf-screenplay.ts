@@ -69,20 +69,27 @@ const slugify = (value: string): string =>
     .replace(/^-+|-+$/g, "")
     .slice(0, 60) || "untitled";
 
-const todayIso = (): string => new Date().toISOString().slice(0, 10);
+// UTC (not local time): this runs server-side, where the container's
+// timezone need not match the user's — using local getters could stamp the
+// wrong calendar day near midnight.
+const exportSerial = (): string => {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}-${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}`;
+};
 
 /**
- * `{project}-{screenplay}[-{format}]-{YYYY-MM-DD}.pdf`. The format slug is
- * omitted when empty (i.e. for the standard format), keeping backwards
- * compat with previously generated filenames.
+ * `{YYYYMMDD-HHmm}-{project}-{version}[-{format}].pdf`. The serial makes
+ * repeated exports of the same version sortable/non-clashing on disk. The
+ * format slug is omitted when empty (i.e. for the standard format).
  */
 export const buildScreenplayFilename = (
   projectTitle: string,
-  screenplayTitle: string,
+  versionLabel: string,
   formatSlug = "",
 ): string => {
   const project = slugify(projectTitle);
-  const screenplay = slugify(screenplayTitle);
+  const version = slugify(versionLabel);
   const middle = formatSlug.length > 0 ? `-${formatSlug}` : "";
-  return `${project}-${screenplay}${middle}-${todayIso()}.pdf`;
+  return `${exportSerial()}-${project}-${version}${middle}.pdf`;
 };

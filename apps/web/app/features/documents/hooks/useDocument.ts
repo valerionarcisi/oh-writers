@@ -15,8 +15,7 @@ import {
   type DocumentView,
 } from "../server/documents.server";
 import type { SaveDocumentData } from "../documents.schema";
-import { base64ToBlob } from "../lib/download";
-import { openPdfPreview } from "../lib/pdf-preview";
+import { base64ToBlob, downloadBlob } from "../lib/download";
 
 export type SaveDocumentMutation = UseMutationResult<
   DocumentView,
@@ -220,8 +219,7 @@ export const useExportNarrativePdf = () =>
     }) => {
       const result = unwrapResult(await exportNarrativePdf({ data: input }));
       const blob = base64ToBlob(result.pdfBase64, "application/pdf");
-      const url = URL.createObjectURL(blob);
-      openPdfPreview(url, result.filename);
+      downloadBlob(blob, result.filename);
       return result;
     },
   });

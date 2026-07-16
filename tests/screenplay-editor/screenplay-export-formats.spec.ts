@@ -12,7 +12,7 @@
 
 import { test, expect } from "../fixtures";
 import { BASE_URL, waitForEditor } from "../helpers";
-import type { Page, Response } from "@playwright/test";
+import type { Download, Page, Response } from "@playwright/test";
 
 const SCREENPLAY_PATH = (projectId: string) =>
   `${BASE_URL}/projects/${projectId}/screenplay`;
@@ -46,22 +46,23 @@ const selectFormat = async (page: Page, id: FormatId) => {
 
 const generateAndCapture = async (
   page: Page,
-): Promise<{ response: Response; popup: Page }> => {
+): Promise<{ response: Response; download: Download }> => {
   // Generate lives in the Modal footer (sibling of the testid'd body), so
-  // scope it to the page.
+  // scope it to the page. Export downloads the PDF directly via an anchor
+  // `download` click (no preview tab) — assert the browser download event.
   const generate = page.getByTestId("screenplay-export-generate");
   await expect(generate).toBeEnabled();
-  const [response, popup] = await Promise.all([
+  const [response, download] = await Promise.all([
     page.waitForResponse(
       (r) =>
         r.url().includes("exportScreenplayPdf") &&
         r.request().method() === "POST",
       { timeout: 30_000 },
     ),
-    page.context().waitForEvent("page", { timeout: 30_000 }),
+    page.waitForEvent("download", { timeout: 30_000 }),
     generate.click(),
   ]);
-  return { response, popup };
+  return { response, download };
 };
 
 test.describe("Screenplay Export Formats — Spec 05k", () => {
@@ -121,13 +122,11 @@ test.describe("Screenplay Export Formats — Spec 05k", () => {
     await expect(checkboxes.first()).toBeVisible({ timeout: 10_000 });
     await checkboxes.nth(0).check();
     await checkboxes.nth(1).check();
-    const { response, popup } = await generateAndCapture(page);
-    if (!popup.isClosed()) await popup.close();
+    const { response, download } = await generateAndCapture(page);
     const body = await response.json();
     expect(body.result.isOk).toBe(true);
-    expect(body.result.value.filename).toMatch(
-      /-sides-\d{4}-\d{2}-\d{2}\.pdf$/,
-    );
+    expect(body.result.value.filename).toMatch(/-sides\.pdf$/);
+    expect(download.suggestedFilename()).toBe(body.result.value.filename);
     expect(body.result.value.format).toBe("sides");
   });
 
@@ -139,12 +138,9 @@ test.describe("Screenplay Export Formats — Spec 05k", () => {
     await waitForEditor(page);
     await openExportModal(page);
     await selectFormat(page, "ad_copy");
-    const { response, popup } = await generateAndCapture(page);
-    if (!popup.isClosed()) await popup.close();
+    const { response } = await generateAndCapture(page);
     const body = await response.json();
-    expect(body.result.value.filename).toMatch(
-      /-ad-copy-\d{4}-\d{2}-\d{2}\.pdf$/,
-    );
+    expect(body.result.value.filename).toMatch(/-ad-copy\.pdf$/);
     expect(body.result.value.format).toBe("ad_copy");
   });
 
@@ -156,12 +152,9 @@ test.describe("Screenplay Export Formats — Spec 05k", () => {
     await waitForEditor(page);
     await openExportModal(page);
     await selectFormat(page, "reading_copy");
-    const { response, popup } = await generateAndCapture(page);
-    if (!popup.isClosed()) await popup.close();
+    const { response } = await generateAndCapture(page);
     const body = await response.json();
-    expect(body.result.value.filename).toMatch(
-      /-reading-\d{4}-\d{2}-\d{2}\.pdf$/,
-    );
+    expect(body.result.value.filename).toMatch(/-reading\.pdf$/);
     expect(body.result.value.format).toBe("reading_copy");
   });
 
@@ -173,12 +166,9 @@ test.describe("Screenplay Export Formats — Spec 05k", () => {
     await waitForEditor(page);
     await openExportModal(page);
     await selectFormat(page, "one_scene_per_page");
-    const { response, popup } = await generateAndCapture(page);
-    if (!popup.isClosed()) await popup.close();
+    const { response } = await generateAndCapture(page);
     const body = await response.json();
-    expect(body.result.value.filename).toMatch(
-      /-scene-per-page-\d{4}-\d{2}-\d{2}\.pdf$/,
-    );
+    expect(body.result.value.filename).toMatch(/-scene-per-page\.pdf$/);
     expect(body.result.value.format).toBe("one_scene_per_page");
   });
 });

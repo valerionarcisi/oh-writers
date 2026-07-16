@@ -1,16 +1,16 @@
 /**
  * Spec 05j — Screenplay PDF Export (Fountain → industry-standard PDF via afterwriting)
  *
- * [232] Editor clicks Export PDF → modal opens → Genera → PDF + preview tab
+ * [232] Editor clicks Export PDF → modal opens → Genera → PDF downloads directly
  * [233] PDF rendering rispetta gli standard (INT./EXT. headings, character maiuscolo)
  * [234] includeCoverPage=true → cover page con "Written by"
  * [237] Viewer su team project può esportare (read op)
- * [239] Filename rispetta {project}-{screenplay}-{YYYY-MM-DD}.pdf
+ * [239] Filename rispetta {serial}-{project}-{version}.pdf
  */
 
 import { test, expect, TEST_TEAM_PROJECT_ID } from "../fixtures";
 import { BASE_URL, waitForEditor } from "../helpers";
-import type { Page, Response } from "@playwright/test";
+import type { Download, Page, Response } from "@playwright/test";
 // @ts-expect-error — pdf-parse has no types for its internal entry
 import pdfParse from "pdf-parse/lib/pdf-parse.js";
 
@@ -29,7 +29,7 @@ const openActionsMenu = async (page: Page): Promise<void> => {
 const openScreenplayExportAndGenerate = async (
   page: Page,
   opts: { includeCoverPage?: boolean } = {},
-): Promise<{ response: Response; popup: Page }> => {
+): Promise<{ response: Response; download: Download }> => {
   // Spec 55a — "Esporta PDF" lives in the TopBar actions menu and opens the
   // export modal; the production-format choice (default Standard) now lives
   // inside the modal.
@@ -51,29 +51,32 @@ const openScreenplayExportAndGenerate = async (
   const generateButton = page.getByTestId("screenplay-export-generate");
   await expect(generateButton).toBeEnabled();
 
-  const [response, popup] = await Promise.all([
+  // Export now downloads the PDF directly via an anchor `download` click
+  // (no preview tab) — assert the browser download event instead of a
+  // new `page`.
+  const [response, download] = await Promise.all([
     page.waitForResponse(
       (r) =>
         r.url().includes("exportScreenplayPdf") &&
         r.request().method() === "POST",
       { timeout: 15_000 },
     ),
-    page.context().waitForEvent("page", { timeout: 15_000 }),
+    page.waitForEvent("download", { timeout: 15_000 }),
     generateButton.click(),
   ]);
 
-  return { response, popup };
+  return { response, download };
 };
 
 test.describe("Screenplay Export — Spec 05j", () => {
-  test("[232] owner exports via modal → preview tab opens with the PDF", async ({
+  test("[232] owner exports via modal → PDF downloads directly", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {
     await page.goto(SCREENPLAY_PATH(testProjectId));
     await waitForEditor(page);
 
-    const { response, popup } = await openScreenplayExportAndGenerate(page);
+    const { response, download } = await openScreenplayExportAndGenerate(page);
 
     expect(response.status()).toBe(200);
     const body = await response.json();
@@ -81,8 +84,7 @@ test.describe("Screenplay Export — Spec 05j", () => {
     expect(typeof body.result.value.pdfBase64).toBe("string");
     expect(body.result.value.pdfBase64.length).toBeGreaterThan(200);
     expect(body.result.value.filename).toMatch(/\.pdf$/);
-    expect(popup).toBeTruthy();
-    if (!popup.isClosed()) await popup.close();
+    expect(download.suggestedFilename()).toBe(body.result.value.filename);
   });
 
   test("[233] PDF contains industry-standard markers", async ({
@@ -92,8 +94,7 @@ test.describe("Screenplay Export — Spec 05j", () => {
     await page.goto(SCREENPLAY_PATH(testProjectId));
     await waitForEditor(page);
 
-    const { response, popup } = await openScreenplayExportAndGenerate(page);
-    if (!popup.isClosed()) await popup.close();
+    const { response } = await openScreenplayExportAndGenerate(page);
     const body = await response.json();
     const buffer = Buffer.from(body.result.value.pdfBase64, "base64");
     expect(buffer.subarray(0, 4).toString()).toBe("%PDF");
@@ -110,10 +111,9 @@ test.describe("Screenplay Export — Spec 05j", () => {
     await page.goto(SCREENPLAY_PATH(testProjectId));
     await waitForEditor(page);
 
-    const { response, popup } = await openScreenplayExportAndGenerate(page, {
+    const { response } = await openScreenplayExportAndGenerate(page, {
       includeCoverPage: true,
     });
-    if (!popup.isClosed()) await popup.close();
     const body = await response.json();
     const buffer = Buffer.from(body.result.value.pdfBase64, "base64");
     const parsed = await pdfParse(buffer);
@@ -174,18 +174,17 @@ test.describe("Screenplay Export — Spec 05j", () => {
     void TEST_TEAM_PROJECT_ID;
   });
 
-  test("[239] filename matches {project}-{screenplay}-{YYYY-MM-DD}.pdf", async ({
+  test("[239] filename matches {YYYYMMDD-HHmm}-{project}-{version}.pdf", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {
     await page.goto(SCREENPLAY_PATH(testProjectId));
     await waitForEditor(page);
 
-    const { response, popup } = await openScreenplayExportAndGenerate(page);
-    if (!popup.isClosed()) await popup.close();
+    const { response } = await openScreenplayExportAndGenerate(page);
     const body = await response.json();
     expect(body.result.value.filename).toMatch(
-      /^[a-z0-9-]+-[a-z0-9-]+-\d{4}-\d{2}-\d{2}\.pdf$/,
+      /^\d{8}-\d{4}-[a-z0-9-]+-[a-z0-9-]+\.pdf$/,
     );
   });
 });
@@ -230,8 +229,7 @@ test.describe("Screenplay Export — WYSIWYG formatting (BUG-N63)", () => {
   }) => {
     await page.goto(SCREENPLAY_PATH(testProjectId));
     await waitForEditor(page);
-    const { response, popup } = await openScreenplayExportAndGenerate(page);
-    if (!popup.isClosed()) await popup.close();
+    const { response } = await openScreenplayExportAndGenerate(page);
     const body = await response.json();
     const buffer = Buffer.from(body.result.value.pdfBase64, "base64");
     const items = await firstPagePositions(buffer);
@@ -245,8 +243,7 @@ test.describe("Screenplay Export — WYSIWYG formatting (BUG-N63)", () => {
   }) => {
     await page.goto(SCREENPLAY_PATH(testProjectId));
     await waitForEditor(page);
-    const { response, popup } = await openScreenplayExportAndGenerate(page);
-    if (!popup.isClosed()) await popup.close();
+    const { response } = await openScreenplayExportAndGenerate(page);
     const body = await response.json();
     const buffer = Buffer.from(body.result.value.pdfBase64, "base64");
     const items = await firstPageItems(buffer);
@@ -270,8 +267,7 @@ test.describe("Screenplay Export — WYSIWYG formatting (BUG-N63)", () => {
   }) => {
     await page.goto(SCREENPLAY_PATH(testProjectId));
     await waitForEditor(page);
-    const { response, popup } = await openScreenplayExportAndGenerate(page);
-    if (!popup.isClosed()) await popup.close();
+    const { response } = await openScreenplayExportAndGenerate(page);
     const body = await response.json();
     const buffer = Buffer.from(body.result.value.pdfBase64, "base64");
     const items = await firstPagePositions(buffer);

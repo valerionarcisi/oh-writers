@@ -112,6 +112,7 @@ export const exportScreenplayPdf = createServerFn({ method: "POST" })
       // Resolve the active version's content (Spec 06b parity); fall back to
       // the screenplay row's mirrored text if no current version pointer.
       let rawFountain = screenplay.content;
+      let versionLabel = screenplay.title;
       if (screenplay.currentVersionId) {
         const versionResult = await ResultAsync.fromPromise(
           db.query.screenplayVersions
@@ -122,7 +123,10 @@ export const exportScreenplayPdf = createServerFn({ method: "POST" })
           (e) => new DbError("exportScreenplayPdf.version", e),
         );
         if (versionResult.isErr()) return toShape(err(versionResult.error));
-        if (versionResult.value) rawFountain = versionResult.value.content;
+        if (versionResult.value) {
+          rawFountain = versionResult.value.content;
+          versionLabel = versionResult.value.label ?? versionLabel;
+        }
       }
 
       const { buildScreenplayPdf, buildScreenplayFilename } =
@@ -179,7 +183,7 @@ export const exportScreenplayPdf = createServerFn({ method: "POST" })
           pdfBase64: buffer.toString("base64"),
           filename: buildScreenplayFilename(
             project.title,
-            screenplay.title,
+            versionLabel,
             meta.filenameSlug,
           ),
           format: data.format,

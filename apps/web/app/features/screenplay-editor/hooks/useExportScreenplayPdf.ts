@@ -2,7 +2,7 @@ import { useMutation } from "@tanstack/react-query";
 import { unwrapResult } from "@oh-writers/utils";
 import type { ExportFormat } from "@oh-writers/domain";
 import { exportScreenplayPdf } from "../server/screenplay-export.server";
-import { base64ToBlob, openPdfPreview } from "~/features/documents";
+import { base64ToBlob, downloadBlob } from "~/features/documents";
 
 export interface ExportScreenplayPdfInput {
   screenplayId: string;
@@ -17,8 +17,7 @@ export const useExportScreenplayPdf = () =>
     mutationFn: async (input: ExportScreenplayPdfInput) => {
       const result = unwrapResult(await exportScreenplayPdf({ data: input }));
       const blob = base64ToBlob(result.pdfBase64, "application/pdf");
-      const url = URL.createObjectURL(blob);
-      openPdfPreview(url, result.filename);
+      downloadBlob(blob, result.filename);
       return result;
     },
   });
