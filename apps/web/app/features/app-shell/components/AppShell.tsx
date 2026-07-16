@@ -1059,11 +1059,25 @@ function AppShellInner({
         }
       }
 
-      if (cesarePage === "screenplay") {
+      if (cesarePage === "screenplay" && projectId) {
         void queryClient.invalidateQueries({
           queryKey: ["screenplay-proposals"],
         });
         void queryClient.invalidateQueries({ queryKey: ["versions"] });
+        // Cesare's "generate from scratch" tool writes the new version straight
+        // to the DB (no local ProseMirror edit) — invalidating this query is
+        // what makes `currentVersionId` change so the version-keyed editor
+        // remounts onto the fresh content instead of staying stale until F5.
+        void queryClient.invalidateQueries({
+          queryKey: ["screenplays", projectId],
+        });
+        if (applied.has("screenplay")) {
+          showToast({
+            message: t("shell.toast.screenplay"),
+            variant: "success",
+            durationMs: CESARE_TOAST_DURATION_MS,
+          });
+        }
       }
     },
     [cesarePage, projectId, queryClient, showToast, activeDocument, t],

@@ -165,6 +165,8 @@ export const screenplayKeys = {
     "screenplay.cesare.kind.format": "Format",
     "screenplay.cesare.editApplied": "Edit applied · Cmd+Z to undo",
     "screenplay.cesare.writeOneScene": "Write at least one scene to start.",
+    "screenplay.cesare.generatingScreenplay":
+      "Cesare is writing the screenplay…",
     "screenplay.cesare.cesareReading": "Cesare is reading…",
     "screenplay.cesare.refinementsSuffix": " refinements",
     "screenplay.cesare.noRefinements": "No refinement.",
@@ -392,6 +394,8 @@ export const screenplayKeys = {
     "screenplay.cesare.kind.format": "Formato",
     "screenplay.cesare.editApplied": "Modifica applicata · Cmd+Z per annullare",
     "screenplay.cesare.writeOneScene": "Scrivi almeno una scena per iniziare.",
+    "screenplay.cesare.generatingScreenplay":
+      "Cesare sta scrivendo la sceneggiatura…",
     "screenplay.cesare.cesareReading": "Cesare sta leggendo…",
     "screenplay.cesare.refinementsSuffix": " rifiniture",
     "screenplay.cesare.noRefinements": "Nessuna rifinitura.",

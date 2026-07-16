@@ -11,6 +11,7 @@ import { useTranslation } from "~/features/i18n";
 import {
   EDITORIAL_ADVICE_REFRESH_DEBOUNCE_MS,
   EditorialAdviceStack,
+  useCesareChatStore,
   useDebouncedValue,
   useEditorialAdviceMemory,
 } from "~/features/predictions";
@@ -61,6 +62,21 @@ function PanelBody({
   const navigate = useNavigate();
   const hasContent = sceneTotal > 0;
 
+  // Cesare's "write the screenplay from scratch" tool writes straight to the
+  // DB and lands live via a query invalidation + editor remount (no local
+  // ProseMirror edit), so `sceneTotal` stays 0 for the whole generation. Read
+  // the tracer's own in-flight step to swap the empty-state CTA for "Cesare
+  // is writing" instead of misleadingly asking the user to write a scene.
+  const chatStore = useCesareChatStore();
+  const activeThread = chatStore?.messagesFor(chatStore.activeSessionId) ?? [];
+  const isGeneratingScreenplay = activeThread.some((m) => {
+    if (m.role !== "assistant" || m.status !== "pending") return false;
+    const lastStep = m.trace[m.trace.length - 1];
+    return (
+      lastStep?.kind === "writing" && lastStep.entity?.domain === "screenplay"
+    );
+  });
+
   const debouncedScene = useDebouncedValue(
     sceneCurrent,
     EDITORIAL_ADVICE_REFRESH_DEBOUNCE_MS,
@@ -98,26 +114,30 @@ function PanelBody({
       <section className={styles.notes}>
         <div className={styles.notesHeadRow}>
           <p className={styles.notesHead}>
-            {!hasContent
-              ? t("screenplay.cesare.writeOneScene")
-              : isLoading
-                ? `${sceneLabel ? `${sceneLabel} · ` : ""}${t("screenplay.cesare.cesareReading")}`
-                : suggestions.length > 0
-                  ? `${sceneLabel ? `${sceneLabel} · ` : ""}${suggestions.length}${t("screenplay.cesare.refinementsSuffix")}`
-                  : `${sceneLabel ? `${sceneLabel} · ` : ""}${t("screenplay.cesare.noRefinements")}`}
+            {isGeneratingScreenplay
+              ? t("screenplay.cesare.generatingScreenplay")
+              : !hasContent
+                ? t("screenplay.cesare.writeOneScene")
+                : isLoading
+                  ? `${sceneLabel ? `${sceneLabel} · ` : ""}${t("screenplay.cesare.cesareReading")}`
+                  : suggestions.length > 0
+                    ? `${sceneLabel ? `${sceneLabel} · ` : ""}${suggestions.length}${t("screenplay.cesare.refinementsSuffix")}`
+                    : `${sceneLabel ? `${sceneLabel} · ` : ""}${t("screenplay.cesare.noRefinements")}`}
           </p>
           <Button
             variant="secondary"
             size="sm"
             onPress={() => void polishQ.refetch()}
-            disabled={polishQ.isFetching || !hasContent}
+            disabled={
+              polishQ.isFetching || !hasContent || isGeneratingScreenplay
+            }
             aria-label={t("screenplay.cesare.rereadAria")}
           >
             {t("screenplay.cesare.reread")}
           </Button>
         </div>
 
-        {isLoading && !hadPreviousSuggestions && (
+        {(isGeneratingScreenplay || isLoading) && !hadPreviousSuggestions && (
           <ul
             className={styles.suggestionList}
             aria-busy="true"
