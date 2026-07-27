@@ -201,7 +201,12 @@ export const useYjsRoom = (
 
         const onStatus = (e: { status: string }): void => {
           if (e.status === "connected") {
-            update("connected");
+            // #38 — the socket is OPEN, not yet synced, and the server can still
+            // reject it (a bad token closes it milliseconds later). Announcing
+            // "connected" here made the presence indicator promise "online" and
+            // then fall back to "offline" on every rejected connection. `sync`
+            // below is the honest signal; until then this stays `connecting`.
+            if (synced) update("connected");
             return;
           }
           if (synced) {

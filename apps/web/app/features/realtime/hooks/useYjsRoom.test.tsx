@@ -92,8 +92,12 @@ describe("useYjsRoom pre-sync drop handling (BUG-N57)", () => {
   it("reports `connecting`, not `offline`, on a transient pre-sync drop", async () => {
     const { result, provider, unmount } = await openRoom();
 
+    // #38 — an open socket is not yet a working room, so the status stays
+    // `connecting` until `sync` lands. Announcing "connected" here made the
+    // presence indicator promise "online" and then drop to "offline" on every
+    // socket the server went on to reject.
     act(() => status(provider, "connected"));
-    expect(result.current.status).toBe("connected");
+    expect(result.current.status).toBe("connecting");
     expect(result.current.synced).toBe(false);
 
     act(() => status(provider, "disconnected"));
@@ -134,7 +138,7 @@ describe("useYjsRoom pre-sync drop handling (BUG-N57)", () => {
     const { result, provider, unmount } = await openRoom();
 
     act(() => status(provider, "connected"));
-    expect(result.current.status).toBe("connected");
+    expect(result.current.status).toBe("connecting");
 
     act(() => {
       vi.advanceTimersByTime(SYNC_DEADLINE_MS);
@@ -160,6 +164,26 @@ describe("useYjsRoom happy path and post-sync behaviour", () => {
 
     unmount();
     expect(provider.destroy).toHaveBeenCalledTimes(1);
+  });
+
+  // #38 — measured live: the socket opened, the status went `connected`, and the
+  // server rejected the token 8ms later. The presence indicator therefore said
+  // "online" and immediately fell back to "offline". Never claiming connected
+  // before sync means a rejected socket goes connecting → offline, with no
+  // "online" the writer can see and disbelieve.
+  it("a socket the server rejects never passes through `connected`", async () => {
+    const { result, provider, unmount } = await openRoom();
+    const seen: string[] = [];
+
+    act(() => status(provider, "connected"));
+    seen.push(result.current.status);
+    act(() => status(provider, "disconnected"));
+    seen.push(result.current.status);
+
+    expect(seen).not.toContain("connected");
+    expect(result.current.synced).toBe(false);
+
+    unmount();
   });
 
   it("a `sync` event with `false` (reconnect reset) does not latch `synced`", async () => {
