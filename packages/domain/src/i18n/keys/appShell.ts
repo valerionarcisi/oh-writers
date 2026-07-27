@@ -5,6 +5,9 @@ import type { LocaleDict } from "./types.js";
 export const appShellKeys = {
   en: {
     // Cesare success toasts (live-apply markers)
+    // Avatar dropdown (issue #113 — sign out had no home in the shell)
+    "shell.account.settings": "Account settings",
+    "shell.account.signOut": "Sign out",
     "shell.toast.locations": "✦ Cesare updated the locations",
     "shell.toast.budget": "✦ Cesare updated the budget",
     "shell.toast.shootingPlan": "✦ Cesare updated the shot plan",
@@ -269,6 +272,9 @@ export const appShellKeys = {
   },
   it: {
     // Cesare success toasts (live-apply markers)
+    // Avatar dropdown (issue #113 — sign out had no home in the shell)
+    "shell.account.settings": "Impostazioni account",
+    "shell.account.signOut": "Esci",
     "shell.toast.locations": "✦ Cesare ha aggiornato le location",
     "shell.toast.budget": "✦ Cesare ha aggiornato il budget",
     "shell.toast.shootingPlan": "✦ Cesare ha aggiornato il piano inquadrature",

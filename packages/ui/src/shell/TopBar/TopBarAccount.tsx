@@ -24,8 +24,13 @@ import styles from "./TopBarAccount.module.css";
 export type TopBarAccountActions = {
   /** Open the notification centre (SplitDrawer). */
   onBell: () => void;
-  /** Open user settings (avatar). */
+  /** Open user settings (avatar). Ignored when `avatarMenuItems` is provided. */
   onAvatar: () => void;
+  /** When provided, the avatar opens a dropdown (settings + sign out) instead
+   *  of navigating straight to settings. Signing out has to live on a surface
+   *  that is always on screen — it had no home at all after the avatar moved
+   *  here from the BottomDock (issue #113). */
+  avatarMenuItems?: DropdownMenuItem[];
   /** Open project settings (gear). Omitted (no project open) → the gear is
    *  hidden: outside a project it would only duplicate the avatar. */
   onGear?: () => void;
@@ -127,16 +132,27 @@ export function TopBarAccount({ account, labels }: TopBarAccountProps) {
           <span className={styles.accountDot} aria-hidden="true" />
         )}
       </button>
-      <button
-        ref={avatarRef}
-        {...avatarProps}
-        className={[styles.accountBtn, styles.accountAvatar].join(" ")}
-        title={labels.profile}
-        data-topbar-account="avatar"
-        data-testid="profile-btn"
-      >
-        <span aria-hidden="true">{account.avatarLabel}</span>
-      </button>
+      {account.avatarMenuItems ? (
+        <DropdownMenu
+          trigger={<span aria-hidden="true">{account.avatarLabel}</span>}
+          items={account.avatarMenuItems}
+          align="end"
+          triggerClassName={[styles.accountBtn, styles.accountAvatar].join(" ")}
+          triggerLabel={labels.account}
+          triggerTestId="profile-btn"
+        />
+      ) : (
+        <button
+          ref={avatarRef}
+          {...avatarProps}
+          className={[styles.accountBtn, styles.accountAvatar].join(" ")}
+          title={labels.profile}
+          data-topbar-account="avatar"
+          data-testid="profile-btn"
+        >
+          <span aria-hidden="true">{account.avatarLabel}</span>
+        </button>
+      )}
       {account.gearMenuItems ? (
         <DropdownMenu
           trigger={<GearGlyph />}

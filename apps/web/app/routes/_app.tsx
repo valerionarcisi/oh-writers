@@ -433,21 +433,23 @@ function AppLayout() {
     });
   };
 
+  // The avatar dropdown. Dropped the "Presentazione" entry that opened
+  // market-analysis.html: an internal deck does not belong in a writer's
+  // account menu.
   const userMenuItems: DropdownMenuItem[] = [
     {
-      label: "Impostazioni account",
+      label: t("shell.account.settings"),
       onClick: () => {
         window.location.href = "/settings";
       },
     },
     {
-      label: "Presentazione",
-      onClick: () => window.open("/market-analysis.html", "_blank"),
-    },
-    {
-      label: "Sign out",
+      label: t("shell.account.signOut"),
+      testId: "sign-out-btn",
       onClick: async () => {
         await signOut();
+        // Full reload, not a router navigate: the session cookie is gone and
+        // every cached query still holds the previous user's data.
         window.location.href = "/login";
       },
     },
