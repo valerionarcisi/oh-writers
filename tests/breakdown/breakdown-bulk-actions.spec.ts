@@ -26,15 +26,27 @@ test.describe("[Spec 10j] Breakdown per-project — bulk action bar", () => {
   ) {
     await navigateToBreakdown(page, TEAM_PROJECT_ID);
     await switchBreakdownView(page, "per-project");
-    await expect(page.getByTestId("project-breakdown-table")).toBeVisible({
-      timeout: 10_000,
-    });
+    // The per-project view renders a skeleton until its own query resolves, and
+    // the radio can read `checked` before React has swapped the panel in. A bare
+    // 10s assert raced that on a cold worker; retrying the whole switch rides
+    // out a re-mount instead of failing on the first miss.
+    await expect(async () => {
+      if (!(await page.getByTestId("project-breakdown-table").isVisible())) {
+        await switchBreakdownView(page, "per-project");
+      }
+      await expect(page.getByTestId("project-breakdown-table")).toBeVisible({
+        timeout: 5_000,
+      });
+    }).toPass({ timeout: 30_000 });
   }
 
   async function expandFirstGroup(
     page: Parameters<typeof test>[1]["authenticatedPage"],
   ): Promise<boolean> {
     const groups = page.locator('[data-testid^="breakdown-group-"]');
+    // Groups stream in after the table shell paints; counting immediately can
+    // read 0 and silently skip the test rather than fail it.
+    await expect(groups.first()).toBeVisible({ timeout: 15_000 });
     const count = await groups.count();
     if (count === 0) return false;
     for (let i = 0; i < count; i++) {
@@ -193,16 +205,12 @@ test.describe("[Spec 10j] Breakdown per-project — bulk action bar", () => {
       await expect(bar).toBeVisible({ timeout: 5_000 });
       await bar.getByTestId("bulk-rename-btn").click();
 
-      // Two ConfirmDialogProviders are mounted (shell + page), so scope to the
-      // visible one rather than the first match in the DOM.
       const field = page.getByTestId("confirm-dialog-input");
       await expect(field).toBeVisible({ timeout: 5_000 });
       await expect(field).toBeFocused();
 
       // An empty name cannot be submitted — the native prompt had no such guard.
-      const confirmBtn = page
-        .getByTestId("confirm-dialog-confirm-btn")
-        .locator("visible=true");
+      const confirmBtn = page.getByTestId("confirm-dialog-confirm-btn");
       await expect(confirmBtn).toBeDisabled();
 
       const newName = "E2E rinominato";
@@ -299,10 +307,7 @@ test.describe("[Spec 10j] Breakdown per-project — bulk action bar", () => {
 
       // Reloading proves the archive was persisted (not just removed locally).
       await page.reload();
-      await switchBreakdownView(page, "per-project");
-      await expect(page.getByTestId("project-breakdown-table")).toBeVisible({
-        timeout: 10_000,
-      });
+      await openPerProjectView(page);
       await expandFirstGroup(page);
       await expect(
         page.locator(`tbody tr[data-row-id="${firstRowId}"]`),

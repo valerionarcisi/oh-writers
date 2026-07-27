@@ -54,6 +54,14 @@ export function ConfirmDialog({
   const trimmed = value.trim();
   const canConfirm = !input || trimmed.length > 0;
 
+  // A closed native <dialog> keeps its children in the DOM, so every mounted
+  // ConfirmDialog left a hidden copy of these buttons behind — and the app
+  // mounts several (the provider, plus the session-delete and import dialogs).
+  // An unscoped getByTestId("confirm-dialog-confirm-btn") then matches an
+  // invisible one. Rendering nothing while closed keeps exactly one addressable
+  // set of buttons in the document.
+  if (!isOpen) return null;
+
   return (
     <Dialog
       isOpen={isOpen}
