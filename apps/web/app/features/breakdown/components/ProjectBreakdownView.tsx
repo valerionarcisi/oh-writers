@@ -93,7 +93,7 @@ export function ProjectBreakdownView({ projectId, versionId, canEdit }: Props) {
   const bulkRename = useBulkRenameBreakdownElements();
   const bulkSetStatus = useBulkSetOccurrenceStatusForElements();
   const mergeElements = useMergeBreakdownElements();
-  const { confirm } = useConfirmDialog();
+  const { confirm, promptText } = useConfirmDialog();
 
   const urlSearch = useSearch({ from: "/_app/projects/$id_/breakdown" });
   const navigate = useNavigate();
@@ -295,12 +295,16 @@ export function ProjectBreakdownView({ projectId, versionId, canEdit }: Props) {
 
   const bulkRenameAction = () => {
     const ids = [...selected];
-    const proposed = window.prompt(t("breakdown.bulk.renamePrompt"));
-    if (proposed === null) return;
-    const trimmed = proposed.trim();
-    if (trimmed.length === 0) return;
-    bulkRename.mutate({ projectId, elementIds: ids, name: trimmed });
-    clearSelection();
+    void promptText({
+      title: t("breakdown.bulk.renameTitle"),
+      message: "",
+      label: t("breakdown.bulk.renamePrompt"),
+      confirmLabel: t("breakdown.bulk.renameConfirm"),
+    }).then((name) => {
+      if (name === null) return;
+      bulkRename.mutate({ projectId, elementIds: ids, name });
+      clearSelection();
+    });
   };
 
   const applyMerge = (dup: DuplicateCandidate) => {
@@ -622,9 +626,7 @@ export function ProjectBreakdownView({ projectId, versionId, canEdit }: Props) {
 
       {/* ─── Groups ────────────────────────────────────────────────────── */}
       {groups.length === 0 && (
-        <div className={styles.emptyState}>
-          {t("breakdown.noElementFound")}
-        </div>
+        <div className={styles.emptyState}>{t("breakdown.noElementFound")}</div>
       )}
       {groups.map((g) => {
         const meta = CATEGORY_META[g.category];

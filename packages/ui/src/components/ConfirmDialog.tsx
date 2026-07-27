@@ -1,5 +1,7 @@
+import { useEffect, useRef, useState } from "react";
 import { Button } from "./Button";
 import { Dialog } from "./Dialog";
+import styles from "./ConfirmDialog.module.css";
 
 export interface ConfirmDialogProps {
   readonly isOpen: boolean;
@@ -8,7 +10,14 @@ export interface ConfirmDialogProps {
   readonly confirmLabel?: string;
   readonly cancelLabel?: string;
   readonly destructive?: boolean;
-  readonly onConfirm: () => void;
+  /** When set, the dialog asks for a value instead of a yes/no. */
+  readonly input?: {
+    readonly label: string;
+    readonly initialValue?: string;
+    readonly placeholder?: string;
+  };
+  /** Carries the typed value when `input` is set; empty string otherwise. */
+  readonly onConfirm: (value: string) => void;
   readonly onCancel: () => void;
   /** Stable E2E hook forwarded to the underlying <dialog>. */
   readonly testId?: string;
@@ -21,10 +30,30 @@ export function ConfirmDialog({
   confirmLabel = "Conferma",
   cancelLabel = "Annulla",
   destructive = false,
+  input,
   onConfirm,
   onCancel,
   testId,
 }: ConfirmDialogProps) {
+  const [value, setValue] = useState(input?.initialValue ?? "");
+  const fieldRef = useRef<HTMLInputElement>(null);
+
+  // Each opening starts from the caller's initial value, and the field — not
+  // the confirm button — takes focus, so the dialog behaves like the native
+  // prompt it replaces.
+  useEffect(() => {
+    if (!isOpen || !input) return;
+    setValue(input.initialValue ?? "");
+    const id = requestAnimationFrame(() => {
+      fieldRef.current?.focus();
+      fieldRef.current?.select();
+    });
+    return () => cancelAnimationFrame(id);
+  }, [isOpen, input]);
+
+  const trimmed = value.trim();
+  const canConfirm = !input || trimmed.length > 0;
+
   return (
     <Dialog
       isOpen={isOpen}
@@ -43,8 +72,9 @@ export function ConfirmDialog({
           </Button>
           <Button
             variant={destructive ? "danger" : "primary"}
-            onClick={onConfirm}
-            autoFocus
+            onClick={() => onConfirm(trimmed)}
+            disabled={!canConfirm}
+            autoFocus={!input}
             data-testid="confirm-dialog-confirm-btn"
           >
             {confirmLabel}
@@ -53,6 +83,25 @@ export function ConfirmDialog({
       }
     >
       {message}
+      {input && (
+        <label className={styles.field}>
+          <span className={styles.fieldLabel}>{input.label}</span>
+          <input
+            ref={fieldRef}
+            type="text"
+            className={styles.fieldInput}
+            value={value}
+            placeholder={input.placeholder}
+            onChange={(e) => setValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key !== "Enter" || !canConfirm) return;
+              e.preventDefault();
+              onConfirm(trimmed);
+            }}
+            data-testid="confirm-dialog-input"
+          />
+        </label>
+      )}
     </Dialog>
   );
 }

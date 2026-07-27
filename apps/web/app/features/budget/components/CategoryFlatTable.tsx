@@ -8,6 +8,7 @@ import {
 } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { unwrapResult } from "@oh-writers/utils";
+import { useConfirmDialog } from "@oh-writers/ui";
 import { useTranslation } from "~/features/i18n";
 import type { Budget } from "@oh-writers/domain";
 import type { BudgetCast, BudgetCrew } from "@oh-writers/db/schema";
@@ -163,6 +164,7 @@ export function CategoryFlatTable({
   onGrandTotal,
 }: CategoryFlatTableProps) {
   const { t } = useTranslation();
+  const { confirm } = useConfirmDialog();
   const qc = useQueryClient();
 
   const invalidate = useCallback(() => {
@@ -340,8 +342,10 @@ export function CategoryFlatTable({
 
   const searchMatches = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return [] as Array<{ rowId: string; row: FlatRow; section: FlatSection }>;
-    const out: Array<{ rowId: string; row: FlatRow; section: FlatSection }> = [];
+    if (!q)
+      return [] as Array<{ rowId: string; row: FlatRow; section: FlatSection }>;
+    const out: Array<{ rowId: string; row: FlatRow; section: FlatSection }> =
+      [];
     for (const sec of sections) {
       for (const row of sec.rows) {
         if (row.name.toLowerCase().includes(q)) {
@@ -381,8 +385,7 @@ export function CategoryFlatTable({
       updateCrew.mutate({ rowId: row.id, patch });
       return;
     }
-    const patch =
-      field === "quantity" ? { quantity: value } : { rate: value };
+    const patch = field === "quantity" ? { quantity: value } : { rate: value };
     updateLine.mutate({ lineId: row.id, patch });
   };
 
@@ -454,10 +457,7 @@ export function CategoryFlatTable({
                 ▸
               </span>
               <span className={styles.sectionName}>
-                <span
-                  className={styles.sectionDot}
-                  aria-hidden="true"
-                />
+                <span className={styles.sectionDot} aria-hidden="true" />
                 {t(section.labelKey)}
                 <span className={styles.sectionCount}>
                   {section.rows.length}
@@ -491,19 +491,19 @@ export function CategoryFlatTable({
 
             {!isCollapsed && (
               <div className={styles.rows}>
-                {section.rows.length === 0 && section.id !== SectionIds.CREW && (
-                  <div className={styles.row}>
-                    <span className={styles.numFaint}>
-                      {t("budget.flat.noLinesIn").replace(
-                        "{section}",
-                        t(section.labelKey),
-                      )}
-                    </span>
-                  </div>
-                )}
+                {section.rows.length === 0 &&
+                  section.id !== SectionIds.CREW && (
+                    <div className={styles.row}>
+                      <span className={styles.numFaint}>
+                        {t("budget.flat.noLinesIn").replace(
+                          "{section}",
+                          t(section.labelKey),
+                        )}
+                      </span>
+                    </div>
+                  )}
                 {section.rows.map((row) => {
-                  const isCrewDisabled =
-                    row.kind === "crew" && !row.enabled;
+                  const isCrewDisabled = row.kind === "crew" && !row.enabled;
                   return (
                     <div
                       key={row.id}
@@ -526,9 +526,7 @@ export function CategoryFlatTable({
                           <InlineCell
                             value={row.quantity}
                             format={fmtQty}
-                            onCommit={(v) =>
-                              commitRowField(row, "quantity", v)
-                            }
+                            onCommit={(v) => commitRowField(row, "quantity", v)}
                             rowKey={row.id}
                             colKey="quantity"
                             registerInput={registerInput}
@@ -573,16 +571,24 @@ export function CategoryFlatTable({
                               row.name,
                             )}
                             onClick={() => {
-                              if (
-                                row.total === 0 ||
-                                window.confirm(
-                                  t("budget.flat.confirmRemove")
-                                    .replace("{name}", row.name)
-                                    .replace("{total}", eurAmount(row.total)),
-                                )
-                              ) {
+                              // An empty line carries no work to lose, so it
+                              // goes without asking.
+                              if (row.total === 0) {
                                 removeCrew.mutate(row.id);
+                                return;
                               }
+                              void confirm({
+                                title: t("budget.flat.confirmRemoveTitle"),
+                                message: t("budget.flat.confirmRemove")
+                                  .replace("{name}", row.name)
+                                  .replace("{total}", eurAmount(row.total)),
+                                confirmLabel: t(
+                                  "budget.flat.confirmRemoveAction",
+                                ),
+                                destructive: true,
+                              }).then((ok) => {
+                                if (ok) removeCrew.mutate(row.id);
+                              });
                             }}
                           >
                             ×
@@ -625,7 +631,6 @@ export function CategoryFlatTable({
           </section>
         );
       })}
-
 
       {searchOpen && (
         <div

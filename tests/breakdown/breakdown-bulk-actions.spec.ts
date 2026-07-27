@@ -165,6 +165,60 @@ test.describe("[Spec 10j] Breakdown per-project — bulk action bar", () => {
     await expect(bar.getByTestId("bulk-recategorize-select")).toBeVisible();
   });
 
+  // Renaming writes to the seeded shared DB. Restore the pristine seed
+  // afterwards so later specs still see the original element names.
+  test.describe("Bulk rename — in-app dialog, not window.prompt", () => {
+    test.afterAll(() => {
+      reseedTestDb();
+    });
+
+    test("renaming through the dialog applies the new name", async ({
+      authenticatedPage,
+    }) => {
+      const page = authenticatedPage;
+
+      // window.prompt suspends the page and Playwright cannot type into it, so
+      // this test only passes against a real in-app dialog. It is the
+      // regression guard for the native-dialog replacement.
+      await openPerProjectView(page);
+
+      const hasRows = await expandFirstGroup(page);
+      if (!hasRows) {
+        test.skip();
+        return;
+      }
+
+      await page.locator('tbody tr input[type="checkbox"]').first().check();
+      const bar = page.getByTestId("bulk-action-bar");
+      await expect(bar).toBeVisible({ timeout: 5_000 });
+      await bar.getByTestId("bulk-rename-btn").click();
+
+      // Two ConfirmDialogProviders are mounted (shell + page), so scope to the
+      // visible one rather than the first match in the DOM.
+      const field = page.getByTestId("confirm-dialog-input");
+      await expect(field).toBeVisible({ timeout: 5_000 });
+      await expect(field).toBeFocused();
+
+      // An empty name cannot be submitted — the native prompt had no such guard.
+      const confirmBtn = page
+        .getByTestId("confirm-dialog-confirm-btn")
+        .locator("visible=true");
+      await expect(confirmBtn).toBeDisabled();
+
+      const newName = "E2E rinominato";
+      await field.fill(newName);
+      await expect(confirmBtn).toBeEnabled();
+      await confirmBtn.click();
+
+      await expect(field).not.toBeVisible({ timeout: 5_000 });
+      await expect(
+        page.locator("tbody tr", { hasText: newName }).first(),
+      ).toBeVisible({ timeout: 10_000 });
+      // The selection is released once the rename lands.
+      await expect(bar).not.toBeVisible({ timeout: 5_000 });
+    });
+  });
+
   // Archiving removes rows permanently from the seeded shared DB. Restore the
   // pristine seed afterwards so later specs still see the archived elements.
   test.describe("[Spec 10j] Bulk archive — confirm + persist (no crash)", () => {
