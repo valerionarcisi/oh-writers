@@ -59,9 +59,17 @@ export const loadYjsState = async (
 export const flushRoom = async (
   room: ParsedRoom,
   ydoc: YDoc,
+  // #91 — asked immediately before the write. A reseed evicts a room precisely
+  // BECAUSE its in-memory copy is stale; if that eviction lands while a flush is
+  // in flight, writing anyway puts the stale doc back over the fresh DB state
+  // and the edit that triggered the reseed silently disappears. Callers that
+  // hold the room registry pass a check; the shutdown and last-disconnect paths
+  // own the doc themselves and do not need one.
+  isStillLive: () => boolean = () => true,
 ): Promise<void> => {
   const state = Buffer.from(encodeStateAsUpdate(ydoc));
   const updatedAt = new Date();
+  if (!isStillLive()) return;
 
   switch (room.kind) {
     case "screenplay":
