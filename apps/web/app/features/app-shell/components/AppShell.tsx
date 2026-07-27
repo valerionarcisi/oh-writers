@@ -21,6 +21,8 @@ import {
   BottomDock,
   SplitDrawer,
   useToast,
+  readPersistedSplitSize,
+  SPLIT_DRAWER_STORAGE_KEYS,
 } from "@oh-writers/ui";
 import type {
   SaveState,
@@ -348,6 +350,20 @@ function AppShellInner({
   // to avoid a duplicate chat container.
   const { isCesareSurfaceActive } = useCesareSurface();
   const [splitDrawerWidth, setSplitDrawerWidth] = useState<number>(480);
+  // #57 — the ONE width of the auxiliary track, shared by every surface that
+  // opens into it (Cesare peek, Versioni, Notifiche) so switching between them
+  // never shifts the page. `null` = the user has never dragged, so each surface
+  // keeps its own sensible default. Hydrated from the drawer's own storage key
+  // in an effect, never during render, so SSR and the first client paint agree.
+  const [auxLaneWidth, setAuxLaneWidth] = useState<number | null>(null);
+
+  useEffect(() => {
+    const persisted = readPersistedSplitSize(
+      SPLIT_DRAWER_STORAGE_KEYS.width,
+      0,
+    );
+    if (persisted > 0) setAuxLaneWidth(persisted);
+  }, []);
   // Notion-style rail overlay: when shell is `collapsed` the rail is hidden
   // by default and a top-left hamburger toggles it as a sliding overlay.
   // No hover-reveal sentinel — outside-click / ESC / hamburger again close
@@ -455,6 +471,21 @@ function AppShellInner({
     document.body.style.setProperty("--split-width", `${splitDrawerWidth}px`);
   }, [splitDrawerWidth]);
 
+  // #57 — the auxiliary track's width. The B4 refound made it a CSS constant so
+  // switching surfaces never shifts the page, which also turned the drag handle
+  // into a no-op: the resize hook updated state that nothing ever painted. The
+  // two goals are compatible — ONE width shared by every surface, but that one
+  // width is user-draggable. The drag writes the user's value here and
+  // `AppShell.module.css` reads it, falling back to its constant when unset.
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    if (auxLaneWidth === null) {
+      document.body.style.removeProperty("--split-aux-user");
+      return;
+    }
+    document.body.style.setProperty("--split-aux-user", `${auxLaneWidth}px`);
+  }, [auxLaneWidth]);
+
   // Cesare split column (Spec 46 ?peek=, Spec 47 A4). The raw `?peek` param is
   // validated against the current project (fail closed). When it resolves to
   // the Cesare token we collapse the page: `body[data-cesare-split]` switches
@@ -509,19 +540,17 @@ function AppShellInner({
   const versionsRawSplit =
     versionsPeek !== null && versionsPeek.state === "split";
   // Master→detail width: the LIST is a narrow rail; opening a version's DETAIL
-  // widens the lane to ~half the page (the read-only preview needs room). The
-  // user's drag-resize is kept per-view in `versionsLaneWidth`; the effective
-  // width below flips the BASE between narrow + half when there's no manual size.
+  // widens the lane to ~half the page (the read-only preview needs room). That
+  // auto-flip is only the DEFAULT — once the user drags the edge, their width
+  // (`auxLaneWidth`, shared by every aux surface) wins and the lane stops
+  // resizing itself under their hands.
   const NARROW_VERSIONS_WIDTH = 420;
   const halfPageWidth =
     typeof window === "undefined"
       ? 720
       : Math.round(Math.min(820, Math.max(560, window.innerWidth * 0.5)));
-  const [versionsLaneWidth, setVersionsLaneWidth] = useState<number | null>(
-    null,
-  );
   const effectiveVersionsWidth =
-    versionsLaneWidth ??
+    auxLaneWidth ??
     (versionsDetailOpen ? halfPageWidth : NARROW_VERSIONS_WIDTH);
 
   useEffect(() => {
@@ -1729,7 +1758,7 @@ function AppShellInner({
           <VersionsSplitLane
             peek={versionsPeek}
             width={effectiveVersionsWidth}
-            onWidthChange={setVersionsLaneWidth}
+            onWidthChange={setAuxLaneWidth}
             onExpand={() => onExpandVersions?.()}
             onStepBack={() => onStepBackVersions?.()}
             onClose={handleCloseVersionsLane}
@@ -1779,8 +1808,13 @@ function AppShellInner({
           renderCesareSheet("floating")}
         <SplitDrawerHost
           splitDrawer={splitDrawer}
-          splitDrawerWidth={splitDrawerWidth}
-          setSplitDrawerWidth={setSplitDrawerWidth}
+          splitDrawerWidth={auxLaneWidth ?? splitDrawerWidth}
+          // The host's own lanes (preview / notifications) live in the SAME aux
+          // track, so their drag moves the one shared width too (#57).
+          setSplitDrawerWidth={(next) => {
+            setSplitDrawerWidth(next);
+            setAuxLaneWidth(next);
+          }}
           onNotificationActivate={(notification) => {
             handleActivateNotification(notification);
             splitDrawer.close();
