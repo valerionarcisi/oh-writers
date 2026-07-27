@@ -203,7 +203,7 @@
 .colorBand {
   width: 4px;
   height: 32px;
-  border-radius: 2px;
+  border-radius: var(--ds-radius-xs);
   flex-shrink: 0;
   background: var(--ds-line);
 

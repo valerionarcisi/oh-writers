@@ -38,8 +38,7 @@
   &:focus {
     outline: none;
     border-color: var(--ds-action);
-    box-shadow: 0 0 0 2px
-      color-mix(in srgb, var(--ds-action) 20%, transparent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--ds-action) 20%, transparent);
   }
 }
 
@@ -52,11 +51,7 @@
   scrollbar-width: thin;
   /* Fade the right edge to signal there is more content scrollable
    * horizontally — pure visual hint, no extra DOM. */
-  mask-image: linear-gradient(
-    to right,
-    black calc(100% - 24px),
-    transparent
-  );
+  mask-image: linear-gradient(to right, black calc(100% - 24px), transparent);
   -webkit-mask-image: linear-gradient(
     to right,
     black calc(100% - 24px),
@@ -93,7 +88,7 @@
   &:focus-visible {
     outline: 2px solid var(--ds-action);
     outline-offset: 2px;
-    border-radius: 2px;
+    border-radius: var(--ds-radius-xs);
   }
 }
 

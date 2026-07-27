@@ -4,9 +4,9 @@
   /* ── Layer 2: Semantic ─────────────────────────────────────── */
 
   /* Backgrounds */
-  --ds-bg:           var(--ds-linen-50);
-  --ds-surface:      var(--ds-white);
-  --ds-surface-alt:  var(--ds-linen-100);
+  --ds-bg: var(--ds-linen-50);
+  --ds-surface: var(--ds-white);
+  --ds-surface-alt: var(--ds-linen-100);
   --ds-surface-deep: var(--ds-linen-200);
 
   /* Text — text-mute and text-faint shifted up the linen scale so helper
@@ -15,50 +15,58 @@
      trade-off is that text-3 and text-mute now share a tone — hierarchy
      becomes: text > text-2 > {text-3 / mute} > faint. The paper-warm scale
      is preserved (no new primitives, no hardcoded values). */
-  --ds-text:         var(--ds-linen-800);
-  --ds-text-2:       var(--ds-linen-700);
-  --ds-text-3:       var(--ds-linen-600);
-  --ds-text-mute:    var(--ds-linen-600);
-  --ds-text-faint:   var(--ds-linen-500);
+  --ds-text: var(--ds-linen-800);
+  --ds-text-2: var(--ds-linen-700);
+  --ds-text-3: var(--ds-linen-600);
+  --ds-text-mute: var(--ds-linen-600);
+  --ds-text-faint: var(--ds-linen-500);
   --ds-text-on-dark: var(--ds-linen-50);
 
   /* Lines */
-  --ds-line:      var(--ds-linen-300);
+  --ds-line: var(--ds-linen-300);
   --ds-line-soft: var(--ds-linen-soft);
 
   /* Brand bichromy */
-  --ds-action:       var(--ds-clay-500);
+  --ds-action: var(--ds-clay-500);
   --ds-action-hover: var(--ds-clay-600);
-  --ds-action-soft:  var(--ds-clay-50);
-  --ds-agent:        var(--ds-leaf-500);
-  --ds-agent-soft:   var(--ds-leaf-50);
+  --ds-action-soft: var(--ds-clay-50);
+  --ds-agent: var(--ds-leaf-500);
+  --ds-agent-soft: var(--ds-leaf-50);
 
   /* Status */
-  --ds-saved:    var(--ds-leaf-500);
-  --ds-saving:   var(--ds-clay-500);
-  --ds-warning:  var(--ds-clay-500);
-  --ds-success:  var(--ds-leaf-500);
-  --ds-info:     #34487a;
+  --ds-saved: var(--ds-leaf-500);
+  --ds-saving: var(--ds-clay-500);
+  --ds-warning: var(--ds-clay-500);
+  --ds-success: var(--ds-leaf-500);
+  --ds-info: #34487a;
 
   /* Danger */
-  --ds-danger:      #b33a28;
+  --ds-danger: #b33a28;
   --ds-danger-soft: rgba(179, 58, 40, 0.08);
 
   /* Soft backgrounds for status (matching brand bichromy) */
-  --ds-warning-soft: var(--ds-clay-50);   /* #f4dccb — light peach */
-  --ds-success-soft: var(--ds-leaf-50);   /* #e5e9d8 — light sage */
+  --ds-warning-soft: var(--ds-clay-50); /* #f4dccb — light peach */
+  --ds-success-soft: var(--ds-leaf-50); /* #e5e9d8 — light sage */
+  --ds-info-soft: #dbeafe; /* light blue */
+
+  /* AI provenance — marks content or actions produced by the assistant, kept
+     distinct from --ds-agent (the live-edit green) so an "AI wrote this" tag
+     never reads as a diff insertion. */
+  --ds-ai: #5a3e8a;
+  --ds-ai-soft: #ede9f8;
+  --ds-ai-soft-hover: #dcd5f3;
 
   /* Scrim / modal backdrop */
   --ds-overlay: rgba(28, 26, 23, 0.5);
 
   /* Diff view (version compare, screenplay diff) */
-  --ds-diff-add-bg:    rgba(90, 107, 60, 0.13);
-  --ds-diff-add-fg:    var(--ds-agent);
-  --ds-diff-remove-bg: rgba(179, 58, 40, 0.10);
+  --ds-diff-add-bg: rgba(90, 107, 60, 0.13);
+  --ds-diff-add-fg: var(--ds-agent);
+  --ds-diff-remove-bg: rgba(179, 58, 40, 0.1);
   --ds-diff-remove-fg: var(--ds-danger);
-  --ds-diff-change-bg: rgba(139, 58, 26, 0.10);
-  --ds-diff-intra:     rgba(139, 58, 26, 0.28);
-  --ds-diff-neutral:   transparent;
+  --ds-diff-change-bg: rgba(139, 58, 26, 0.1);
+  --ds-diff-intra: rgba(139, 58, 26, 0.28);
+  --ds-diff-neutral: transparent;
 
   /* Typography stacks — two-font UI system.
    *
@@ -81,28 +89,31 @@
    *
    * `--ds-font-serif` and `--ds-font-script` are aliases kept only for
    * backward-compat; do not introduce new fonts. */
-  --ds-font-sans:    "Inter", -apple-system, system-ui, sans-serif;
+  --ds-font-sans: "Inter", -apple-system, system-ui, sans-serif;
   --ds-font-display: "Fraunces", Georgia, serif;
-  --ds-font-mono:    "Courier Prime", "Courier New", ui-monospace, monospace;
-  --ds-font-serif:   var(--ds-font-display);
-  --ds-font-script:  var(--ds-font-mono);
+  --ds-font-mono: "Courier Prime", "Courier New", ui-monospace, monospace;
+  --ds-font-serif: var(--ds-font-display);
+  --ds-font-script: var(--ds-font-mono);
 
   /* Spacing — px-based, decoupled from rem */
-  --ds-space-1:  4px;
-  --ds-space-2:  8px;
-  --ds-space-3:  12px;
-  --ds-space-4:  16px;
-  --ds-space-5:  20px;
-  --ds-space-6:  24px;
-  --ds-space-8:  32px;
+  --ds-space-1: 4px;
+  --ds-space-2: 8px;
+  --ds-space-3: 12px;
+  --ds-space-4: 16px;
+  --ds-space-5: 20px;
+  --ds-space-6: 24px;
+  --ds-space-8: 32px;
   --ds-space-10: 48px;
   --ds-space-12: 64px;
 
   /* Radius */
   --ds-radius-none: 0;
-  --ds-radius-sm:   4px;
-  --ds-radius-md:   8px;
-  --ds-radius-lg:   12px;
+  /* xs is for micro-surfaces only — progress bars, timeline strips, inline text
+     highlights — where 4px would swallow an element that is itself ~6px tall. */
+  --ds-radius-xs: 2px;
+  --ds-radius-sm: 4px;
+  --ds-radius-md: 8px;
+  --ds-radius-lg: 12px;
   --ds-radius-pill: 100px;
 
   /* Shadow — depth hierarchy */
@@ -113,20 +124,20 @@
   --ds-shadow-4: 0 24px 64px -12px rgba(28, 26, 23, 0.3);
 
   /* Motion */
-  --ds-ease:        cubic-bezier(0.2, 0.7, 0.2, 1);
-  --ds-duration-1:  150ms;
-  --ds-duration-2:  200ms;
-  --ds-duration-3:  250ms;
+  --ds-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --ds-duration-1: 150ms;
+  --ds-duration-2: 200ms;
+  --ds-duration-3: 250ms;
 
   /* ── Layer 3: Component-specific derived tokens ───────────── */
-  --ds-btn-primary-bg:    var(--ds-action);
-  --ds-btn-primary-fg:    var(--ds-text-on-dark);
+  --ds-btn-primary-bg: var(--ds-action);
+  --ds-btn-primary-fg: var(--ds-text-on-dark);
   --ds-btn-primary-hover: var(--ds-action-hover);
 
-  --ds-card-bg:     var(--ds-surface);
+  --ds-card-bg: var(--ds-surface);
   --ds-card-border: var(--ds-line);
 
-  --ds-dock-bg:     var(--ds-surface);
+  --ds-dock-bg: var(--ds-surface);
   --ds-dock-shadow: var(--ds-shadow-3);
 
   --ds-margin-note-rail: var(--ds-agent-soft);

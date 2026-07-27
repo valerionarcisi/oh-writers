@@ -43,9 +43,9 @@
   min-width: 18px;
   height: 18px;
   padding-inline: var(--space-1);
-  border-radius: var(--radius-pill);
+  border-radius: var(--ds-radius-pill);
   background: var(--color-accent);
-  color: #fff;
+  color: var(--ds-text-on-dark);
   font-size: 10px;
   font-weight: var(--weight-bold);
   line-height: 1;
@@ -74,7 +74,7 @@
   display: inline-flex;
   align-items: center;
   padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-pill);
+  border-radius: var(--ds-radius-pill);
   border: 1px solid var(--ds-line);
   background: var(--ds-surface);
   font-size: var(--text-xs);
@@ -93,7 +93,7 @@
   &[data-active="true"] {
     background: var(--color-accent);
     border-color: var(--color-accent);
-    color: #fff;
+    color: var(--ds-text-on-dark);
   }
 }
 

@@ -17,13 +17,17 @@
 }
 
 .badge_confirmed {
-  background: color-mix(in oklch, var(--ds-positive, #2d6a4f) 16%, transparent);
-  color: var(--ds-positive, #2d6a4f);
+  background: color-mix(
+    in oklch,
+    var(--ds-positive, var(--ds-success)) 16%,
+    transparent
+  );
+  color: var(--ds-positive, var(--ds-success));
 }
 
 .badge_visited {
-  background: color-mix(in oklch, #1d4ed8 16%, transparent);
-  color: #1d4ed8;
+  background: color-mix(in oklch, var(--ds-info) 16%, transparent);
+  color: var(--ds-info);
 }
 
 .badge_candidate {
@@ -32,8 +36,8 @@
 }
 
 .badge_rejected {
-  background: color-mix(in oklch, #b91c1c 16%, transparent);
-  color: #b91c1c;
+  background: color-mix(in oklch, var(--ds-danger) 16%, transparent);
+  color: var(--ds-danger);
 }
 
 .photosGrid {
@@ -111,7 +115,7 @@
   background: none;
   border: none;
   padding: 0;
-  color: var(--ds-action, #8b3a1a);
+  color: var(--ds-action, var(--ds-action));
   font-size: var(--text-sm);
   cursor: pointer;
   text-decoration: underline;
@@ -145,7 +149,7 @@
   color: var(--ds-text);
 
   &:focus-visible {
-    outline: 2px solid var(--ds-action, #8b3a1a);
+    outline: 2px solid var(--ds-action, var(--ds-action));
     outline-offset: -1px;
     border-color: transparent;
   }
@@ -164,7 +168,7 @@
   min-block-size: 80px;
 
   &:focus-visible {
-    outline: 2px solid var(--ds-action, #8b3a1a);
+    outline: 2px solid var(--ds-action, var(--ds-action));
     outline-offset: -1px;
     border-color: transparent;
   }
@@ -176,15 +180,19 @@
   gap: var(--space-2);
   font-size: var(--text-sm);
   color: var(--ds-text-2);
-  background: color-mix(in oklch, var(--ds-action, #8b3a1a) 6%, transparent);
-  border-inline-start: 3px solid var(--ds-action, #8b3a1a);
+  background: color-mix(
+    in oklch,
+    var(--ds-action, var(--ds-action)) 6%,
+    transparent
+  );
+  border-inline-start: 3px solid var(--ds-action, var(--ds-action));
   border-radius: var(--radius-md);
   padding: var(--space-2) var(--space-3);
 }
 
 .aiTag {
   font-weight: 600;
-  color: var(--ds-action, #8b3a1a);
+  color: var(--ds-action, var(--ds-action));
   white-space: nowrap;
 }
 
@@ -216,7 +224,7 @@
   padding: var(--space-2) var(--space-4);
   border: none;
   border-radius: var(--radius-md);
-  background: var(--ds-positive, #2d6a4f);
+  background: var(--ds-positive, var(--ds-success));
   color: white;
   font-size: var(--text-sm);
   font-weight: 600;
@@ -225,7 +233,11 @@
 
   &:hover,
   &:focus-visible {
-    background: color-mix(in oklch, var(--ds-positive, #2d6a4f) 80%, black);
+    background: color-mix(
+      in oklch,
+      var(--ds-positive, var(--ds-success)) 80%,
+      black
+    );
     outline: none;
   }
 }

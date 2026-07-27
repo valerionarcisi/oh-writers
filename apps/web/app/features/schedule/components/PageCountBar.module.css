@@ -1,13 +1,13 @@
 .bar {
   height: 4px;
-  border-radius: 2px;
+  border-radius: var(--ds-radius-xs);
   background: var(--ds-line);
   overflow: hidden;
 }
 
 .fill {
   height: 100%;
-  border-radius: 2px;
+  border-radius: var(--ds-radius-xs);
   transition: width 300ms ease;
 
   @media (prefers-reduced-motion: reduce) {

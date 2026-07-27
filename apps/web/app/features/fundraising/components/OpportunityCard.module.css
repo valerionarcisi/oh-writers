@@ -53,7 +53,7 @@
   display: inline-flex;
   align-items: center;
   padding: 2px var(--space-2);
-  border-radius: var(--radius-pill);
+  border-radius: var(--ds-radius-pill);
   font-size: 10px;
   font-weight: var(--weight-bold);
   letter-spacing: var(--tracking-caps);
@@ -159,7 +159,7 @@
   &[data-active="true"] {
     background: var(--color-accent);
     border-color: var(--color-accent);
-    color: #fff;
+    color: var(--ds-text-on-dark);
   }
 }
 

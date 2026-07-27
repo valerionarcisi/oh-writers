@@ -9,11 +9,7 @@
     var(--ds-surface)
   );
   border: 1px solid
-    color-mix(
-      in oklch,
-      var(--shot-color, var(--ds-action)) 28%,
-      var(--ds-line)
-    );
+    color-mix(in oklch, var(--shot-color, var(--ds-action)) 28%, var(--ds-line));
   border-inline-start: 3px solid var(--shot-color, var(--ds-action));
   border-radius: var(--ds-radius-sm);
   display: flex;
@@ -109,8 +105,12 @@
     inset-block: 25%;
     inset-inline-end: 2px;
     inline-size: 3px;
-    border-radius: 2px;
-    background: color-mix(in oklch, var(--shot-color, var(--ds-action)) 60%, transparent);
+    border-radius: var(--ds-radius-xs);
+    background: color-mix(
+      in oklch,
+      var(--shot-color, var(--ds-action)) 60%,
+      transparent
+    );
     opacity: 0;
     transition: opacity var(--ds-duration-1) var(--ds-ease);
   }

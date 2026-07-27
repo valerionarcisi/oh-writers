@@ -121,7 +121,7 @@
 
   &:hover {
     background: var(--color-error, #e53e3e);
-    color: #fff;
+    color: var(--ds-text-on-dark);
   }
 
   &:disabled {

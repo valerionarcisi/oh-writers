@@ -54,13 +54,13 @@
   flex: 1;
   height: 6px;
   background: var(--ds-line);
-  border-radius: 3px;
+  border-radius: var(--ds-radius-xs);
   overflow: hidden;
 }
 
 .barFill {
   height: 100%;
-  border-radius: 3px;
+  border-radius: var(--ds-radius-xs);
   background: var(--ds-action);
   transition: width 250ms ease;
 

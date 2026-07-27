@@ -83,7 +83,7 @@
   color: var(--ds-text-2);
   padding: 4px var(--ds-space-3);
   border: 1px solid var(--ds-line);
-  border-radius: 4px;
+  border-radius: var(--ds-radius-sm);
   background: var(--ds-surface);
   cursor: pointer;
   transition: border-color 150ms ease;
@@ -337,7 +337,7 @@
   background: var(--ds-action-soft);
   color: var(--ds-action);
   padding: 1px 5px;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
 }
 
 .indiceCaret {
@@ -381,7 +381,7 @@
   background: var(--ds-surface);
   color: var(--ds-text-3);
   padding: 1px 5px;
-  border-radius: 3px;
+  border-radius: var(--ds-radius-xs);
   border: 1px solid var(--ds-line);
 }
 
