@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/start";
 import { z } from "zod";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, ne } from "drizzle-orm";
 import { ResultAsync, ok, err } from "neverthrow";
 import {
   scenes,
@@ -95,7 +95,10 @@ const findSceneByNumber = (
         })
         .from(scenes)
         .where(
-          and(eq(scenes.screenplayId, screenplay.id), eq(scenes.number, sceneNumber)),
+          and(
+            eq(scenes.screenplayId, screenplay.id),
+            eq(scenes.number, sceneNumber),
+          ),
         )
         .limit(1);
       return scene ?? null;
@@ -110,10 +113,33 @@ interface ElementRow {
   name: string;
 }
 
+/** Which occurrences a scene's cost may be derived from.
+ *
+ *  Must stay in step with the canonical breakdown query (breakdown.server.ts
+ *  loadOccs). Dropping the version filter sums the same element once per
+ *  version that ever existed — on the seeded project a scene with 19 elements
+ *  was counted as 119 across six versions. Dropping the `ignored` filter
+ *  charges for elements the user explicitly threw away.
+ *
+ *  Exported so a test can assert the filters without reaching a database. */
+export const sceneCostOccurrenceFilter = (
+  projectId: string,
+  sceneId: string,
+  screenplayVersionId: string,
+) =>
+  and(
+    eq(breakdownElements.projectId, projectId),
+    eq(breakdownOccurrences.sceneId, sceneId),
+    eq(breakdownOccurrences.screenplayVersionId, screenplayVersionId),
+    isNull(breakdownElements.archivedAt),
+    ne(breakdownOccurrences.cesareStatus, "ignored"),
+  );
+
 const loadElementsForScene = (
   db: Db,
   projectId: string,
   sceneId: string,
+  screenplayVersionId: string,
 ): ResultAsync<ElementRow[], DbError> =>
   ResultAsync.fromPromise(
     db
@@ -127,11 +153,7 @@ const loadElementsForScene = (
         eq(breakdownOccurrences.elementId, breakdownElements.id),
       )
       .where(
-        and(
-          eq(breakdownElements.projectId, projectId),
-          eq(breakdownOccurrences.sceneId, sceneId),
-          isNull(breakdownElements.archivedAt),
-        ),
+        sceneCostOccurrenceFilter(projectId, sceneId, screenplayVersionId),
       ),
     (e) => new DbError("loadElementsForScene", e),
   );
@@ -152,25 +174,24 @@ const computeEstimate = (
   db: Db,
   projectId: string,
   sceneNumber: number,
-): ResultAsync<
-  SceneCostBreakdown,
-  BreakdownSceneNotFoundError | DbError
-> =>
+  screenplayVersionId: string,
+): ResultAsync<SceneCostBreakdown, BreakdownSceneNotFoundError | DbError> =>
   findSceneByNumber(db, projectId, sceneNumber).andThen((scene) =>
-    loadElementsForScene(db, projectId, scene.id).andThen((elements) =>
-      loadProductionRates(db, projectId).map((rates) =>
-        estimateSceneCost(
-          {
-            sceneNumber: scene.number,
-            intExt: scene.intExt,
-            timeOfDay: scene.timeOfDay,
-            characters: scene.characterNames,
-            elementsByCategory: groupByCategory(elements),
-            estimatedShootHours: 8,
-          },
-          rates,
+    loadElementsForScene(db, projectId, scene.id, screenplayVersionId).andThen(
+      (elements) =>
+        loadProductionRates(db, projectId).map((rates) =>
+          estimateSceneCost(
+            {
+              sceneNumber: scene.number,
+              intExt: scene.intExt,
+              timeOfDay: scene.timeOfDay,
+              characters: scene.characterNames,
+              elementsByCategory: groupByCategory(elements),
+              estimatedShootHours: 8,
+            },
+            rates,
+          ),
         ),
-      ),
     ),
   );
 
@@ -179,6 +200,7 @@ export const getSceneCostEstimate = createServerFn({ method: "GET" })
     z.object({
       projectId: z.string().uuid(),
       sceneNumber: z.number().int().min(1),
+      screenplayVersionId: z.string().uuid(),
     }),
   )
   .handler(
@@ -195,7 +217,12 @@ export const getSceneCostEstimate = createServerFn({ method: "GET" })
     > =>
       toShape(
         await withProjectAccess(data.projectId, "view", ({ db }) =>
-          computeEstimate(db, data.projectId, data.sceneNumber),
+          computeEstimate(
+            db,
+            data.projectId,
+            data.sceneNumber,
+            data.screenplayVersionId,
+          ),
         ),
       ),
   );

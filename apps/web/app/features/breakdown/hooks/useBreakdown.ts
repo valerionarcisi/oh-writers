@@ -77,16 +77,33 @@ export const staleScenesOptions = (versionId: string) =>
 export const sceneCostEstimateOptions = (
   projectId: string,
   sceneNumber: number | null,
+  versionId: string,
 ) =>
   queryOptions({
-    queryKey: ["breakdown", "scene-cost", projectId, sceneNumber] as const,
+    // The version is part of the key: the same scene costs different money in
+    // different drafts, so a cached estimate must not leak across versions.
+    queryKey: [
+      "breakdown",
+      "scene-cost",
+      projectId,
+      sceneNumber,
+      versionId,
+    ] as const,
     queryFn: async () =>
       unwrapResult(
         await getSceneCostEstimate({
-          data: { projectId, sceneNumber: sceneNumber ?? 1 },
+          data: {
+            projectId,
+            sceneNumber: sceneNumber ?? 1,
+            screenplayVersionId: versionId,
+          },
         }),
       ),
-    enabled: projectId.length > 0 && sceneNumber !== null && sceneNumber > 0,
+    enabled:
+      projectId.length > 0 &&
+      sceneNumber !== null &&
+      sceneNumber > 0 &&
+      versionId.length > 0,
   });
 
 export const useAddBreakdownElement = (
@@ -327,13 +344,9 @@ export const useBulkSetOccurrenceStatusForElements = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (
-      input: Parameters<
-        typeof bulkSetOccurrenceStatusForElements
-      >[0]["data"],
+      input: Parameters<typeof bulkSetOccurrenceStatusForElements>[0]["data"],
     ) =>
-      unwrapResult(
-        await bulkSetOccurrenceStatusForElements({ data: input }),
-      ),
+      unwrapResult(await bulkSetOccurrenceStatusForElements({ data: input })),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ["breakdown"] }),
   });
 };

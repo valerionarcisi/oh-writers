@@ -107,6 +107,9 @@ export function RecapStrip({
       className={classes}
       data-testid="recap-strip"
       data-scene-id={sceneId}
+      // Raw euros, so a test can assert the number without parsing the
+      // locale-formatted string.
+      data-cost={cost}
       aria-label={`${t("cesare.recap.aria")} ${sceneNumber}`}
     >
       <div className={styles.costBlock}>
@@ -118,7 +121,10 @@ export function RecapStrip({
       </div>
 
       {categories.length > 0 && (
-        <ul className={styles.cats} aria-label={t("cesare.recap.categoriesAria")}>
+        <ul
+          className={styles.cats}
+          aria-label={t("cesare.recap.categoriesAria")}
+        >
           {categories.map((item) => {
             const meta = CATEGORY_META[item.category];
             const label = item.label ?? meta.labelIt;

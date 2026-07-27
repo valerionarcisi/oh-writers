@@ -2,7 +2,10 @@ import { Suspense } from "react";
 import { useMutation, useSuspenseQuery } from "@tanstack/react-query";
 import { unwrapResult } from "@oh-writers/utils";
 import { sceneCostEstimateOptions } from "../hooks/useBreakdown";
-import { getBudget, addBudgetLine } from "~/features/budget/server/budget.server";
+import {
+  getBudget,
+  addBudgetLine,
+} from "~/features/budget/server/budget.server";
 import { useCesareOpen } from "~/features/app-shell";
 import { useTranslation } from "~/features/i18n";
 import styles from "./SceneCostPanel.module.css";
@@ -13,6 +16,7 @@ interface Props {
   projectId: string;
   sceneNumber: number;
   sceneLabel: string;
+  versionId: string;
 }
 
 const formatEur = (n: number): string =>
@@ -41,10 +45,15 @@ export function SceneCostPanel(props: Props) {
   );
 }
 
-function SceneCostPanelContent({ projectId, sceneNumber, sceneLabel }: Props) {
+function SceneCostPanelContent({
+  projectId,
+  sceneNumber,
+  sceneLabel,
+  versionId,
+}: Props) {
   const { t } = useTranslation();
   const { data: estimate } = useSuspenseQuery(
-    sceneCostEstimateOptions(projectId, sceneNumber),
+    sceneCostEstimateOptions(projectId, sceneNumber, versionId),
   );
   const openCesare = useCesareOpen();
 

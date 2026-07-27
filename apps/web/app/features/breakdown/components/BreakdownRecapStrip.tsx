@@ -71,7 +71,7 @@ function BreakdownRecapStripInner({
   versionId,
 }: Props & { scene: BreakdownSceneSummary }) {
   const { data: estimate } = useSuspenseQuery(
-    sceneCostEstimateOptions(projectId, sceneNumber),
+    sceneCostEstimateOptions(projectId, sceneNumber, versionId),
   );
   const { data: sceneData } = useSuspenseQuery(
     breakdownForSceneOptions(scene.id, versionId),
