@@ -129,3 +129,19 @@ const TOOL_ENTITY_MAP: Readonly<Record<string, ToolEntityMapping>> = {
  *  emitter then falls back to a raw `tool` event rather than guessing). */
 export const mappingForTool = (toolName: string): ToolEntityMapping | null =>
   TOOL_ENTITY_MAP[toolName] ?? null;
+
+/**
+ * Every domain any tool in the registry can WRITE.
+ *
+ * Derived from the map above rather than listed by hand, so adding a Cesare
+ * tool cannot leave the client refreshing a stale panel: the same declaration
+ * that makes the tracer say "sto scrivendo la Scaletta" is what tells the cache
+ * that the Scaletta changed. A tool that forgets to declare its domain has a
+ * visible symptom — the tracer goes silent about it — which is what keeps this
+ * source honest.
+ */
+export const WRITTEN_DOMAINS: ReadonlySet<StreamEntityDomain> = new Set(
+  Object.values(TOOL_ENTITY_MAP)
+    .filter((m) => m.access === "write")
+    .map((m) => m.domain),
+);
