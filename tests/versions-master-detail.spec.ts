@@ -122,9 +122,17 @@ test.describe("[066] Versions master→detail", () => {
     await page.reload();
     await openVersionsViaChip(page);
 
-    // Open the detail of the FIRST row (newest). Whatever its content, the
+    // Open the detail of a NON-current row. Whatever its content, the
     // master→detail panes must render: a read-only content node + a back button.
-    await page.locator('[data-testid^="versions-split-row-"]').first().click();
+    // It must be a non-current row: the CURRENT version's detail would only show
+    // the text already open in the editor with no action available, so that row
+    // is deliberately not a navigation target (#94).
+    await page
+      .locator(
+        '[data-testid^="versions-split-row-"]:not([data-current="true"])',
+      )
+      .first()
+      .click();
 
     const detail = page.getByTestId("versions-split-detail");
     await expect(detail).toBeVisible();
@@ -133,6 +141,24 @@ test.describe("[066] Versions master→detail", () => {
     // Indietro returns to the list.
     await page.getByTestId("versions-split-back").click();
     await expect(page.getByTestId("versions-split-list")).toBeVisible();
+  });
+
+  // #94 — the current version's detail showed the text already visible in the
+  // editor and offered no action (Attiva is hidden for it), so it was a dead end.
+  test("clicking the CURRENT version stays on the list (no dead-end detail)", async ({
+    authenticatedPage: page,
+  }) => {
+    await page.goto(SOGGETTO_PATH);
+    await openVersionsViaChip(page);
+
+    const currentRow = page
+      .locator('[data-testid^="versions-split-row-"][data-current="true"]')
+      .first();
+    await expect(currentRow).toBeVisible({ timeout: 8_000 });
+    await currentRow.click();
+
+    await expect(page.getByTestId("versions-split-list")).toBeVisible();
+    await expect(page.getByTestId("versions-split-detail")).toHaveCount(0);
   });
 
   test("Attiva switches the active version (current badge moves)", async ({
