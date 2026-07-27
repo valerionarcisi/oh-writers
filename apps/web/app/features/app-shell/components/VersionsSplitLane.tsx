@@ -16,8 +16,8 @@
 // Spec 49): `?versions=<id>` → open (split); `?vstate=full` → full; param dropped
 // → closed. `↗` is a REAL navigation so the URL stays shareable.
 
-import { useMemo, useRef, useState, type ReactNode } from "react";
-import { useDialog, useOverlay, FocusScope } from "react-aria";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+
 import { match } from "ts-pattern";
 import { SplitDrawer, useToast } from "@oh-writers/ui";
 import type { SplitDrawerState } from "@oh-writers/ui";
@@ -279,75 +279,80 @@ export function VersionsSplitLane({
   const [detailOpen, setDetailOpen] = useState(false);
   usePublishVersionsDetail(detailOpen && peek.state !== "full");
 
-  const { overlayProps } = useOverlay(
-    {
-      onClose,
-      isOpen: true,
-      isDismissable: true,
-      shouldCloseOnInteractOutside: () => false,
-    },
-    ref,
-  );
-  const { dialogProps } = useDialog(
-    { "aria-label": t("shell.versionsLane.aria") },
-    ref,
-  );
+  // #94 — this lane is a persistent in-flow column that COEXISTS with the
+  // editor, not a modal the editor is behind. It used to be built as an overlay
+  // dialog, and `useDialog` autofocuses its container and pulls focus back
+  // whenever it lands elsewhere: the editor stayed `contenteditable`, but every
+  // keystroke went to the lane, so browsing versions read exactly like a
+  // read-only document. `useOverlay` also installs a global interact-outside
+  // listener that swallows mousedown on portaled overlays. The Cesare peek lane
+  // dropped both for the same reasons; this one now matches it.
+  //
+  // ESC keeps closing the lane from anywhere on the page — including while the
+  // writer is typing in the editor beside it, which is exactly where focus now
+  // stays — so the listener is on the document, as `useOverlay`'s was.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      onClose();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
 
   const state: SplitDrawerState = peek.state === "full" ? "full" : "open";
 
   return (
-    <FocusScope>
-      <div
-        {...overlayProps}
-        {...dialogProps}
-        ref={ref}
-        className={styles.lane}
-        data-testid="versions-split-lane"
-        data-split-lane="versions"
+    <div
+      ref={ref}
+      role="region"
+      aria-label={t("shell.versionsLane.aria")}
+      className={styles.lane}
+      data-testid="versions-split-lane"
+      data-split-lane="versions"
+    >
+      <SplitDrawer
+        state={state}
+        placement="lane"
+        onStateChange={(next) => {
+          if (next === "closed") onClose();
+          else if (next === "full") onExpand();
+          else onStepBack();
+        }}
+        // The Versions panel has no "expand to full-screen" affordance — the
+        // master→detail panes already give it room. Only offer the reduce
+        // (↙) control when already in the full state; never the ↗ expand.
+        onCycle={state === "full" ? onStepBack : undefined}
+        onStepBack={onStepBack}
+        onClose={onClose}
+        header={
+          <div className={styles.headerRow}>
+            {headerNav}
+            <h2 className={styles.title}>{t("shell.versionsLane.title")}</h2>
+          </div>
+        }
+        size={{ width }}
+        onSizeChange={({ width: next }) => onWidthChange(next)}
+        ariaLabel={t("shell.versionsLane.frameAria")}
+        expandLabel={t("shell.splitDrawer.expand")}
+        closeLabel={t("shell.splitDrawer.close")}
+        reduceLabel={t("shell.splitDrawer.reduce")}
+        testId="versions-split-drawer-frame"
       >
-        <SplitDrawer
-          state={state}
-          placement="lane"
-          onStateChange={(next) => {
-            if (next === "closed") onClose();
-            else if (next === "full") onExpand();
-            else onStepBack();
-          }}
-          // The Versions panel has no "expand to full-screen" affordance — the
-          // master→detail panes already give it room. Only offer the reduce
-          // (↙) control when already in the full state; never the ↗ expand.
-          onCycle={state === "full" ? onStepBack : undefined}
-          onStepBack={onStepBack}
-          onClose={onClose}
-          header={
-            <div className={styles.headerRow}>
-              {headerNav}
-              <h2 className={styles.title}>{t("shell.versionsLane.title")}</h2>
-            </div>
-          }
-          size={{ width }}
-          onSizeChange={({ width: next }) => onWidthChange(next)}
-          ariaLabel={t("shell.versionsLane.frameAria")}
-          expandLabel={t("shell.splitDrawer.expand")}
-          closeLabel={t("shell.splitDrawer.close")}
-          reduceLabel={t("shell.splitDrawer.reduce")}
-          testId="versions-split-drawer-frame"
-        >
-          {peek.kind === "screenplay" ? (
-            <ScreenplayVersionsContent
-              screenplayId={peek.documentId}
-              currentVersionId={peek.currentVersionId}
-              onDetailChange={setDetailOpen}
-            />
-          ) : (
-            <NarrativeVersionsContent
-              documentId={peek.documentId}
-              currentVersionId={peek.currentVersionId}
-              onDetailChange={setDetailOpen}
-            />
-          )}
-        </SplitDrawer>
-      </div>
-    </FocusScope>
+        {peek.kind === "screenplay" ? (
+          <ScreenplayVersionsContent
+            screenplayId={peek.documentId}
+            currentVersionId={peek.currentVersionId}
+            onDetailChange={setDetailOpen}
+          />
+        ) : (
+          <NarrativeVersionsContent
+            documentId={peek.documentId}
+            currentVersionId={peek.currentVersionId}
+            onDetailChange={setDetailOpen}
+          />
+        )}
+      </SplitDrawer>
+    </div>
   );
 }

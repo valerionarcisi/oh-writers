@@ -334,4 +334,58 @@ test.describe("[049] Versions SplitDrawer (routed)", () => {
     expect(mainTrackWidth).not.toBeNull();
     expect(mainTrackWidth!).toBeGreaterThan(200);
   });
+
+  // #94 — the lane was built as an overlay dialog, and `useDialog` autofocuses
+  // its container and pulls focus back whenever it lands elsewhere. The editor
+  // stayed `contenteditable`, but keystrokes went to the lane instead of the
+  // document — indistinguishable, for the writer, from a read-only editor.
+  // Browsing versions must never lock the live document.
+  test("the open lane does not steal focus: the editor still accepts typing", async ({
+    authenticatedPage: page,
+  }) => {
+    await page.goto(SOGGETTO_PATH);
+    await openVersionsViaUi(page);
+
+    const editor = page.locator(".ProseMirror").first();
+    await expect(editor).toBeVisible({ timeout: 10_000 });
+    // The document is not read-only merely because the panel is open.
+    await expect(editor).toHaveAttribute("contenteditable", "true");
+
+    const before = (await editor.textContent()) ?? "";
+    await editor.click();
+    await page.keyboard.press("Home");
+    await page.keyboard.type("ZZZ");
+
+    // The keystrokes reached the DOCUMENT, not the lane.
+    await expect
+      .poll(async () => (await editor.textContent()) ?? "", { timeout: 8_000 })
+      .toContain("ZZZ");
+    // ...and the lane is still open beside it (typing did not dismiss it).
+    await expect(page.getByTestId("versions-split-lane")).toBeVisible();
+
+    // Leave the seeded document as we found it.
+    for (let i = 0; i < 3; i += 1) await page.keyboard.press("Backspace");
+    await expect
+      .poll(async () => (await editor.textContent()) ?? "", { timeout: 8_000 })
+      .toBe(before);
+  });
+
+  test("Escape still closes the lane and clears the routed param", async ({
+    authenticatedPage: page,
+  }) => {
+    await page.goto(SOGGETTO_PATH);
+    await openVersionsViaUi(page);
+
+    await page
+      .getByTestId("versions-split-lane")
+      .getByRole("button")
+      .first()
+      .focus();
+    await page.keyboard.press("Escape");
+
+    await expect(page.getByTestId("versions-split-lane")).toHaveCount(0, {
+      timeout: 8_000,
+    });
+    expect(new URL(page.url()).searchParams.get("versions")).toBeNull();
+  });
 });
