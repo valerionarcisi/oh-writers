@@ -27,6 +27,13 @@ body {
   background-color: var(--ds-bg);
   color: var(--ds-text);
   line-height: var(--leading-normal);
+  /* Installed on iPad the app paints edge to edge (viewport-fit=cover), so the
+     chrome has to stay clear of the rounded corners and the home indicator.
+     Zero in a browser tab, where the insets resolve to 0. */
+  padding-block-start: env(safe-area-inset-top, 0);
+  padding-block-end: env(safe-area-inset-bottom, 0);
+  padding-inline-start: env(safe-area-inset-left, 0);
+  padding-inline-end: env(safe-area-inset-right, 0);
 }
 
 a {
@@ -45,13 +52,9 @@ button {
   --vscode-editorSuggestWidget-background: var(--ds-surface-deep) !important;
   --vscode-editorSuggestWidget-border: var(--ds-line) !important;
   --vscode-editorSuggestWidget-foreground: var(--ds-text-2) !important;
-  --vscode-editorSuggestWidget-selectedBackground: var(
-    --ds-overlay
-  ) !important;
+  --vscode-editorSuggestWidget-selectedBackground: var(--ds-overlay) !important;
   --vscode-editorSuggestWidget-selectedForeground: var(--ds-text) !important;
-  --vscode-editorSuggestWidget-highlightForeground: var(
-    --ds-action
-  ) !important;
+  --vscode-editorSuggestWidget-highlightForeground: var(--ds-action) !important;
   --vscode-editorSuggestWidget-focusHighlightForeground: var(
     --ds-action
   ) !important;
