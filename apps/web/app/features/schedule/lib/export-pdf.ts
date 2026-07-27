@@ -16,10 +16,7 @@ const HEADER_HEIGHT = 16;
 const tableWidth = Object.values(COL_WIDTHS).reduce((a, b) => a + b, 0);
 
 const drawTableHeader = (doc: PDFKit.PDFDocument, x: number, y: number) => {
-  doc
-    .rect(x, y, tableWidth, HEADER_HEIGHT)
-    .fillColor("#222")
-    .fill();
+  doc.rect(x, y, tableWidth, HEADER_HEIGHT).fillColor("#222").fill();
 
   const cols = [
     { label: "SC", width: COL_WIDTHS.scene },
@@ -50,7 +47,11 @@ const drawStripRow = (
     .fillColor(isEven ? "#f7f7f5" : "#fff")
     .fill();
 
-  doc.rect(x, y, tableWidth, ROW_HEIGHT).strokeColor("#ddd").lineWidth(0.25).stroke();
+  doc
+    .rect(x, y, tableWidth, ROW_HEIGHT)
+    .strokeColor("#ddd")
+    .lineWidth(0.25)
+    .stroke();
 
   const cols = [
     { value: String(strip.sceneNumber), width: COL_WIDTHS.scene },
@@ -78,7 +79,11 @@ export const buildSchedulePdf = (
   days: ShootingDayView[],
 ): Promise<Buffer> =>
   new Promise((resolve, reject) => {
-    const doc = new PDFDocument({ size: "LETTER", margin: MARGIN, layout: "landscape" });
+    const doc = new PDFDocument({
+      size: "LETTER",
+      margin: MARGIN,
+      layout: "landscape",
+    });
     const chunks: Buffer[] = [];
     doc.on("data", (c: Buffer) => chunks.push(c));
     doc.on("end", () => resolve(Buffer.concat(chunks)));
@@ -102,8 +107,7 @@ export const buildSchedulePdf = (
       )
       .moveDown(1.2);
 
-    const pageWidth =
-      doc.page.width - MARGIN * 2;
+    const pageWidth = doc.page.width - MARGIN * 2;
     const x = MARGIN + (pageWidth - tableWidth) / 2;
 
     for (const day of days) {
@@ -120,36 +124,48 @@ export const buildSchedulePdf = (
         : "";
 
       const bannerHeight = 18;
-      const blockHeight =
-        bannerHeight + HEADER_HEIGHT + day.strips.length * ROW_HEIGHT + 16;
+      const pageBottom = doc.page.height - MARGIN;
 
-      // Add new page when block won't fit
-      if (doc.y + blockHeight > doc.page.height - MARGIN) {
+      // Writes the day banner + column header at the current y and returns the
+      // y the first row goes on. Called again after every page break so a
+      // continued day still says which day it is and keeps its columns.
+      const openDayBlock = (continued: boolean): number => {
+        const bannerY = doc.y;
+        doc
+          .rect(x, bannerY, tableWidth, bannerHeight)
+          .fillColor("#1a1a1a")
+          .fill();
+        doc
+          .font("Courier-Bold")
+          .fontSize(9)
+          .fillColor("#fff")
+          .text(
+            `GIORNATA ${day.dayNumber}${dateLabel ? `   ${dateLabel.toUpperCase()}` : ""}   ·   ${day.strips.length} SCENE  ·  ${day.totalPageCount} PAG${continued ? "   (SEGUE)" : ""}`,
+            x + 6,
+            bannerY + 5,
+            { width: tableWidth - 12, lineBreak: false },
+          );
+        drawTableHeader(doc, x, bannerY + bannerHeight);
+        return bannerY + bannerHeight + HEADER_HEIGHT;
+      };
+
+      // Start the day on a fresh page when its header plus at least one row
+      // cannot fit. The old check reserved room for the WHOLE day, which for a
+      // day taller than one page is unsatisfiable — it fell through and wrote
+      // the overflow rows off the page, silently losing scenes (issue #67).
+      if (doc.y + bannerHeight + HEADER_HEIGHT + ROW_HEIGHT > pageBottom) {
         doc.addPage();
       }
 
-      const bannerY = doc.y;
-
-      doc
-        .rect(x, bannerY, tableWidth, bannerHeight)
-        .fillColor("#1a1a1a")
-        .fill();
-
-      doc
-        .font("Courier-Bold")
-        .fontSize(9)
-        .fillColor("#fff")
-        .text(
-          `GIORNATA ${day.dayNumber}${dateLabel ? `   ${dateLabel.toUpperCase()}` : ""}   ·   ${day.strips.length} SCENE  ·  ${day.totalPageCount} PAG`,
-          x + 6,
-          bannerY + 5,
-          { width: tableWidth - 12, lineBreak: false },
-        );
-
-      drawTableHeader(doc, x, bannerY + bannerHeight);
-
-      let rowY = bannerY + bannerHeight + HEADER_HEIGHT;
+      let rowY = openDayBlock(false);
       for (let i = 0; i < day.strips.length; i++) {
+        // Per-ROW bound: a day longer than a page continues onto the next one
+        // instead of dropping what does not fit.
+        if (rowY + ROW_HEIGHT > pageBottom) {
+          doc.addPage();
+          doc.y = MARGIN;
+          rowY = openDayBlock(true);
+        }
         drawStripRow(doc, x, rowY, day.strips[i]!, i % 2 === 0);
         rowY += ROW_HEIGHT;
       }
