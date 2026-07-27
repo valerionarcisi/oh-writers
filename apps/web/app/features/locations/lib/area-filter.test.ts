@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { filterCandidatesInPolygon, collectAllCandidates } from "./area-filter";
+import {
+  filterCandidatesInPolygon,
+  collectAllCandidates,
+  geometryToCircle,
+  clampDiscoveryRadius,
+  DISCOVERY_MIN_RADIUS_M,
+  DISCOVERY_MAX_RADIUS_M,
+} from "./area-filter";
 
 // A 1°×1° square around [0,0] → [1,1].
 const square: GeoJSON.Polygon = {
@@ -70,5 +77,49 @@ describe("collectAllCandidates", () => {
       { candidates: [{ id: "c" } as any] },
     ]);
     expect(result.map((c) => c.id)).toEqual(["a", "b", "c"]);
+  });
+});
+
+// #68 — an unclamped radius was rejected by the discovery validator inside an
+// unguarded promise: no pins appeared and nothing was said. The bounds are
+// enforced where the radius is derived, so no caller has to remember them.
+describe("geometryToCircle radius clamping", () => {
+  const boxAround = (halfDeg: number): GeoJSON.Polygon => ({
+    type: "Polygon",
+    coordinates: [
+      [
+        [-halfDeg, -halfDeg],
+        [halfDeg, -halfDeg],
+        [halfDeg, halfDeg],
+        [-halfDeg, halfDeg],
+        [-halfDeg, -halfDeg],
+      ],
+    ],
+  });
+
+  it("clamps a region-sized boundary to the discovery maximum", () => {
+    // ~5° half-width is several hundred km — far past the 50 km limit.
+    const circle = geometryToCircle(boxAround(5));
+    expect(circle).not.toBeNull();
+    expect(circle!.radius_m).toBe(DISCOVERY_MAX_RADIUS_M);
+  });
+
+  it("raises a degenerate polygon to the discovery minimum", () => {
+    // A zero-area polygon yields radius 0, which the validator also rejects.
+    const circle = geometryToCircle(boxAround(0));
+    expect(circle).not.toBeNull();
+    expect(circle!.radius_m).toBe(DISCOVERY_MIN_RADIUS_M);
+  });
+
+  it("leaves a radius inside the range untouched (bar rounding)", () => {
+    const circle = geometryToCircle(boxAround(0.1));
+    expect(circle!.radius_m).toBeGreaterThan(DISCOVERY_MIN_RADIUS_M);
+    expect(circle!.radius_m).toBeLessThan(DISCOVERY_MAX_RADIUS_M);
+  });
+
+  it("clamps both ends", () => {
+    expect(clampDiscoveryRadius(0)).toBe(DISCOVERY_MIN_RADIUS_M);
+    expect(clampDiscoveryRadius(9_999_999)).toBe(DISCOVERY_MAX_RADIUS_M);
+    expect(clampDiscoveryRadius(1_234.6)).toBe(1_235);
   });
 });

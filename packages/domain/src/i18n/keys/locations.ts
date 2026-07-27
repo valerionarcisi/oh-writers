@@ -37,6 +37,10 @@ export const locationsKeys = {
     "locations.areaFilter.candidateSingular": "candidate",
     "locations.areaFilter.candidatePlural": "candidates",
     "locations.areaFilter.none": "No candidate in: {label}",
+    "locations.discovery.failed":
+      "Could not search this area. Try again, or draw a smaller one.",
+    "locations.discovery.skipped":
+      "No place of this type found in the selected area.",
     "locations.areaFilter.askCesare": "Ask Cesare",
     "locations.areaFilter.removeAria": "Remove area filter",
     // Candidate / form fields
@@ -149,6 +153,10 @@ export const locationsKeys = {
     "locations.areaFilter.candidateSingular": "candidato",
     "locations.areaFilter.candidatePlural": "candidati",
     "locations.areaFilter.none": "Nessun candidato in: {label}",
+    "locations.discovery.failed":
+      "Non è stato possibile cercare in quest'area. Riprova, oppure disegnane una più piccola.",
+    "locations.discovery.skipped":
+      "Nessun luogo di questo tipo trovato nell'area selezionata.",
     "locations.areaFilter.askCesare": "Chiedi a Cesare",
     "locations.areaFilter.removeAria": "Rimuovi filtro area",
     // Candidate / form fields

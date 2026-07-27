@@ -104,8 +104,29 @@ export const geometryToCircle = (
   const halfW = ((maxLng - minLng) / 2) * mPerDegLng;
   const radius_m = Math.sqrt(halfH * halfH + halfW * halfW);
 
-  return { lat: centerLat, lng: centerLng, radius_m };
+  // Clamped to the discovery API's accepted range. A province or region covers
+  // far more than 50 km, and an unclamped radius was rejected by the server
+  // validator — inside an unguarded promise, so the user saw no pins and no
+  // error at all (issue #68). A degenerate polygon lands at 0, below the
+  // minimum, and is clamped the same way.
+  return {
+    lat: centerLat,
+    lng: centerLng,
+    radius_m: clampDiscoveryRadius(radius_m),
+  };
 };
+
+/** The bounds `discoverPlacesInArea` validates against
+ *  (locations/server/discovery.server.ts). Kept here so every caller deriving
+ *  a radius is bounded at the source rather than each remembering to clamp. */
+export const DISCOVERY_MIN_RADIUS_M = 100;
+export const DISCOVERY_MAX_RADIUS_M = 50_000;
+
+export const clampDiscoveryRadius = (radius_m: number): number =>
+  Math.min(
+    DISCOVERY_MAX_RADIUS_M,
+    Math.max(DISCOVERY_MIN_RADIUS_M, Math.round(radius_m)),
+  );
 
 /**
  * Collect all candidates from a flat requirements list.

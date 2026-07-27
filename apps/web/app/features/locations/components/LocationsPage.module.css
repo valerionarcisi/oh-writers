@@ -38,6 +38,28 @@
   min-inline-size: 0;
 }
 
+/* The discovery notice can become the column's first child, which would
+   otherwise inherit the map's flex-grow and push the map off-screen. */
+.mapColumn > .discoveryNotice {
+  flex: 0 0 auto;
+}
+
+.discoveryNotice {
+  margin-block-end: var(--ds-space-2);
+  padding: var(--ds-space-2) var(--ds-space-3);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-sm);
+  background: var(--ds-surface-alt);
+  color: var(--ds-text-2);
+  font-size: var(--text-sm);
+
+  &[role="alert"] {
+    border-color: var(--ds-danger);
+    color: var(--ds-danger);
+    background: var(--ds-danger-soft);
+  }
+}
+
 /* Server / pre-mount placeholder for the client-only Leaflet map. Fills the
    column so the layout doesn't jump when the real map mounts. */
 .mapPlaceholder {
