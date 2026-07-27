@@ -117,6 +117,9 @@ export function BlockingCard({
       await moveActor.mutateAsync({
         sceneBlockingId: blocking.sceneBlockingId,
         positions: final,
+        // Accepting a Cesare proposal persists through the same path as a
+        // manual drag, so it needs the same plan attribution (issue #69).
+        planSceneCamerasId: blocking.planSceneCamerasId,
       });
     } else {
       const existingPin = localCameras.find((c) => c.shotId === item.shotId);
@@ -187,6 +190,9 @@ export function BlockingCard({
     void moveActor.mutateAsync({
       sceneBlockingId: blocking.sceneBlockingId,
       positions: updated,
+      // Lets the server send a detached plan's drag to its own override row
+      // instead of the shared one (issue #69).
+      planSceneCamerasId: blocking.planSceneCamerasId,
     });
   };
 

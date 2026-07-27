@@ -278,8 +278,11 @@ export const getOrCreateBlocking = createServerFn({ method: "POST" })
                   }
                 }
 
+                // Same decision the write makes — see actorPositionsTarget.
+                // A detached plan with no override yet has never been dragged,
+                // so it still shows the shared positions.
                 const effectiveActors: ActorPosition[] =
-                  planCameras!.detachedActors &&
+                  actorPositionsTarget(planCameras!) === "override" &&
                   planCameras!.overrideActorPositions
                     ? (planCameras!
                         .overrideActorPositions as unknown as ActorPosition[])
@@ -320,11 +323,27 @@ export const getOrCreateBlocking = createServerFn({ method: "POST" })
     },
   );
 
+/** Where a plan's actor positions live.
+ *
+ *  A plan that detached its actors keeps them on its own row; every other plan
+ *  shares the scene's. The READ and the WRITE must agree on this, and they did
+ *  not: the write always targeted the shared row, so a detached plan's drag
+ *  clobbered every other plan and then snapped back, because the read was
+ *  looking somewhere else entirely (issue #69). One function, both callers. */
+export const actorPositionsTarget = (
+  plan: { detachedActors: boolean } | null | undefined,
+): "override" | "shared" => (plan?.detachedActors ? "override" : "shared");
+
 export const saveActorPositions = createServerFn({ method: "POST" })
   .validator(
     z.object({
       sceneBlockingId: z.string().uuid(),
       positions: ActorPositionsArraySchema,
+      /** The plan the drag happened on. A plan with `detachedActors` keeps its
+       *  own positions, so the write has to know which plan to attribute it to.
+       *  Optional: a caller that omits it always writes the shared row, which
+       *  is the pre-existing behaviour for non-detached plans. */
+      planSceneCamerasId: z.string().uuid().optional(),
     }),
   )
   .handler(async ({ data }): Promise<ResultShape<void, ProjectAccessError>> => {
@@ -335,17 +354,36 @@ export const saveActorPositions = createServerFn({ method: "POST" })
     ).andThen((projectId) =>
       withProjectAccess(projectId, "edit", ({ db }) =>
         ResultAsync.fromPromise(
-          db
-            .update(sceneBlockings)
-            .set({
-              actorPositions: data.positions as unknown as Record<
-                string,
-                unknown
-              >[],
-              isSuggested: false,
-            })
-            .where(eq(sceneBlockings.id, data.sceneBlockingId))
-            .then(() => undefined as void),
+          (async () => {
+            const positions = data.positions as unknown as Record<
+              string,
+              unknown
+            >[];
+
+            // A detached plan READS overrideActorPositions, so it must WRITE
+            // there too. Writing the shared row instead both clobbered every
+            // other plan's blocking and snapped the drag back on the next
+            // refetch, because the read never looked at what was written
+            // (issue #69).
+            if (data.planSceneCamerasId) {
+              const plan = await db.query.planSceneCameras.findFirst({
+                where: eq(planSceneCameras.id, data.planSceneCamerasId),
+              });
+              if (actorPositionsTarget(plan) === "override") {
+                await db
+                  .update(planSceneCameras)
+                  .set({ overrideActorPositions: positions })
+                  .where(eq(planSceneCameras.id, data.planSceneCamerasId));
+                return undefined as void;
+              }
+            }
+
+            await db
+              .update(sceneBlockings)
+              .set({ actorPositions: positions, isSuggested: false })
+              .where(eq(sceneBlockings.id, data.sceneBlockingId));
+            return undefined as void;
+          })(),
           (e) => new DbError("saveActorPositions", e),
         ),
       ),

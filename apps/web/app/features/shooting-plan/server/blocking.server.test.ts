@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { BLOCKING_TEMPLATES } from "@oh-writers/domain";
 import type { Db } from "~/server/db";
-import { __test__ } from "./blocking.server";
+import { __test__, actorPositionsTarget } from "./blocking.server";
 
 const { inferTemplateKey, loadOrCreateLocation } = __test__;
 
@@ -13,7 +13,9 @@ describe("inferTemplateKey", () => {
   });
 
   it("returns 'restaurant' for headings containing 'ristorante'", () => {
-    expect(inferTemplateKey("INT. RISTORANTE LUIGI - NIGHT")).toBe("restaurant");
+    expect(inferTemplateKey("INT. RISTORANTE LUIGI - NIGHT")).toBe(
+      "restaurant",
+    );
   });
 
   it("returns 'kitchen' for headings containing 'cucina'", () => {
@@ -29,7 +31,9 @@ describe("inferTemplateKey", () => {
   });
 
   it("returns 'car_interior' for headings containing 'auto'", () => {
-    expect(inferTemplateKey("INT. AUTO IN MOVIMENTO - DAY")).toBe("car_interior");
+    expect(inferTemplateKey("INT. AUTO IN MOVIMENTO - DAY")).toBe(
+      "car_interior",
+    );
   });
 
   it("returns 'car_interior' for headings containing 'macchina'", () => {
@@ -37,7 +41,9 @@ describe("inferTemplateKey", () => {
   });
 
   it("returns 'exterior_street' when heading starts with 'ext'", () => {
-    expect(inferTemplateKey("EXT. PIAZZA DEL COMUNE - DAY")).toBe("exterior_street");
+    expect(inferTemplateKey("EXT. PIAZZA DEL COMUNE - DAY")).toBe(
+      "exterior_street",
+    );
   });
 
   it("returns 'exterior_street' for headings containing 'strada'", () => {
@@ -60,12 +66,14 @@ describe("inferTemplateKey", () => {
 
 const PROJECT_ID = "11111111-1111-1111-1111-111111111111";
 
-const buildLocationDb = (existingLocation: {
-  id: string;
-  widthCm: number;
-  heightCm: number;
-  primitives: unknown[];
-} | null) => {
+const buildLocationDb = (
+  existingLocation: {
+    id: string;
+    widthCm: number;
+    heightCm: number;
+    primitives: unknown[];
+  } | null,
+) => {
   const insertedRows: unknown[] = [];
 
   const findFirst = vi.fn(() => Promise.resolve(existingLocation ?? undefined));
@@ -165,5 +173,27 @@ describe("loadOrCreateLocation", () => {
     const inserted = values.mock.calls[0]?.[0] as { name: string };
     // Empty heading → falls back to template.label (living_room default)
     expect(inserted.name).toBe(BLOCKING_TEMPLATES.living_room.label);
+  });
+});
+
+// #69 — the read looked at overrideActorPositions for a detached plan while
+// the write always targeted the shared sceneBlockings row. A detached-actor
+// drag therefore clobbered every other plan's blocking AND snapped back on the
+// next refetch, because nothing ever read what it had written. Both sides now
+// call this, so they cannot drift apart again.
+describe("actorPositionsTarget", () => {
+  it("sends a detached plan to its own override row", () => {
+    expect(actorPositionsTarget({ detachedActors: true })).toBe("override");
+  });
+
+  it("sends an attached plan to the shared scene row", () => {
+    expect(actorPositionsTarget({ detachedActors: false })).toBe("shared");
+  });
+
+  it("treats a missing plan as shared rather than throwing", () => {
+    // saveActorPositions may be called without a plan id (Cesare acceptance,
+    // older clients); that path must keep the previous behaviour.
+    expect(actorPositionsTarget(null)).toBe("shared");
+    expect(actorPositionsTarget(undefined)).toBe("shared");
   });
 });
