@@ -60,10 +60,15 @@ export function EditorialAdviceStack({
     (item) => item.severity === "low" || item.severity === "optional",
   );
 
+  // #99 — the approval card stands for "nothing to say about this text". It used
+  // to be synthesised whenever no note was high or medium, so a reading that
+  // produced six genuine low/optional notes was still crowned "OK editoriale" —
+  // the writer read the verdict and stopped there. It now appears only when there
+  // is genuinely nothing to show.
   const approvedVisible = visible.find((item) => item.type === "approved");
   const approvalCard =
     approvedVisible ??
-    (primary.length === 0
+    (visible.length === 0
       ? createEditorialApprovalAdvice(fallbackArea, {
           id: `auto-approved-${fallbackArea}`,
         })
