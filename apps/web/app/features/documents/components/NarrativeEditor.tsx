@@ -48,6 +48,7 @@ import {
   toggleHeading,
 } from "../lib/narrative-plugins";
 import { useDocumentVersions } from "~/features/documents";
+import { versionDisplayLabel } from "~/features/versions";
 import {
   useSaveStatePublisher,
   useCesareOpen,
@@ -336,7 +337,12 @@ export function NarrativeEditor({
   const currentDocVersion = docVersions.find(
     (v) => v.id === document.currentVersionId,
   );
-  const currentVersionLabel = currentDocVersion?.label ?? null;
+  // #55 — through the shared resolver, so the chip never announces Cesare's
+  // internal "draft Cesare · sinossi" for a document whose current version the
+  // writer has already accepted.
+  const currentVersionLabel = currentDocVersion
+    ? versionDisplayLabel(currentDocVersion, t)
+    : null;
 
   const versionFallback = (idx: number) =>
     t("documents.editor.versionFallback").replace("{number}", String(idx + 1));

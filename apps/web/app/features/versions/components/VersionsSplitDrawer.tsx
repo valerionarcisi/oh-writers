@@ -31,6 +31,7 @@ import { Skeleton, Popover, useConfirmDialog } from "@oh-writers/ui";
 import { useTranslation } from "~/features/i18n";
 import { DRAFT_COLOR_HEX, DRAFT_COLOR_LABEL } from "~/features/projects";
 import type { VersionView } from "../version-view";
+import { versionDisplayLabel } from "../version-label";
 import styles from "./VersionsSplitDrawer.module.css";
 
 type Translate = (key: TranslationKey) => string;
@@ -149,13 +150,12 @@ export interface VersionsSplitDrawerProps {
 const formatCreatedAt = (iso: string, locale: Locale): string =>
   formatDateTime(new Date(iso), locale);
 
-// #58 — the version NUMBER is a rendered decoration, never part of the label.
-// Concatenating it here produced "Versione 1 (v1)" on an auto-named version and
-// read, after a rename, as if the suffix had been stored into the user's text.
+// #58 / #55 — the user-facing name comes from the one shared resolver: the
+// version NUMBER is rendered as a separate decoration rather than concatenated
+// into the label, and Cesare's internal "draft Cesare · …" never reaches the
+// writer.
 const versionTitle = (v: VersionView, t: Translate): string =>
-  v.label && v.label.length > 0
-    ? v.label
-    : `${t("versions.split.versionPrefix")} ${v.number}`;
+  versionDisplayLabel(v, t);
 
 export function VersionsSplitDrawer({
   versions,
