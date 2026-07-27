@@ -2,7 +2,7 @@
 /* Attivare con <html data-theme="dark"> */
 :root[data-theme="dark"] {
   /* Linen scale inverted */
-  --ds-linen-50:  #1c1a17;
+  --ds-linen-50: #1c1a17;
   --ds-linen-100: #232220;
   --ds-linen-200: #2d2b27;
   --ds-linen-300: #3a3833;
@@ -17,25 +17,26 @@
   --ds-white: #232220;
 
   /* Clay — brighter on dark */
-  --ds-clay-50:  #4a2614;
+  --ds-clay-50: #4a2614;
   --ds-clay-500: #d97551;
   --ds-clay-600: #b85e3f;
 
   /* Leaf — brighter on dark */
-  --ds-leaf-50:  #2e3322;
+  --ds-leaf-50: #2e3322;
   --ds-leaf-500: #9bb37a;
+  --ds-leaf-600: #b0c493;
 
   /* Categories adjusted for dark (higher luminance, lower chroma to keep harmony) */
-  --ds-cat-cast:        #b07fc4;
-  --ds-cat-crew:        #79b58e;
-  --ds-cat-locations:   #d18a5b;
-  --ds-cat-vehicles:    #6fa9b1;
+  --ds-cat-cast: #b07fc4;
+  --ds-cat-crew: #79b58e;
+  --ds-cat-locations: #d18a5b;
+  --ds-cat-vehicles: #6fa9b1;
   --ds-cat-scenografia: #d1a866;
-  --ds-cat-costumi:     #c97aa3;
-  --ds-cat-fotografia:  #7a93ce;
-  --ds-cat-suono:       #b5c270;
-  --ds-cat-vfx:         #a87bc4;
-  --ds-cat-comparse:    #c89968;
+  --ds-cat-costumi: #c97aa3;
+  --ds-cat-fotografia: #7a93ce;
+  --ds-cat-suono: #b5c270;
+  --ds-cat-vfx: #a87bc4;
+  --ds-cat-comparse: #c89968;
 
   --ds-plan-1: #7a93ce;
   --ds-plan-2: #9bb37a;

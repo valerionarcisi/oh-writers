@@ -598,7 +598,7 @@
   cursor: pointer;
 
   &:hover {
-    background: var(--ds-leaf-600, var(--ds-success));
+    background: var(--ds-success-hover);
   }
 }
 

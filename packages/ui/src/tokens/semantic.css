@@ -38,6 +38,7 @@
   --ds-saving: var(--ds-clay-500);
   --ds-warning: var(--ds-clay-500);
   --ds-success: var(--ds-leaf-500);
+  --ds-success-hover: var(--ds-leaf-600);
   --ds-info: #34487a;
 
   /* Danger */
