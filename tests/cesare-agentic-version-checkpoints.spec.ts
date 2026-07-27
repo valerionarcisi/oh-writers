@@ -150,6 +150,16 @@ test.describe("[N66] Cesare version checkpoints", () => {
     await expect(card).toBeVisible({ timeout: 30_000 });
     await expect(page.getByTestId("cesare-ask-overwrite")).toBeVisible();
     await expect(page.getByTestId("cesare-ask-mint")).toBeVisible();
+
+    // The labels come from the i18n catalogue, not hardcoded literals — a
+    // regression here means the card is stuck in one language whatever the
+    // market. The default test locale is IT.
+    await expect(page.getByTestId("cesare-ask-overwrite")).toHaveText(
+      "Sovrascrivi",
+    );
+    await expect(page.getByTestId("cesare-ask-mint")).toHaveText(
+      "Nuova versione",
+    );
   });
 
   test("[N66] explicit 'nuova versione' skips the ask", async ({

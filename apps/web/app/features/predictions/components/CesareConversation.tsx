@@ -825,7 +825,7 @@ export function MessageView({
                 })
               }
             >
-              Sovrascrivi
+              {t("cesare.ask.overwrite")}
             </Button>
             <Button
               variant="primary"
@@ -838,7 +838,7 @@ export function MessageView({
                 })
               }
             >
-              Nuova versione
+              {t("cesare.ask.mint")}
             </Button>
           </div>
         )}
