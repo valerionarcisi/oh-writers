@@ -1,9 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  buildFlatSections,
-  grandTotalOf,
-  SectionIds,
-} from "./flat-sections";
+import { buildFlatSections, grandTotalOf, SectionIds } from "./flat-sections";
 import type { BudgetLine } from "@oh-writers/domain";
 import type { BudgetCast, BudgetCrew } from "@oh-writers/db/schema";
 
@@ -120,7 +116,9 @@ describe("buildFlatSections", () => {
       cast: [],
       crew: [],
     });
-    expect(sections.find((s) => s.id === SectionIds.POST)?.rows).toHaveLength(1);
+    expect(sections.find((s) => s.id === SectionIds.POST)?.rows).toHaveLength(
+      1,
+    );
     expect(
       sections.find((s) => s.id === SectionIds.CONTINGENCY)?.rows,
     ).toHaveLength(1);
@@ -128,9 +126,7 @@ describe("buildFlatSections", () => {
 
   it("grandTotalOf sums all sections", () => {
     const sections = buildFlatSections({
-      lines: [
-        line({ rate: 1000, quantity: 1, linkedCategory: "locations" }),
-      ],
+      lines: [line({ rate: 1000, quantity: 1, linkedCategory: "locations" })],
       cast: [],
       crew: [],
     });
@@ -139,9 +135,7 @@ describe("buildFlatSections", () => {
 
   it("uses actual when set, otherwise rate * quantity", () => {
     const sections = buildFlatSections({
-      lines: [
-        line({ id: "a", rate: 100, quantity: 2, actual: 250 }),
-      ],
+      lines: [line({ id: "a", rate: 100, quantity: 2, actual: 250 })],
       cast: [],
       crew: [],
     });

@@ -39,6 +39,24 @@ export const SECTION_LABEL_KEY: Record<SectionId, TranslationKey> = {
   other: "budget.section.label.other",
 };
 
+// Exports run server-side with no translator in scope, so section names for
+// CSV/PDF live here rather than going through the i18n catalogue.
+export const SECTION_EXPORT_LABEL: Record<SectionId, string> = {
+  cast: "Cast",
+  crew: "Troupe",
+  locations: "Location",
+  scenografia: "Scenografia",
+  costumi: "Costumi",
+  fotografia: "Fotografia",
+  suono: "Suono",
+  vfx: "VFX",
+  comparse: "Comparse",
+  vehicles: "Veicoli",
+  post: "Post-produzione",
+  contingency: "Imprevisti",
+  other: "Altro",
+};
+
 export const SECTION_TOKEN: Record<SectionId, string> = {
   cast: "--ds-cat-cast",
   crew: "--ds-cat-crew",
@@ -164,7 +182,8 @@ const toCrewRow = (c: BudgetCrew): CrewFlatRow => {
 const toLineRow = (l: BudgetLine): LineFlatRow => {
   const qty = num(l.quantity) || 1;
   const rate = num(l.rate);
-  const actual = l.actual === null || l.actual === undefined ? null : num(l.actual);
+  const actual =
+    l.actual === null || l.actual === undefined ? null : num(l.actual);
   const total = actual !== null ? actual : rate * qty;
   return {
     kind: "line",
@@ -182,7 +201,9 @@ const lineSection = (l: BudgetLine): SectionId => {
   if (l.topSheet === "post_production") return SectionIds.POST;
   if (l.topSheet === "contingency") return SectionIds.CONTINGENCY;
   if (l.topSheet === "production") {
-    const mapped = l.linkedCategory ? LINKED_TO_SECTION[l.linkedCategory] : undefined;
+    const mapped = l.linkedCategory
+      ? LINKED_TO_SECTION[l.linkedCategory]
+      : undefined;
     return mapped ?? SectionIds.OTHER;
   }
   return SectionIds.OTHER;

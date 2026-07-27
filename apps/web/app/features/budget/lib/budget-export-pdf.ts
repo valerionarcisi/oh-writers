@@ -1,5 +1,10 @@
 import PDFDocument from "pdfkit";
 import type { BudgetLine } from "@oh-writers/domain";
+import {
+  grandTotalOf,
+  SECTION_EXPORT_LABEL,
+  type FlatSection,
+} from "./flat-sections";
 
 const MARGIN = 54;
 
@@ -91,15 +96,18 @@ const writeSectionHeader = (
   doc.moveDown(0.4);
 };
 
-const writeLineItem = (doc: PDFKit.PDFDocument, line: BudgetLine) => {
-  const estimate = lineEstimate(line);
+const writeLineItem = (
+  doc: PDFKit.PDFDocument,
+  item: { readonly name: string; readonly total: number },
+) => {
+  const estimate = item.total;
   const colName = doc.page.width - MARGIN * 2 - 100;
 
   doc
     .font("Helvetica")
     .fontSize(9)
     .fillColor("#222")
-    .text(line.name, MARGIN, doc.y, { width: colName, continued: false });
+    .text(item.name, MARGIN, doc.y, { width: colName, continued: false });
 
   const y = doc.y - doc.currentLineHeight(true);
   doc
@@ -171,6 +179,38 @@ const writeGrandTotal = (doc: PDFKit.PDFDocument, grandTotal: number) => {
     });
 };
 
+/** The PDF the user actually gets: every section the screen shows, Cast and
+ *  Crew included, with the totals `buildFlatSections` computed — so the
+ *  document and the app can never disagree on what the film costs. */
+export const buildBudgetPdfFromSections = (
+  projectTitle: string,
+  sections: ReadonlyArray<FlatSection>,
+  date: string,
+): Promise<Buffer> =>
+  new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ size: "A4", margin: MARGIN });
+    const chunks: Buffer[] = [];
+    doc.on("data", (c: Buffer) => chunks.push(c));
+    doc.on("end", () => resolve(Buffer.concat(chunks)));
+    doc.on("error", reject);
+
+    writeHeader(doc, projectTitle, grandTotalOf(sections), date);
+
+    for (const section of sections) {
+      if (section.rows.length === 0) continue;
+      const label = SECTION_EXPORT_LABEL[section.id];
+      writeSectionHeader(doc, label, section.total);
+      for (const row of section.rows) {
+        writeLineItem(doc, row);
+      }
+      writeSubtotalRow(doc, label, section.total);
+    }
+
+    writeGrandTotal(doc, grandTotalOf(sections));
+
+    doc.end();
+  });
+
 export const buildBudgetPdf = (
   projectTitle: string,
   lines: BudgetLine[],
@@ -207,7 +247,7 @@ export const buildBudgetPdf = (
       writeSectionHeader(doc, label, subtotal);
 
       for (const line of sectionLines) {
-        writeLineItem(doc, line);
+        writeLineItem(doc, { name: line.name, total: lineEstimate(line) });
       }
 
       writeSubtotalRow(doc, label, subtotal);

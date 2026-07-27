@@ -26,7 +26,7 @@ import {
   type FlatRow,
   type FlatSection,
   type SectionId,
-} from "./flat-sections";
+} from "../lib/flat-sections";
 import styles from "./CategoryFlatTable.module.css";
 
 const eur = new Intl.NumberFormat("it-IT", {
