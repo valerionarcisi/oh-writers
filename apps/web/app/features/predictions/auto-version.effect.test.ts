@@ -30,6 +30,7 @@ type Op =
       versionId: string;
       content: string;
       reseededCrdt: boolean;
+      crdtIsNull: boolean;
     }
   | { kind: "updateWorking"; versionId: string; content: string }
   | {
@@ -37,6 +38,7 @@ type Op =
       versionId: string | null;
       content: string;
       reseededCrdt: boolean;
+      crdtIsNull: boolean;
     }
   | { kind: "restoreWorking"; versionId: string; content: string }
   | { kind: "deleteVersion"; versionId: string };
@@ -119,9 +121,12 @@ const makeMockDb = (opts: MockOptions) => {
         if (table === documents) {
           const versionId = values["currentVersionId"] as string | null;
           const content = values["content"] as string;
-          // `yjsState` is present in the .set() only when the apply/revert
-          // reseeds the CRDT (PM-room doc type + non-empty/non-HTML content).
+          // `yjsState` is written for every PM-room doc type. Its VALUE is the
+          // new CRDT, or null when the content has no canonical encoding — that
+          // null must still be written, or the room keeps serving the old
+          // document while `content` holds the new one (#54).
           const reseededCrdt = "yjsState" in values;
+          const crdtIsNull = values["yjsState"] === null;
           // The apply points at the target version (minted OR the working row);
           // the rollback points back at the previous one (or null).
           const isApply = versionId === insertedId || versionId === workingId;
@@ -131,6 +136,7 @@ const makeMockDb = (opts: MockOptions) => {
               versionId: versionId!,
               content,
               reseededCrdt,
+              crdtIsNull,
             });
             if (opts.failApply) {
               return Promise.reject(new Error("forced apply failure"));
@@ -141,6 +147,7 @@ const makeMockDb = (opts: MockOptions) => {
               versionId,
               content,
               reseededCrdt,
+              crdtIsNull,
             });
           }
         }
@@ -543,6 +550,37 @@ describe("[OHW-N72] Cesare narrative apply reseeds the CRDT", () => {
     expect(Exit.isSuccess(exit)).toBe(true);
     const apply = mock.ops.find((o) => o.kind === "applyUpdate");
     expect(apply).toMatchObject({ reseededCrdt: false });
+  });
+
+  // #54 — content the canonical parser does not recognise has no CRDT encoding.
+  // Skipping the column then left the room serving the WHOLE previous document
+  // while `content` held the new one, and since the editor renders the CRDT the
+  // writer kept seeing the old text — its tail past the new content being exactly
+  // the "AAAAAA/bbbbb" leftover that was reported. The null must be WRITTEN: a
+  // NULL state loads as an empty fragment, which the client reseeds from
+  // `content`, so it cannot wipe the room.
+  it("PM-room doc with non-canonical HTML → yjs_state is written as NULL, not skipped", async () => {
+    const NON_CANONICAL =
+      "<div class='x'>testo che il parser non riconosce</div>";
+    const mock = makeMockDb({
+      currentVersionId: "version-prev",
+      currentContent: PREV,
+    });
+    const exit = await Effect.runPromiseExit(
+      Effect.provide(
+        applyVersionLiveEffect(
+          "doc-1",
+          DocumentTypes.SOGGETTO,
+          "user-1",
+          NON_CANONICAL,
+          "draft Cesare · soggetto",
+        ),
+        mock.layer,
+      ),
+    );
+    expect(Exit.isSuccess(exit)).toBe(true);
+    const apply = mock.ops.find((o) => o.kind === "applyUpdate");
+    expect(apply).toMatchObject({ reseededCrdt: true, crdtIsNull: true });
   });
 
   it("rollback on failure reseeds the CRDT back to the previous content", async () => {
