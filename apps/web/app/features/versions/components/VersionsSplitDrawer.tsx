@@ -149,9 +149,12 @@ export interface VersionsSplitDrawerProps {
 const formatCreatedAt = (iso: string, locale: Locale): string =>
   formatDateTime(new Date(iso), locale);
 
+// #58 — the version NUMBER is a rendered decoration, never part of the label.
+// Concatenating it here produced "Versione 1 (v1)" on an auto-named version and
+// read, after a rename, as if the suffix had been stored into the user's text.
 const versionTitle = (v: VersionView, t: Translate): string =>
   v.label && v.label.length > 0
-    ? `${v.label} (v${v.number})`
+    ? v.label
     : `${t("versions.split.versionPrefix")} ${v.number}`;
 
 export function VersionsSplitDrawer({
@@ -218,13 +221,57 @@ export function VersionsSplitDrawer({
 
   // One list row (the version's dot, label/rename, current badge, timestamp) +
   // its actions. `isWorking` indents the row when it is nested under a checkpoint.
+  //
+  // #58 — the row is a DIV that holds the layout, with the activation surface as
+  // a nested button. The rename <input> used to be a CHILD of that button:
+  // invalid HTML, and the button's activation swallowed the click so focusing the
+  // field bounced the user into the version detail. The input is now a sibling
+  // that REPLACES the button while renaming, so it is independently focusable.
   const renderVersionRow = (v: VersionView, isWorking: boolean) => {
     const isCurrent = v.id === currentVersionId;
     const isRenaming = renamingId === v.id;
+    // #94 — the current version's detail shows the text already open in the
+    // editor and offers no action (Attiva is hidden for it), so opening it is a
+    // dead end. The current row is not a navigation target.
+    const canOpenDetail = !isCurrent;
+    const rowContent = (
+      <>
+        <span
+          className={styles.dot}
+          style={
+            v.draftColor
+              ? { background: DRAFT_COLOR_HEX[v.draftColor] }
+              : undefined
+          }
+          data-testid={`version-dot-${v.id}`}
+          aria-hidden
+        />
+        <span className={styles.versionLabel}>{versionTitle(v, t)}</span>
+        <span
+          className={styles.versionNumber}
+          data-testid={`version-number-${v.id}`}
+        >
+          v{v.number}
+        </span>
+        {isCurrent && (
+          <span
+            className={styles.badgeCurrent}
+            data-testid={`versions-split-current-${v.id}`}
+          >
+            <span className={styles.badgeDot} aria-hidden>
+              ●
+            </span>
+            {t("versions.split.badgeCurrent")}
+          </span>
+        )}
+        <span className={styles.versionMeta}>
+          {formatCreatedAt(v.createdAt, locale)}
+        </span>
+      </>
+    );
     return (
       <>
-        <button
-          type="button"
+        <div
           className={[
             styles.versionRow,
             isCurrent ? styles.versionRowCurrent : "",
@@ -232,65 +279,60 @@ export function VersionsSplitDrawer({
           ]
             .filter(Boolean)
             .join(" ")}
-          onClick={() => setSelectedId(v.id)}
           data-current={isCurrent ? "true" : undefined}
           data-testid={`versions-split-row-${v.id}`}
         >
-          <span
-            className={styles.dot}
-            style={
-              v.draftColor
-                ? { background: DRAFT_COLOR_HEX[v.draftColor] }
-                : undefined
-            }
-            data-testid={`version-dot-${v.id}`}
-            aria-hidden
-          />
           {isRenaming ? (
-            <input
-              className={styles.renameInput}
-              type="text"
-              value={renameLabel}
-              autoFocus
-              maxLength={80}
-              placeholder={t("versions.split.namePlaceholder")}
-              onClick={(e) => e.stopPropagation()}
-              onChange={(e) => setRenameLabel(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key !== "Enter" && e.key !== "Escape") return;
-                // Both keys are consumed by the field. Without this the event
-                // bubbles to the lane's dismiss handler, so cancelling a
-                // rename with Escape also closed the whole Versions panel and
-                // dropped the user back on the bare editor.
-                e.stopPropagation();
-                e.preventDefault();
-                if (e.key === "Enter") {
-                  submitRename(v.id);
-                  return;
+            <>
+              <span
+                className={styles.dot}
+                style={
+                  v.draftColor
+                    ? { background: DRAFT_COLOR_HEX[v.draftColor] }
+                    : undefined
                 }
-                setRenamingId(null);
-                setRenameLabel("");
-              }}
-              data-testid={`version-rename-input-${v.id}`}
-            />
-          ) : (
-            <span className={styles.versionLabel}>{versionTitle(v, t)}</span>
-          )}
-          {isCurrent && (
-            <span
-              className={styles.badgeCurrent}
-              data-testid={`versions-split-current-${v.id}`}
+                aria-hidden
+              />
+              <input
+                className={styles.renameInput}
+                type="text"
+                value={renameLabel}
+                autoFocus
+                maxLength={80}
+                placeholder={t("versions.split.namePlaceholder")}
+                onChange={(e) => setRenameLabel(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key !== "Enter" && e.key !== "Escape") return;
+                  // Both keys are consumed by the field: without this, Escape
+                  // bubbled to the lane's dismiss handler and cancelling a
+                  // rename also closed the whole Versions panel.
+                  e.stopPropagation();
+                  e.preventDefault();
+                  if (e.key === "Enter") {
+                    submitRename(v.id);
+                    return;
+                  }
+                  setRenamingId(null);
+                  setRenameLabel("");
+                }}
+                data-testid={`version-rename-input-${v.id}`}
+              />
+            </>
+          ) : canOpenDetail ? (
+            <button
+              type="button"
+              className={styles.versionRowButton}
+              onClick={() => setSelectedId(v.id)}
+              data-testid={`versions-split-open-${v.id}`}
             >
-              <span className={styles.badgeDot} aria-hidden>
-                ●
-              </span>
-              {t("versions.split.badgeCurrent")}
-            </span>
+              {rowContent}
+            </button>
+          ) : (
+            <div className={styles.versionRowButton} aria-current="true">
+              {rowContent}
+            </div>
           )}
-          <span className={styles.versionMeta}>
-            {formatCreatedAt(v.createdAt, locale)}
-          </span>
-        </button>
+        </div>
         {renderActions(v)}
       </>
     );
@@ -455,6 +497,7 @@ export function VersionsSplitDrawer({
             <span className={styles.detailTitle}>
               {versionTitle(selected, t)}
             </span>
+            <span className={styles.versionNumber}>v{selected.number}</span>
             {selected.id === currentVersionId && (
               <span className={styles.badgeCurrent}>
                 {t("versions.split.isCurrent")}

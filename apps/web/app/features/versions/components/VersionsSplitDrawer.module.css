@@ -74,17 +74,16 @@
   border-block-end: 1px solid var(--ds-line);
 }
 
+/* The row is a plain container (#58): it holds the layout and the visual state,
+ * while the activation surface below is the button. The rename input can then be
+ * a sibling of that button instead of an interactive child of it. */
 .versionRow {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   inline-size: 100%;
   padding: var(--space-2);
-  background: transparent;
-  border: none;
   border-radius: var(--radius-md);
-  text-align: start;
-  cursor: pointer;
   color: inherit;
 }
 
@@ -92,7 +91,29 @@
   background: var(--ds-surface-2);
 }
 
-.versionRow:focus-visible {
+/* The clickable surface inside the row. Stretches across the row so the whole
+ * strip stays a hit target; rendered as a non-interactive div for the current
+ * version, which has no detail worth opening. */
+.versionRowButton {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+  text-align: start;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.versionRowButton:where(div) {
+  cursor: default;
+}
+
+.versionRowButton:focus-visible {
   outline: var(--ring-focus);
 }
 
@@ -122,6 +143,15 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* The version number, rendered beside the label instead of concatenated into it
+ * (#58) — so a renamed version shows the user's text, not "il mio nome (v4)". */
+.versionNumber {
+  flex: none;
+  font-size: var(--text-xs);
+  color: var(--ds-text-mute);
+  font-variant-numeric: tabular-nums;
 }
 
 .versionMeta {
