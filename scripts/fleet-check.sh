@@ -27,10 +27,12 @@ BOLD='\033[1m'; GREEN='\033[0;32m'; RED='\033[0;31m'; YELLOW='\033[0;33m'; CYAN=
 # --- args ---------------------------------------------------------------
 RUN_BUILD=0
 DIFF_BASE=""
+STAGED=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --build) RUN_BUILD=1; shift ;;
-    --diff)  DIFF_BASE="${2:?--diff needs a base ref}"; shift 2 ;;
+    --build)  RUN_BUILD=1; shift ;;
+    --staged) STAGED=1; shift ;;
+    --diff)   DIFF_BASE="${2:?--diff needs a base ref}"; shift 2 ;;
     *) echo "unknown arg: $1" >&2; exit 2 ;;
   esac
 done
@@ -41,10 +43,23 @@ cd "$ROOT"
 # NOT a violation of the English-identifiers rule. Extend deliberately.
 DOMAIN_TERMS='soggetto|sinossi|scaletta|trattamento|sceneggiatura|logline|breakdown|cesare|vernissage'
 
-# Files in scope: whole src, or only what changed vs the diff base.
+# Files in scope: what is staged, what changed vs a base ref, or the whole src.
+#
+# --staged is what a pre-commit hook needs: it reads the index, so it sees
+# exactly what is about to be committed. --diff <base> uses two dots, not
+# three: three would compare against the merge-base and silently ignore the
+# working tree, which is how this check could report "clean" having looked at
+# no files at all.
 scoped_files() {
-  if [[ -n "$DIFF_BASE" ]]; then
-    git diff --name-only --diff-filter=d "$DIFF_BASE"... -- "$SRC" 2>/dev/null
+  if [[ $STAGED -eq 1 ]]; then
+    git diff --name-only --cached --diff-filter=d -- "$SRC" 2>/dev/null
+  elif [[ -n "$DIFF_BASE" ]]; then
+    # Untracked files are invisible to `git diff`, so a brand-new file would
+    # sail past the gate. List them alongside the modified ones.
+    {
+      git diff --name-only --diff-filter=d "$DIFF_BASE" -- "$SRC" 2>/dev/null
+      git ls-files --others --exclude-standard -- "$SRC" 2>/dev/null
+    } | sort -u
   else
     find "$SRC" -type f \( -name '*.ts' -o -name '*.tsx' -o -name '*.module.css' \) 2>/dev/null
   fi
@@ -116,7 +131,8 @@ g_hardcoded_radius() {
 }
 
 # --- run ----------------------------------------------------------------
-echo -e "${BOLD}${CYAN}fleet-check${RESET}  ${DIM}scope: ${DIFF_BASE:-full tree}  files: ${#FILES[@]}${RESET}\n"
+if [[ $STAGED -eq 1 ]]; then SCOPE_LABEL="staged"; else SCOPE_LABEL="${DIFF_BASE:-full tree}"; fi
+echo -e "${BOLD}${CYAN}fleet-check${RESET}  ${DIM}scope: ${SCOPE_LABEL}  files: ${#FILES[@]}${RESET}\n"
 
 if [[ $RUN_BUILD -eq 1 ]]; then
   echo -e "${BOLD}build-green${RESET} ${DIM}(typecheck + lint + tests)${RESET}"

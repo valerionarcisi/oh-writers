@@ -107,23 +107,28 @@ When in doubt about an architectural decision, stop and ask.
 
 Hard stops. If you are about to do any of these, stop and ask.
 
+**Six of these rules are enforced by a script, not by memory.** `pnpm fleet:check`
+(run automatically on every commit, and as the `Guardrails` CI job) blocks: rogue
+hex, hardcoded `border-radius`, native `window.alert/confirm/prompt`, Tailwind /
+utility classes, Italian identifiers, and secrets in logs. It reports `file:line`.
+Use `--staged` for what you are about to commit, `--diff <base>` for a branch.
+Add a check there rather than a bullet here whenever a rule can be grepped —
+this list is for what a script cannot decide.
+
 - **Never use tRPC** — server calls go through `createServerFn` only
 - **Never run DB queries on the client** — all Drizzle calls are inside `createServerFn` handlers
 - **Never gate a feature on a raw `locale`/`plan`/market/user check inline** — every show/hide decision goes through `resolveFeatures`/`useFeature(Features.X)` (catalogue in `packages/domain/src/features/flags.ts`), resolved server-side, OFF=hidden. New gateable features must be added to the catalogue. See [Feature Flags](docs/conventions/feature-flags.md) + [Spec 54](docs/specs/54-feature-flags.md).
 - **Never use `try/catch`** for expected failures — use `ResultAsync.fromPromise` and typed errors
 - **Never mutate** state, arrays, or objects directly — always return new values
 - **Never write TypeScript types by hand** when they can be inferred from Zod or Drizzle
-- **Never use Tailwind**, utility classes, or CSS-in-JS of any kind
-- **Never hardcode** hex colors, arbitrary `px` values, or magic numbers in CSS
-- **Never re-implement focus management, keyboard nav, or overlay dismiss by hand** — use `react-aria` hooks (`useButton`, `useDialog`, `useOverlay`, `useMenu`, `useTabList`, etc.) for every interactive primitive. If a `react-aria` hook exists for the pattern, it is mandatory. See spec 25.
-- **Never use hardcoded border-radius** — use `--radius-*` tokens (`--radius-md` default, `--radius-none` for screenplay page only)
+- **Never use CSS-in-JS**, and never hardcode magic numbers in CSS — spacing goes through `--ds-space-*`, radii through `--ds-radius-*`, colour through the semantic tokens. _(Tailwind, rogue hex and hardcoded radii: gated.)_
+- **Never re-implement focus management, keyboard nav, or overlay dismiss by hand** — use `react-aria` hooks (`useButton`, `useDialog`, `useOverlay`, `useMenu`, `useTabList`, etc.) for every interactive primitive. If a `react-aria` hook exists for the pattern, it is mandatory. See spec 25. This includes dialogs: ask with `useConfirmDialog()` (`confirm` / `promptText`), never a browser dialog. _(Native dialogs: gated.)_
 - **Never mix `null` and `undefined`** in the same type — use `null` for intentional absence
-- **Never expose the Anthropic API key** to the client
-- **Never log** tokens, passwords, or API keys
+- **Never expose the Anthropic API key** to the client, and never log tokens, passwords or keys. _(Secrets in logs: gated.)_
 - **Never add AI signatures** to commits (`Co-Authored-By: Claude` or similar)
 - **Never import browser-only or editor (ProseMirror/Monaco) APIs** inside `packages/domain`, `packages/utils`, or any other shared package — those must stay framework-agnostic so the future mobile companion can consume them
 - **Never hard-couple auth to cookies** — Better Auth must remain able to issue bearer tokens for mobile clients
-- **Never write code in Italian** — every identifier (variables, functions, types, files), every comment, every log message, every internal error message MUST be in English. UI copy shown to the user is Italian (the product is IT-localised); everything else is English. A function named `caricaSceneggiatura` or a comment `// gestisce errore` is a hard NO. This rule is non-negotiable so that future contributors, AI tooling, and English-speaking collaborators can read the codebase.
+- **Never write code in Italian** — every identifier, comment, log message and internal error message MUST be in English; only UI copy shown to the user is Italian (the product is IT-localised), and it lives in the i18n catalogue, never as a literal in a component. A comment `// gestisce errore` is as much a violation as a function named `caricaSceneggiatura`. Non-negotiable, so that future contributors and English-speaking collaborators can read the codebase. _(Identifiers: gated. Comments and messages: on you.)_
 - **Cesare prompts are written in English** — every LLM system/role/skill-guidance prompt (`ROLE_TEXT`, `skills/*.skill.ts` guidance blocks, any new prompt) is authored in English, because models reason better on English instructions and it matches the English-everything rule above. The **output language is set by an explicit directive in the prompt** ("Always respond to the user in Italian"; keep domain terms — logline, soggetto, scaletta, trattamento — in Italian), NOT by writing the prompt itself in Italian. The user-facing strings Cesare emits stay Italian. _Existing prompts are still Italian and will be migrated in a separate card_ (`ROLE_TEXT` is cache-position-sensitive — see `context/assemble-system-prompt.ts`); new prompts start English. See [Spec 79](docs/specs/79-cesare-kickoff-mode.md).
 - **Never reintroduce a reserved-column Cesare** — Cesare is a floating Notion-style sub-window anchored bottom-right. The editor never reflows when Cesare opens, closes, or resizes. See [Spec 44](docs/specs/44-shell-refactor-notion-style.md).
 - **The bell / avatar / gear live in the TopBar account zone** (`TopBarAccount`, the single home — Spec 55, supersedes Spec 47b). They are NOT in the `BottomDock`, the `CesareDrawer` header, or the LeftRail footer (`AccountRow` is retired from the shell). Avatar → user settings; gear → project settings (distinct). Never re-add them to the dock/rail/Cesare header.

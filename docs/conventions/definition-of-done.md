@@ -28,16 +28,20 @@ anything skipped + why. (UI specifics: measure + screenshot, `ui-ux-research.md`
 
 ## 3. Gates green
 
-- `pnpm typecheck` + `pnpm lint` clean (pre-commit enforces typecheck; never `--no-verify`).
-- The relevant CI guards green: route-smoke, DS-consistency, the new test(s) (Spec 56).
+- `pnpm typecheck` + `pnpm lint` clean, and `pnpm fleet:check` clean. Pre-commit
+  enforces all three on the staged diff; never `--no-verify`.
+- The relevant CI guards green: `Guardrails`, route-smoke, DS-consistency, the
+  new test(s) (Spec 56).
 
 ## 4. Tracked + recorded
 
-- A feature is an item in `docs/BACKLOG.md`. A bug is a **GitHub Issue** (repro + proof +
-  severity via labels `sev:*` + `area:*`); close it with `Fixes #N`. (`docs/BUGS.md` is the
-  frozen pre-2026-06-24 archive — do not add entries.)
+- Work is tracked on the [GitHub Project board](https://github.com/users/valerionarcisi/projects/3)
+  — features as draft cards, bugs as **GitHub Issues** (repro + proof + severity via labels
+  `sev:*` + `area:*`); close with `Fixes #N`. (`docs/BACKLOG.md` and `docs/BUGS.md` are the
+  frozen pre-2026-06-24 archives — do not add entries.)
 - Any correction/mistake/dead-end along the way → `docs/LEARNINGS.md` + a feedback memory.
 
 ## 5. Committed clean
 
-- `[OHW] type: description`, no AI signatures, code-reviewed diff (`/code-review`) before commit.
+- `type: description` (no `[OHW]` prefix — dropped 2026-06-26), no AI signatures,
+  code-reviewed diff (`/code-review`) before commit.
