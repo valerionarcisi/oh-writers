@@ -72,17 +72,24 @@ const TOOL_ENTITY_MAP: Readonly<Record<string, ToolEntityMapping>> = {
   apply_text_edit: { access: "write", domain: "soggetto" },
   expand_section: { access: "write", domain: "soggetto" },
   compress_section: { access: "write", domain: "soggetto" },
+  edit_outline_scene: { access: "write", domain: "outline" },
 
   // ── screenplay writes ─────────────────────────────────────────────────────
   rewrite_scene: { access: "write", domain: "screenplay" },
   propose_screenplay_revision: { access: "write", domain: "screenplay" },
+  // Renames every occurrence in the SCREENPLAY (cesare-screenplay-tools.ts);
+  // it reads like a breakdown entity op but never writes one.
+  propose_rename_entity: { access: "write", domain: "screenplay" },
   propose_blocking_for_scene: { access: "write", domain: "shooting-plan" },
   propose_move_actor_position: { access: "write", domain: "shooting-plan" },
   propose_move_camera_pin: { access: "write", domain: "shooting-plan" },
 
   // ── breakdown writes ──────────────────────────────────────────────────────
-  propose_rename_entity: { access: "write", domain: "breakdown" },
   tag_element: { access: "write", domain: "breakdown" },
+  // Ghost accept/reject flip a breakdown occurrence's status
+  // (executeSetGhostStatus); they never touch a budget line.
+  accept_ghost: { access: "write", domain: "breakdown" },
+  reject_ghost: { access: "write", domain: "breakdown" },
 
   // ── budget writes ─────────────────────────────────────────────────────────
   set_budget_cap: { access: "write", domain: "budget" },
@@ -93,8 +100,6 @@ const TOOL_ENTITY_MAP: Readonly<Record<string, ToolEntityMapping>> = {
   redistribute_topsheet: { access: "write", domain: "budget" },
   propose_excessive_lines_flags: { access: "write", domain: "budget" },
   propose_missing_lines: { access: "write", domain: "budget" },
-  accept_ghost: { access: "write", domain: "budget" },
-  reject_ghost: { access: "write", domain: "budget" },
 
   // ── schedule writes ───────────────────────────────────────────────────────
   move_scene_to_day: { access: "write", domain: "schedule" },

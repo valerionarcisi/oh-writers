@@ -121,6 +121,40 @@ describe("tool → entity map", () => {
     expect(mappingForTool("totally_unknown_tool")).toBeNull();
   });
 
+  // The tracer must never name the wrong entity: the user's only evidence of
+  // what Cesare touched is what the trace says it touched. These three were
+  // mislabelled — the domain is asserted against where each tool actually
+  // writes, not the skill that lists it.
+  it("maps the ghost accept/reject tools onto the breakdown they mutate", () => {
+    // executeSetGhostStatus flips a breakdown occurrence; no budget line moves.
+    expect(mappingForTool("accept_ghost")).toEqual({
+      access: "write",
+      domain: "breakdown",
+    });
+    expect(mappingForTool("reject_ghost")).toEqual({
+      access: "write",
+      domain: "breakdown",
+    });
+  });
+
+  it("maps the global rename onto the screenplay it rewrites", () => {
+    // Lives in cesare-screenplay-tools.ts and fails with "not found in
+    // screenplay" — it renames occurrences in the script, not breakdown rows.
+    expect(mappingForTool("propose_rename_entity")).toEqual({
+      access: "write",
+      domain: "screenplay",
+    });
+  });
+
+  it("maps the single-scene outline edit, so it is not silently untraced", () => {
+    // An unmapped tool degrades to a raw `tool` event with no entity, which
+    // reads to the user as Cesare acting without saying on what.
+    expect(mappingForTool("edit_outline_scene")).toEqual({
+      access: "write",
+      domain: "outline",
+    });
+  });
+
   it("produces an IT entity ref label for a domain", () => {
     expect(entityRefForDomain("budget")).toEqual({
       domain: "budget",
