@@ -59,7 +59,7 @@ export async function resolveAiEnabled(
   if (hasProvider) return true;
 
   const { isTrialQuotaEnabled, getUserTrialSpend } =
-    await import("~/features/ai/ai-usage.server");
+    await import("~/features/ai");
   if (isTrialQuotaEnabled()) {
     const allowanceEur = Number(process.env["AI_TRIAL_QUOTA_EUR"]);
     const spentEur = await getUserTrialSpend(userId, db).catch(() => 0);

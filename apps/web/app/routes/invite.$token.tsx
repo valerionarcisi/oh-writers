@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { Skeleton } from "@oh-writers/ui";
 import type { UserId } from "@oh-writers/domain";
 import { InviteAcceptancePage } from "~/features/teams";
-import { fetchCurrentUser as fetchUser } from "~/features/auth/server/auth-routes.server";
+import { fetchInviteUser as fetchUser } from "~/features/auth";
 
 export const Route = createFileRoute("/invite/$token")({
   loader: async ({ params }) => {

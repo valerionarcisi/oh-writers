@@ -34,7 +34,7 @@ import { signOut } from "~/lib/auth-client";
 // it here made vinxi extract a use-server module that evaluated this file's
 // top-level app-shell barrel imports in the server-fn graph and broke every
 // RPC. See `features/auth/fetch-current-user.server.ts`.
-import { fetchCurrentUser } from "~/features/auth/fetch-current-user.server";
+import { fetchCurrentUser } from "~/features/auth";
 
 // The shell layout carries every routed auxiliary surface as search params:
 // `?peek=` (Spec 46 Cesare/page side-peek) and

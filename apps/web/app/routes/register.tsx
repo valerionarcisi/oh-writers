@@ -1,7 +1,6 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { titleHead } from "~/lib/document-title";
-import { RegisterForm } from "~/features/auth";
-import { fetchIsAuthenticated } from "~/features/auth/server/auth-routes.server";
+import { RegisterForm, fetchIsAuthenticated } from "~/features/auth";
 import styles from "./_auth.module.css";
 
 export const Route = createFileRoute("/register")({

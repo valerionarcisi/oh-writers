@@ -31,7 +31,7 @@ export const fetchIsAuthenticated = createServerFn({ method: "GET" }).handler(
   },
 );
 
-export const fetchCurrentUser = createServerFn({ method: "GET" }).handler(
+export const fetchInviteUser = createServerFn({ method: "GET" }).handler(
   async (): Promise<{ id: string; name: string; email: string } | null> => {
     const { getUser } = await import("~/server/context");
     const user = await getUser();
