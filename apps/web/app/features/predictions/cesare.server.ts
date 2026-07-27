@@ -43,6 +43,7 @@ import {
   runScreenplayToolLoop,
   runUniversalToolLoop,
 } from "./cesare-tools";
+import { parseOutline } from "~/features/documents";
 import { classifyIntent, INTENT_SCALE } from "./cesare-intent-classifier";
 import type {
   DocumentContext,
@@ -1100,13 +1101,39 @@ const MAX_ACTIVE_DOC_CHARS = 8000;
 const truncate = (text: string, max: number): string =>
   text.length > max ? text.slice(0, max) + "…" : text;
 
+// #108 — the scaletta is stored as JSON. Injected verbatim, the model read a
+// minified object (and, past the cap, a truncated one cut mid-structure), so the
+// strings it quoted back were drawn from JSON syntax. It is rendered as the
+// numbered scene list the writer sees instead; scaletta edits go through
+// `edit_outline_scene`, which addresses scenes by number, so nothing here needs
+// to be an exact substring of what is stored.
+const formatOutlineForModel = (raw: string): string => {
+  const lines: string[] = [];
+  let sceneNumber = 0;
+  for (const act of parseOutline(raw).acts) {
+    lines.push(`## ${act.title}`);
+    for (const sequence of act.sequences) {
+      for (const scene of sequence.scenes) {
+        sceneNumber += 1;
+        lines.push(`Scena ${sceneNumber} — ${scene.heading}`);
+        if (scene.description) lines.push(scene.description);
+      }
+    }
+  }
+  return lines.join("\n");
+};
+
 const formatDocumentsContext = (ctx: CesareContext): string => {
   if (!ctx.activeDocument) return "";
   // Only inject the active document verbatim (needed for apply_text_edit to
   // find exact strings). Cross-doc context is now handled by the Film Bible
   // cached block — dumping all docs here was the root cause of the "Rome" bug.
+  const body =
+    ctx.activeDocument.type === "outline"
+      ? formatOutlineForModel(ctx.activeDocument.content)
+      : ctx.activeDocument.content;
   return `\nDOCUMENTO ATTIVO — ${DOCUMENT_LABELS[ctx.activeDocument.type]}:\n---\n${truncate(
-    ctx.activeDocument.content,
+    body,
     MAX_ACTIVE_DOC_CHARS,
   )}\n---`;
 };

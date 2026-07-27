@@ -1,10 +1,12 @@
 import { describe, it, expect } from "vitest";
+import { DocumentTypes } from "@oh-writers/domain";
 import {
   findSection,
   parseHeading,
   extractSideChannelMarkers,
   markerAwareFallbackText,
   toolErrorPayload,
+  createDocumentTools,
 } from "./cesare-tools";
 import { parsePlanDescription } from "./cesare-shooting-plan-tools";
 import { CesareError } from "./cesare.errors";
@@ -361,5 +363,90 @@ describe("toolErrorPayload", () => {
   it("degrades to UnknownError rather than throwing on an untagged error", () => {
     const payload = toolErrorPayload({ message: "odd" } as never);
     expect(payload.code).toBe("UnknownError");
+  });
+});
+
+// #108 — the scaletta is stored as structured JSON, not prose. A find/replace
+// that happened to span a `","` boundary produced a string that no longer
+// parsed, and an unparseable outline reads as an EMPTY one — so a mistargeted
+// rename silently blanked the whole scaletta. Both text tools now refuse the
+// call outright rather than trusting the model to have read the guidance.
+describe("[#108] the text edit tools refuse to touch a structured scaletta", () => {
+  const db = {} as never;
+  const outlineDoc = {
+    documentId: "doc-1",
+    documentType: DocumentTypes.OUTLINE,
+    content: JSON.stringify({
+      acts: [
+        {
+          id: "a1",
+          title: "Atto I",
+          sequences: [
+            {
+              id: "s1",
+              title: "Sequenza 1",
+              scenes: [
+                {
+                  id: "sc1",
+                  heading: "INT. CUCINA - GIORNO",
+                  description: "Elena prepara il caffè.",
+                  characters: ["Elena"],
+                  pageEstimate: 1,
+                  notes: "",
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }),
+  };
+
+  it("apply_text_edit refuses and points at edit_outline_scene", async () => {
+    const before = outlineDoc.content;
+    const tools = createDocumentTools(db, { ...outlineDoc });
+    const result = await tools.apply_text_edit.execute!(
+      { find: "Elena", replace: "Chiara" },
+      {} as never,
+    );
+
+    expect(result).toMatchObject({ ok: false });
+    expect(String((result as { reason: string }).reason)).toContain(
+      "edit_outline_scene",
+    );
+    // Nothing was rewritten, so the document cannot have been corrupted.
+    expect(outlineDoc.content).toBe(before);
+  });
+
+  it("compress_section refuses too (no prose sections to slice)", async () => {
+    const tools = createDocumentTools(db, { ...outlineDoc });
+    const result = await tools.compress_section.execute!(
+      { heading: "Atto I", target_words: 50 },
+      {} as never,
+    );
+
+    expect(result).toMatchObject({ ok: false });
+    expect(String((result as { reason: string }).reason)).toContain(
+      "edit_outline_scene",
+    );
+  });
+
+  it("still works on a prose document (the guard is scaletta-only)", async () => {
+    const tools = createDocumentTools(db, {
+      documentId: "doc-2",
+      documentType: DocumentTypes.SOGGETTO,
+      content: "<p>Elena prepara il caffè.</p>",
+    });
+    const result = await tools.apply_text_edit.execute!(
+      { find: "non presente nel testo", replace: "x" },
+      {} as never,
+    );
+
+    // Refused for NOT FINDING the string — i.e. it got past the doc-type guard
+    // and actually attempted the match.
+    expect(result).toMatchObject({ ok: false });
+    expect(String((result as { reason: string }).reason)).toContain(
+      "not found",
+    );
   });
 });

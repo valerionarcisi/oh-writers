@@ -78,6 +78,12 @@ export type OutlineContent = z.infer<typeof OutlineContentSchema>;
 
 export const emptyOutline = (): OutlineContent => ({ acts: [] });
 
+// Answers an unreadable document with an empty outline rather than throwing, so
+// a malformed row degrades to a blank editor instead of a crashed page. The cost
+// is that corruption is indistinguishable from "no scenes yet" — which is how a
+// mistargeted `apply_text_edit` could blank a whole scaletta without a trace
+// (#108). The tools that could corrupt it now refuse the call at their own
+// boundary, so this stays a last-resort guard rather than the only defence.
 export const parseOutline = (raw: string): OutlineContent => {
   if (!raw) return emptyOutline();
   try {

@@ -59,6 +59,7 @@ import {
 import {
   estimateSceneCost,
   DEFAULT_PRODUCTION_RATES,
+  DocumentTypes,
   type ProductionRates,
 } from "@oh-writers/domain";
 import type { Db } from "~/server/db";
@@ -398,7 +399,8 @@ export const CESARE_DOCUMENT_TOOLS = [
   {
     name: "apply_text_edit",
     description:
-      "Sostituisce una stringa esatta nel documento attivo (soggetto / sinossi / scaletta / trattamento). " +
+      "Sostituisce una stringa esatta nel documento attivo (soggetto / sinossi / trattamento). " +
+      "NON funziona sulla scaletta, che è un documento strutturato: lì usa edit_outline_scene. " +
       "Usa questo tool quando l'utente chiede una modifica testuale puntuale, come 'cambia X in Y' o 'riscrivi questa frase'. " +
       "La stringa `find` deve essere un sottoesempio testuale ESATTO del documento, copia-incollalo letteralmente. " +
       "Se `find` non viene trovato, l'edit fallisce: non inventare il testo originale.",
@@ -473,7 +475,8 @@ export const createDocumentTools = (
 ) => ({
   apply_text_edit: tool({
     description:
-      "Sostituisce una stringa esatta nel documento attivo (soggetto / sinossi / scaletta / trattamento). " +
+      "Sostituisce una stringa esatta nel documento attivo (soggetto / sinossi / trattamento). " +
+      "NON funziona sulla scaletta, che è un documento strutturato: lì usa edit_outline_scene. " +
       "Usa questo tool quando l'utente chiede una modifica testuale puntuale, come 'cambia X in Y' o 'riscrivi questa frase'. " +
       "La stringa `find` deve essere un sottoesempio testuale ESATTO del documento, copia-incollalo letteralmente. " +
       "Se `find` non viene trovato, l'edit fallisce: non inventare il testo originale.",
@@ -1566,6 +1569,19 @@ const executeApplyTextEdit = (
   if (!input.find) {
     return okAsync({ ok: false, reason: "empty find string" });
   }
+  // #108 — the outline is stored as structured JSON, not prose. A find/replace
+  // that happens to span a `","` boundary produces a string that no longer
+  // parses, and `parseOutline` answers an unparseable document with an EMPTY
+  // outline — so a mistargeted rename silently blanked the whole scaletta. The
+  // skill guidance already says to use `edit_outline_scene`; this refuses the
+  // call outright rather than trusting the model to have read it.
+  if (doc.documentType === DocumentTypes.OUTLINE) {
+    return okAsync({
+      ok: false,
+      reason:
+        "apply_text_edit does not work on the scaletta (it is stored as a structured document, not as text). Use edit_outline_scene(scene_number, instruction) to change a single scene.",
+    });
+  }
   const previousContent = doc.content;
   // #106 — lenient match: the stored content is HTML-ish (typographic quotes,
   // entities, collapsed spaces) while the model quotes what it read; exact
@@ -1721,6 +1737,17 @@ const generateAndReplaceSection = (
   sessionId: string | null,
   userInstruction: string | null,
 ): ResultAsync<DocumentEditResult, CesareError> => {
+  // #108 — same reasoning as `apply_text_edit`: the outline is a structured
+  // document with no prose headings to slice, so a section edit could only ever
+  // fail here — with a message that sends the model looking for a heading
+  // instead of at the right tool.
+  if (doc.documentType === DocumentTypes.OUTLINE) {
+    return okAsync({
+      ok: false,
+      reason:
+        "Section edits do not work on the scaletta (it is stored as a structured document, not as prose sections). Use edit_outline_scene(scene_number, instruction) to change a single scene.",
+    });
+  }
   const range = findSection(doc.content, heading);
   if (!range) {
     return okAsync({

@@ -27,10 +27,19 @@ const buildDocumentEditGuidance = (docType: string): string => {
 PRODUTTORE ESECUTIVO (sempre attivo): ogni sviluppo narrativo ha implicazioni produttive. Se stai ampliando una sottotrama che porta nuovi set o personaggi, segnalalo. Se stai comprimendo, valuta se perdi beat narrativi fondamentali. Il racconto deve funzionare sia sulla carta che sul set.
 
 STRUMENTI DISPONIBILI SU QUESTO ${label.toUpperCase()}:
-- apply_text_edit(find, replace): sostituisce una stringa esatta del documento. Usa SEMPRE testo letterale presente nel DOCUMENTO ATTIVO sopra.
+${
+  // #108 — the scaletta is a structured document, so the text tools cannot work
+  // on it and are refused at the tool boundary. They are not advertised here
+  // either: the model used to be offered them, try one, fail, and fall back to
+  // regenerating the whole scaletta.
+  docType === "outline"
+    ? `- edit_outline_scene(scene_number, instruction): modifica UNA singola scena (es. "accorcia la scena 1", "chiama Chiara il personaggio Elena nella scena 3"). È il tool corretto per OGNI edit mirato a una scena.
+- Su questa pagina apply_text_edit / expand_section / compress_section NON funzionano (la scaletta non è testo continuo): non chiamarli.
+- propose_scaletta_from_soggetto rigenera TUTTE le scene: usalo solo se l'utente chiede esplicitamente di rifare la scaletta intera.`
+    : `- apply_text_edit(find, replace): sostituisce una stringa esatta del documento. Usa SEMPRE testo letterale presente nel DOCUMENTO ATTIVO sopra.
 - expand_section(heading): espande la sezione sotto un heading in 2-3 paragrafi.
-- compress_section(heading, target_words): comprime una sezione mantenendo i beat.
-- edit_outline_scene(scene_number, instruction): modifica UNA singola scena della SCALETTA (es. "accorcia la scena 1"). È il tool corretto per un edit mirato a una scena: la scaletta è strutturata a scene, quindi NON usare apply_text_edit/compress_section per una scena, e NON usare propose_scaletta_from_soggetto (rigenererebbe tutte le scene).
+- compress_section(heading, target_words): comprime una sezione mantenendo i beat.`
+}
 
 Quando l'utente chiede una modifica concreta (riscrivi, cambia, espandi, accorcia, sostituisci) USA SEMPRE il tool appropriato — non limitarti a suggerire il testo nel chat. Se la richiesta nomina una scena specifica della scaletta ("la scena N", "la prima scena"), il tool corretto è SEMPRE edit_outline_scene, MAI propose_scaletta_from_soggetto. Conferma in italiano cosa hai fatto dopo ogni edit.
 
