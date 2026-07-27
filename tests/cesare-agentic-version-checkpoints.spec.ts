@@ -185,4 +185,72 @@ test.describe("[N66] Cesare version checkpoints", () => {
     // No ask card — the edit was applied as a new version directly.
     await expect(page.getByTestId("cesare-ask-new-version")).toHaveCount(0);
   });
+
+  test("the Versions list reacts to a Cesare edit without a reload", async ({
+    authenticatedPage: page,
+  }) => {
+    test.setTimeout(150_000);
+    await seedLongSoggetto(page);
+
+    await page.goto(SOGGETTO_PATH(TEST_TEAM_PROJECT_ID));
+    await expect(page.getByTestId("soggetto-page")).toBeVisible({
+      timeout: 15_000,
+    });
+
+    // Cesare writes FIRST, from the floating sheet, and Versions is opened
+    // afterwards — opening Versions first would promote the Cesare click to a
+    // split and close Versions (BUG-N64: one auxiliary lane at a time), which
+    // is correct product behaviour, not what this test is about.
+    // Cesare invalidated only its own message/session queries after a turn, so
+    // the panel kept rendering the pre-turn list: the version the auto-version
+    // effect had just created never appeared, and the next one the writer
+    // minted by hand showed up already marked "Attuale" because the current
+    // pointer had moved underneath a stale list.
+    const documentId = await openVersionsViaUi(page);
+    const before = await countVersionRows(page);
+    // Close Versions so the Cesare click opens the floating sheet.
+    await page.goto(SOGGETTO_PATH(TEST_TEAM_PROJECT_ID));
+    await expect(page.getByTestId("soggetto-page")).toBeVisible({
+      timeout: 15_000,
+    });
+
+    await openCesareSheet(page);
+    await sendCesareMessage(page, "Piccola modifica: cambia una parola");
+    await waitForCesareReply(page);
+
+    // Reopen Versions WITHOUT a reload: the client-side navigation reuses the
+    // cached query, so a stale cache still shows the pre-turn list here.
+    await page.getByTestId("topbar-version-chip").click();
+    await expect(page.getByTestId("versions-split-lane")).toBeVisible({
+      timeout: 5_000,
+    });
+    expect(documentId).not.toBe("");
+
+    // A small edit OVERWRITES the working version rather than adding a row
+    // (Spec 76, no flood), so the row count is not what proves freshness —
+    // the current marker is. Exactly one row is "Attuale", and it is the one
+    // the pointer actually names: a stale cache showed the badge on the row
+    // that was current BEFORE the turn.
+    expect(await countVersionRows(page)).toBeGreaterThanOrEqual(before);
+    const current = page.locator('[data-testid^="versions-split-current-"]');
+    await expect(current).toHaveCount(1, { timeout: 30_000 });
+
+    const badgedId = (await current
+      .first()
+      .getAttribute("data-testid"))!.replace("versions-split-current-", "");
+    // Cross-check against the server's own pointer, not against the list that
+    // rendered it — otherwise a stale cache would agree with itself.
+    const pointer = await page.evaluate(async (docId) => {
+      const res = await fetch(
+        `/_server/app_features_documents_server_versions_server_ts` +
+          `--getCurrentVersionId_createServerFn_handler?createServerFn&payload=` +
+          encodeURIComponent(JSON.stringify({ data: { documentId: docId } })),
+      );
+      const body = (await res.json()) as {
+        result?: { value?: string | null };
+      };
+      return body.result?.value ?? null;
+    }, documentId);
+    if (pointer) expect(badgedId).toBe(pointer);
+  });
 });

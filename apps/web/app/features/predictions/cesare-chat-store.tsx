@@ -361,6 +361,22 @@ export function CesareChatStoreProvider({ children }: { children: ReactNode }) {
               void queryClient.invalidateQueries({
                 queryKey: sessionsQueryKey(projectId),
               });
+              // Every agentic edit auto-creates a version before applying
+              // (auto-version.effect.ts), but nothing told the Versions panel.
+              // It kept rendering the list from before the turn, so a version
+              // Cesare had just made never appeared — and the next one the
+              // user minted by hand showed up already "Attuale", because the
+              // pointer had moved underneath the stale list.
+              // Invalidated by key PREFIX: this store has no document or
+              // screenplay id, and the edit may have targeted either.
+              for (const key of [
+                ["document-versions"],
+                ["documents", "current-version"],
+                ["versions"],
+                ["screenplay-current-version"],
+              ]) {
+                void queryClient.invalidateQueries({ queryKey: key });
+              }
             })
             .catch(() => undefined);
         }
