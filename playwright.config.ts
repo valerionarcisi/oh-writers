@@ -91,7 +91,15 @@ export default defineConfig({
       // match the test DB — the editor then remount-loops between skeleton and
       // editor and eats keystrokes (BUG-N57). The E2E stack is non-realtime by
       // contract (N-42) until it runs its own ws-server.
-      command: `PORT=${TEST_PORT} BETTER_AUTH_URL=${TEST_BASE_URL} DATABASE_URL=${TEST_DB_URL} VITE_WS_URL= LLM_FIRST_BREAKDOWN=false MOCK_AI=true CRON_SECRET=test-cron-secret pnpm --filter @oh-writers/web dev`,
+      //
+      // DEV_AUTH_BYPASS is force-disabled for the same class of reason: it is a
+      // local convenience for hand-testing, but inherited from apps/web/.env it
+      // makes the server answer EVERY request as the dev user. The role fixtures
+      // then sign in for nothing — `authenticatedViewerPage` holds owner rights —
+      // and permission assertions silently test the wrong thing in BOTH
+      // directions: viewer guards fail, and owner-only flows pass that should
+      // not. The suite must not depend on how a developer left their .env.
+      command: `PORT=${TEST_PORT} BETTER_AUTH_URL=${TEST_BASE_URL} DATABASE_URL=${TEST_DB_URL} VITE_WS_URL= DEV_AUTH_BYPASS=false LLM_FIRST_BREAKDOWN=false MOCK_AI=true CRON_SECRET=test-cron-secret pnpm --filter @oh-writers/web dev`,
       url: TEST_BASE_URL,
       // Always start a dedicated test server so it uses the test DB, never the
       // dev DB. Locally a warm server (already bound to the test DB) can be
@@ -106,7 +114,7 @@ export default defineConfig({
       // for the build step too, not just the start step, or this "prod" build
       // would call the real Anthropic API. Uses the same test DB as the dev
       // webServer above — this is only about isDevEnvironment, not data.
-      command: `PORT=${PROD_PORT} BETTER_AUTH_URL=${PROD_BASE_URL} DATABASE_URL=${TEST_DB_URL} VITE_WS_URL= LLM_FIRST_BREAKDOWN=false MOCK_AI=true CRON_SECRET=test-cron-secret pnpm --filter @oh-writers/web build && PORT=${PROD_PORT} BETTER_AUTH_URL=${PROD_BASE_URL} DATABASE_URL=${TEST_DB_URL} VITE_WS_URL= LLM_FIRST_BREAKDOWN=false MOCK_AI=true CRON_SECRET=test-cron-secret pnpm --filter @oh-writers/web start`,
+      command: `PORT=${PROD_PORT} BETTER_AUTH_URL=${PROD_BASE_URL} DATABASE_URL=${TEST_DB_URL} VITE_WS_URL= DEV_AUTH_BYPASS=false LLM_FIRST_BREAKDOWN=false MOCK_AI=true CRON_SECRET=test-cron-secret pnpm --filter @oh-writers/web build && PORT=${PROD_PORT} BETTER_AUTH_URL=${PROD_BASE_URL} DATABASE_URL=${TEST_DB_URL} VITE_WS_URL= DEV_AUTH_BYPASS=false LLM_FIRST_BREAKDOWN=false MOCK_AI=true CRON_SECRET=test-cron-secret pnpm --filter @oh-writers/web start`,
       url: PROD_BASE_URL,
       reuseExistingServer: process.env["PW_REUSE_SERVER"] === "1",
       // Build + start: a cold production build easily exceeds the 180s the
