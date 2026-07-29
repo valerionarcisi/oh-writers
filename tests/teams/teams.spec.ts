@@ -12,6 +12,22 @@ import { test } from "../fixtures";
 
 const TEST_TEAM_SLUG = "test-team";
 
+// Refill until the button enables: a fill that lands around hydration can be
+// lost to a React remount (SSR value «»), leaving Invita disabled forever
+// (the [512]/[514] flake). A person would just retype.
+const inviteMember = async (
+  page: import("@playwright/test").Page,
+  email: string,
+) => {
+  const emailInput = page.getByPlaceholder("email@esempio.com");
+  const invita = page.getByRole("button", { name: "Invita" });
+  await expect(async () => {
+    await emailInput.fill(email);
+    await expect(invita).toBeEnabled({ timeout: 1_000 });
+  }).toPass({ timeout: 15_000 });
+  await invita.click();
+};
+
 test.describe("[Spec 02] Teams — creation and dashboard", () => {
   test("[510] team creation page renders and form creates team", async ({
     authenticatedPage,
@@ -60,8 +76,7 @@ test.describe("[Spec 02] Teams — creation and dashboard", () => {
     await page.goto(`/teams/${TEST_TEAM_SLUG}/members`);
 
     const email = `invite-${Date.now()}@example.com`;
-    await page.getByPlaceholder("email@esempio.com").fill(email);
-    await page.getByRole("button", { name: "Invita" }).click();
+    await inviteMember(page, email);
 
     // The invitation should appear in the pending invitations list
     await expect(
@@ -89,8 +104,7 @@ test.describe("[Spec 02] Teams — creation and dashboard", () => {
     // First create an invite to get a real token
     await page.goto(`/teams/${TEST_TEAM_SLUG}/members`);
     const email = `accept-test-${Date.now()}@example.com`;
-    await page.getByPlaceholder("email@esempio.com").fill(email);
-    await page.getByRole("button", { name: "Invita" }).click();
+    await inviteMember(page, email);
     await expect(
       page.getByTestId("invitations-list").getByText(email),
     ).toBeVisible({ timeout: 8_000 });

@@ -19,6 +19,22 @@ export async function waitForEditor(page: Page) {
 // to end-of-visible-line in word-wrapped paragraphs — subsequent Enter would
 // split mid-paragraph instead of creating a fresh action.
 export async function goToNewLine(page: Page) {
+  // The helper is installed by ProseMirrorView on mount. Optional-chaining a
+  // not-yet-exposed function would silently no-op and leave the cursor where
+  // waitForEditor's click put it — every subsequent keystroke of a flow-matrix
+  // test then lands inside an existing paragraph ([412] flake).
+  await expect
+    .poll(
+      () =>
+        page.evaluate(
+          () =>
+            typeof (
+              window as unknown as { __ohWritersAppendAction?: () => void }
+            ).__ohWritersAppendAction === "function",
+        ),
+      { timeout: 10_000 },
+    )
+    .toBe(true);
   await page.evaluate(() => {
     (
       window as unknown as { __ohWritersAppendAction?: () => void }

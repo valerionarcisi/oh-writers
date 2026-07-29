@@ -71,8 +71,10 @@ export const openSceneInBreakdown = async (page: Page, sceneNumber: number) => {
       await expect(fullScope).toBeChecked({ timeout: 1_000 });
     }).toPass({ timeout: 15_000 });
   }
+  // Switching to full scope loads the whole script — on the seeded 12-page
+  // doc the headings can take longer than the 5s default to render ([284]).
   const heading = page.getByTestId(`scene-${sceneNumber}-heading`);
-  await expect(heading).toBeVisible();
+  await expect(heading).toBeVisible({ timeout: 15_000 });
   await heading.click();
 };
 
