@@ -86,6 +86,15 @@ test.describe("[ADR-0003] Cesare edit applies live; the editor never paints an i
       "Fammi un v2 del soggetto più asciutto.",
     );
 
+    // Spec 76 — a large, unconfirmed edit ASKS before applying: the turn
+    // renders the Sovrascrivi / Nuova versione card, and nothing touches the
+    // document until the writer picks. This test predates that contract and
+    // asserted the trace directly; the pick is now part of the flow, and every
+    // ADR-0003 assertion below holds on the applied turn that follows.
+    await authenticatedPage
+      .getByRole("button", { name: "Sovrascrivi" })
+      .click({ timeout: 90_000 });
+
     const trace = authenticatedPage.getByTestId("cesare-change-trace");
     await expect(trace).toBeVisible({ timeout: 90_000 });
 

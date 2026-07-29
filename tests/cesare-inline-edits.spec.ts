@@ -17,6 +17,20 @@ import {
  * - 041d: Drawer closes during streaming, glow visible on Cesare button
  * - 041e: Cmd+Z while streaming → reject, doc unchanged
  */
+
+// Compare Fountain CONTENT, ignoring per-line leading indentation. The E2E
+// getter (`__ohWritersFountain`) starts as the RAW string loaded from the DB and
+// becomes the canonical doc→fountain serialisation after the first transaction —
+// which indents dialogue (DIALOGUE_INDENT). A reject genuinely restores the
+// original nodes, but a strict string compare of raw-seed vs canonical form can
+// only pass when the seed happens to already be canonical, so it failed on
+// whitespace alone while the content was identical.
+const fountainContent = (s: string): string =>
+  s
+    .split("\n")
+    .map((line) => line.replace(/^[ \t]+/, ""))
+    .join("\n")
+    .trim();
 test.describe("[Spec 41] Cesare Inline Edits", () => {
   test.beforeEach(async ({ authenticatedPage }) => {
     await resetScreenplayState(authenticatedPage, TEAM_PROJECT_ID);
@@ -49,10 +63,14 @@ test.describe("[Spec 41] Cesare Inline Edits", () => {
       authenticatedPage.locator("[data-testid='cesare-pending-edit']"),
     ).toBeVisible({ timeout: 15_000 });
 
-    // Verify the decoration has the agent-green styling (background-color).
-    // The decoration class is `cesare-pending-edit` — check it's rendered.
-    const decoration = authenticatedPage.locator(".cesare-pending-edit");
-    await expect(decoration).toBeVisible({ timeout: 10_000 });
+    // Verify the decoration carries the agent-green styling class. The class is
+    // `cesare-scene-new` (NEW_SCENE_CLASS in cesare-pending-edit.ts); the string
+    // "cesare-pending-edit" is the data-testid only — this assertion shipped
+    // targeting it as a CSS class, which has never existed in any commit, so it
+    // failed from birth while the decoration itself rendered correctly.
+    await expect(
+      authenticatedPage.locator("[data-testid='cesare-pending-edit']"),
+    ).toHaveClass(/cesare-scene-new/);
   });
 
   test("[041b] Accept applies the new text to the doc and no version is created", async ({
@@ -138,14 +156,17 @@ test.describe("[Spec 41] Cesare Inline Edits", () => {
       authenticatedPage.locator("[data-testid='cesare-pending-edit']"),
     ).toBeHidden({ timeout: 5_000 });
 
-    // Doc is unchanged — same fountain text as before.
+    // Doc is unchanged — same fountain CONTENT as before (indentation aside,
+    // see `fountainContent`).
     const afterFountain: string = await authenticatedPage.evaluate(
       () =>
         (
           window as unknown as { __ohWritersFountain?: () => string }
         ).__ohWritersFountain?.() ?? "",
     );
-    expect(afterFountain).toBe(originalFountain);
+    expect(fountainContent(afterFountain)).toBe(
+      fountainContent(originalFountain),
+    );
   });
 
   test("[041d] Cesare sheet closes and glow appears on Cesare button during streaming", async ({
@@ -202,9 +223,11 @@ test.describe("[Spec 41] Cesare Inline Edits", () => {
     // After streaming ends it reverts. We check once the decoration appears.
     // Note: the glow may already be gone by the time we assert (fast CI),
     // so we just verify the decoration appeared (which confirms sheet closed).
-    await expect(authenticatedPage.locator(".cesare-pending-edit")).toBeVisible(
-      { timeout: 10_000 },
-    );
+    // Same born-wrong selector as [041a]: "cesare-pending-edit" is the testid,
+    // not a class — the styling class is `cesare-scene-new`.
+    await expect(
+      authenticatedPage.locator("[data-testid='cesare-pending-edit']"),
+    ).toBeVisible({ timeout: 10_000 });
 
     // Cleanup: reject to avoid leaking state to next test.
     const rejectBtn = authenticatedPage.getByTestId("cesare-pending-reject");
@@ -253,13 +276,16 @@ test.describe("[Spec 41] Cesare Inline Edits", () => {
       authenticatedPage.locator("[data-testid='cesare-pending-edit']"),
     ).toBeHidden({ timeout: 5_000 });
 
-    // Doc is unchanged.
+    // Doc is unchanged — content compare, indentation aside (see
+    // `fountainContent`).
     const afterFountain: string = await authenticatedPage.evaluate(
       () =>
         (
           window as unknown as { __ohWritersFountain?: () => string }
         ).__ohWritersFountain?.() ?? "",
     );
-    expect(afterFountain).toBe(originalFountain);
+    expect(fountainContent(afterFountain)).toBe(
+      fountainContent(originalFountain),
+    );
   });
 });

@@ -1573,17 +1573,27 @@ function AppShellInner({
             // mirror), falling back to the mirror. Clear the peek lane and close
             // the floating drawer first so the chat is not duplicated.
             const targetSessionId = sessionId ?? focusedSessionId;
-            if (projectId && targetSessionId) {
-              if (isSplit) {
-                handleCloseCesarePeek();
-              } else {
-                setCesareOpen(false);
-              }
+            if (!projectId) return;
+            if (isSplit) {
+              handleCloseCesarePeek();
+            } else {
+              setCesareOpen(false);
+            }
+            if (targetSessionId) {
               void router.navigate({
                 to: "/projects/$id/sessions/$sessionId",
                 params: { id: projectId, sessionId: targetSessionId },
               });
+              return;
             }
+            // No active session: since #42 the drawer opens CLEAN, so this is
+            // the normal first-open state — and ↗ used to silently do nothing
+            // here, a dead button in the header. Expanding the empty pending
+            // thread routes to its full-page equivalent, the new-session page.
+            void router.navigate({
+              to: "/projects/$id/sessions/new",
+              params: { id: projectId },
+            });
           }}
           onCesareStateChange={(next) => {
             // Mirror the drawer's state into AppShell's body[data-cesare]
