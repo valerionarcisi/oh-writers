@@ -38,11 +38,21 @@ export async function getEditorContent(page: Page): Promise<string> {
 // Open the screenplay's TopBar "Altre azioni" menu (Spec 55a). Export, import,
 // Versioni, renumber and title-page actions all live here — the single home
 // that replaced the in-editor ⋯ ToolbarMenu.
+//
+// The click is forced and retried: right after a PDF import the editor
+// repaginates the fresh document over many frames, and the sticky TopBar
+// jiggles enough that Playwright's actionability gate reports the trigger
+// "not stable" until the 30s test timeout (traced in #116 — the button is
+// present, enabled and functional the whole time; a person just clicks it).
+// The truth condition is the MENU OPENING, so that closes the retry loop,
+// not the stability heuristic.
 export async function openScreenplayActionsMenu(page: Page): Promise<void> {
   const trigger = page.getByLabel("Altre azioni");
   await expect(trigger).toBeVisible({ timeout: 15_000 });
-  await trigger.click();
-  await expect(page.getByTestId("screenplay-actions-menu")).toBeVisible({
-    timeout: 5_000,
-  });
+  await expect(async () => {
+    await trigger.click({ force: true, timeout: 2_000 });
+    await expect(page.getByTestId("screenplay-actions-menu")).toBeVisible({
+      timeout: 2_000,
+    });
+  }).toPass({ timeout: 20_000 });
 }
