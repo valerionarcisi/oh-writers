@@ -417,15 +417,18 @@ test.describe("Narrative Editor — happy paths & navigation", () => {
     await expect(pmEditorLocator(page)).toBeVisible({ timeout: 10_000 });
 
     const pill = page.getByTestId("save-status-indicator");
-    // Untouched page → no pill (the publisher gate).
-    await expect(pill).toHaveCount(0);
+    // 58b2597b superseded the edit-gate this block used to assert (untouched →
+    // no pill): the pill now publishes whenever the editor is enabled, starting
+    // from "Salvato". What BUG-N45 still protects: caret moves without an edit
+    // must not flip it dirty.
+    await expect(pill).toBeVisible({ timeout: 10_000 });
+    await expect(pill).toHaveAttribute("data-state", "saved");
 
-    // Caret moves without an edit must NOT publish the pill (BUG-N45).
     const editor = pmEditorLocator(page);
     await editor.click();
     await page.keyboard.press("ArrowDown");
     await page.keyboard.press("ArrowRight");
-    await expect(pill).toHaveCount(0);
+    await expect(pill).toHaveAttribute("data-state", "saved");
 
     // Edit → dirty pill appears.
     await page.keyboard.press("End");

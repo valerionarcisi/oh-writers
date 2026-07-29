@@ -96,12 +96,17 @@ const forceSave = (page: Page) =>
 
 // ─── 140  Pill self-hides on a fresh, untouched editor ───────────────────
 
-test("[140] the indicator is hidden on a fresh, untouched editor", async ({
+test("[140] the indicator reads 'saved' on a fresh, untouched editor", async ({
   page,
 }) => {
   await openScreenplay(page, projectId);
-  // It must not flash a stale "saved" on a doc the user hasn't edited.
-  await expect(indicator(page)).toHaveCount(0);
+  // 58b2597b deliberately superseded the OHW-140 edit-gate this test used to
+  // assert: the pill is published whenever the editor is enabled, starting
+  // from "Salvato" — the loaded screenplay IS persisted, and the pill doubles
+  // as the "save now" button, so it must not wait for the first keystroke to
+  // exist. What still must not happen on a fresh open: a dirty/saving flash.
+  await expect(indicator(page)).toBeVisible({ timeout: 10_000 });
+  await expect(indicator(page)).toHaveAttribute("data-state", "saved");
 });
 
 // ─── 141  Typing surfaces the indicator (saving) ─────────────────────────
