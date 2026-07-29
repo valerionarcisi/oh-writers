@@ -93,14 +93,18 @@ test.describe("[044-A] Cesare floating-drawer state transitions", () => {
 
     // ── expanded → session detail (header ↗) ──────────────────────────────
     // The ↗ control no longer escalates to an in-place "full" overlay: it
-    // navigates to the full-screen session conversation route. The floating
-    // drawer unmounts and `body[data-cesare-surface]` flips to "active".
+    // navigates to a full-screen central Cesare route and the floating drawer
+    // unmounts (`body[data-cesare-surface]` flips to "active"). No message was
+    // sent in this test, and since #42 the drawer opens CLEAN — no auto-adopted
+    // session — so the empty pending thread expands to its full-page
+    // equivalent, the new-session page. (↗ with an active session is covered by
+    // cesare-floating-arrow-routes.)
     await drawer.getByTestId("cesare-expand-btn").first().click();
     await page.waitForURL(
-      new RegExp(`/projects/${TEAM_PROJECT_ID}/sessions/[0-9a-f-]+$`),
+      new RegExp(`/projects/${TEAM_PROJECT_ID}/sessions/new$`),
       { timeout: 10_000 },
     );
-    await expect(page.getByTestId("session-conversation")).toBeVisible({
+    await expect(page.getByTestId("new-session-input")).toBeVisible({
       timeout: 10_000,
     });
     await expect
