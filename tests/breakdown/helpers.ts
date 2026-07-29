@@ -76,16 +76,31 @@ export const openSceneInBreakdown = async (page: Page, sceneNumber: number) => {
   await heading.click();
 };
 
+/** The root each view mounts the moment React accepts the switch. `per-scene`
+ *  is the default view the page already settled on in `navigateToBreakdown`. */
+const VIEW_ROOT: Record<string, string | null> = {
+  "per-project": '[data-testid="project-breakdown-table"]',
+  matrice: '[data-testid="breakdown-matrix-view"]',
+  "per-scene": null,
+};
+
 /**
  * Switch the v3 breakdown viewbar to a SegmentedControl tab and wait until the
  * switch actually took effect.
  *
- * The viewbar is `position: sticky` and the SegmentedControl re-mounts while the
- * nested Suspense boundaries settle, so a single `click()` can land on the tab a
- * frame before React wires its handler — the click is swallowed and the view
- * never changes. Clicking inside an `expect.toPass` retry loop, gated on the
- * tab's own `aria-selected` flipping to `true`, makes the switch deterministic
- * without weakening any assertion (the caller still asserts the target view).
+ * The control is CONTROLLED (`activeId` + `onSelect`), so `toBeChecked` alone is
+ * a lying gate: a click that lands before React has wired `onSelect` flips the
+ * NATIVE radio — checked reads true — while the state never changed, and the
+ * next controlled render flips it straight back (the reverted-tab snapshots in
+ * #116; the same pre-hydration class as #117). The proof React accepted the
+ * click is the destination view MOUNTING, so that — not the radio — closes the
+ * retry loop; a reverted click simply gets clicked again, as a user would.
+ *
+ * Mounting is awaited INSIDE the retry, data readiness OUTSIDE it: the root
+ * appears synchronously with the accepted state change (its loading skeleton
+ * carries the same testid), while awaiting the DATA inside the loop makes the
+ * retry re-click the tab and restart the very query being awaited — the
+ * livelock documented in #116.
  */
 export const switchBreakdownView = async (
   page: Page,
@@ -95,15 +110,15 @@ export const switchBreakdownView = async (
   // a radio input carrying data-testid="segmented-<id>"; selection is the native
   // `checked` state, not aria-selected.
   const tab = page.getByTestId(`segmented-${view}`);
+  const root = VIEW_ROOT[view];
   await expect(async () => {
     await tab.click();
     await expect(tab).toBeChecked({ timeout: 1_000 });
-  }).toPass({ timeout: 15_000 });
+    if (root) {
+      await expect(page.locator(root)).toBeAttached({ timeout: 2_000 });
+    }
+  }).toPass({ timeout: 20_000 });
 
-  // Then wait for the view's DATA, outside the retry loop above. It has to be
-  // outside: inside, a still-loading view fails the callback and `toPass`
-  // responds by clicking the tab again, which remounts the subtree and restarts
-  // the very query being waited on — the wait invalidates its own condition.
   if (view === "per-project") {
     await expect(
       page.locator(
