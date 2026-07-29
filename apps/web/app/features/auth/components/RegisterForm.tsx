@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link, useRouter } from "@tanstack/react-router";
 import { z } from "zod";
-import { Button } from "@oh-writers/ui";
+import { Button, useHydratedInput } from "@oh-writers/ui";
 import { authClient } from "~/lib/auth-client";
 import { useTranslation } from "~/features/i18n";
 import { PasswordInput } from "./PasswordInput";
@@ -41,6 +41,11 @@ export function RegisterForm() {
     setErrors((prev) => ({ ...prev, [key]: undefined }));
     setApiError(null);
   };
+
+  // Server-rendered + autofocused: adopt anything typed before React wired its
+  // onChange, or the name sits in the field while state stays empty (#117).
+  const nameRef = useRef<HTMLInputElement>(null);
+  useHydratedInput(nameRef, values.name, (next) => setField("name", next));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,9 +88,11 @@ export function RegisterForm() {
 
         <div className={styles.field}>
           <label className={styles.label} htmlFor="name">
-            {t("auth.register.fieldName")} <span className={styles.required}>*</span>
+            {t("auth.register.fieldName")}{" "}
+            <span className={styles.required}>*</span>
           </label>
           <input
+            ref={nameRef}
             id="name"
             type="text"
             autoComplete="name"
@@ -102,7 +109,8 @@ export function RegisterForm() {
 
         <div className={styles.field}>
           <label className={styles.label} htmlFor="email">
-            {t("auth.register.fieldEmail")} <span className={styles.required}>*</span>
+            {t("auth.register.fieldEmail")}{" "}
+            <span className={styles.required}>*</span>
           </label>
           <input
             id="email"
@@ -120,7 +128,8 @@ export function RegisterForm() {
 
         <div className={styles.field}>
           <label className={styles.label} htmlFor="password">
-            {t("auth.register.fieldPassword")} <span className={styles.required}>*</span>
+            {t("auth.register.fieldPassword")}{" "}
+            <span className={styles.required}>*</span>
           </label>
           <PasswordInput
             id="password"

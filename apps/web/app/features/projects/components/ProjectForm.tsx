@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { z } from "zod";
-import { Button } from "@oh-writers/ui";
+import { Button, useHydratedInput } from "@oh-writers/ui";
 import { Formats, Genres, type TranslationKey } from "@oh-writers/domain";
 import { useTranslation } from "~/features/i18n";
 import styles from "./ProjectForm.module.css";
@@ -102,6 +102,13 @@ export function ProjectForm({
     setErrors((prev) => ({ ...prev, [key]: undefined }));
   };
 
+  // Server-rendered + autofocused: adopt anything typed before React wired its
+  // onChange, or the title sits in the field while state stays empty (#117).
+  const titleRef = useRef<HTMLInputElement>(null);
+  useHydratedInput(titleRef, values.title ?? "", (next) =>
+    setField("title", next),
+  );
+
   return (
     <form onSubmit={handleSubmit} className={styles.form} noValidate>
       <div className={styles.field}>
@@ -110,6 +117,7 @@ export function ProjectForm({
           <span className={styles.required}>*</span>
         </label>
         <input
+          ref={titleRef}
           id="title"
           type="text"
           className={`${styles.input} ${errors.title ? styles.error : ""}`}
