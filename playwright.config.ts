@@ -43,9 +43,19 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      // Agentic specs require MOCK_AI=true and live in the mock-ui project; keep
-      // them out of the default run so they aren't executed twice.
-      testIgnore: /cesare-agentic-.*\.spec\.ts$/,
+      testIgnore: [
+        // Agentic specs require MOCK_AI=true and live in the mock-ui project;
+        // keep them out of the default run so they aren't executed twice.
+        /cesare-agentic-.*\.spec\.ts$/,
+        // Out of the production scope (MVP #97: everything up to Calendario
+        // ships; Budget, Location, Piano di ripresa and Fundraising stay
+        // DEV_ONLY and unshipped). Their suites are parked, not deleted —
+        // remove the entry to reactivate one when its feature comes back into
+        // scope. The GATING of these pages stays covered: prod-build's
+        // shell-production-gating and mvp-surface-smoke still run.
+        /(budget|locations|shooting-plan)\/.*\.spec\.ts$/,
+        /fundraising-.*\.spec\.ts$/,
+      ],
       // `viewport` override comes AFTER the spread — devices.Desktop Chrome
       // sets it to 1280x720 by default which is too small for the Cesare
       // bottom sheet to fit on screen.
@@ -64,6 +74,10 @@ export default defineConfig({
     {
       name: "mock-ui",
       testMatch: /cesare-agentic-.*\.spec\.ts$/,
+      // Same MVP #97 parking as the chromium project: the Cesare flows for
+      // Budget and Location drive DEV_ONLY pages that do not ship.
+      testIgnore:
+        /cesare-agentic-(budget|budget-intelligence|locations|locations-ux)\.spec\.ts$/,
       dependencies: ["warmup"],
       use: {
         ...devices["Desktop Chrome"],
