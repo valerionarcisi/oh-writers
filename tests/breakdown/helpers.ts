@@ -99,4 +99,16 @@ export const switchBreakdownView = async (
     await tab.click();
     await expect(tab).toBeChecked({ timeout: 1_000 });
   }).toPass({ timeout: 15_000 });
+
+  // Then wait for the view's DATA, outside the retry loop above. It has to be
+  // outside: inside, a still-loading view fails the callback and `toPass`
+  // responds by clicking the tab again, which remounts the subtree and restarts
+  // the very query being waited on — the wait invalidates its own condition.
+  if (view === "per-project") {
+    await expect(
+      page.locator(
+        '[data-testid="project-breakdown-table"]:not([data-loading])',
+      ),
+    ).toBeVisible({ timeout: 20_000 });
+  }
 };

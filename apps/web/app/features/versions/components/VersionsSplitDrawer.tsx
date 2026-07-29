@@ -318,19 +318,26 @@ export function VersionsSplitDrawer({
                 data-testid={`version-rename-input-${v.id}`}
               />
             </>
-          ) : canOpenDetail ? (
+          ) : (
+            // The current version stays a real button: rendering it as a plain
+            // div took its role and accessible name away, so a screen reader no
+            // longer announced the row it is sitting on. It is announced as the
+            // current row and as unavailable — `aria-disabled` rather than
+            // `disabled`, so it keeps its name and stays reachable by keyboard —
+            // and simply does nothing, because its detail would only show the
+            // text already open in the editor with no action to take (#94).
             <button
               type="button"
               className={styles.versionRowButton}
-              onClick={() => setSelectedId(v.id)}
-              data-testid={`versions-split-open-${v.id}`}
+              onClick={canOpenDetail ? () => setSelectedId(v.id) : undefined}
+              aria-current={canOpenDetail ? undefined : "true"}
+              aria-disabled={canOpenDetail ? undefined : true}
+              data-testid={
+                canOpenDetail ? `versions-split-open-${v.id}` : undefined
+              }
             >
               {rowContent}
             </button>
-          ) : (
-            <div className={styles.versionRowButton} aria-current="true">
-              {rowContent}
-            </div>
           )}
         </div>
         {renderActions(v)}

@@ -67,6 +67,17 @@ describe("VersionsSplitDrawer", () => {
     expect(screen.queryByTestId("versions-split-detail")).toBeNull();
   });
 
+  // Not a navigation target, but still announced: rendering the current row as a
+  // plain div took its role and accessible name away, so a screen reader stopped
+  // announcing the row the reader is sitting on.
+  it("keeps the current row announced as a button, marked current and unavailable", () => {
+    renderDrawer([version({ id: "v-cur", label: "il mio nome" })], "v-cur");
+
+    const row = screen.getByRole("button", { name: /il mio nome/ });
+    expect(row.getAttribute("aria-current")).toBe("true");
+    expect(row.getAttribute("aria-disabled")).toBe("true");
+  });
+
   it("opens the detail for a NON-current version", () => {
     renderDrawer(
       [version({ id: "v-cur" }), version({ id: "v-old", number: 2 })],

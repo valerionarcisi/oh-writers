@@ -45,7 +45,10 @@ const waitForImportCommit = (page: import("@playwright/test").Page) =>
 
 const openVersions = async (page: import("@playwright/test").Page) => {
   await page.getByRole("button", { name: "VERSIONI" }).click();
-  await expect(page.getByRole("dialog", { name: "Versioni" })).toBeVisible({
+  // The lane is a labelled REGION, not a dialog: it is a persistent in-flow
+  // column that coexists with the editor. As a dialog it autofocused itself and
+  // pulled focus back from the document behind it (#94).
+  await expect(page.getByRole("region", { name: "Versioni" })).toBeVisible({
     timeout: 5_000,
   });
 };

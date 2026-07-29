@@ -109,7 +109,7 @@
   cursor: pointer;
 }
 
-.versionRowButton:where(div) {
+.versionRowButton[aria-disabled="true"] {
   cursor: default;
 }
 
