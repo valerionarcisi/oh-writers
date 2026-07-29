@@ -20,7 +20,7 @@
 import { test, expect } from "./fixtures";
 import type { ConsoleMessage, Page } from "@playwright/test";
 import { BASE_URL } from "./fixtures";
-import { TEAM_PROJECT_ID } from "./breakdown/helpers";
+import { TEAM_PROJECT_ID, reseedTestDb } from "./breakdown/helpers";
 import { resetCesareState } from "./helpers/cesare";
 
 async function openCesare(page: Page): Promise<void> {
@@ -64,6 +64,12 @@ function trackUpdateDepthErrors(page: Page): { count: () => number } {
 }
 
 test.describe("[ADR-0003] Cesare edit applies live; the editor never paints an inline diff", () => {
+  // Sovrascrivi applies a soggetto v2, permanently mutating the shared seed
+  // document that later spec files read. The mutator cleans up (see #116).
+  test.afterAll(() => {
+    reseedTestDb();
+  });
+
   // Reset the shared Cesare chat store so a prior turn (this run) can't bleed in.
   test.beforeEach(async ({ authenticatedPage }) => {
     await resetCesareState(authenticatedPage, TEAM_PROJECT_ID);

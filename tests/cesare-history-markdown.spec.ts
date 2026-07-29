@@ -12,7 +12,7 @@
 import { type Page } from "@playwright/test";
 import { test, expect } from "./fixtures";
 import { BASE_URL } from "./fixtures";
-import { TEAM_PROJECT_ID } from "./breakdown/helpers";
+import { TEAM_PROJECT_ID, reseedTestDb } from "./breakdown/helpers";
 import {
   openCesareSheet,
   sendCesareMessage,
@@ -44,6 +44,12 @@ async function reopenLastSession(page: Page): Promise<void> {
 }
 
 test.describe("[051] Cesare history — derived markdown", () => {
+  // The agentic-edit test confirms Sovrascrivi, permanently mutating the shared
+  // seed soggetto that later spec files read. The mutator cleans up (see #116).
+  test.afterAll(() => {
+    reseedTestDb();
+  });
+
   test("a session's conversation survives a full reload", async ({
     authenticatedPage: page,
   }) => {

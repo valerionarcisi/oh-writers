@@ -1,6 +1,6 @@
 import { test, expect } from "./fixtures";
 import { BASE_URL } from "./fixtures";
-import { TEAM_PROJECT_ID } from "./breakdown/helpers";
+import { TEAM_PROJECT_ID, reseedTestDb } from "./breakdown/helpers";
 import {
   openCesareSheet,
   resetScreenplayState,
@@ -34,6 +34,14 @@ const fountainContent = (s: string): string =>
 test.describe("[Spec 41] Cesare Inline Edits", () => {
   test.beforeEach(async ({ authenticatedPage }) => {
     await resetScreenplayState(authenticatedPage, TEAM_PROJECT_ID);
+  });
+
+  // These tests APPLY rewrites (accept + autosave), permanently mutating the
+  // shared seed screenplay that later spec files read. The mutator cleans up
+  // after itself — the inversion that keeps alphabetical ordering from being
+  // load-bearing (see #116): the victim's beforeEach cannot know about us.
+  test.afterAll(() => {
+    reseedTestDb();
   });
 
   test("[041a] rewrite_scene produces a green pending decoration in the editor", async ({
