@@ -11,8 +11,7 @@
 import { test, expect, TEST_TEAM_PROJECT_ID } from "../fixtures";
 import { BASE_URL, waitForEditor } from "../helpers";
 import type { Download, Page, Response } from "@playwright/test";
-// @ts-expect-error — pdf-parse has no types for its internal entry
-import pdfParse from "pdf-parse/lib/pdf-parse.js";
+import { pdfCompactText, pdfFirstPageItems } from "../helpers/pdf";
 
 const SCREENPLAY_PATH = (projectId: string) =>
   `${BASE_URL}/projects/${projectId}/screenplay`;
@@ -98,10 +97,10 @@ test.describe("Screenplay Export — Spec 05j", () => {
     const body = await response.json();
     const buffer = Buffer.from(body.result.value.pdfBase64, "base64");
     expect(buffer.subarray(0, 4).toString()).toBe("%PDF");
-    const parsed = await pdfParse(buffer);
     // Seeded "Non fa ridere" screenplay starts with INT./EXT. scene headings
-    // — they must surface in the rendered PDF text.
-    expect(parsed.text).toMatch(/INT\.|EXT\./);
+    // — they must surface in the rendered PDF text (whitespace-stripped).
+    const text = await pdfCompactText(buffer);
+    expect(text).toMatch(/INT\.|EXT\./);
   });
 
   test("[234] includeCoverPage=true → cover page with Written by", async ({
@@ -116,10 +115,11 @@ test.describe("Screenplay Export — Spec 05j", () => {
     });
     const body = await response.json();
     const buffer = Buffer.from(body.result.value.pdfBase64, "base64");
-    const parsed = await pdfParse(buffer);
     // The cover-page byline is localized — "Scritto da" (IT) or "Written by"
-    // (EN). The seeded project renders IT.
-    expect(parsed.text).toMatch(/Scritto da|Written by/);
+    // (EN). The seeded project renders IT. Whitespace-stripped: the cover
+    // renders with letter-spacing.
+    const text = await pdfCompactText(buffer);
+    expect(text).toMatch(/Scrittoda|Writtenby/);
   });
 
   test("[236] Export PDF disabled when screenplay is empty", async ({
@@ -193,36 +193,6 @@ test.describe("Screenplay Export — Spec 05j", () => {
 // Exercise the FULL export server fn (real DB) so the formatting fixes are
 // locked end-to-end, not just at the unit layer.
 test.describe("Screenplay Export — WYSIWYG formatting (BUG-N63)", () => {
-  // Per-item x-position + fontName of the first page. The x lets us tell
-  // dialogue (indented) from action (flush-left); the fontName lets us tell a
-  // bold run (a distinct font face) from the regular body, reliably — the PDF
-  // compresses the font NAME into a stream, so a raw-buffer substring check is
-  // not reliable, but pdf.js resolves the per-item fontName for us.
-  const firstPageItems = async (
-    buffer: Buffer,
-  ): Promise<Array<{ x: number; str: string; font: string }>> => {
-    const items: Array<{ x: number; str: string; font: string }> = [];
-    await pdfParse(buffer, {
-      max: 1,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      pagerender: async (pageData: any) => {
-        const tc = await pageData.getTextContent();
-        for (const it of tc.items) {
-          if (it.str && it.str.trim()) {
-            items.push({
-              x: Math.round(it.transform[4]),
-              str: it.str.trim(),
-              font: String(it.fontName ?? ""),
-            });
-          }
-        }
-        return "";
-      },
-    });
-    return items;
-  };
-  const firstPagePositions = firstPageItems;
-
   test("[N63a] no cover → page 1 starts with content, not a blank page", async ({
     authenticatedPage: page,
     testProjectId,
@@ -232,7 +202,7 @@ test.describe("Screenplay Export — WYSIWYG formatting (BUG-N63)", () => {
     const { response } = await openScreenplayExportAndGenerate(page);
     const body = await response.json();
     const buffer = Buffer.from(body.result.value.pdfBase64, "base64");
-    const items = await firstPagePositions(buffer);
+    const items = await pdfFirstPageItems(buffer);
     expect(items.length).toBeGreaterThan(0);
     expect(items.some((i) => /INT\.|EXT\./.test(i.str))).toBe(true);
   });
@@ -246,7 +216,7 @@ test.describe("Screenplay Export — WYSIWYG formatting (BUG-N63)", () => {
     const { response } = await openScreenplayExportAndGenerate(page);
     const body = await response.json();
     const buffer = Buffer.from(body.result.value.pdfBase64, "base64");
-    const items = await firstPageItems(buffer);
+    const items = await pdfFirstPageItems(buffer);
     // afterwriting emboldens scene headings by switching to a distinct (bold)
     // font face. So a slugline ("INT./EXT. …") must render in a DIFFERENT font
     // from the regular body/action text — proving the bold was applied.
@@ -270,7 +240,7 @@ test.describe("Screenplay Export — WYSIWYG formatting (BUG-N63)", () => {
     const { response } = await openScreenplayExportAndGenerate(page);
     const body = await response.json();
     const buffer = Buffer.from(body.result.value.pdfBase64, "base64");
-    const items = await firstPagePositions(buffer);
+    const items = await pdfFirstPageItems(buffer);
     const actionMargin = Math.min(...items.map((i) => i.x));
     // A "(V.O.)" character cue must be indented well right of the action margin.
     const cue = items.find((i) => /\(.*V\.?O\.?\)/i.test(i.str));

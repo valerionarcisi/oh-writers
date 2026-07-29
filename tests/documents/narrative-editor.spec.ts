@@ -32,6 +32,15 @@
 
 import { test, expect, TEST_TEAM_PROJECT_ID } from "../fixtures";
 import { BASE_URL } from "../helpers";
+import { reseedTestDb } from "../breakdown/helpers";
+
+// Mutator pays (#116): the content-caps test types a 250-char unbroken run
+// of "x" into the shared seed doc. Left in place, narrative-export (the next
+// file) embeds it in the PDF and pdf-parse v1 dies on any content-stream
+// token over 128 chars ("Command token too long" — [226]/[231]).
+test.afterAll(() => {
+  reseedTestDb();
+});
 
 const SOGGETTO_PATH = (projectId: string) =>
   `${BASE_URL}/projects/${projectId}/soggetto`;

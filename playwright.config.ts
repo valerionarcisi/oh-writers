@@ -55,6 +55,11 @@ export default defineConfig({
         // shell-production-gating and mvp-surface-smoke still run.
         /(budget|locations|shooting-plan)\/.*\.spec\.ts$/,
         /fundraising-.*\.spec\.ts$/,
+        // Belongs to the prod-build project only: it asserts
+        // isDevEnvironment=false gating, which against the dev server this
+        // project uses fails BY CONSTRUCTION (DEV_ONLY pages must be visible
+        // in dev). Without this ignore, `--project=chromium` runs it wrongly.
+        /shell-production-gating\.spec\.ts$/,
       ],
       // `viewport` override comes AFTER the spread — devices.Desktop Chrome
       // sets it to 1280x720 by default which is too small for the Cesare

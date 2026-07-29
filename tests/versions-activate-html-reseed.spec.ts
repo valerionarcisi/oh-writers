@@ -11,6 +11,14 @@
 // final activate left the CRDT on the previous plain-text content.
 import { test, expect, TEST_TEAM_PROJECT_ID, BASE_URL } from "./fixtures";
 import type { Page } from "@playwright/test";
+import { reseedTestDb } from "./breakdown/helpers";
+
+// Mutator pays (#116): activating the HTML version rewrites the soggetto CRDT
+// and leaves extra rows in the shared version list — the alphabetically-next
+// versions-activate-reseeds-editor spec then activated the wrong row ([N72]).
+test.afterAll(() => {
+  reseedTestDb();
+});
 
 const SOGGETTO_PATH = `${BASE_URL}/projects/${TEST_TEAM_PROJECT_ID}/soggetto`;
 const HTML_CONTENT =

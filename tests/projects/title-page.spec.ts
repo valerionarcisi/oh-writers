@@ -11,6 +11,15 @@
 
 import { test, expect, TEST_TEAM_PROJECT_ID } from "../fixtures";
 import { BASE_URL } from "../helpers";
+import { reseedTestDb } from "../breakdown/helpers";
+
+// Mutator pays (#116): this file writes timestamped Title/Draft values into
+// the shared seed title page and never restored them — screenplay-export's
+// cover-page assertions downstream then saw "TITLE 1785…" instead of the
+// seeded byline ([234]). Restore the seed so file order stays irrelevant.
+test.afterAll(() => {
+  reseedTestDb();
+});
 
 const TITLE_PAGE_PATH = (projectId: string) =>
   `${BASE_URL}/projects/${projectId}/title-page`;
