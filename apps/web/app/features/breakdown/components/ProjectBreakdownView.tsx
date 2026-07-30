@@ -360,9 +360,20 @@ export function ProjectBreakdownView({ projectId, versionId, canEdit }: Props) {
     return () => window.removeEventListener("keydown", handler);
   }, [canEdit, flatVisibleRows, focusedIndex, toggleRow]);
 
+  // The loading state carries the SAME testid as the loaded one, with the
+  // loading flag exposed as an attribute. Without it the view had no stable
+  // identity while its query was in flight, so "the per-project view is open"
+  // and "its data has arrived" were indistinguishable from the outside: anything
+  // waiting for the view reported `element not found` whenever it happened to
+  // look during the fetch, which read as a broken view rather than a slow one.
   if (isLoading)
     return (
-      <div className={styles.root}>
+      <div
+        className={styles.root}
+        data-testid="project-breakdown-table"
+        data-view="per-project"
+        data-loading="true"
+      >
         <Skeleton
           lines={3}
           widths={["60%", "100%", "40%"]}

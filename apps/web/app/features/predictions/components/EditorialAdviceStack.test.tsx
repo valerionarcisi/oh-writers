@@ -43,7 +43,11 @@ describe("EditorialAdviceStack", () => {
     ).toBeTruthy();
   });
 
-  it("keeps optional notes visible but still marks the area as approved", () => {
+  // #99 — the approval card used to be synthesised whenever nothing was high or
+  // medium, so a reading that produced real low/optional notes was still crowned
+  // "OK editoriale" and the writer stopped at the verdict. Optional notes ARE
+  // something to say, so the area is not approved.
+  it("shows optional notes on their own, without crowning the area approved", () => {
     renderStack([
       {
         id: "opt-1",
@@ -55,9 +59,27 @@ describe("EditorialAdviceStack", () => {
       },
     ]);
 
-    expect(screen.getByText("Stato editoriale")).toBeTruthy();
     expect(screen.getByText("Fine tuning opzionale")).toBeTruthy();
     expect(screen.getByText("Dialogo da stringere appena")).toBeTruthy();
+    expect(screen.queryByText("OK editoriale")).toBeNull();
+  });
+
+  it("shows every low note rather than one approval card over them", () => {
+    renderStack(
+      Array.from({ length: 6 }, (_, i) => ({
+        id: `low-${i}`,
+        area: "structure" as const,
+        title: `Rilievo ${i}`,
+        body: "Un rilievo reale, non bloccante.",
+        type: "optional" as const,
+        severity: "low" as const,
+      })),
+    );
+
+    for (let i = 0; i < 6; i += 1) {
+      expect(screen.getByText(`Rilievo ${i}`)).toBeTruthy();
+    }
+    expect(screen.queryByText("OK editoriale")).toBeNull();
   });
 
   it("hides an item whose editorialAdviceMemoryKey is remembered as decided", () => {

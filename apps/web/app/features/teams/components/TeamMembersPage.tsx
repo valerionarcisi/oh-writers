@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { useHydratedInput } from "@oh-writers/ui";
 import {
   useSuspenseQuery,
   useMutation,
@@ -31,6 +32,11 @@ export function TeamMembersPage({ slug, currentUserId }: TeamMembersPageProps) {
   const { data: result } = useSuspenseQuery(teamQueryOptions(slug));
 
   const [inviteEmail, setInviteEmail] = useState("");
+  // Server-rendered input: adopt anything typed before React wired its onChange,
+  // or the address sits in the field while state stays empty and the Invita
+  // button never enables (#117).
+  const inviteEmailRef = useRef<HTMLInputElement>(null);
+  useHydratedInput(inviteEmailRef, inviteEmail, setInviteEmail);
   const [inviteRole, setInviteRole] = useState<RoleOption>("editor");
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -130,7 +136,9 @@ export function TeamMembersPage({ slug, currentUserId }: TeamMembersPageProps) {
 
       {/* Invite form */}
       <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>{t("teams.members.inviteTitle")}</h2>
+        <h2 className={styles.sectionTitle}>
+          {t("teams.members.inviteTitle")}
+        </h2>
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -139,6 +147,7 @@ export function TeamMembersPage({ slug, currentUserId }: TeamMembersPageProps) {
           className={styles.inviteForm}
         >
           <input
+            ref={inviteEmailRef}
             type="email"
             className={styles.input}
             placeholder={t("teams.members.emailPlaceholder")}

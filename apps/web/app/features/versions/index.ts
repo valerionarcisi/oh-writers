@@ -5,3 +5,5 @@ export {
   narrativeToVersionView,
   screenplayToVersionView,
 } from "./version-view";
+export { versionDisplayLabel } from "./version-label";
+export type { LabelledVersion } from "./version-label";

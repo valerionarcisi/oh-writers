@@ -12,7 +12,7 @@
 import { type Page } from "@playwright/test";
 import { test, expect } from "./fixtures";
 import { BASE_URL } from "./fixtures";
-import { TEAM_PROJECT_ID } from "./breakdown/helpers";
+import { TEAM_PROJECT_ID, reseedTestDb } from "./breakdown/helpers";
 import {
   openCesareSheet,
   sendCesareMessage,
@@ -28,7 +28,28 @@ async function ensureCesareOpen(page: Page): Promise<void> {
   await openCesareSheet(page);
 }
 
+// Re-open the persisted session after a reload. Since issue #42 the drawer
+// deliberately opens CLEAN — no auto-selected session — so a reload lands on the
+// empty pending thread and a past conversation comes back only on an EXPLICIT
+// pick. These tests used to assert auto-rehydration into the open drawer, which
+// is exactly the behaviour #42 removed: persistence is now asserted through the
+// same affordance the writer uses, the session selector.
+async function reopenLastSession(page: Page): Promise<void> {
+  const drawer = page.getByTestId("cesare-drawer");
+  await drawer.getByTestId("cesare-session-selector").click();
+  await expect(page.getByTestId("cesare-sessions-popover")).toBeVisible({
+    timeout: 5_000,
+  });
+  await page.getByTestId("cesare-session-row").first().click();
+}
+
 test.describe("[051] Cesare history — derived markdown", () => {
+  // The agentic-edit test confirms Sovrascrivi, permanently mutating the shared
+  // seed soggetto that later spec files read. The mutator cleans up (see #116).
+  test.afterAll(() => {
+    reseedTestDb();
+  });
+
   test("a session's conversation survives a full reload", async ({
     authenticatedPage: page,
   }) => {
@@ -51,6 +72,7 @@ test.describe("[051] Cesare history — derived markdown", () => {
     await page.reload();
     await page.waitForLoadState("networkidle");
     await ensureCesareOpen(page);
+    await reopenLastSession(page);
 
     // The persisted user message is re-hydrated into the thread.
     await expect(
@@ -69,9 +91,15 @@ test.describe("[051] Cesare history — derived markdown", () => {
       page,
       "Riscrivi il soggetto rendendolo più intenso",
     );
-    const reply = await waitForCesareReply(page);
-    // MOCK_AI applies a soggetto edit and reports the new version.
-    expect(reply.toLowerCase()).toMatch(/aggiornato|soggetto|versione/i);
+    await waitForCesareReply(page);
+
+    // Spec 76 — a large, unconfirmed edit ASKS before applying (Sovrascrivi /
+    // Nuova versione). This test predates that contract and expected the edit
+    // applied directly; the pick is now part of the flow, and the applied turn
+    // that follows carries the trace whose persistence this test protects.
+    await page
+      .getByRole("button", { name: "Sovrascrivi" })
+      .click({ timeout: 15_000 });
 
     const conversation = page.getByTestId("cesare-conversation");
     // The agentic-edit trace renders the "Aggiornato Soggetto" step + a
@@ -86,6 +114,7 @@ test.describe("[051] Cesare history — derived markdown", () => {
     await page.reload();
     await page.waitForLoadState("networkidle");
     await ensureCesareOpen(page);
+    await reopenLastSession(page);
 
     // After reload the edit turn — including its trace + the Mostra modifiche
     // control — is restored from the persisted message metadata.

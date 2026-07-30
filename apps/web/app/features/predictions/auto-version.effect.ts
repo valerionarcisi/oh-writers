@@ -353,9 +353,16 @@ const acquireVersion = (
 // (soggetto/synopsis/treatment) the realtime editor reads the CRDT, not
 // `content`, so the Yjs state is reseeded from the new content too — otherwise
 // the open/reloaded editor keeps the pre-edit text (BUG-N72, the narrative twin
-// of the screenplay BUG-N71 reseed). `yjsStateFromNarrativeContent` returns null
-// for empty/HTML content; in that case the existing CRDT is left untouched
-// (nulling it would wipe the room), the same guard the seed path uses.
+// of the screenplay BUG-N71 reseed).
+//
+// `yjsStateFromNarrativeContent` returns null for empty content AND for any HTML
+// its strict canonical parser does not recognise. That null used to mean "leave
+// the column alone", which is what left junk on screen (#54): `content` got the
+// clean new text while `yjsState` kept the WHOLE previous document, and since the
+// editor renders the CRDT the writer still saw the old text — its tail past the
+// new content being exactly the reported leftover. We now write the null through.
+// That cannot wipe a room: a NULL state loads as an empty fragment, which the
+// client's `isFragmentEmpty` seed path fills from `content` (yjs-plugins.ts).
 const applyLive = (
   documentId: string,
   documentType: DocumentType,
@@ -364,9 +371,7 @@ const applyLive = (
 ): Effect.Effect<void, CesareError, DbService> =>
   Effect.gen(function* () {
     const { db } = yield* DbService;
-    const reseed = isPmRoomDocType(documentType)
-      ? yjsStateFromNarrativeContent(content)
-      : null;
+    const isPmRoom = isPmRoomDocType(documentType);
     yield* dbStep(
       () =>
         db
@@ -374,7 +379,9 @@ const applyLive = (
           .set({
             currentVersionId: acquired.versionId,
             content,
-            ...(reseed ? { yjsState: reseed } : {}),
+            ...(isPmRoom
+              ? { yjsState: yjsStateFromNarrativeContent(content) }
+              : {}),
             updatedAt: new Date(),
           })
           .where(eq(documents.id, documentId)),
@@ -395,9 +402,9 @@ const rollbackApply = (
     const { db } = yield* DbService;
     // Reseed the CRDT back to the "before" content too, so a failed apply never
     // leaves the room on the half-applied edit while `content` reverts (BUG-N72).
-    const reseed = isPmRoomDocType(documentType)
-      ? yjsStateFromNarrativeContent(acquired.previousContent)
-      : null;
+    // As in `applyLive`, a null reseed is WRITTEN rather than skipped (#54) —
+    // skipping it would strand the room on the failed edit's text.
+    const isPmRoom = isPmRoomDocType(documentType);
     yield* Effect.ignore(
       dbStep(
         () =>
@@ -406,7 +413,13 @@ const rollbackApply = (
             .set({
               currentVersionId: acquired.previousVersionId,
               content: acquired.previousContent,
-              ...(reseed ? { yjsState: reseed } : {}),
+              ...(isPmRoom
+                ? {
+                    yjsState: yjsStateFromNarrativeContent(
+                      acquired.previousContent,
+                    ),
+                  }
+                : {}),
               updatedAt: new Date(),
             })
             .where(eq(documents.id, documentId)),

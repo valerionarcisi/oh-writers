@@ -171,6 +171,30 @@ async function importAndConfirm(page: Page) {
     () => ((window as any).__ohWritersFountain?.() ?? "").trim().length > 100,
     { timeout: 20_000 },
   );
+  await dismissImportedTitlePage(page);
+}
+
+/**
+ * Dismiss the "Frontespizio importato dal PDF" confirmation if it appears.
+ *
+ * A PDF with a detected title page pops `ImportedTitlePageConfirm` — a MODAL
+ * dialog — once the content lands. Every pointer event outside it is blocked,
+ * so a test that imports and then interacts (open the actions menu, click a
+ * block) stalls against an invisible wall until the test timeout: the four
+ * long-red tests in this file were exactly that, a product feature that
+ * arrived after they were written. Cancel keeps the document as the tests
+ * expect it — no title page applied.
+ */
+async function dismissImportedTitlePage(page: Page) {
+  const cancel = page.getByTestId("imported-titlepage-confirm-cancel");
+  const appeared = await cancel
+    .waitFor({ state: "visible", timeout: 3_000 })
+    .then(() => true)
+    .catch(() => false);
+  if (appeared) {
+    await cancel.click();
+    await cancel.waitFor({ state: "hidden", timeout: 5_000 });
+  }
 }
 
 /** Wait until the editor has Wolf content (loaded from DB or just imported). */

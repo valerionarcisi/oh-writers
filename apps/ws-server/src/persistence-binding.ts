@@ -120,7 +120,14 @@ const flushDirtyRooms = async (utils: YWebsocketUtils): Promise<void> => {
       dirtyRooms.delete(docName);
       continue;
     }
-    await flushRoom(room, ydoc);
+    // #91 — this loop awaits once per room, so a reseed can land at any point
+    // while a flush is in flight. A reseed evicts a room precisely BECAUSE its
+    // in-memory copy is stale (see `reseedRoom`), and writing that copy anyway
+    // reverts the fresh DB state — the edit that triggered the reseed silently
+    // disappears. The doc instance is the evidence: `reseedRoom` removes it from
+    // `utils.docs`, so a room that has vanished (or been re-created as a
+    // different doc) must not be written.
+    await flushRoom(room, ydoc, () => utils.docs.get(docName) === ydoc);
     dirtyRooms.delete(docName);
   }
 };

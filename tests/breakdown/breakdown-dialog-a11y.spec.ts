@@ -4,6 +4,7 @@ import {
   navigateToBreakdown,
   switchBreakdownView,
   TEAM_PROJECT_ID,
+  reseedTestDb,
 } from "./helpers";
 
 /**
@@ -22,6 +23,13 @@ import {
  */
 
 test.describe("[Spec UI] Dialog a11y — native <dialog> focus and keyboard", () => {
+  // [413] CONFIRMS a bulk archive, permanently mutating the shared seed rows the
+  // later breakdown specs read (per-project rows/KPIs). The mutator cleans up
+  // (see #116) — dialog-a11y was the missing link in the intra-directory chain.
+  test.afterAll(() => {
+    reseedTestDb();
+  });
+
   /**
    * Helper: navigate to per-project breakdown and select at least one row
    * so the bulk action bar appears. Returns false if skipping is needed.

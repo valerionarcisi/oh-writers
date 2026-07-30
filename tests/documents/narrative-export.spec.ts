@@ -19,8 +19,7 @@
 import { test, expect, TEST_TEAM_PROJECT_ID } from "../fixtures";
 import { BASE_URL } from "../helpers";
 import type { Download, Page, Response } from "@playwright/test";
-// @ts-expect-error — pdf-parse has no types for its internal entry
-import pdfParse from "pdf-parse/lib/pdf-parse.js";
+import { pdfCompactText } from "../helpers/pdf";
 
 const SYNOPSIS_PATH = (projectId: string) =>
   `${BASE_URL}/projects/${projectId}/synopsis`;
@@ -110,10 +109,12 @@ test.describe("Narrative Export — Spec 04c", () => {
     const body = await response.json();
     const buffer = Buffer.from(body.result.value.pdfBase64, "base64");
     expect(buffer.subarray(0, 4).toString()).toBe("%PDF");
-    const parsed = await pdfParse(buffer);
-    expect(parsed.text).toContain("LOGLINE");
-    expect(parsed.text).toContain("SYNOPSIS");
-    expect(parsed.text).toContain("TREATMENT");
+    // Compact text: the section headings render with letter-spacing, so the
+    // extracted glyphs come back as "L O G L I N E".
+    const text = await pdfCompactText(buffer);
+    expect(text).toContain("LOGLINE");
+    expect(text).toContain("SYNOPSIS");
+    expect(text).toContain("TREATMENT");
   });
 
   test("[227] Esporta PDF is disabled on the outline (non-narrative) surface", async ({
@@ -162,10 +163,11 @@ test.describe("Narrative Export — Spec 04c", () => {
     });
     expect(typeof body.result.value.pdfBase64).toBe("string");
     const buffer = Buffer.from(body.result.value.pdfBase64, "base64");
-    const parsed = await pdfParse(buffer);
     // Cover page is opt-in: when not requested, the "Written by" credit
-    // line that lives on the cover must NOT appear in the rendered text.
-    expect(parsed.text).not.toContain("Written by");
+    // line that lives on the cover must NOT appear in the rendered text
+    // (whitespace-stripped so heading letter-spacing can't mask it).
+    const text = await pdfCompactText(buffer);
+    expect(text).not.toContain("Writtenby");
   });
 
   test("Esporta PDF is exposed on the treatment surface too", async ({

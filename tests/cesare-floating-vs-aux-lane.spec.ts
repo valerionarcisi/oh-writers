@@ -98,15 +98,24 @@ test.describe("[BUG · #49] floating Cesare vs auxiliary split lane", () => {
     // ── Hit-test: the lane's interactive area is reachable ───────────────────
     // The element at the lane's centre point must live INSIDE the Versioni lane,
     // never inside a floating Cesare surface stacked over it.
+    //
+    // Probe the centre of the lane's VISIBLE part, not of its element box: the
+    // lane wrapper is an in-flow grid column that grows with the page (the
+    // drawer inside it is sticky), so on a long document the box centre falls
+    // below the viewport, where elementFromPoint answers null — this probe then
+    // reported the lane as covered while nothing was covering anything.
     const ownerIsLane = await page.evaluate(() => {
       const lane = document.querySelector(
         '[data-testid="versions-split-lane"]',
       );
       if (!lane) return false;
       const r = lane.getBoundingClientRect();
+      const visibleTop = Math.max(r.top, 0);
+      const visibleBottom = Math.min(r.bottom, window.innerHeight);
+      if (visibleBottom <= visibleTop) return false;
       const hit = document.elementFromPoint(
         r.left + r.width / 2,
-        r.top + r.height / 2,
+        (visibleTop + visibleBottom) / 2,
       );
       // The hit element must be the lane or a descendant of it — and must NOT be
       // inside the floating Cesare drawer.

@@ -28,6 +28,7 @@ export type {
   ConfirmOptions,
   UseConfirmDialog,
 } from "./components/ConfirmDialogProvider";
+export { useHydratedInput } from "./components/use-hydrated-input";
 export { Tag } from "./components/Tag";
 export type { TagProps, TagVariant } from "./components/Tag";
 export { Banner } from "./components/Banner";

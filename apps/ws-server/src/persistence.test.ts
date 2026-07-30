@@ -152,6 +152,32 @@ describe("flushRoom → loadYjsState round-trip", () => {
 
     expect(restored.getText("content").toString()).toBe("v1 v2");
   });
+
+  // #91 — a reseed evicts a room precisely BECAUSE its in-memory copy is stale.
+  // A flush already in flight when that lands must not write, or it puts the
+  // stale doc back over the fresh DB state and the edit that triggered the
+  // reseed silently disappears.
+  it("skips the write when the room stopped being live mid-flush", async () => {
+    const room = ROOMS[0]!;
+    await flushRoom(room, seedDoc("fresh"));
+
+    // The stale doc's flush loses the race: its liveness check says no.
+    await flushRoom(room, seedDoc("stale"), () => false);
+
+    const restored = new Doc();
+    applyUpdate(restored, (await loadYjsState(room)) as Uint8Array);
+    expect(restored.getText("content").toString()).toBe("fresh");
+  });
+
+  it("writes normally while the room is still live", async () => {
+    const room = ROOMS[0]!;
+    await flushRoom(room, seedDoc("first"));
+    await flushRoom(room, seedDoc("second"), () => true);
+
+    const restored = new Doc();
+    applyUpdate(restored, (await loadYjsState(room)) as Uint8Array);
+    expect(restored.getText("content").toString()).toContain("second");
+  });
 });
 
 describe("loadYjsState on a never-synced row", () => {

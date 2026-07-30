@@ -81,9 +81,16 @@ interface ProseMirrorViewProps {
   onReady?: (view: EditorView) => void;
   /** When true the editor is non-editable — used by the version viewer. */
   readOnly?: boolean;
-  /** Optional extra plugins appended after the core plugin chain. Used by
-   *  ScreenplayEditor to install the Cesare propose/accept decoration plugin
-   *  without coupling ProseMirrorView to the agentic layer. */
+  /** Optional extra plugins placed BEFORE the core plugin chain. Used by
+   *  ScreenplayEditor to install the Cesare propose/accept decoration plugins
+   *  without coupling ProseMirrorView to the agentic layer.
+   *
+   *  Order matters: the pending-edit plugin intercepts Mod-z while a rewrite is
+   *  awaiting accept/reject (Cmd+Z = reject). Appended AFTER the chain — as
+   *  this prop originally was — that handler sat behind the core
+   *  `"Mod-z": undo` keymap, which consumed the key first: a plain history
+   *  undo reverted the text while the plugin state and its green highlight
+   *  survived, orphaned. The interception can only work from in front. */
   pluginsExtra?: Plugin[];
   /** Shared Yjs doc for realtime collaboration. Null when realtime is off. */
   ydoc?: Y.Doc | null;
@@ -161,6 +168,11 @@ export function ProseMirrorView({
     const state = EditorState.create({
       ...(isRealtime ? { schema } : { doc: initialPmDoc }),
       plugins: [
+        // FIRST, so their key handlers see the event before the core keymaps —
+        // the pending-edit plugin's Cmd+Z-rejects-the-rewrite can only intercept
+        // from in front of the `"Mod-z": undo` binding below (see the
+        // `pluginsExtra` prop comment).
+        ...(pluginsExtra ?? []),
         ...(isRealtime ? [] : [history()]),
         // Scene-heading pickers: each fires only when the cursor is inside
         // its respective slot, offering values the writer has already used
@@ -203,7 +215,6 @@ export function ProseMirrorView({
         buildPaginatorPlugin(),
         buildCesareAppliedHighlightPlugin(),
         ...yjsPlugins,
-        ...(pluginsExtra ?? []),
       ],
     });
 

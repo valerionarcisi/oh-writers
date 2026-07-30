@@ -10,9 +10,15 @@
      refound). Cesare peek, Versioni and Notifiche all open INTO the same lane,
      so the column is the SAME width for every surface — switching surfaces never
      reflows the page. Clamped so the track stays usable and never starves the
-     main (middle) lane. There is no per-surface width and no drag-divergence:
-     constant width is the whole point of the refound. */
-  --split-aux-width: clamp(360px, 480px, 42vw);
+     main (middle) lane. There is still no per-surface width and no
+     drag-divergence: one width for all of them.
+     That one width IS user-draggable (#57): the resize handle writes
+     `--split-aux-user` on <body> and it is read here, with the constant below as
+     the default. Resolving it on `.shell` (rather than letting the drag write
+     this very property on <body>) is deliberate — a custom property declared on
+     the element always beats the same one inherited from an ancestor, so a
+     body-level `--split-aux-width` would be silently ignored here. */
+  --split-aux-width: var(--split-aux-user, clamp(360px, 480px, 42vw));
 
   display: grid;
   grid-template-columns: 240px 1fr;

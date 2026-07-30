@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
+import { useHydratedInput } from "@oh-writers/ui";
 import { unwrapResult } from "@oh-writers/utils";
 import { useTranslation } from "~/features/i18n";
 import { createTeam } from "../server/teams.server";
@@ -11,6 +12,12 @@ export function TeamCreationPage() {
   const { t } = useTranslation();
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
+  // The field is server-rendered and autofocused, so it invites typing before
+  // React has wired its onChange. Adopt whatever was typed in that window,
+  // otherwise the name sits visibly in the field while `name` stays empty and
+  // the submit button never enables (#117).
+  const nameRef = useRef<HTMLInputElement>(null);
+  useHydratedInput(nameRef, name, setName);
 
   const mutation = useMutation({
     mutationFn: async (teamName: string) =>
@@ -41,6 +48,7 @@ export function TeamCreationPage() {
               {t("teams.create.nameLabel")}
             </label>
             <input
+              ref={nameRef}
               id="team-name"
               type="text"
               className={styles.input}

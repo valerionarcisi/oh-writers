@@ -56,6 +56,19 @@ const readAuxTrackWidth = async (page: Page): Promise<number> =>
     return last ? Math.round(parseFloat(last)) : -1;
   });
 
+// The rendered width of whichever surface currently owns the auxiliary track.
+// Measured off the live element rather than the grid template: `[class*="shell"]`
+// resolves to different elements between the dev and built bundles (hashed CSS
+// Module class names), so reading the template is unreliable outside the specific
+// flows above. What the user sees is the lane's own box.
+const readAuxLaneWidth = async (page: Page): Promise<number> =>
+  page.evaluate(() => {
+    const lane = document.querySelector(
+      '[data-testid="cesare-peek-lane"], [data-testid="versions-split-lane"], [data-testid="notification-center-drawer"]',
+    );
+    return lane ? Math.round(lane.getBoundingClientRect().width) : -1;
+  });
+
 const peekParam = (page: Page): string | null =>
   new URL(page.url()).searchParams.get("peek");
 const versionsParam = (page: Page): string | null =>
@@ -590,5 +603,118 @@ test.describe("[N78-A6] unified navigable split host", () => {
     await page.waitForTimeout(800);
 
     expect(hydrationWarnings).toEqual([]);
+  });
+
+  // #57 — the B4 refound unified the aux column to a single constant width, which
+  // also made the drag handle a no-op: the resize hook updated state nothing ever
+  // painted. Both requirements hold together — ONE width for every surface, and
+  // that width is user-draggable. Dragging must move the real grid track, survive
+  // a reload, and stay shared across surfaces.
+  test("the shared aux width is user-draggable, persisted, and still shared", async ({
+    authenticatedPage: page,
+  }) => {
+    // Pin a known starting width so the drag has room to grow regardless of what
+    // an earlier test left in localStorage (the value is shared + persisted).
+    await page.goto(SOGGETTO_PATH);
+    await expect(page.getByTestId("soggetto-page")).toBeVisible({
+      timeout: 15_000,
+    });
+    await page.evaluate(() =>
+      localStorage.setItem("ohw.split-drawer.width", "420"),
+    );
+
+    // Versioni is the surface that owns a lane resize handle (the Cesare peek
+    // fills the track without one).
+    await page.getByTestId("topbar-version-chip").click();
+    await expect(page.getByTestId("versions-split-lane")).toBeVisible({
+      timeout: 15_000,
+    });
+
+    // The lane animates into its track, so poll until the width settles rather
+    // than reading mid-transition (a too-early read catches the full-bleed
+    // pre-layout box, not the lane).
+    await expect
+      .poll(async () => readAuxLaneWidth(page), { timeout: 10_000 })
+      .toBeLessThan(1_000);
+    const initialWidth = await readAuxLaneWidth(page);
+    expect(initialWidth).toBeGreaterThan(200);
+
+    // Drag the lane's left edge leftwards by 150px — that widens the aux track.
+    // The handle is a transparent 6px strip whose grip only fades in on hover, so
+    // Playwright treats it as invisible (the role engine skips it and
+    // `boundingBox()` returns null) and react-aria's `useMove` binds POINTER
+    // events, which `page.mouse` never emits. It is nonetheless attached and
+    // hit-testable, so the gesture is dispatched in-page.
+    const dragged = await page.evaluate(() => {
+      const el = [...document.querySelectorAll('[class*="handleLeft"]')].find(
+        (h) => h.closest('[data-placement="lane"]'),
+      );
+      if (!el) return false;
+      const r = el.getBoundingClientRect();
+      const x = r.left + r.width / 2;
+      const y = r.top + Math.min(300, r.height / 2);
+      const ev = (type: string, clientX: number, buttons: number) =>
+        new PointerEvent(type, {
+          bubbles: true,
+          cancelable: true,
+          clientX,
+          clientY: y,
+          pointerId: 1,
+          pointerType: "mouse",
+          isPrimary: true,
+          button: 0,
+          buttons,
+        });
+      el.dispatchEvent(ev("pointerdown", x, 1));
+      for (const dx of [-30, -70, -110, -150]) {
+        window.dispatchEvent(ev("pointermove", x + dx, 1));
+      }
+      window.dispatchEvent(ev("pointerup", x - 150, 0));
+      return true;
+    });
+    expect(dragged).toBe(true);
+
+    // The track GREW — before the fix it stayed pinned at the CSS constant no
+    // matter how far the handle was dragged.
+    await expect
+      .poll(async () => readAuxLaneWidth(page), { timeout: 8_000 })
+      .toBeGreaterThan(initialWidth);
+    const draggedWidth = await readAuxLaneWidth(page);
+
+    // The new width is persisted, so the next visit restores it. (The hydration
+    // path itself is covered by the divergent-persisted-size test above; here we
+    // assert the drag actually writes the shared key. The stored value is the
+    // track width, a few px wider than the lane's own rendered box.)
+    await expect
+      .poll(
+        async () =>
+          page.evaluate(() =>
+            Number(localStorage.getItem("ohw.split-drawer.width")),
+          ),
+        { timeout: 8_000 },
+      )
+      .toBeGreaterThan(initialWidth);
+
+    // The dragged width is the ONE shared track width, so switching surfaces never
+    // shifts the page (the refound invariant). Asserted on the shared custom
+    // property rather than each lane's rendered box: the two surfaces inset their
+    // content differently, so their boxes differ by a few px for the same track.
+    const trackWidth = await page.evaluate(() =>
+      document.body.style.getPropertyValue("--split-aux-user"),
+    );
+    await page.goto(`${SOGGETTO_PATH}?peek=cesare`);
+    await expect(page.getByTestId("cesare-peek-lane")).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect
+      .poll(
+        async () =>
+          page.evaluate(() =>
+            document.body.style.getPropertyValue("--split-aux-user"),
+          ),
+        { timeout: 8_000 },
+      )
+      .toBe(trackWidth);
+    expect(await readMainWidth(page)).toBeGreaterThan(200);
   });
 });

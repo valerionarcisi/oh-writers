@@ -86,7 +86,23 @@ test.describe("Screenplay Versions — master→detail (Spec 66)", () => {
     authenticatedPage: page,
   }) => {
     await openVersions(page);
-    await rows(page).first().click();
+    await expect(rows(page).first()).toBeVisible({ timeout: 10_000 });
+
+    // The detail needs a NON-current row: the current version's detail would only
+    // show the script already open in the editor with no action available, so
+    // that row is deliberately not a navigation target (#94). The fixture opens
+    // with a single (current) version, so duplicate it to get a second one.
+    const target = page.locator(
+      '[data-testid^="versions-split-row-"]:not([data-current="true"])',
+    );
+    if ((await target.count()) === 0) {
+      const firstId = (await rows(page)
+        .first()
+        .getAttribute("data-testid"))!.replace("versions-split-row-", "");
+      await page.getByTestId(`version-duplicate-${firstId}`).click();
+      await expect.poll(async () => target.count(), { timeout: 8_000 }).toBe(1);
+    }
+    await target.first().click();
 
     await expect(page.getByTestId("versions-split-detail")).toBeVisible();
     await expect(page.getByTestId("versions-split-content")).toBeVisible();

@@ -11,7 +11,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // This keeps the test in the pure-unit CI lane (no DB, no websocket).
 
 const persistence = vi.hoisted(() => ({
-  flushRoom: vi.fn(async () => undefined),
+  // The third parameter is the #91 liveness check the flush loop passes; typed
+  // here so the tests below can read it off the recorded call.
+  flushRoom: vi.fn(
+    async (
+      _room?: unknown,
+      _ydoc?: unknown,
+      _isStillLive?: () => boolean,
+    ): Promise<undefined> => undefined,
+  ),
   loadYjsState: vi.fn(async () => null as Uint8Array | null),
 }));
 
@@ -79,14 +87,49 @@ describe("installPersistence dirty-room flush path", () => {
 
     await vi.advanceTimersByTimeAsync(60_000);
     expect(persistence.flushRoom).toHaveBeenCalledTimes(1);
-    expect(persistence.flushRoom).toHaveBeenCalledWith(
-      { kind: "screenplay", id: "sp-1" },
-      ydoc,
+    // Only the room + doc are pinned here; the trailing argument is the #91
+    // liveness check, which has its own test below.
+    expect(vi.mocked(persistence.flushRoom).mock.calls[0]?.slice(0, 2)).toEqual(
+      [{ kind: "screenplay", id: "sp-1" }, ydoc],
     );
 
     // Already flushed + cleared: the next tick is a no-op without a new edit.
     await vi.advanceTimersByTimeAsync(60_000);
     expect(persistence.flushRoom).toHaveBeenCalledTimes(1);
+  });
+
+  // #91 — a reseed evicts a room precisely BECAUSE its in-memory copy is stale.
+  // If that lands while the interval flush is in flight, writing anyway puts the
+  // stale doc back over the fresh DB state and the edit that triggered the
+  // reseed silently disappears. The flush therefore carries a liveness check,
+  // asked immediately before the write.
+  it("hands flushRoom a liveness check that fails once the room is evicted", async () => {
+    vi.useFakeTimers();
+    await installPersistence();
+    const { bindState } = utils.getCaptured();
+
+    const docName = "screenplay:sp-1";
+    const ydoc = new Doc();
+    utils.docs.set(docName, ydoc);
+    await bindState(docName, ydoc);
+    ydoc.getText("content").insert(0, "edit");
+
+    await vi.advanceTimersByTimeAsync(60_000);
+    const isStillLive = vi.mocked(persistence.flushRoom).mock.calls[0]?.[2] as
+      | (() => boolean)
+      | undefined;
+    expect(isStillLive).toBeTypeOf("function");
+
+    // Still the live room → the write may proceed.
+    expect(isStillLive!()).toBe(true);
+
+    // A reseed drops the stale doc from the registry → the write must not.
+    utils.docs.delete(docName);
+    expect(isStillLive!()).toBe(false);
+
+    // A room re-created as a DIFFERENT doc is not this flush's room either.
+    utils.docs.set(docName, new Doc());
+    expect(isStillLive!()).toBe(false);
   });
 
   it("loads persisted state into the doc on bindState", async () => {

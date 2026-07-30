@@ -43,9 +43,24 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      // Agentic specs require MOCK_AI=true and live in the mock-ui project; keep
-      // them out of the default run so they aren't executed twice.
-      testIgnore: /cesare-agentic-.*\.spec\.ts$/,
+      testIgnore: [
+        // Agentic specs require MOCK_AI=true and live in the mock-ui project;
+        // keep them out of the default run so they aren't executed twice.
+        /cesare-agentic-.*\.spec\.ts$/,
+        // Out of the production scope (MVP #97: everything up to Calendario
+        // ships; Budget, Location, Piano di ripresa and Fundraising stay
+        // DEV_ONLY and unshipped). Their suites are parked, not deleted —
+        // remove the entry to reactivate one when its feature comes back into
+        // scope. The GATING of these pages stays covered: prod-build's
+        // shell-production-gating and mvp-surface-smoke still run.
+        /(budget|locations|shooting-plan)\/.*\.spec\.ts$/,
+        /fundraising-.*\.spec\.ts$/,
+        // Belongs to the prod-build project only: it asserts
+        // isDevEnvironment=false gating, which against the dev server this
+        // project uses fails BY CONSTRUCTION (DEV_ONLY pages must be visible
+        // in dev). Without this ignore, `--project=chromium` runs it wrongly.
+        /shell-production-gating\.spec\.ts$/,
+      ],
       // `viewport` override comes AFTER the spread — devices.Desktop Chrome
       // sets it to 1280x720 by default which is too small for the Cesare
       // bottom sheet to fit on screen.
@@ -64,6 +79,10 @@ export default defineConfig({
     {
       name: "mock-ui",
       testMatch: /cesare-agentic-.*\.spec\.ts$/,
+      // Same MVP #97 parking as the chromium project: the Cesare flows for
+      // Budget and Location drive DEV_ONLY pages that do not ship.
+      testIgnore:
+        /cesare-agentic-(budget|budget-intelligence|locations|locations-ux)\.spec\.ts$/,
       dependencies: ["warmup"],
       use: {
         ...devices["Desktop Chrome"],
@@ -91,7 +110,15 @@ export default defineConfig({
       // match the test DB — the editor then remount-loops between skeleton and
       // editor and eats keystrokes (BUG-N57). The E2E stack is non-realtime by
       // contract (N-42) until it runs its own ws-server.
-      command: `PORT=${TEST_PORT} BETTER_AUTH_URL=${TEST_BASE_URL} DATABASE_URL=${TEST_DB_URL} VITE_WS_URL= LLM_FIRST_BREAKDOWN=false MOCK_AI=true CRON_SECRET=test-cron-secret pnpm --filter @oh-writers/web dev`,
+      //
+      // DEV_AUTH_BYPASS is force-disabled for the same class of reason: it is a
+      // local convenience for hand-testing, but inherited from apps/web/.env it
+      // makes the server answer EVERY request as the dev user. The role fixtures
+      // then sign in for nothing — `authenticatedViewerPage` holds owner rights —
+      // and permission assertions silently test the wrong thing in BOTH
+      // directions: viewer guards fail, and owner-only flows pass that should
+      // not. The suite must not depend on how a developer left their .env.
+      command: `PORT=${TEST_PORT} BETTER_AUTH_URL=${TEST_BASE_URL} DATABASE_URL=${TEST_DB_URL} VITE_WS_URL= DEV_AUTH_BYPASS=false LLM_FIRST_BREAKDOWN=false MOCK_AI=true CRON_SECRET=test-cron-secret pnpm --filter @oh-writers/web dev`,
       url: TEST_BASE_URL,
       // Always start a dedicated test server so it uses the test DB, never the
       // dev DB. Locally a warm server (already bound to the test DB) can be
@@ -106,7 +133,7 @@ export default defineConfig({
       // for the build step too, not just the start step, or this "prod" build
       // would call the real Anthropic API. Uses the same test DB as the dev
       // webServer above — this is only about isDevEnvironment, not data.
-      command: `PORT=${PROD_PORT} BETTER_AUTH_URL=${PROD_BASE_URL} DATABASE_URL=${TEST_DB_URL} VITE_WS_URL= LLM_FIRST_BREAKDOWN=false MOCK_AI=true CRON_SECRET=test-cron-secret pnpm --filter @oh-writers/web build && PORT=${PROD_PORT} BETTER_AUTH_URL=${PROD_BASE_URL} DATABASE_URL=${TEST_DB_URL} VITE_WS_URL= LLM_FIRST_BREAKDOWN=false MOCK_AI=true CRON_SECRET=test-cron-secret pnpm --filter @oh-writers/web start`,
+      command: `PORT=${PROD_PORT} BETTER_AUTH_URL=${PROD_BASE_URL} DATABASE_URL=${TEST_DB_URL} VITE_WS_URL= DEV_AUTH_BYPASS=false LLM_FIRST_BREAKDOWN=false MOCK_AI=true CRON_SECRET=test-cron-secret pnpm --filter @oh-writers/web build && PORT=${PROD_PORT} BETTER_AUTH_URL=${PROD_BASE_URL} DATABASE_URL=${TEST_DB_URL} VITE_WS_URL= DEV_AUTH_BYPASS=false LLM_FIRST_BREAKDOWN=false MOCK_AI=true CRON_SECRET=test-cron-secret pnpm --filter @oh-writers/web start`,
       url: PROD_BASE_URL,
       reuseExistingServer: process.env["PW_REUSE_SERVER"] === "1",
       // Build + start: a cold production build easily exceeds the 180s the
