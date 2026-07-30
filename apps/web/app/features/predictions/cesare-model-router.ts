@@ -49,11 +49,6 @@ export interface RouteModelInput {
 // the old "any imperative → quality tier" bias, which sent nearly all real
 // requests to the expensive tier (issue #101).
 
-// A narrow set of "rewrite the whole document from scratch" phrasings — the
-// one interactive intent heavy enough to justify the quality tier even when
-// it slips past the generation tools. Everyday scoped edits are
-// intentionally NOT here.
-
 // Multi-constraint prompts encode complex intent. Raised from the old 200 so a
 // normal edit instruction ("aggiungi una scena dopo la 4 e accorcia la 2") still
 // lands on the fast tier; only genuinely long, layered requests escalate.
