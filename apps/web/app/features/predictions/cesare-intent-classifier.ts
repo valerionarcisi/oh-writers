@@ -105,7 +105,7 @@ const CONFIDENCE_THRESHOLD = 0.55;
 // Mapping from intent → tool the API must force. Only includes intents that
 // have a one-to-one mapping to a proper propose_*/write_* tool. Generic intents
 // (question, comment) fall through to "auto".
-const TOOL_BY_INTENT: Partial<Record<IntentType, string>> = {
+export const TOOL_BY_INTENT: Partial<Record<IntentType, string>> = {
   macro_rewrite: "propose_screenplay_revision",
   // Spec 80 — a single-scene edit (micro OR full rewrite) is one universal tool
   // now: the model returns the whole scene, which rewrite_scene applies inline
@@ -122,6 +122,7 @@ const TOOL_BY_INTENT: Partial<Record<IntentType, string>> = {
   edit_outline_scene: "edit_outline_scene",
   write_treatment: "propose_treatment_from_narrative",
   write_screenplay: "generate_screenplay_from_narrative",
+  translate_document: "transform_document",
 };
 
 // Shared catalogue of the many Italian ways a writer phrases a WRITE / DERIVE /

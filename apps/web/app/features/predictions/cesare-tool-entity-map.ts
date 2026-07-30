@@ -70,6 +70,9 @@ const TOOL_ENTITY_MAP: Readonly<Record<string, ToolEntityMapping>> = {
   propose_treatment_from_narrative: { access: "write", domain: "treatment" },
   generate_screenplay_from_narrative: { access: "write", domain: "screenplay" },
   apply_text_edit: { access: "write", domain: "soggetto" },
+  // Fallback only — transform_document's real target is its input's
+  // document_type, resolved dynamically by domainForToolInput below.
+  transform_document: { access: "write", domain: "soggetto" },
   expand_section: { access: "write", domain: "soggetto" },
   compress_section: { access: "write", domain: "soggetto" },
   edit_outline_scene: { access: "write", domain: "outline" },
@@ -145,3 +148,26 @@ export const WRITTEN_DOMAINS: ReadonlySet<StreamEntityDomain> = new Set(
     .filter((m) => m.access === "write")
     .map((m) => m.domain),
 );
+
+/** Domains for tools whose TARGET is an argument, not a constant. The tracer
+ *  must name the entity actually being written (#64: a wrong label is worse
+ *  than none), and transform_document can write any document the writer names.
+ *  Returns null when the tool has a fixed target or the input is unusable —
+ *  callers then fall back to the static map. */
+export const domainForToolInput = (
+  toolName: string,
+  input: unknown,
+): StreamEntityDomain | null => {
+  if (toolName !== "transform_document") return null;
+  const t = (input as { document_type?: unknown } | null)?.document_type;
+  switch (t) {
+    case "soggetto":
+    case "synopsis":
+    case "outline":
+    case "treatment":
+    case "screenplay":
+      return t;
+    default:
+      return null;
+  }
+};

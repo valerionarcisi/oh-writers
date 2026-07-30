@@ -74,6 +74,46 @@ import {
 
 export const CESARE_DOCUMENT_GEN_TOOLS = [
   {
+    // The universal whole-document primitive (#118). Closed primitives, open
+    // instruction: every other tool here encodes a USE CASE, so any request
+    // outside the enumerated set (a translation, a tone pass, a tightening)
+    // left the model with nothing to call — it interviewed the writer forever
+    // or promised background work it cannot do. The instruction reaches the
+    // quality model VERBATIM, in whatever language and spelling.
+    name: "transform_document",
+    description:
+      "Transform an ENTIRE document (soggetto, synopsis, outline, treatment or screenplay) " +
+      "following ANY free-form instruction: translate it into another language, change its tone, " +
+      "tighten it, modernise the dialogue — anything that applies to the whole document and has no " +
+      "dedicated tool. The instruction is executed verbatim, in whatever language the writer wrote it. " +
+      "Applies the result live as a version (the writer can restore the previous one from the Versions " +
+      "panel). Do NOT interrogate the writer about scope or options: the whole document is the default, " +
+      "everything not mentioned in the instruction is preserved. Use it as soon as the request is clear " +
+      "enough to act on.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        document_type: {
+          type: "string",
+          enum: ["soggetto", "synopsis", "outline", "treatment", "screenplay"],
+          description:
+            "Which document to transform. Default to the page the writer is on.",
+        },
+        instruction: {
+          type: "string",
+          description:
+            "The writer's request, passed through verbatim (any language, typos included).",
+        },
+        label: {
+          type: "string",
+          description:
+            "Optional short label for the created version (e.g. 'Versione inglese').",
+        },
+      },
+      required: ["document_type", "instruction"],
+    },
+  },
+  {
     name: "propose_logline_from_screenplay",
     description:
       "Estrae una logline (max 200 caratteri) DALLA SCENEGGIATURA esistente del progetto. " +
@@ -1712,6 +1752,207 @@ const handleGenerateScreenplay = (
     );
   });
 
+// ─── transform_document — universal whole-document transformation (#118) ─────
+
+const TRANSFORM_DOCUMENT_SYSTEM = `You are Cesare, the film-writing assistant. You transform an ENTIRE film document following the writer's instruction, given verbatim below in whatever language they wrote it.
+
+Rules:
+- Apply the instruction to the WHOLE document.
+- Change ONLY what the instruction requires; preserve structure, story content, names and formatting conventions otherwise.
+- Write the output in the language the instruction requires; if the instruction does not ask for a language change, keep the document's language.
+- Output ONLY the transformed document text — no preamble, no commentary, no code fences.`;
+
+const TRANSFORM_SCREENPLAY_SYSTEM = `You are Cesare, the film-writing assistant. You transform an ENTIRE screenplay in Fountain format following the writer's instruction, given verbatim below in whatever language they wrote it.
+
+Rules:
+- Apply the instruction to the WHOLE screenplay, scene by scene, none skipped, none summarised.
+- Preserve the Fountain structure exactly: scene headings stay headings, character cues stay alone on their line, dialogue under its cue, parentheticals in (parentheses), transitions as transitions.
+- Change ONLY what the instruction requires. If it asks for a translation, translate headings, action, cues, dialogue and parentheticals; keep proper names unless asked otherwise.
+- Output ONLY the transformed screenplay in Fountain — no preamble, no commentary.`;
+
+const TRANSFORM_NARRATIVE_TYPES: Record<string, DocumentType> = {
+  soggetto: DocumentTypes.SOGGETTO,
+  synopsis: DocumentTypes.SYNOPSIS,
+  outline: DocumentTypes.OUTLINE,
+  treatment: DocumentTypes.TREATMENT,
+};
+
+// ~10k input tokens. Beyond this a single-pass transform would silently DROP
+// the tail — the schedule-PDF lesson: fail honestly, never truncate content.
+const TRANSFORM_SCREENPLAY_MAX_CHARS = 40_000;
+
+interface TransformInput {
+  document_type?: string;
+  instruction?: string;
+  label?: string;
+}
+
+const handleTransformNarrative = (
+  input: TransformInput,
+  db: Db,
+  projectId: string,
+  userIdFallback: string | null,
+  sessionId: string | null,
+  userInstruction: string | null,
+  onDelta?: (text: string) => void,
+  abortSignal?: AbortSignal,
+): ResultAsync<CommitOutcome, CesareError> => {
+  const type = TRANSFORM_NARRATIVE_TYPES[input.document_type ?? ""];
+  const instruction = input.instruction?.trim() ?? "";
+  if (!type) {
+    return errAsync(
+      new CesareError(
+        `transform_document: tipo documento sconosciuto "${input.document_type}".`,
+      ),
+    );
+  }
+  if (instruction.length === 0) {
+    return errAsync(
+      new CesareError("transform_document: istruzione mancante."),
+    );
+  }
+  return loadDocumentForType(db, projectId, type).andThen((doc) => {
+    if (!doc) {
+      return errAsync(
+        new CesareError(`Documento ${type} non trovato per il progetto.`),
+      );
+    }
+    const existing = doc.content.trim();
+    if (existing.length === 0) {
+      return errAsync(
+        new CesareError(
+          `Il documento ${type} è vuoto: non c'è nulla da trasformare. Usa il tool di scrittura per crearlo prima.`,
+        ),
+      );
+    }
+    const user = `Instruction (verbatim from the writer):\n${instruction}\n\nDocument:\n---\n${doc.content.slice(0, 18_000)}\n---`;
+    return runGeneration(
+      TRANSFORM_DOCUMENT_SYSTEM,
+      user,
+      4000,
+      "cesare.transformDocument",
+      { onDelta, abortSignal, userId: userIdFallback },
+    )
+      .map((t) => t.trim())
+      .andThen((next) => {
+        if (next === existing) {
+          return errAsync(
+            new CesareError(
+              "Il modello ha restituito un documento identico. Riformula l'istruzione in modo più specifico.",
+            ),
+          );
+        }
+        const creator = doc.ownerId ?? userIdFallback;
+        if (!creator) {
+          return errAsync(
+            new CesareError(
+              "Impossibile determinare l'autore della draft: documento senza createdBy.",
+            ),
+          );
+        }
+        return commitOrAsk(
+          db,
+          doc.id,
+          type,
+          creator,
+          doc.content,
+          next,
+          (input.label ?? buildDraftLabel(type, instruction)).slice(0, 80),
+          commitOptions(sessionId, instruction, userInstruction),
+        );
+      });
+  });
+};
+
+const handleTransformScreenplay = (
+  input: TransformInput,
+  db: Db,
+  projectId: string,
+  userIdFallback: string | null,
+  onDelta?: (text: string) => void,
+  abortSignal?: AbortSignal,
+): ResultAsync<GeneratedScreenplay, CesareError> => {
+  const instruction = input.instruction?.trim() ?? "";
+  if (instruction.length === 0) {
+    return errAsync(
+      new CesareError("transform_document: istruzione mancante."),
+    );
+  }
+  return ResultAsync.combine([
+    loadScreenplayRowForProject(db, projectId),
+    loadScreenplayContent(db, projectId),
+  ]).andThen(([sp, fountain]) => {
+    if (!sp) {
+      return errAsync(
+        new CesareError("Sceneggiatura non trovata per il progetto."),
+      );
+    }
+    const existing = fountain.trim();
+    if (existing.length === 0) {
+      return errAsync(
+        new CesareError(
+          "La sceneggiatura è vuota: non c'è nulla da trasformare. Scrivi prima la sceneggiatura (o generala dal materiale a monte).",
+        ),
+      );
+    }
+    if (existing.length > TRANSFORM_SCREENPLAY_MAX_CHARS) {
+      return errAsync(
+        new CesareError(
+          "La sceneggiatura supera la dimensione trasformabile in un solo passaggio (~20 pagine). Per ora trasforma il documento a monte (trattamento) o riduci la richiesta a un intervallo di scene.",
+        ),
+      );
+    }
+    const label = (input.label ?? "Trasformazione · Cesare").slice(0, 80);
+    const user = `Instruction (verbatim from the writer):\n${instruction}\n\nScreenplay (Fountain):\n---\n${existing}\n---`;
+    return runGeneration(
+      TRANSFORM_SCREENPLAY_SYSTEM,
+      user,
+      9000,
+      "cesare.transformScreenplay",
+      { onDelta, abortSignal, userId: userIdFallback },
+    )
+      .map((t) => sanitizeAiText(normaliseScreenplayFountain(t.trim())))
+      .andThen((next) => {
+        if (next.length === 0) {
+          return errAsync(
+            new CesareError(
+              "Il modello ha restituito una sceneggiatura vuota. Riformula l'istruzione.",
+            ),
+          );
+        }
+        return ResultAsync.fromPromise(
+          db.transaction((tx) =>
+            importAsActiveVersionTx(tx, {
+              screenplayId: sp.id,
+              label,
+              content: next,
+              prevActiveId: sp.currentVersionId,
+              userId: sp.createdBy,
+            }),
+          ),
+          (e) =>
+            new CesareError(
+              `transform_document apply: ${e instanceof Error ? e.message : String(e)}`,
+            ),
+        ).map((updated) => ({
+          versionId: updated.currentVersionId ?? "",
+          previousVersionId: sp.currentVersionId,
+          label,
+        }));
+      });
+  });
+};
+
+const screenplayTransformPayload = (gen: GeneratedScreenplay) => ({
+  ok: true as const,
+  version_id: gen.versionId,
+  previous_version_id: gen.previousVersionId,
+  document_type: "screenplay" as const,
+  label: gen.label,
+  applied_live: true as const,
+  toast: `✦ Cesare ha trasformato la Sceneggiatura — è la versione attiva nell'editor. Apri il pannello Versioni per ripristinare la versione precedente.`,
+});
+
 // ─── Public executor ──────────────────────────────────────────────────────────
 
 const successResult = (id: string, payload: unknown): ToolResult => ({
@@ -1867,6 +2108,29 @@ export const executeDocumentGenTool = (
       abortSignal,
     ).map((gen) => successResult(block.id, screenplayGenPayload(gen)));
   }
+  if (block.name === "transform_document") {
+    const tin = block.input as TransformInput;
+    if (tin.document_type === "screenplay") {
+      return handleTransformScreenplay(
+        tin,
+        db,
+        projectId,
+        userIdFallback,
+        onDelta,
+        abortSignal,
+      ).map((gen) => successResult(block.id, screenplayTransformPayload(gen)));
+    }
+    return handleTransformNarrative(
+      tin,
+      db,
+      projectId,
+      userIdFallback,
+      sessionId,
+      userInstruction,
+      onDelta,
+      abortSignal,
+    ).map((outcome) => successResult(block.id, outcomePayload(outcome)));
+  }
   return okAsync(
     successResult(block.id, {
       ok: false,
@@ -1888,7 +2152,8 @@ export const isDocumentGenToolName = (name: string): boolean =>
   name === "propose_scaletta_from_soggetto" ||
   name === "edit_outline_scene" ||
   name === "propose_treatment_from_narrative" ||
-  name === "generate_screenplay_from_narrative";
+  name === "generate_screenplay_from_narrative" ||
+  name === "transform_document";
 
 // ─── Document generation tools factory (AI SDK v5 format) ────────────────────
 
@@ -1901,6 +2166,57 @@ export const createDocumentGenTools = (
   // the confirm-card choice turn-wide instead of re-asking on a second tool.
   userInstruction: string | null = null,
 ) => ({
+  transform_document: tool({
+    description:
+      "Transform an ENTIRE document (soggetto, synopsis, outline, treatment or screenplay) " +
+      "following ANY free-form instruction — translate it into another language, change its tone, " +
+      "tighten it — anything whole-document that has no dedicated tool. The instruction is executed " +
+      "verbatim, in whatever language the writer wrote it. Applies the result live as a new version " +
+      "(the previous one stays restorable from the Versions panel). Do NOT interrogate the writer " +
+      "about scope or options: the whole document is the default and everything not mentioned is " +
+      "preserved. Act as soon as the request is clear enough.",
+    inputSchema: z.object({
+      document_type: z
+        .enum(["soggetto", "synopsis", "outline", "treatment", "screenplay"])
+        .describe(
+          "Which document to transform. Default to the writer's current page.",
+        ),
+      instruction: z
+        .string()
+        .describe(
+          "The writer's request, verbatim (any language, typos included).",
+        ),
+      label: z
+        .string()
+        .optional()
+        .describe(
+          "Optional short label for the created version (e.g. 'Versione inglese').",
+        ),
+    }),
+    execute: async (input, _opts) => {
+      const tin = input as TransformInput;
+      if (tin.document_type === "screenplay") {
+        const result = await handleTransformScreenplay(
+          tin,
+          db,
+          projectId,
+          userIdFallback,
+        );
+        if (result.isErr()) return { error: result.error.message };
+        return screenplayTransformPayload(result.value);
+      }
+      const result = await handleTransformNarrative(
+        tin,
+        db,
+        projectId,
+        userIdFallback,
+        sessionId,
+        userInstruction,
+      );
+      if (result.isErr()) return { error: result.error.message };
+      return outcomePayload(result.value);
+    },
+  }),
   propose_logline_from_screenplay: tool({
     description:
       "Estrae una logline (max 200 caratteri) DALLA SCENEGGIATURA esistente del progetto. " +

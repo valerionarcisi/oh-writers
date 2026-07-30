@@ -1681,6 +1681,7 @@ const callCesareWithTools = (
 };
 
 const SCREENPLAY_PROPOSE_TOOLS = new Set<string>([
+  "transform_document",
   "propose_screenplay_revision",
   "propose_rename_entity",
   "rewrite_scene",
@@ -1693,6 +1694,7 @@ const SCREENPLAY_PROPOSE_TOOLS = new Set<string>([
 // page; the classifier nudge only forces one when the request clearly asks to
 // write/generate a document, so free natural-language requests dispatch reliably.
 const DOCUMENT_GEN_TOOLS = new Set<string>([
+  "transform_document",
   "write_logline",
   "propose_soggetto_v2",
   "propose_synopsis_from_screenplay",

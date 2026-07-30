@@ -54,6 +54,7 @@ import {
   mappingForTool,
   entityRefForDomain,
   labelForDomain,
+  domainForToolInput,
 } from "./cesare-tool-entity-map";
 import {
   estimateSceneCost,
@@ -2718,6 +2719,7 @@ interface RunToolLoopArgs {
  */
 const emitToolStep = (
   toolName: string,
+  toolInput: unknown,
   onStreamEvent: ((event: CesareStreamEvent) => void) | undefined,
 ): void => {
   if (!onStreamEvent) return;
@@ -2726,7 +2728,11 @@ const emitToolStep = (
     onStreamEvent({ _tag: "tool", name: toolName });
     return;
   }
-  const entity = entityRefForDomain(mapping.domain);
+  // A tool with a runtime target (transform_document) names the entity from
+  // its input — the tracer must say what is REALLY being written (#64).
+  const entity = entityRefForDomain(
+    domainForToolInput(toolName, toolInput) ?? mapping.domain,
+  );
   onStreamEvent(
     mapping.access === "read"
       ? { _tag: "reading", entity }
@@ -3076,7 +3082,7 @@ const runLegacyToolLoopEffect = (
           fromResultAsync(args.executor(block, args.db, args.projectId)).pipe(
             Effect.map((value): ToolResult => {
               toolsExecuted += 1;
-              emitToolStep(block.name, args.onStreamEvent);
+              emitToolStep(block.name, block.input, args.onStreamEvent);
               extractSideChannelMarkers(
                 block.name,
                 value.content,
@@ -3372,7 +3378,11 @@ const runProductionToolLoopEffect = (
             );
             if (toolResult) {
               toolsExecuted += 1;
-              emitToolStep(toolCall.toolName, args.onStreamEvent);
+              emitToolStep(
+                toolCall.toolName,
+                toolCall.input,
+                args.onStreamEvent,
+              );
               extractSideChannelMarkers(
                 toolCall.toolName,
                 JSON.stringify(toolResult.output),
@@ -4884,7 +4894,7 @@ const bridgeLegacyTools = (
           // generation shows "sto scrivendo …" immediately rather than after it
           // finishes. onStepFinish still emits the authoritative step later; the
           // client's reducer dedupes a repeated step, so the eager one is free.
-          emitToolStep(t.name, onStreamEvent);
+          emitToolStep(t.name, input, onStreamEvent);
           const block: ToolUseBlock = {
             type: "tool_use",
             id: opts.toolCallId,
