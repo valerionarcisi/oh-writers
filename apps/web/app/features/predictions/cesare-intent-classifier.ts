@@ -50,9 +50,37 @@ export type IntentType =
   // screenplay from the upstream narrative chain. Distinct from macro_rewrite,
   // which revises an EXISTING screenplay.
   | "write_screenplay"
+  // Document-scale transformation of an EXISTING document (#118): the model
+  // must understand it in any language or misspelling — that is exactly why
+  // this lives in the classifier and not in a router regex.
+  | "translate_document"
   // Generic
   | "question"
   | "comment";
+
+/** How much of a document a classified intent touches. Drives the model tier:
+ *  document-scale work escalates to the quality slot, scoped work stays fast.
+ *  A Record over the closed IntentType union — adding an intent without
+ *  declaring its scale fails typecheck, so the router can never meet an
+ *  unclassified intent at runtime. */
+export const INTENT_SCALE: Record<IntentType, "scoped" | "document"> = {
+  macro_rewrite: "document",
+  micro_edit: "scoped",
+  rewrite_one_scene: "scoped",
+  merge_scenes: "scoped",
+  delete_scene: "scoped",
+  rename: "scoped",
+  write_logline: "scoped",
+  write_soggetto: "document",
+  write_synopsis: "document",
+  write_outline: "document",
+  edit_outline_scene: "scoped",
+  write_treatment: "document",
+  write_screenplay: "document",
+  translate_document: "document",
+  question: "scoped",
+  comment: "scoped",
+};
 
 export interface IntentResult {
   readonly type: IntentType;
@@ -107,7 +135,8 @@ const DOCUMENT_INTENT_DEFINITIONS = `- write_logline: scrivere, generare o modif
 - write_outline: scrivere, generare, derivare o rigenerare l'INTERA SCALETTA (tutte le scene). Frasi: "fammi/scrivimi/dammi/genera/buttami giù/abbozza la scaletta", derivazioni: "genera la scaletta dal soggetto", "dato il soggetto fammi la scaletta", "dividi la storia in scene", "dammi la lista delle scene", "rigenera tutta la scaletta", "accorcia la scaletta" (l'intera scaletta). NON usare per una singola scena numerata → vedi edit_outline_scene.
 - edit_outline_scene: modifica di UNA SOLA scena esistente della scaletta, identificata da un numero o riferimento ("la scena N", "la prima/ultima scena"). Frasi: "accorcia la scena 1", "riscrivi la descrizione della scena 3", "rendi più tesa la scena 5", "espandi la scena 2". NON è la rigenerazione dell'intera scaletta.
 - write_treatment: scrivere, generare o derivare il TRATTAMENTO dal materiale a monte (scaletta, sinossi, soggetto). Frasi: "scrivi/scrivimi/fammi/dammi/genera/buttami giù/abbozza il trattamento", derivazioni: "genera il trattamento dalla scaletta", "trattamento a partire dalla scaletta/dal soggetto", modifiche: "espandi l'Atto II del trattamento", "rendi il trattamento più dettagliato". ATTENZIONE: vale SOLO per il TRATTAMENTO, MAI per la sceneggiatura.
-- write_screenplay: scrivere la PRIMA STESURA della SCENEGGIATURA derivandola dal materiale narrativo a monte (soggetto, sinossi, scaletta, trattamento). Frasi: "scrivi/scrivimi/fammi/dammi/genera/buttami giù/abbozza la sceneggiatura", "scrivimi la prima stesura della sceneggiatura", derivazioni: "partendo dal soggetto fammi la sceneggiatura", "dal soggetto/dalla scaletta scrivimi la sceneggiatura", "scrivimi il film in sceneggiatura". NON è un trattamento: se l'utente nomina la SCENEGGIATURA (o "il film in formato sceneggiatura"), è write_screenplay, mai write_treatment.`;
+- write_screenplay: scrivere la PRIMA STESURA della SCENEGGIATURA derivandola dal materiale narrativo a monte (soggetto, sinossi, scaletta, trattamento). Frasi: "scrivi/scrivimi/fammi/dammi/genera/buttami giù/abbozza la sceneggiatura", "scrivimi la prima stesura della sceneggiatura", derivazioni: "partendo dal soggetto fammi la sceneggiatura", "dal soggetto/dalla scaletta scrivimi la sceneggiatura", "scrivimi il film in sceneggiatura". NON è un trattamento: se l'utente nomina la SCENEGGIATURA (o "il film in formato sceneggiatura"), è write_screenplay, mai write_treatment.
+- translate_document: tradurre un INTERO documento (soggetto, sinossi, scaletta, trattamento o sceneggiatura) in un'altra lingua, in qualunque formulazione o lingua sia espressa la richiesta, refusi inclusi. Frasi: "traduci la sceneggiatura in inglese", "fammi una versione in inglese", "mi serve la versione english da mandare ai produttori", "translate the treatment". NON usare per la correzione di una singola battuta in lingua straniera.`;
 
 const DOCUMENT_INTENT_EXAMPLES = `"scrivimi una logline su un detective che non dorme" → {"type":"write_logline","confidence":0.95}
 "buttami giù una logline" → {"type":"write_logline","confidence":0.9}
@@ -128,6 +157,8 @@ const DOCUMENT_INTENT_EXAMPLES = `"scrivimi una logline su un detective che non 
 "dividi la storia in scene" → {"type":"write_outline","confidence":0.85}
 "espandi l'atto II" → {"type":"write_outline","confidence":0.7}
 "accorcia la scena 1" → {"type":"edit_outline_scene","confidence":0.93}
+"puoi farmi una nuova versione scritta in ingelse?" → {"type":"translate_document","confidence":0.9}
+"traduci tutto in inglese per i produttori" → {"type":"translate_document","confidence":0.93}
 "riscrivi la descrizione della scena 3" → {"type":"edit_outline_scene","confidence":0.92}
 "rendi più tesa la scena 5" → {"type":"edit_outline_scene","confidence":0.9}
 "scrivi il trattamento" → {"type":"write_treatment","confidence":0.92}
@@ -142,7 +173,7 @@ const SCREENPLAY_SYSTEM_PROMPT = `Sei un classificatore d'intento per Oh Writers
 
 Output: SOLO un oggetto JSON, niente prosa attorno. Schema:
 {
-  "type": "macro_rewrite" | "micro_edit" | "rewrite_one_scene" | "merge_scenes" | "delete_scene" | "rename" | "write_logline" | "write_soggetto" | "write_synopsis" | "write_outline" | "write_treatment" | "write_screenplay" | "question" | "comment",
+  "type": "macro_rewrite" | "micro_edit" | "rewrite_one_scene" | "merge_scenes" | "delete_scene" | "rename" | "write_logline" | "write_soggetto" | "write_synopsis" | "write_outline" | "write_treatment" | "write_screenplay" | "translate_document" | "question" | "comment",
   "confidence": <number tra 0 e 1>
 }
 
@@ -210,7 +241,7 @@ const DOCUMENT_SYSTEM_PROMPT = `Sei un classificatore d'intento per Oh Writers. 
 
 Output: SOLO un oggetto JSON, niente prosa attorno. Schema:
 {
-  "type": "write_logline" | "write_soggetto" | "write_synopsis" | "write_outline" | "write_treatment" | "write_screenplay" | "question" | "comment",
+  "type": "write_logline" | "write_soggetto" | "write_synopsis" | "write_outline" | "write_treatment" | "write_screenplay" | "translate_document" | "question" | "comment",
   "confidence": <number tra 0 e 1>
 }
 

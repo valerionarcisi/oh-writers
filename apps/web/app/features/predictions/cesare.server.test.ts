@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { CesareInputSchema, resolveForcedFirstTool } from "./cesare.server";
+import { CesareInputSchema, resolveTurnPlan } from "./cesare.server";
 
 const VALID_UUID = "123e4567-e89b-12d3-a456-426614174000";
 
@@ -35,16 +35,13 @@ describe("CesareInputSchema — message cap", () => {
   });
 });
 
-// Cesare Task 3b — resolveForcedFirstTool is kicked off in parallel with
-// context loading (extracted from callCesareV2's old inline classifier call).
-// These lock its two branches: pages with no classifier configured resolve
-// immediately to undefined; pages that do configure one still resolve
-// (MOCK_AI=true short-circuits classifyIntent to a no-op, so this exercises
-// the wiring/fallback path without a real Haiku call).
-describe("resolveForcedFirstTool", () => {
-  // classifyIntent short-circuits to a no-op under MOCK_AI=true (it would
-  // otherwise consume a real Haiku call) — force it for this describe block
-  // so the test never depends on the ambient environment.
+// Cesare Task 3b + #118 — resolveTurnPlan is kicked off in parallel with
+// context loading and now yields the WHOLE turn plan: the classifier's forced
+// first tool AND the model tier derived from the classified intent's scale.
+// One decision point, so the tier can never again be patched per-phrasing in
+// a router regex. MOCK_AI=true short-circuits classifyIntent to a no-op, so
+// these exercise the wiring/fallback paths without a real model call.
+describe("resolveTurnPlan", () => {
   const prevMockAi = process.env["MOCK_AI"];
   beforeAll(() => {
     process.env["MOCK_AI"] = "true";
@@ -54,28 +51,30 @@ describe("resolveForcedFirstTool", () => {
     else process.env["MOCK_AI"] = prevMockAi;
   });
 
-  it("resolves to undefined immediately for a page with no classifier configured", async () => {
-    const result = await resolveForcedFirstTool(
-      "qualsiasi messaggio",
-      "budget",
-    );
+  it("a page with no classifier still yields a full plan from the structural rules", async () => {
+    const result = await resolveTurnPlan("qualsiasi messaggio", "budget", 0);
     expect(result.isOk()).toBe(true);
-    expect(result._unsafeUnwrap()).toBeUndefined();
+    const plan = result._unsafeUnwrap();
+    expect(plan.forcedFirstTool).toBeUndefined();
+    expect(plan.tier).toBe("fast");
+    expect(plan.model.length).toBeGreaterThan(0);
   });
 
-  it("resolves without throwing for a page that DOES configure a classifier (MOCK_AI short-circuits to no-op)", async () => {
-    const result = await resolveForcedFirstTool(
-      "scrivi la scena",
-      "screenplay",
-    );
+  it("a classifier page resolves without throwing (MOCK_AI no-op → no forced tool)", async () => {
+    const result = await resolveTurnPlan("scrivi la scena", "screenplay", 0);
     expect(result.isOk()).toBe(true);
-    // MOCK_AI=true makes classifyIntent return NO_OP_INTENT — no forced tool.
-    expect(result._unsafeUnwrap()).toBeUndefined();
+    expect(result._unsafeUnwrap().forcedFirstTool).toBeUndefined();
   });
 
-  it("never rejects — an unknown page also falls back to undefined", async () => {
-    const result = await resolveForcedFirstTool("ciao", "not-a-real-page");
+  it("never rejects — an unknown page falls back to a structural plan", async () => {
+    const result = await resolveTurnPlan("ciao", "not-a-real-page", 0);
     expect(result.isOk()).toBe(true);
-    expect(result._unsafeUnwrap()).toBeUndefined();
+    expect(result._unsafeUnwrap().tier).toBe("fast");
+  });
+
+  it("still escalates structurally without a classifier: deep threads go quality", async () => {
+    const result = await resolveTurnPlan("ok", "budget", 20);
+    expect(result.isOk()).toBe(true);
+    expect(result._unsafeUnwrap().tier).toBe("quality");
   });
 });

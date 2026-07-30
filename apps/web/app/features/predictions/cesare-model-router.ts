@@ -29,6 +29,11 @@ export interface RouteModelInput {
   readonly userMessage: string;
   readonly page: CesarePage;
   readonly conversationLength: number;
+  /** The classified intent's scale (INTENT_SCALE in cesare-intent-classifier).
+   *  Kept as a plain literal — not the IntentType — so this module stays free
+   *  of the classifier and its prompt. Absent when the page has no classifier;
+   *  the structural rules below then decide alone. */
+  readonly intentScale?: "scoped" | "document";
 }
 
 // The fast tier (Haiku 4.5 on the platform default, 3× cheaper than the
@@ -48,17 +53,6 @@ export interface RouteModelInput {
 // one interactive intent heavy enough to justify the quality tier even when
 // it slips past the generation tools. Everyday scoped edits are
 // intentionally NOT here.
-const HEAVY_GENERATION_REGEX =
-  /\b(riscrivi|riscrivere|rigenera|rigenerare|genera(?:mi)?|generare)\b.*\b(tutt[oa]|intero|intera|dall['’ ]?inizio|da\s?capo|da\s?zero|l['’ ]?intero|l['’ ]?intera)\b/i;
-
-// Translating a document — or minting a whole version in another language — is
-// document-scale work whatever the phrasing's length. Observed live (2026-07-30,
-// #118): "puoi farmi una nuova versione scritta in inglese?" is 46 chars, so it
-// sailed past every escalation rule onto the fast tier, whose model answered by
-// PROMISING background work it cannot do instead of acting. The fast tier is
-// for scoped edits; a translation is never one.
-const TRANSLATION_REGEX =
-  /\b(tradu(?:ci|rre|zione|cimi)|translate|translation)\b|\bversione\b.*\bin\s+(inglese|english|francese|french|spagnolo|spanish|tedesco|german)\b/i;
 
 // Multi-constraint prompts encode complex intent. Raised from the old 200 so a
 // normal edit instruction ("aggiungi una scena dopo la 4 e accorcia la 2") still
@@ -72,7 +66,14 @@ export const routeModel = ({
   userMessage,
   page: _page,
   conversationLength,
+  intentScale,
 }: RouteModelInput): ModelTier => {
+  // The classifier's verdict outranks every textual heuristic: it is an LLM,
+  // so it understands any language, any phrasing, any typo — the things a
+  // regex was being patched for, one user report at a time (#118). Document-
+  // scale work always gets the quality slot.
+  if (intentScale === "document") return "quality";
+
   const trimmed = userMessage.trim();
 
   // Defensive: an empty message shouldn't reach a model at all; if it does,
@@ -84,12 +85,6 @@ export const routeModel = ({
 
   // Deep conversations carry accumulated context worth the quality tier's reasoning.
   if (conversationLength > DEEP_CONVERSATION_TURN_LIMIT) return "quality";
-
-  // "Rewrite the whole thing from scratch" — the one heavy interactive intent.
-  if (HEAVY_GENERATION_REGEX.test(trimmed)) return "quality";
-
-  // A translation is document-scale work regardless of how briefly it's asked.
-  if (TRANSLATION_REGEX.test(trimmed)) return "quality";
 
   // Everything else — questions and everyday scoped edits — is a fast-tier job.
   return "fast";
