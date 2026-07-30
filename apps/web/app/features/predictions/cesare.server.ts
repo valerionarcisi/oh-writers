@@ -2081,6 +2081,7 @@ export const resolveTurnPlan = (
   message: string,
   page: string,
   conversationLength: number,
+  byok?: { userId: string; db: Db },
 ): ResultAsync<TurnPlan, CesareError> => {
   // One decision point for the whole turn: the classified intent yields BOTH
   // the forced first tool AND the model tier. The classifier is an LLM, so it
@@ -2125,11 +2126,21 @@ export const resolveTurnPlan = (
     userMessage: message,
     page,
     availableTools: classifierTools,
+    userId: byok?.userId,
+    db: byok?.db,
   })
     .map((intent) => plan(intent.suggestedTool, INTENT_SCALE[intent.type]))
-    .orElse(() =>
-      ResultAsync.fromSafePromise(Promise.resolve(plan(undefined))),
-    );
+    .orElse((error) => {
+      // The fallback is deliberate (a broken classifier must never block the
+      // writer) but it must never be SILENT again: a dead platform API key
+      // 401'd every classification for weeks and the only symptom was Cesare
+      // interviewing instead of acting (#118).
+      logger.warn(
+        { page, error: error.message },
+        "cesare-v2 intent classifier failed — falling back to tool_choice auto",
+      );
+      return ResultAsync.fromSafePromise(Promise.resolve(plan(undefined)));
+    });
 };
 
 // ─── Unified tool loop caller (spec 39) ──────────────────────────────────────
@@ -2197,6 +2208,7 @@ const handleAskCesareV2 = (
     data.message,
     data.pageContext.page,
     data.conversationHistory.length,
+    { userId: access.user.id, db },
   );
 
   // Step 1: build global context (60s memo cache)

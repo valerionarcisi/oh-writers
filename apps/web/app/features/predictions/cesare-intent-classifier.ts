@@ -22,6 +22,7 @@
 //   user-visible behaviour is "best effort", never blocking.
 
 import { ResultAsync } from "neverthrow";
+import type { Db } from "~/server/db";
 import { callHaiku, extractText } from "~/features/ai";
 import { FAST_TIER_MODEL } from "./cesare-model-router";
 import { CesareError } from "./cesare.errors";
@@ -322,6 +323,13 @@ export interface ClassifyOpts {
   /** Names of the propose_* tools available on the current page. The
    *  classifier only forces a tool that is actually registered. */
   readonly availableTools: ReadonlySet<string>;
+  /** BYOK routing (Spec 84): without these the call falls back to the
+   *  PLATFORM Anthropic key — which a BYOK user may not have. That exact gap
+   *  made every classifier call 401 silently in dev, so no intent was ever
+   *  classified and the whole #118 pipeline (forced transform_document +
+   *  quality-tier escalation) never engaged. Always pass them. */
+  readonly userId?: string;
+  readonly db?: Db;
 }
 
 /**
@@ -370,6 +378,11 @@ export const classifyIntent = (
       user: opts.userMessage.slice(0, 800),
       model: FAST_TIER_MODEL,
       maxTokens: 100,
+      // Ride the user's own provider (fast role) like every other Cesare
+      // call; the platform key is only the no-BYOK fallback.
+      userId: opts.userId,
+      db: opts.db,
+      tier: "fast",
     },
     "cesare.intent-classifier",
   )
