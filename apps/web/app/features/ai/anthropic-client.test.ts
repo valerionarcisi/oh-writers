@@ -283,3 +283,103 @@ describe("streamGeneration (#103)", () => {
     expect(passed).toBeInstanceOf(AbortSignal);
   });
 });
+
+// #120 — ambient per-request identity: a call with no explicit BYOK params
+// inherits {userId, db} from the identity scope published by
+// requireProjectAccess, so it rides the user's provider instead of silently
+// hitting the platform key.
+describe("callHaiku — ambient identity (#120)", () => {
+  it("with no explicit userId, inherits the ambient identity and resolves through resolveModelClient", async () => {
+    resolveModelClientMock.mockReturnValue(
+      fakeResolvedModelClientResult({
+        model: { modelId: "ambient-user-model" },
+        modelId: "ambient-user-model",
+        source: "user",
+      }),
+    );
+    generateTextMock.mockResolvedValue({
+      text: "ok",
+      toolCalls: [],
+      finishReason: "stop",
+    });
+    const { callHaiku } = await import("./anthropic-client");
+    const { runWithAiIdentityScope, setAiRequestIdentity } =
+      await import("./ai-request-context");
+
+    const dbStub = { _tag: "dbStub" } as never;
+    await runWithAiIdentityScope(async () => {
+      setAiRequestIdentity({ userId: "ambient-user", db: dbStub });
+      await callHaiku(
+        { system: "sys", fewShot: [], user: "hi", maxTokens: 100 },
+        "test.op",
+      );
+    });
+
+    expect(resolveModelClientMock).toHaveBeenCalledWith({
+      userId: "ambient-user",
+      tier: "fast",
+      db: dbStub,
+    });
+    expect(generateTextMock.mock.calls[0]?.[0].model).toEqual({
+      modelId: "ambient-user-model",
+    });
+  });
+
+  it("explicit params always beat the ambient identity", async () => {
+    resolveModelClientMock.mockReturnValue(
+      fakeResolvedModelClientResult({
+        model: { modelId: "explicit-model" },
+        modelId: "explicit-model",
+        source: "user",
+      }),
+    );
+    generateTextMock.mockResolvedValue({
+      text: "ok",
+      toolCalls: [],
+      finishReason: "stop",
+    });
+    const { callHaiku } = await import("./anthropic-client");
+    const { runWithAiIdentityScope, setAiRequestIdentity } =
+      await import("./ai-request-context");
+
+    await runWithAiIdentityScope(async () => {
+      setAiRequestIdentity({
+        userId: "ambient-user",
+        db: { _tag: "a" } as never,
+      });
+      await callHaiku(
+        {
+          system: "sys",
+          fewShot: [],
+          user: "hi",
+          maxTokens: 100,
+          userId: "explicit-user",
+          tier: "quality",
+        },
+        "test.op",
+      );
+    });
+
+    expect(resolveModelClientMock).toHaveBeenCalledWith({
+      userId: "explicit-user",
+      tier: "quality",
+      db: undefined,
+    });
+  });
+
+  it("with no ambient scope at all, the legacy platform path is untouched", async () => {
+    generateTextMock.mockResolvedValue({
+      text: "ok",
+      toolCalls: [],
+      finishReason: "stop",
+    });
+    const { callHaiku } = await import("./anthropic-client");
+
+    await callHaiku(
+      { system: "sys", fewShot: [], user: "hi", maxTokens: 100 },
+      "test.op",
+    );
+
+    expect(resolveModelClientMock).not.toHaveBeenCalled();
+  });
+});
