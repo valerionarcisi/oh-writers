@@ -26,15 +26,27 @@ test.describe("[Spec 10j] Breakdown per-project — bulk action bar", () => {
   ) {
     await navigateToBreakdown(page, TEAM_PROJECT_ID);
     await switchBreakdownView(page, "per-project");
-    await expect(page.getByTestId("project-breakdown-table")).toBeVisible({
-      timeout: 10_000,
-    });
+    // The per-project view renders a skeleton until its own query resolves, and
+    // the radio can read `checked` before React has swapped the panel in. A bare
+    // 10s assert raced that on a cold worker; retrying the whole switch rides
+    // out a re-mount instead of failing on the first miss.
+    await expect(async () => {
+      if (!(await page.getByTestId("project-breakdown-table").isVisible())) {
+        await switchBreakdownView(page, "per-project");
+      }
+      await expect(page.getByTestId("project-breakdown-table")).toBeVisible({
+        timeout: 5_000,
+      });
+    }).toPass({ timeout: 30_000 });
   }
 
   async function expandFirstGroup(
     page: Parameters<typeof test>[1]["authenticatedPage"],
   ): Promise<boolean> {
     const groups = page.locator('[data-testid^="breakdown-group-"]');
+    // Groups stream in after the table shell paints; counting immediately can
+    // read 0 and silently skip the test rather than fail it.
+    await expect(groups.first()).toBeVisible({ timeout: 15_000 });
     const count = await groups.count();
     if (count === 0) return false;
     for (let i = 0; i < count; i++) {
@@ -165,6 +177,56 @@ test.describe("[Spec 10j] Breakdown per-project — bulk action bar", () => {
     await expect(bar.getByTestId("bulk-recategorize-select")).toBeVisible();
   });
 
+  // Renaming writes to the seeded shared DB. Restore the pristine seed
+  // afterwards so later specs still see the original element names.
+  test.describe("Bulk rename — in-app dialog, not window.prompt", () => {
+    test.afterAll(() => {
+      reseedTestDb();
+    });
+
+    test("renaming through the dialog applies the new name", async ({
+      authenticatedPage,
+    }) => {
+      const page = authenticatedPage;
+
+      // window.prompt suspends the page and Playwright cannot type into it, so
+      // this test only passes against a real in-app dialog. It is the
+      // regression guard for the native-dialog replacement.
+      await openPerProjectView(page);
+
+      const hasRows = await expandFirstGroup(page);
+      if (!hasRows) {
+        test.skip();
+        return;
+      }
+
+      await page.locator('tbody tr input[type="checkbox"]').first().check();
+      const bar = page.getByTestId("bulk-action-bar");
+      await expect(bar).toBeVisible({ timeout: 5_000 });
+      await bar.getByTestId("bulk-rename-btn").click();
+
+      const field = page.getByTestId("confirm-dialog-input");
+      await expect(field).toBeVisible({ timeout: 5_000 });
+      await expect(field).toBeFocused();
+
+      // An empty name cannot be submitted — the native prompt had no such guard.
+      const confirmBtn = page.getByTestId("confirm-dialog-confirm-btn");
+      await expect(confirmBtn).toBeDisabled();
+
+      const newName = "E2E rinominato";
+      await field.fill(newName);
+      await expect(confirmBtn).toBeEnabled();
+      await confirmBtn.click();
+
+      await expect(field).not.toBeVisible({ timeout: 5_000 });
+      await expect(
+        page.locator("tbody tr", { hasText: newName }).first(),
+      ).toBeVisible({ timeout: 10_000 });
+      // The selection is released once the rename lands.
+      await expect(bar).not.toBeVisible({ timeout: 5_000 });
+    });
+  });
+
   // Archiving removes rows permanently from the seeded shared DB. Restore the
   // pristine seed afterwards so later specs still see the archived elements.
   test.describe("[Spec 10j] Bulk archive — confirm + persist (no crash)", () => {
@@ -245,10 +307,7 @@ test.describe("[Spec 10j] Breakdown per-project — bulk action bar", () => {
 
       // Reloading proves the archive was persisted (not just removed locally).
       await page.reload();
-      await switchBreakdownView(page, "per-project");
-      await expect(page.getByTestId("project-breakdown-table")).toBeVisible({
-        timeout: 10_000,
-      });
+      await openPerProjectView(page);
       await expandFirstGroup(page);
       await expect(
         page.locator(`tbody tr[data-row-id="${firstRowId}"]`),

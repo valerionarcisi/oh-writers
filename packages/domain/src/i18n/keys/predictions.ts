@@ -23,6 +23,9 @@ export const predictionsKeys = {
     "cesare.bubble.sending": "Sending",
     "cesare.bubble.sendFailed": "Send failed",
     "cesare.bubble.replying": "Cesare is replying",
+    // Spec 76 — the large-edit ask card's two choices
+    "cesare.ask.overwrite": "Overwrite",
+    "cesare.ask.mint": "New version",
     "cesare.trace.reasoning": "Reasoning",
     "cesare.trace.reading": "Reading",
     "cesare.trace.writing": "Writing",
@@ -212,6 +215,9 @@ export const predictionsKeys = {
     "cesare.bubble.sending": "Invio in corso",
     "cesare.bubble.sendFailed": "Invio non riuscito",
     "cesare.bubble.replying": "Cesare sta rispondendo",
+    // Spec 76 — the large-edit ask card's two choices
+    "cesare.ask.overwrite": "Sovrascrivi",
+    "cesare.ask.mint": "Nuova versione",
     "cesare.trace.reasoning": "Sto ragionando",
     "cesare.trace.reading": "Sto leggendo",
     "cesare.trace.writing": "Sto scrivendo",

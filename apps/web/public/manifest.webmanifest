@@ -1,0 +1,27 @@
+{
+  "name": "Oh Writers",
+  "short_name": "Oh Writers",
+  "description": "Scrivi, spoglia e pianifica il tuo film.",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f5f3ee",
+  "theme_color": "#1c1a17",
+  "lang": "it",
+  "categories": ["productivity"],
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "maskable"
+    }
+  ]
+}

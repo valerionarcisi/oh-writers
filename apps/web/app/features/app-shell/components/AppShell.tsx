@@ -294,6 +294,7 @@ function AppShellInner({
   onOpenVersions,
   onExpandVersions,
   onStepBackVersions,
+  userMenuItems,
   children,
 }: AppShellProps) {
   // Save-state is published by the page editors via `useSaveStateValue` and
@@ -1421,6 +1422,13 @@ function AppShellInner({
     () => ({
       onBell: handleBell,
       onAvatar: handleUserSettings,
+      // Sign out has no other home: the avatar stopped being a dropdown when it
+      // moved here from the BottomDock, and the menu the route builds was
+      // passed in and never read — so there was no way to log out at all
+      // (issue #113). Falls back to plain navigation when no items are given.
+      ...(userMenuItems && userMenuItems.length > 0
+        ? { avatarMenuItems: userMenuItems }
+        : {}),
       // No project open → no gear: outside a project it would only duplicate
       // the avatar's /settings destination (live report 2026-07-13, refines
       // N-22's fallback). Inside a project the gear opens the pages/settings
@@ -1444,6 +1452,7 @@ function AppShellInner({
       handleUserSettings,
       handleProjectSettings,
       gearMenuItems,
+      userMenuItems,
       projectId,
       hasUnseen,
       user.name,

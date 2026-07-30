@@ -178,22 +178,55 @@ test.describe("[Spec 55] narrative shell backbone", () => {
     await expect(rail.getByText("Oh Writers", { exact: true })).toHaveCount(0);
   });
 
+  // ── #113 — signing out must exist, and be reachable ──
+  test("#113 — the avatar menu offers sign out and it ends the session", async ({
+    authenticatedPage: page,
+  }) => {
+    // There was no way to log out at all: the route built a user menu and
+    // passed it to AppShell, which declared the prop and never read it. Two
+    // refactors moved the avatar (rail → dock → TopBar) and the menu was never
+    // reconnected, so the entry existed in code and nowhere on screen.
+    await gotoNarrative(page, "soggetto");
+
+    await page.getByTestId("topbar-account").getByTestId("profile-btn").click();
+    const signOut = page.getByTestId("sign-out-btn");
+    await expect(signOut).toBeVisible({ timeout: 5_000 });
+
+    await signOut.click();
+    await page.waitForURL("**/login", { timeout: 15_000 });
+
+    // The session is really gone: a protected route bounces back to login
+    // rather than rendering from a stale cookie.
+    await page.goto(`${BASE_URL}/dashboard`);
+    await page.waitForURL("**/login", { timeout: 15_000 });
+  });
+
   // ── N-22 — avatar → user settings, gear → project settings (distinct) ──
   test("N-22 — avatar opens user settings; gear opens project settings (distinct destinations)", async ({
     authenticatedPage: page,
   }) => {
     await gotoNarrative(page, "soggetto");
 
-    // Avatar → user settings (/settings).
+    // Avatar → dropdown → user settings (/settings). The avatar opens a menu
+    // now rather than navigating straight there: signing out needs a home on an
+    // always-visible surface, and it had none (issue #113). The destination is
+    // unchanged, it is one click further in.
     await page.getByTestId("topbar-account").getByTestId("profile-btn").click();
+    await page.getByRole("menuitem", { name: /impostazioni account/i }).click();
     await page.waitForURL("**/settings", { timeout: 10_000 });
     expect(new URL(page.url()).pathname).toBe("/settings");
 
-    // Gear → project settings (/projects/:id/settings).
+    // Gear → project settings (/projects/:id/settings). Like the avatar, the
+    // gear opens a dropdown (pages + settings) rather than navigating on click
+    // — `gearMenuItems`, already live before this change; the test had not
+    // caught up, so it was red on main.
     await gotoNarrative(page, "soggetto");
     await page
       .getByTestId("topbar-account")
       .getByTestId("settings-btn")
+      .click();
+    await page
+      .getByRole("menuitem", { name: /impostazioni progetto/i })
       .click();
     await page.waitForURL(`**/projects/${TEAM_PROJECT_ID}/settings`, {
       timeout: 10_000,

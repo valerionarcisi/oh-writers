@@ -130,6 +130,45 @@ test.describe("Screenplay Versions — master→detail (Spec 66)", () => {
     ).toContainText(label, { timeout: 8_000 });
   });
 
+  test("Escape cancels the rename WITHOUT closing the Versions panel", async ({
+    authenticatedPage: page,
+  }) => {
+    // The rename input handled Escape but let the event bubble, so the lane's
+    // dismiss handler fired too: cancelling a rename dropped the writer back on
+    // the bare editor and they had to reopen the panel and find their place
+    // again. Escape belongs to the field it was typed in.
+    await openVersions(page);
+    await expect(rows(page).first()).toBeVisible({ timeout: 10_000 });
+
+    const firstId = (await rows(page)
+      .first()
+      .getAttribute("data-testid"))!.replace("versions-split-row-", "");
+    const before = await page
+      .getByTestId(`versions-split-row-${firstId}`)
+      .textContent();
+
+    await page.getByTestId(`version-rename-${firstId}`).click();
+    const input = page.getByTestId(`version-rename-input-${firstId}`);
+    await input.fill("scartami");
+    await input.press("Escape");
+
+    // The panel is still open…
+    await expect(page.getByTestId("versions-split-drawer")).toBeVisible();
+    expect(
+      await page.evaluate(() =>
+        new URL(location.href).searchParams.get("versions"),
+      ),
+    ).not.toBeNull();
+    // …the edit was discarded, and the field is gone.
+    await expect(input).toBeHidden();
+    await expect(
+      page.getByTestId(`versions-split-row-${firstId}`),
+    ).not.toContainText("scartami");
+    expect(
+      await page.getByTestId(`versions-split-row-${firstId}`).textContent(),
+    ).toBe(before);
+  });
+
   test("[175] '+ Nuova versione' creates a version (row count grows)", async ({
     authenticatedPage: page,
   }) => {

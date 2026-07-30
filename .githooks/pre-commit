@@ -61,6 +61,19 @@ else
   ok "No console.log"
 fi
 
+# ── 4. Guardrails on staged files (CLAUDE.md hard-no rules) ──────────────────
+#
+# Scoped to the staged diff, so a commit is blocked only for what IT
+# introduces — never for pre-existing debt elsewhere in the tree.
+
+step "Guardrails"
+if ! bash "$(dirname -- "$0")/../scripts/fleet-check.sh" --staged; then
+  fail "Guardrail violations in staged files — fix before committing."
+  errors=$((errors + 1))
+else
+  ok "Guardrails"
+fi
+
 # ── Result ────────────────────────────────────────────────────────────────────
 
 echo ""

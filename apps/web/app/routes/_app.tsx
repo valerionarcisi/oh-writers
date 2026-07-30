@@ -34,7 +34,7 @@ import { signOut } from "~/lib/auth-client";
 // it here made vinxi extract a use-server module that evaluated this file's
 // top-level app-shell barrel imports in the server-fn graph and broke every
 // RPC. See `features/auth/fetch-current-user.server.ts`.
-import { fetchCurrentUser } from "~/features/auth/fetch-current-user.server";
+import { fetchCurrentUser } from "~/features/auth";
 
 // The shell layout carries every routed auxiliary surface as search params:
 // `?peek=` (Spec 46 Cesare/page side-peek) and
@@ -433,21 +433,23 @@ function AppLayout() {
     });
   };
 
+  // The avatar dropdown. Dropped the "Presentazione" entry that opened
+  // market-analysis.html: an internal deck does not belong in a writer's
+  // account menu.
   const userMenuItems: DropdownMenuItem[] = [
     {
-      label: "Impostazioni account",
+      label: t("shell.account.settings"),
       onClick: () => {
         window.location.href = "/settings";
       },
     },
     {
-      label: "Presentazione",
-      onClick: () => window.open("/market-analysis.html", "_blank"),
-    },
-    {
-      label: "Sign out",
+      label: t("shell.account.signOut"),
+      testId: "sign-out-btn",
       onClick: async () => {
         await signOut();
+        // Full reload, not a router navigate: the session cookie is gone and
+        // every cached query still holds the previous user's data.
         window.location.href = "/login";
       },
     },

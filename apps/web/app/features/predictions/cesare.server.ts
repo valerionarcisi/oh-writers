@@ -43,13 +43,13 @@ import {
   runScreenplayToolLoop,
   runUniversalToolLoop,
 } from "./cesare-tools";
-import { classifyIntent } from "./cesare-intent-classifier";
+import { classifyIntent, INTENT_SCALE } from "./cesare-intent-classifier";
 import type {
   DocumentContext,
   ScheduleToolContext,
   ShootingPlanToolContext,
 } from "./cesare-tools";
-import { routeModel, tierToModel } from "./cesare-model-router";
+import { routeModel, tierToModel, type ModelTier } from "./cesare-model-router";
 import { loadFilmBible } from "./bible-distill.server";
 import {
   formatGlobalContext,
@@ -1681,6 +1681,7 @@ const callCesareWithTools = (
 };
 
 const SCREENPLAY_PROPOSE_TOOLS = new Set<string>([
+  "transform_document",
   "propose_screenplay_revision",
   "propose_rename_entity",
   "rewrite_scene",
@@ -1693,6 +1694,7 @@ const SCREENPLAY_PROPOSE_TOOLS = new Set<string>([
 // page; the classifier nudge only forces one when the request clearly asks to
 // write/generate a document, so free natural-language requests dispatch reliably.
 const DOCUMENT_GEN_TOOLS = new Set<string>([
+  "transform_document",
   "write_logline",
   "propose_soggetto_v2",
   "propose_synopsis_from_screenplay",
@@ -2069,28 +2071,76 @@ const handleAskCesare = (
 // Depends only on (message, page) — NOT on context/prompt assembly — so the
 // caller kicks this off in parallel with buildGlobalContext/buildLocalContext
 // instead of waiting for the whole chain to finish first (Task 3b).
-export const resolveForcedFirstTool = (
+export interface TurnPlan {
+  readonly forcedFirstTool: string | undefined;
+  readonly tier: ModelTier;
+  readonly model: string;
+}
+
+export const resolveTurnPlan = (
   message: string,
   page: string,
-): ResultAsync<string | undefined, CesareError> => {
+  conversationLength: number,
+  byok?: { userId: string; db: Db },
+): ResultAsync<TurnPlan, CesareError> => {
+  // One decision point for the whole turn: the classified intent yields BOTH
+  // the forced first tool AND the model tier. The classifier is an LLM, so it
+  // absorbs any language, phrasing or typo — which is why the tier must come
+  // from it and not from text heuristics patched one user report at a time
+  // (#118: "versione in ingelse" sailed past every regex onto the fast tier,
+  // whose model then promised background work it cannot do).
+  const plan = (
+    forcedFirstTool: string | undefined,
+    intentScale?: "scoped" | "document",
+  ): TurnPlan => {
+    const tier = routeModel({
+      userMessage: message,
+      page: page as Parameters<typeof routeModel>[0]["page"],
+      conversationLength,
+      intentScale,
+    });
+    const model = tierToModel(tier);
+    if (process.env["CESARE_DEBUG"] === "true") {
+      logger.debug(
+        {
+          tier,
+          model,
+          intentScale,
+          page,
+          convLen: conversationLength,
+          msg: message.slice(0, 60),
+        },
+        "cesare-v2 request routing",
+      );
+    }
+    return { forcedFirstTool, tier, model };
+  };
+
   const classifierTools = CLASSIFIER_TOOLS_BY_PAGE[page];
   if (!classifierTools) {
-    return ResultAsync.fromSafePromise(
-      Promise.resolve<string | undefined>(undefined),
-    );
+    // No classifier on this page: the structural rules (length, depth) decide.
+    return ResultAsync.fromSafePromise(Promise.resolve(plan(undefined)));
   }
 
   return classifyIntent({
     userMessage: message,
     page,
     availableTools: classifierTools,
+    userId: byok?.userId,
+    db: byok?.db,
   })
-    .map((intent) => intent.suggestedTool)
-    .orElse(() =>
-      ResultAsync.fromSafePromise(
-        Promise.resolve<string | undefined>(undefined),
-      ),
-    );
+    .map((intent) => plan(intent.suggestedTool, INTENT_SCALE[intent.type]))
+    .orElse((error) => {
+      // The fallback is deliberate (a broken classifier must never block the
+      // writer) but it must never be SILENT again: a dead platform API key
+      // 401'd every classification for weeks and the only symptom was Cesare
+      // interviewing instead of acting (#118).
+      logger.warn(
+        { page, error: error.message },
+        "cesare-v2 intent classifier failed — falling back to tool_choice auto",
+      );
+      return ResultAsync.fromSafePromise(Promise.resolve(plan(undefined)));
+    });
 };
 
 // ─── Unified tool loop caller (spec 39) ──────────────────────────────────────
@@ -2104,17 +2154,18 @@ const callCesareV2 = (
   access: ProjectAccess,
   executor: import("./skills/types").SkillExecutor,
   tools: readonly import("./skills/types").AnthropicTool[],
-  model: string,
-  forcedFirstToolResult: ResultAsync<string | undefined, CesareError>,
+  turnPlan: ResultAsync<TurnPlan, CesareError>,
   onStreamEvent?: (event: CesareStreamEvent) => void,
   abortSignal?: AbortSignal,
-): ResultAsync<string, CesareError> => {
+): ResultAsync<{ reply: string; model: string }, CesareError> => {
   const messages = [
     ...conversationHistory.map((m) => ({ role: m.role, content: m.content })),
     { role: "user" as const, content: message },
   ];
 
-  return forcedFirstToolResult.andThen((forcedFirstTool) =>
+  // The loop already waited here for the classifier's forced-first-tool, so
+  // the model decision riding along adds nothing to the critical path.
+  return turnPlan.andThen(({ forcedFirstTool, model }) =>
     runUnifiedToolLoop(
       systemPrompt,
       messages,
@@ -2127,7 +2178,7 @@ const callCesareV2 = (
       onStreamEvent,
       forcedFirstTool,
       abortSignal,
-    ),
+    ).map((reply) => ({ reply, model })),
   );
 };
 
@@ -2147,35 +2198,17 @@ const handleAskCesareV2 = (
     return mockResponse(data.pageContext);
   }
 
-  const tier = routeModel({
-    userMessage: data.message,
-    page: data.pageContext.page,
-    conversationLength: data.conversationHistory.length,
-  });
-  const model = tierToModel(tier);
-
-  if (process.env["CESARE_DEBUG"] === "true") {
-    logger.debug(
-      {
-        tier,
-        model,
-        page: data.pageContext.page,
-        convLen: data.conversationHistory.length,
-        msg: data.message.slice(0, 60),
-      },
-      "cesare-v2 request routing",
-    );
-  }
-
-  // Task 3b: kick off the intent classifier NOW, in parallel with
-  // buildGlobalContext/buildLocalContext below — it depends only on
-  // (message, page), not on context/prompt assembly, so there is no reason to
-  // wait for the (slower) context chain to finish before starting it. Calling
-  // the function starts its underlying promise immediately; `callCesareV2`
-  // only awaits the already-in-flight result once the tool loop needs it.
-  const forcedFirstToolResult = resolveForcedFirstTool(
+  // Task 3b: kick off the turn plan (classifier + model routing) NOW, in
+  // parallel with buildGlobalContext/buildLocalContext below — it depends only
+  // on (message, page), not on context/prompt assembly. Calling the function
+  // starts its underlying promise immediately; `callCesareV2` only awaits the
+  // already-in-flight result once the tool loop needs it, so deriving the
+  // model from the classified intent costs zero extra latency.
+  const turnPlan = resolveTurnPlan(
     data.message,
     data.pageContext.page,
+    data.conversationHistory.length,
+    { userId: access.user.id, db },
   );
 
   // Step 1: build global context (60s memo cache)
@@ -2288,11 +2321,10 @@ const handleAskCesareV2 = (
                 access,
                 executor,
                 tools,
-                model,
-                forcedFirstToolResult,
+                turnPlan,
                 onStreamEvent,
                 abortSignal,
-              ).map((reply) => {
+              ).map(({ reply, model }) => {
                 emitCesareMetricEvent(
                   data.pageContext.page,
                   data.projectId,

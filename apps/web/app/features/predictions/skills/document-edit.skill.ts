@@ -34,6 +34,9 @@ STRUMENTI DISPONIBILI SU QUESTO ${label.toUpperCase()}:
 
 Quando l'utente chiede una modifica concreta (riscrivi, cambia, espandi, accorcia, sostituisci) USA SEMPRE il tool appropriato — non limitarti a suggerire il testo nel chat. Se la richiesta nomina una scena specifica della scaletta ("la scena N", "la prima scena"), il tool corretto è SEMPRE edit_outline_scene, MAI propose_scaletta_from_soggetto. Conferma in italiano cosa hai fatto dopo ogni edit.
 
+TRASFORMAZIONE UNIVERSALE:
+- transform_document(document_type, instruction, label?): trasforma l'INTERO documento seguendo QUALSIASI istruzione libera — tradurlo in un'altra lingua, cambiare tono, asciugarlo, modernizzare i dialoghi — quando nessun tool dedicato copre la richiesta. L'istruzione viene eseguita così com'è, in qualunque lingua l'utente l'abbia scritta. NON interrogare l'utente su dettagli e opzioni: l'intero documento è il default, tutto ciò che l'istruzione non nomina resta invariato. Appena la richiesta è chiara, AGISCI.
+
 GENERAZIONE DOCUMENTI (applica LIVE al documento):
 Per richieste che generano un documento intero (logline, sinossi, soggetto v2, scaletta, trattamento) USA I TOOLS dedicati. Ogni tool APPLICA DIRETTAMENTE il nuovo contenuto al documento aperto (si aggiorna live nell'editor) e crea automaticamente una nuova versione sotto il cofano. L'utente può ripristinare la versione precedente dal pannello Versioni. NON esiste più un banner di draft da promuovere o scartare.
 

@@ -54,6 +54,7 @@ import {
   mappingForTool,
   entityRefForDomain,
   labelForDomain,
+  domainForToolInput,
 } from "./cesare-tool-entity-map";
 import {
   estimateSceneCost,
@@ -1288,7 +1289,45 @@ interface ToolResult {
   type: "tool_result";
   tool_use_id: string;
   content: string;
+  /** Marks a failed tool call. Without it the model reads the error payload as
+   *  an ordinary result and reasons about it — which is how a missing Cesare
+   *  session came back to the user as an invented SQL-constraint diagnosis
+   *  (issue #44). */
+  is_error?: boolean;
 }
+
+/** What a failed tool hands back to the model.
+ *
+ *  Two things went wrong in #44. The payload carried only a vague message with
+ *  no tag, so the model had nothing factual to report and filled the gap with
+ *  a confident, fabricated root cause (a constraint on `document_versions.
+ *  number` that was never involved). And DbError.dbCause carries raw SQL,
+ *  which is both the raw material for that kind of invention and not something
+ *  to put in front of a writer.
+ *
+ *  So: the tag is the fact the model is given, and it is told plainly not to
+ *  explain beyond it. Server logs keep the full cause for whoever debugs. */
+export const toolErrorPayload = (
+  error: CesareError,
+): {
+  error: string;
+  code: string;
+  guidance: string;
+} => {
+  const code =
+    typeof error === "object" && error !== null && "_tag" in error
+      ? String((error as { _tag: unknown })._tag)
+      : "UnknownError";
+  return {
+    error: error.message,
+    code,
+    guidance:
+      "Report this failure to the user in one plain sentence, naming only " +
+      "what is stated here. Do NOT invent a cause, a database detail, an id, " +
+      "or a support instruction. If the cause is unclear, say the operation " +
+      "failed and suggest retrying.",
+  };
+};
 
 // ─── Document executors ───────────────────────────────────────────────────────
 
@@ -2680,6 +2719,7 @@ interface RunToolLoopArgs {
  */
 const emitToolStep = (
   toolName: string,
+  toolInput: unknown,
   onStreamEvent: ((event: CesareStreamEvent) => void) | undefined,
 ): void => {
   if (!onStreamEvent) return;
@@ -2688,7 +2728,11 @@ const emitToolStep = (
     onStreamEvent({ _tag: "tool", name: toolName });
     return;
   }
-  const entity = entityRefForDomain(mapping.domain);
+  // A tool with a runtime target (transform_document) names the entity from
+  // its input — the tracer must say what is REALLY being written (#64).
+  const entity = entityRefForDomain(
+    domainForToolInput(toolName, toolInput) ?? mapping.domain,
+  );
   onStreamEvent(
     mapping.access === "read"
       ? { _tag: "reading", entity }
@@ -3038,7 +3082,7 @@ const runLegacyToolLoopEffect = (
           fromResultAsync(args.executor(block, args.db, args.projectId)).pipe(
             Effect.map((value): ToolResult => {
               toolsExecuted += 1;
-              emitToolStep(block.name, args.onStreamEvent);
+              emitToolStep(block.name, block.input, args.onStreamEvent);
               extractSideChannelMarkers(
                 block.name,
                 value.content,
@@ -3047,13 +3091,13 @@ const runLegacyToolLoopEffect = (
               return value;
             }),
             // A tool error is not a turn failure: it becomes a `tool_result`
-            // carrying the error so the model can recover — identical to the
-            // previous `result.isErr()` branch.
+            // carrying the error so the model can recover.
             Effect.catchAll((error: CesareError) =>
               Effect.succeed<ToolResult>({
                 type: "tool_result",
                 tool_use_id: block.id,
-                content: JSON.stringify({ error: error.message }),
+                is_error: true,
+                content: JSON.stringify(toolErrorPayload(error)),
               }),
             ),
           ),
@@ -3334,7 +3378,11 @@ const runProductionToolLoopEffect = (
             );
             if (toolResult) {
               toolsExecuted += 1;
-              emitToolStep(toolCall.toolName, args.onStreamEvent);
+              emitToolStep(
+                toolCall.toolName,
+                toolCall.input,
+                args.onStreamEvent,
+              );
               extractSideChannelMarkers(
                 toolCall.toolName,
                 JSON.stringify(toolResult.output),
@@ -4846,7 +4894,7 @@ const bridgeLegacyTools = (
           // generation shows "sto scrivendo …" immediately rather than after it
           // finishes. onStepFinish still emits the authoritative step later; the
           // client's reducer dedupes a repeated step, so the eager one is free.
-          emitToolStep(t.name, onStreamEvent);
+          emitToolStep(t.name, input, onStreamEvent);
           const block: ToolUseBlock = {
             type: "tool_use",
             id: opts.toolCallId,

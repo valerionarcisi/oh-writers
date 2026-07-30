@@ -15,7 +15,7 @@
 
   &:focus {
     outline: none;
-    border-color: #8b3a1a;
+    border-color: var(--ds-action);
   }
 
   &::placeholder {
@@ -108,7 +108,7 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
   padding: 1px 6px;
-  border-radius: var(--radius-pill);
+  border-radius: var(--ds-radius-pill);
   background: var(--ds-surface-deep);
   color: var(--ds-text-mute);
   margin-block-start: 2px;
@@ -128,7 +128,7 @@
   block-size: 12px;
   border-radius: 50%;
   border: 2px solid var(--ds-line);
-  border-block-start-color: #8b3a1a;
+  border-block-start-color: var(--ds-action);
   animation: spin 600ms linear infinite;
   margin-inline-end: var(--space-1);
   vertical-align: middle;

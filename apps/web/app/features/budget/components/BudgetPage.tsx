@@ -52,7 +52,7 @@ import { CategoryFlatTable } from "./CategoryFlatTable";
 import { RateCardSection } from "./RateCardSection";
 import { BudgetWeeklyView } from "./BudgetWeeklyView";
 import { BudgetCapBar } from "./BudgetCapBar";
-import { SectionIds, type SectionId } from "./flat-sections";
+import { SectionIds, type SectionId } from "../lib/flat-sections";
 import styles from "./BudgetPage.module.css";
 
 const budgetQueryOptions = (projectId: string) =>

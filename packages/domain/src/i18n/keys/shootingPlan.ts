@@ -83,6 +83,9 @@ export const shootingPlanKeys = {
     "shootingPlan.blocking.openEditorTitle": "Open blocking editor (⌘B)",
     "shootingPlan.blocking.editor": "⌘B Editor",
     "shootingPlan.blocking.actors": "Actors",
+    "shootingPlan.blocking.furnitureTitle": "New furniture",
+    "shootingPlan.blocking.furnitureLabel": "Furniture name",
+    "shootingPlan.blocking.furnitureDefault": "Furniture",
     "shootingPlan.blocking.camera": "Camera",
     "shootingPlan.blocking.positionSingular": "position",
     "shootingPlan.blocking.positionPlural": "positions",
@@ -103,7 +106,8 @@ export const shootingPlanKeys = {
     "shootingPlan.proposal.applying": "Applying…",
     "shootingPlan.proposal.acceptAll": "Accept all",
     // Blocking canvas / pin
-    "shootingPlan.canvas.proposalsAria": "Blocking proposals suggested by Cesare",
+    "shootingPlan.canvas.proposalsAria":
+      "Blocking proposals suggested by Cesare",
     "shootingPlan.pin.rotateTitle": "Drag to rotate the camera",
     // Shot detail panel
     "shootingPlan.shotDetail.size": "Size",
@@ -120,7 +124,8 @@ export const shootingPlanKeys = {
     "shootingPlan.scriptPanel.collapsedLabel": "SCENE ▶",
     "shootingPlan.scriptPanel.regionAria": "Screenplay panel",
     "shootingPlan.scriptPanel.headerTitle": "Scene {value} — text",
-    "shootingPlan.scriptPanel.openScreenplayTitle": "Open in the Screenplay editor",
+    "shootingPlan.scriptPanel.openScreenplayTitle":
+      "Open in the Screenplay editor",
     "shootingPlan.scriptPanel.closeAria": "Close panel",
     "shootingPlan.scriptPanel.notesPlaceholder": "Add scene notes…",
     "shootingPlan.scriptPanel.saving": "saving…",
@@ -208,8 +213,10 @@ export const shootingPlanKeys = {
       "Seleziona una scena dalla lista per iniziare a pianificare le inquadrature.",
     "shootingPlan.page.loadingBlocking": "Caricamento blocking",
     // Toasts
-    "shootingPlan.toast.generateError": "Errore durante la generazione del piano.",
-    "shootingPlan.toast.allHavePlan": "Tutte le {count} scene hanno già un piano.",
+    "shootingPlan.toast.generateError":
+      "Errore durante la generazione del piano.",
+    "shootingPlan.toast.allHavePlan":
+      "Tutte le {count} scene hanno già un piano.",
     "shootingPlan.toast.generated":
       "Piano generato: {created} scene create{skipped}. Stima: {days} di riprese.",
     "shootingPlan.toast.generatedSkipped": ", {count} già esistenti",
@@ -245,7 +252,8 @@ export const shootingPlanKeys = {
     "shootingPlan.calendar.loading": "Caricamento calendario",
     "shootingPlan.calendar.noSchedule":
       "Nessun piano di lavorazione trovato. Genera un piano dalla sezione Schedule.",
-    "shootingPlan.calendar.noDays": "Nessun giorno di ripresa pianificato ancora.",
+    "shootingPlan.calendar.noDays":
+      "Nessun giorno di ripresa pianificato ancora.",
     "shootingPlan.calendar.weeks": "Settimane",
     "shootingPlan.calendar.projectTotal": "Totale progetto",
     "shootingPlan.calendar.totalDays": "Giorni",
@@ -261,6 +269,9 @@ export const shootingPlanKeys = {
     "shootingPlan.blocking.openEditorTitle": "Apri blocking editor (⌘B)",
     "shootingPlan.blocking.editor": "⌘B Editor",
     "shootingPlan.blocking.actors": "Attori",
+    "shootingPlan.blocking.furnitureTitle": "Nuovo mobile",
+    "shootingPlan.blocking.furnitureLabel": "Nome del mobile",
+    "shootingPlan.blocking.furnitureDefault": "Mobile",
     "shootingPlan.blocking.camera": "Camera",
     "shootingPlan.blocking.positionSingular": "posizione",
     "shootingPlan.blocking.positionPlural": "posizioni",
@@ -281,7 +292,8 @@ export const shootingPlanKeys = {
     "shootingPlan.proposal.applying": "Applicando…",
     "shootingPlan.proposal.acceptAll": "Accetta tutto",
     // Blocking canvas / pin
-    "shootingPlan.canvas.proposalsAria": "Proposte di blocking suggerite da Cesare",
+    "shootingPlan.canvas.proposalsAria":
+      "Proposte di blocking suggerite da Cesare",
     "shootingPlan.pin.rotateTitle": "Trascina per ruotare la camera",
     // Shot detail panel
     "shootingPlan.shotDetail.size": "Dimensione",
@@ -298,7 +310,8 @@ export const shootingPlanKeys = {
     "shootingPlan.scriptPanel.collapsedLabel": "SCENA ▶",
     "shootingPlan.scriptPanel.regionAria": "Pannello sceneggiatura",
     "shootingPlan.scriptPanel.headerTitle": "Scena {value} — testo",
-    "shootingPlan.scriptPanel.openScreenplayTitle": "Apri nello Screenplay editor",
+    "shootingPlan.scriptPanel.openScreenplayTitle":
+      "Apri nello Screenplay editor",
     "shootingPlan.scriptPanel.closeAria": "Chiudi pannello",
     "shootingPlan.scriptPanel.notesPlaceholder": "Aggiungi note di scena…",
     "shootingPlan.scriptPanel.saving": "salvataggio…",

@@ -70,19 +70,29 @@ const TOOL_ENTITY_MAP: Readonly<Record<string, ToolEntityMapping>> = {
   propose_treatment_from_narrative: { access: "write", domain: "treatment" },
   generate_screenplay_from_narrative: { access: "write", domain: "screenplay" },
   apply_text_edit: { access: "write", domain: "soggetto" },
+  // Fallback only — transform_document's real target is its input's
+  // document_type, resolved dynamically by domainForToolInput below.
+  transform_document: { access: "write", domain: "soggetto" },
   expand_section: { access: "write", domain: "soggetto" },
   compress_section: { access: "write", domain: "soggetto" },
+  edit_outline_scene: { access: "write", domain: "outline" },
 
   // ── screenplay writes ─────────────────────────────────────────────────────
   rewrite_scene: { access: "write", domain: "screenplay" },
   propose_screenplay_revision: { access: "write", domain: "screenplay" },
+  // Renames every occurrence in the SCREENPLAY (cesare-screenplay-tools.ts);
+  // it reads like a breakdown entity op but never writes one.
+  propose_rename_entity: { access: "write", domain: "screenplay" },
   propose_blocking_for_scene: { access: "write", domain: "shooting-plan" },
   propose_move_actor_position: { access: "write", domain: "shooting-plan" },
   propose_move_camera_pin: { access: "write", domain: "shooting-plan" },
 
   // ── breakdown writes ──────────────────────────────────────────────────────
-  propose_rename_entity: { access: "write", domain: "breakdown" },
   tag_element: { access: "write", domain: "breakdown" },
+  // Ghost accept/reject flip a breakdown occurrence's status
+  // (executeSetGhostStatus); they never touch a budget line.
+  accept_ghost: { access: "write", domain: "breakdown" },
+  reject_ghost: { access: "write", domain: "breakdown" },
 
   // ── budget writes ─────────────────────────────────────────────────────────
   set_budget_cap: { access: "write", domain: "budget" },
@@ -93,8 +103,6 @@ const TOOL_ENTITY_MAP: Readonly<Record<string, ToolEntityMapping>> = {
   redistribute_topsheet: { access: "write", domain: "budget" },
   propose_excessive_lines_flags: { access: "write", domain: "budget" },
   propose_missing_lines: { access: "write", domain: "budget" },
-  accept_ghost: { access: "write", domain: "budget" },
-  reject_ghost: { access: "write", domain: "budget" },
 
   // ── schedule writes ───────────────────────────────────────────────────────
   move_scene_to_day: { access: "write", domain: "schedule" },
@@ -124,3 +132,42 @@ const TOOL_ENTITY_MAP: Readonly<Record<string, ToolEntityMapping>> = {
  *  emitter then falls back to a raw `tool` event rather than guessing). */
 export const mappingForTool = (toolName: string): ToolEntityMapping | null =>
   TOOL_ENTITY_MAP[toolName] ?? null;
+
+/**
+ * Every domain any tool in the registry can WRITE.
+ *
+ * Derived from the map above rather than listed by hand, so adding a Cesare
+ * tool cannot leave the client refreshing a stale panel: the same declaration
+ * that makes the tracer say "sto scrivendo la Scaletta" is what tells the cache
+ * that the Scaletta changed. A tool that forgets to declare its domain has a
+ * visible symptom — the tracer goes silent about it — which is what keeps this
+ * source honest.
+ */
+export const WRITTEN_DOMAINS: ReadonlySet<StreamEntityDomain> = new Set(
+  Object.values(TOOL_ENTITY_MAP)
+    .filter((m) => m.access === "write")
+    .map((m) => m.domain),
+);
+
+/** Domains for tools whose TARGET is an argument, not a constant. The tracer
+ *  must name the entity actually being written (#64: a wrong label is worse
+ *  than none), and transform_document can write any document the writer names.
+ *  Returns null when the tool has a fixed target or the input is unusable —
+ *  callers then fall back to the static map. */
+export const domainForToolInput = (
+  toolName: string,
+  input: unknown,
+): StreamEntityDomain | null => {
+  if (toolName !== "transform_document") return null;
+  const t = (input as { document_type?: unknown } | null)?.document_type;
+  switch (t) {
+    case "soggetto":
+    case "synopsis":
+    case "outline":
+    case "treatment":
+    case "screenplay":
+      return t;
+    default:
+      return null;
+  }
+};

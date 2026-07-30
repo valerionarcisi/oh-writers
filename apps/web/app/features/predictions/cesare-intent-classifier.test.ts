@@ -592,3 +592,28 @@ describe("classifyIntent — R3 confidence gating", () => {
     expect(result._unsafeUnwrap().suggestedTool).toBeUndefined();
   });
 });
+
+describe("classifyIntent — BYOK routing", () => {
+  // A dead platform key 401'd EVERY classification silently for weeks: no
+  // forced tool, no quality-tier escalation, Cesare interviewing instead of
+  // acting (#118). The classifier must ride the user's own provider (fast
+  // role) exactly like the tool loop does — platform key is only the
+  // no-BYOK fallback inside callHaiku itself.
+  it("forwards the user's BYOK context to callHaiku on the fast tier", async () => {
+    callHaikuMock.mockReturnValue(
+      okAsync(haikuJson('{"type":"question","confidence":0.9}')),
+    );
+    const db = { fake: "db" };
+    await classifyIntent({
+      userMessage: "che ne pensi?",
+      page: "screenplay",
+      availableTools: DOC_TOOLS,
+      userId: "user-1",
+      db: db as never,
+    });
+    expect(callHaikuMock).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: "user-1", db, tier: "fast" }),
+      "cesare.intent-classifier",
+    );
+  });
+});

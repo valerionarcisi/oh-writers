@@ -96,7 +96,7 @@
 .elementPill:focus-visible {
   outline: 2px solid var(--ds-action);
   outline-offset: 2px;
-  border-radius: 2px;
+  border-radius: var(--ds-radius-xs);
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -115,12 +115,24 @@
 }
 
 /* Per-element accent colors — teal for structural elements, coral for dialogue */
-.elementPill[data-element="scene"]         { --chip-accent: var(--ds-action, #2ec4b6); }
-.elementPill[data-element="action"]        { --chip-accent: var(--ds-text-2, #8a8580); }
-.elementPill[data-element="character"]     { --chip-accent: var(--ds-coral, #e76f51); }
-.elementPill[data-element="dialogue"]      { --chip-accent: var(--ds-coral, #e76f51); }
-.elementPill[data-element="parenthetical"] { --chip-accent: var(--ds-coral, #e76f51); }
-.elementPill[data-element="transition"]    { --chip-accent: var(--ds-action, #2ec4b6); }
+.elementPill[data-element="scene"] {
+  --chip-accent: var(--ds-action, #2ec4b6);
+}
+.elementPill[data-element="action"] {
+  --chip-accent: var(--ds-text-2, #8a8580);
+}
+.elementPill[data-element="character"] {
+  --chip-accent: var(--ds-coral, #e76f51);
+}
+.elementPill[data-element="dialogue"] {
+  --chip-accent: var(--ds-coral, #e76f51);
+}
+.elementPill[data-element="parenthetical"] {
+  --chip-accent: var(--ds-coral, #e76f51);
+}
+.elementPill[data-element="transition"] {
+  --chip-accent: var(--ds-action, #2ec4b6);
+}
 
 .elementIcon {
   font-size: 10px;
@@ -176,7 +188,7 @@
 .elementChip:focus-visible {
   outline: 2px solid var(--ds-action);
   outline-offset: 4px;
-  border-radius: 2px;
+  border-radius: var(--ds-radius-xs);
 }
 
 .elementChipActive {

@@ -17,13 +17,15 @@ export const useBlocking = (sceneId: string, planId: string) => {
     mutationFn: ({
       sceneBlockingId,
       positions,
+      planSceneCamerasId,
     }: {
       sceneBlockingId: string;
       positions: ActorPosition[];
+      planSceneCamerasId?: string;
     }) =>
-      saveActorPositions({ data: { sceneBlockingId, positions } }).then(
-        unwrapResult,
-      ),
+      saveActorPositions({
+        data: { sceneBlockingId, positions, planSceneCamerasId },
+      }).then(unwrapResult),
     onSuccess: () => void qc.invalidateQueries({ queryKey: key }),
   });
 

@@ -36,6 +36,8 @@ import type { CesarePage } from "./components/CesareConversation";
 import { persistTurn } from "./messages/messages.server";
 import { messagesQueryOptions } from "./messages/useMessages";
 import { sessionsQueryKey } from "./sessions/useSessions";
+import { invalidateFor, type WrittenEntity } from "~/lib/query-keys";
+import { WRITTEN_DOMAINS } from "./cesare-tool-entity-map";
 import {
   buildAssistantMetadata,
   persistedToChatMessage,
@@ -361,6 +363,22 @@ export function CesareChatStoreProvider({ children }: { children: ReactNode }) {
               void queryClient.invalidateQueries({
                 queryKey: sessionsQueryKey(projectId),
               });
+              // Every agentic edit auto-creates a version before applying
+              // (auto-version.effect.ts), but nothing told the Versions panel.
+              // It kept rendering the list from before the turn, so a version
+              // Cesare had just made never appeared — and the next one the
+              // user minted by hand showed up already "Attuale", because the
+              // pointer had moved underneath the stale list.
+              //
+              // The entity list is DERIVED from the tool registry, not written
+              // by hand here: adding a Cesare tool cannot leave this behind,
+              // because the same `domain` declaration that makes the tracer say
+              // "sto scrivendo la Scaletta" is what refreshes the Scaletta's
+              // queries. A hand-kept list would have to be remembered on every
+              // new tool, and it would not be.
+              invalidateFor(queryClient, [
+                ...WRITTEN_DOMAINS,
+              ] as WrittenEntity[]);
             })
             .catch(() => undefined);
         }

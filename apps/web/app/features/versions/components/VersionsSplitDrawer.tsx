@@ -257,11 +257,19 @@ export function VersionsSplitDrawer({
               onClick={(e) => e.stopPropagation()}
               onChange={(e) => setRenameLabel(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter") submitRename(v.id);
-                if (e.key === "Escape") {
-                  setRenamingId(null);
-                  setRenameLabel("");
+                if (e.key !== "Enter" && e.key !== "Escape") return;
+                // Both keys are consumed by the field. Without this the event
+                // bubbles to the lane's dismiss handler, so cancelling a
+                // rename with Escape also closed the whole Versions panel and
+                // dropped the user back on the bare editor.
+                e.stopPropagation();
+                e.preventDefault();
+                if (e.key === "Enter") {
+                  submitRename(v.id);
+                  return;
                 }
+                setRenamingId(null);
+                setRenameLabel("");
               }}
               data-testid={`version-rename-input-${v.id}`}
             />

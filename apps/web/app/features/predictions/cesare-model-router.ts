@@ -29,6 +29,11 @@ export interface RouteModelInput {
   readonly userMessage: string;
   readonly page: CesarePage;
   readonly conversationLength: number;
+  /** The classified intent's scale (INTENT_SCALE in cesare-intent-classifier).
+   *  Kept as a plain literal — not the IntentType — so this module stays free
+   *  of the classifier and its prompt. Absent when the page has no classifier;
+   *  the structural rules below then decide alone. */
+  readonly intentScale?: "scoped" | "document";
 }
 
 // The fast tier (Haiku 4.5 on the platform default, 3× cheaper than the
@@ -44,13 +49,6 @@ export interface RouteModelInput {
 // the old "any imperative → quality tier" bias, which sent nearly all real
 // requests to the expensive tier (issue #101).
 
-// A narrow set of "rewrite the whole document from scratch" phrasings — the
-// one interactive intent heavy enough to justify the quality tier even when
-// it slips past the generation tools. Everyday scoped edits are
-// intentionally NOT here.
-const HEAVY_GENERATION_REGEX =
-  /\b(riscrivi|riscrivere|rigenera|rigenerare|genera(?:mi)?|generare)\b.*\b(tutt[oa]|intero|intera|dall['’ ]?inizio|da\s?capo|da\s?zero|l['’ ]?intero|l['’ ]?intera)\b/i;
-
 // Multi-constraint prompts encode complex intent. Raised from the old 200 so a
 // normal edit instruction ("aggiungi una scena dopo la 4 e accorcia la 2") still
 // lands on the fast tier; only genuinely long, layered requests escalate.
@@ -63,7 +61,14 @@ export const routeModel = ({
   userMessage,
   page: _page,
   conversationLength,
+  intentScale,
 }: RouteModelInput): ModelTier => {
+  // The classifier's verdict outranks every textual heuristic: it is an LLM,
+  // so it understands any language, any phrasing, any typo — the things a
+  // regex was being patched for, one user report at a time (#118). Document-
+  // scale work always gets the quality slot.
+  if (intentScale === "document") return "quality";
+
   const trimmed = userMessage.trim();
 
   // Defensive: an empty message shouldn't reach a model at all; if it does,
@@ -75,9 +80,6 @@ export const routeModel = ({
 
   // Deep conversations carry accumulated context worth the quality tier's reasoning.
   if (conversationLength > DEEP_CONVERSATION_TURN_LIMIT) return "quality";
-
-  // "Rewrite the whole thing from scratch" — the one heavy interactive intent.
-  if (HEAVY_GENERATION_REGEX.test(trimmed)) return "quality";
 
   // Everything else — questions and everyday scoped edits — is a fast-tier job.
   return "fast";

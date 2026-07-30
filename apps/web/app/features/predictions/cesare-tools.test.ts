@@ -4,8 +4,12 @@ import {
   parseHeading,
   extractSideChannelMarkers,
   markerAwareFallbackText,
+  toolErrorPayload,
 } from "./cesare-tools";
 import { parsePlanDescription } from "./cesare-shooting-plan-tools";
+import { CesareError } from "./cesare.errors";
+import { CesareSessionNotFoundError } from "./sessions/sessions.errors";
+import { DbError } from "@oh-writers/utils";
 
 // F-A3 — the server emits a success marker ONLY when a write tool genuinely
 // mutated the DB, so the client card can never fabricate success. For the
@@ -318,5 +322,44 @@ describe("markerAwareFallbackText — fallback matches the rendered affordance",
 
   it("no marker → honest 'nothing applied' copy", () => {
     expect(markerAwareFallbackText("")).toContain("non è stata applicata");
+  });
+});
+
+// #44 — a failed tool used to hand the model `{ error: "<vague message>" }`
+// with no tag and no is_error flag. With nothing factual to report, the model
+// invented a confident root cause: it told the user to file a bug about a
+// constraint on `document_versions.number` when the real failure was a missing
+// Cesare session. The payload now carries the tag as the one fact, and says
+// outright not to elaborate.
+describe("toolErrorPayload", () => {
+  it("carries the error tag so the model has a fact to report", () => {
+    const payload = toolErrorPayload(
+      new CesareSessionNotFoundError("sess-1") as never,
+    );
+    expect(payload.code).toBe("CesareSessionNotFoundError");
+    expect(payload.error).toContain("Cesare session");
+  });
+
+  it("tells the model not to invent a cause", () => {
+    const payload = toolErrorPayload(new CesareError("boom") as never);
+    expect(payload.guidance).toMatch(/do not invent/i);
+    expect(payload.guidance).toMatch(/database/i);
+  });
+
+  it("never leaks the raw SQL cause a DbError carries", () => {
+    const dbError = new DbError(
+      "insertVersion",
+      new Error('insert into "document_versions" violates unique constraint'),
+    );
+    const payload = toolErrorPayload(dbError as never);
+    expect(payload.code).toBe("DbError");
+    // dbCause stays in the server log; the model gets the operation, not SQL.
+    expect(JSON.stringify(payload)).not.toContain("document_versions");
+    expect(JSON.stringify(payload)).not.toContain("unique constraint");
+  });
+
+  it("degrades to UnknownError rather than throwing on an untagged error", () => {
+    const payload = toolErrorPayload({ message: "odd" } as never);
+    expect(payload.code).toBe("UnknownError");
   });
 });

@@ -37,6 +37,15 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
 
+  guardrails:
+    name: Guardrails
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Pure grep over the source — no install needed, so this is the fastest
+      # signal in the matrix and fails a PR before the expensive jobs run.
+      - run: bash scripts/fleet-check.sh
+
   unit:
     name: Unit (Vitest)
     runs-on: ubuntu-latest

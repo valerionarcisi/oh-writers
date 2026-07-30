@@ -111,7 +111,9 @@
   padding: 4px 0;
   transition: color var(--ds-duration-1) var(--ds-ease);
 
-  &:hover { color: var(--ds-text); }
+  &:hover {
+    color: var(--ds-text);
+  }
 
   &:focus-visible {
     outline: 2px solid var(--ds-action);
@@ -249,8 +251,12 @@
   letter-spacing: 0.06em;
 }
 
-.catDeltaPos { color: var(--ds-warning); }
-.catDeltaNeg { color: var(--ds-success); }
+.catDeltaPos {
+  color: var(--ds-warning);
+}
+.catDeltaNeg {
+  color: var(--ds-success);
+}
 
 /* ── Table ── */
 .table {
@@ -302,13 +308,19 @@
   content: "";
   width: 3px;
   height: 10px;
-  border-radius: 2px;
+  border-radius: var(--ds-radius-xs);
   background: var(--cat-color, var(--ds-text-faint));
 }
 
-.deltaPos { color: var(--ds-warning); }
-.deltaNeg { color: var(--ds-success); }
-.deltaZero { color: var(--ds-text-faint); }
+.deltaPos {
+  color: var(--ds-warning);
+}
+.deltaNeg {
+  color: var(--ds-success);
+}
+.deltaZero {
+  color: var(--ds-text-faint);
+}
 
 /* ── Margin rail ── */
 .margin {
@@ -464,7 +476,6 @@
   color: var(--ds-text);
   font-size: 13px;
 }
-
 
 /* ── Empty card ── */
 .emptyCard {

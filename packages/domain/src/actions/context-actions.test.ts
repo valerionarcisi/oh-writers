@@ -14,14 +14,18 @@ describe("resolveContextActions", () => {
       "soggetto",
       new Set([Features.SIAE_EXPORT]),
     );
+    // IMPORT_DOCUMENT joined the soggetto menu with the PDF/DOCX/TXT import
+    // (1d5712ea) and is ungated, so it shows in both cases.
     expect(withSiae.map((a) => a.id)).toEqual([
       ContextActionIds.EXPORT_DOCX,
       ContextActionIds.EXPORT_SIAE,
+      ContextActionIds.IMPORT_DOCUMENT,
     ]);
 
     const withoutSiae = resolveContextActions("soggetto", new Set());
     expect(withoutSiae.map((a) => a.id)).toEqual([
       ContextActionIds.EXPORT_DOCX,
+      ContextActionIds.IMPORT_DOCUMENT,
     ]);
   });
 

@@ -1,0 +1,30 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-1);
+  margin-block-start: var(--ds-space-3);
+}
+
+.fieldLabel {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  color: var(--ds-text-2);
+}
+
+.fieldInput {
+  display: block;
+  inline-size: 100%;
+  min-block-size: 2rem;
+  padding: var(--ds-space-1) var(--ds-space-2);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-sm);
+  background: var(--ds-surface);
+  font: inherit;
+  color: var(--ds-text);
+  outline: none;
+
+  &:focus {
+    border-color: var(--ds-action);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--ds-action) 20%, transparent);
+  }
+}

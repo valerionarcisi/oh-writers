@@ -1,5 +1,7 @@
 import { useRef, useState, useCallback } from "react";
 import type { Primitive } from "@oh-writers/domain";
+import { useConfirmDialog } from "@oh-writers/ui";
+import { useTranslation } from "~/features/i18n";
 import type { EditorTool } from "./BlockingEditorToolbar";
 import styles from "./BlockingEditorCanvas.module.css";
 
@@ -26,6 +28,8 @@ export function BlockingEditorCanvas({
   const scale = DISPLAY_W / widthCm;
   const displayH = heightCm * scale;
   const svgRef = useRef<SVGSVGElement>(null);
+  const { promptText } = useConfirmDialog();
+  const { t } = useTranslation();
 
   const [drawing, setDrawing] = useState<{ x: number; y: number } | null>(null);
   const [preview, setPreview] = useState<{
@@ -37,7 +41,8 @@ export function BlockingEditorCanvas({
   const [selected, setSelected] = useState<number | null>(null);
 
   const snap = useCallback(
-    (v: number) => (snapOn ? Math.round(v / GRID_SNAP) * GRID_SNAP : Math.round(v)),
+    (v: number) =>
+      snapOn ? Math.round(v / GRID_SNAP) * GRID_SNAP : Math.round(v),
     [snapOn],
   );
 
@@ -78,40 +83,33 @@ export function BlockingEditorCanvas({
       return;
     }
 
-    let newPrimitive: Primitive;
-    if (activeTool === "wall") {
-      newPrimitive = {
-        type: "wall",
-        x: preview.x,
-        y: preview.y,
-        w: preview.w,
-        h: preview.h,
-      };
-    } else if (activeTool === "furniture") {
-      const label = window.prompt("Nome del mobile:", "Mobile") ?? "Mobile";
-      newPrimitive = {
-        type: "furniture",
-        x: preview.x,
-        y: preview.y,
-        w: preview.w,
-        h: preview.h,
-        label,
-        propRef: null,
-      };
-    } else {
-      newPrimitive = {
-        type: "opening",
-        x: preview.x,
-        y: preview.y,
-        w: preview.w,
-        h: preview.h,
-        kind: "door",
-      };
-    }
+    const box = { x: preview.x, y: preview.y, w: preview.w, h: preview.h };
+    const commit = (p: Primitive) => onChange([...primitives, p]);
 
-    onChange([...primitives, newPrimitive]);
+    // Furniture is the one tool that needs a name, so it commits after the
+    // dialog resolves; the drag state is cleared up front either way so the
+    // canvas is never left mid-stroke while the dialog is open.
     setDrawing(null);
     setPreview(null);
+
+    if (activeTool === "furniture") {
+      void promptText({
+        title: t("shootingPlan.blocking.furnitureTitle"),
+        message: "",
+        label: t("shootingPlan.blocking.furnitureLabel"),
+        initialValue: t("shootingPlan.blocking.furnitureDefault"),
+      }).then((label) => {
+        if (label === null) return;
+        commit({ type: "furniture", ...box, label, propRef: null });
+      });
+      return;
+    }
+
+    commit(
+      activeTool === "wall"
+        ? { type: "wall", ...box }
+        : { type: "opening", ...box, kind: "door" },
+    );
   };
 
   const gridLines = () => {
@@ -194,7 +192,9 @@ export function BlockingEditorCanvas({
                 height={p.h * scale}
                 fill="var(--color-surface)"
                 stroke={
-                  isSelected ? "var(--color-accent)" : "var(--color-border-strong)"
+                  isSelected
+                    ? "var(--color-accent)"
+                    : "var(--color-border-strong)"
                 }
                 strokeWidth={isSelected ? 2 : 1}
                 rx={2 * scale}
@@ -222,7 +222,9 @@ export function BlockingEditorCanvas({
               height={p.h * scale}
               fill="var(--color-bg)"
               stroke={
-                isSelected ? "var(--color-accent)" : "var(--color-border-strong)"
+                isSelected
+                  ? "var(--color-accent)"
+                  : "var(--color-border-strong)"
               }
               strokeWidth={isSelected ? 2 : 1.5}
               onClick={() => setSelected(i)}

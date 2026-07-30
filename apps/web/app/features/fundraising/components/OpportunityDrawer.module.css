@@ -111,7 +111,7 @@
 }
 
 .deadlineValueUrgent {
-  color: #d97706;
+  color: var(--ds-warning);
 }
 
 .deadlineValueExpired {
@@ -129,7 +129,7 @@
   display: inline-flex;
   align-items: center;
   padding: 2px var(--space-2);
-  border-radius: var(--radius-pill);
+  border-radius: var(--ds-radius-pill);
   border: 1px solid var(--ds-line);
   font-size: var(--text-xs);
   color: var(--ds-text-2);
@@ -143,7 +143,7 @@
   padding: var(--space-2) var(--space-4);
   border-radius: var(--radius-md);
   background: var(--color-accent);
-  color: #fff;
+  color: var(--ds-text-on-dark);
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
   text-decoration: none;
@@ -185,7 +185,7 @@
   &[data-active="true"] {
     background: var(--color-accent);
     border-color: var(--color-accent);
-    color: #fff;
+    color: var(--ds-text-on-dark);
   }
 }
 

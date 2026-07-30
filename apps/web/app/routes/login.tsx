@@ -1,20 +1,7 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { titleHead } from "~/lib/document-title";
-import { createServerFn } from "@tanstack/start";
-import { LoginForm } from "~/features/auth";
+import { LoginForm, fetchLoginData } from "~/features/auth";
 import styles from "./_auth.module.css";
-
-const fetchLoginData = createServerFn({ method: "GET" }).handler(async () => {
-  const { getUser } = await import("~/server/context");
-  const user = await getUser();
-  return {
-    isAuthenticated: !!user,
-    availableProviders: [
-      ...(process.env["GOOGLE_CLIENT_ID"] ? ["google"] : []),
-      ...(process.env["GITHUB_CLIENT_ID"] ? ["github"] : []),
-    ],
-  };
-});
 
 export const Route = createFileRoute("/login")({
   head: () => titleHead("Accedi"),

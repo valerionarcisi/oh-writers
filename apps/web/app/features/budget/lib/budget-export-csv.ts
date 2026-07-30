@@ -1,4 +1,5 @@
 import type { BudgetLine } from "@oh-writers/domain";
+import { SECTION_EXPORT_LABEL, type FlatSection } from "./flat-sections";
 
 export interface BudgetCsvRow {
   readonly category: string;
@@ -22,19 +23,7 @@ const escapeCsv = (s: string): string =>
 const formatAmount = (v: number | null): string =>
   v === null ? "" : v.toFixed(2);
 
-export const buildBudgetCsvRows = (lines: BudgetLine[]): BudgetCsvRow[] =>
-  lines.map((line) => ({
-    category: TOP_SHEET_LABELS[line.topSheet] ?? line.topSheet,
-    name: line.name,
-    estimatedAmount:
-      line.quantity !== null && line.rate !== null
-        ? line.quantity * line.rate
-        : 0,
-    actualAmount: line.actual,
-    notes: line.notes,
-  }));
-
-export const budgetLinesToCsv = (lines: BudgetLine[]): string => {
+const rowsToCsv = (rows: ReadonlyArray<BudgetCsvRow>): string => {
   const header = [
     "Category",
     "Line Item",
@@ -43,7 +32,6 @@ export const budgetLinesToCsv = (lines: BudgetLine[]): string => {
     "Notes",
   ].join(",");
 
-  const rows = buildBudgetCsvRows(lines);
   const dataRows = rows.map((r) =>
     [
       escapeCsv(r.category),
@@ -65,3 +53,39 @@ export const budgetLinesToCsv = (lines: BudgetLine[]): string => {
 
   return [header, ...dataRows, totalRow].join("\n");
 };
+
+export const buildBudgetCsvRows = (lines: BudgetLine[]): BudgetCsvRow[] =>
+  lines.map((line) => ({
+    category: TOP_SHEET_LABELS[line.topSheet] ?? line.topSheet,
+    name: line.name,
+    estimatedAmount:
+      line.quantity !== null && line.rate !== null
+        ? line.quantity * line.rate
+        : 0,
+    actualAmount: line.actual,
+    notes: line.notes,
+  }));
+
+/** Every row the budget shows, Cast and Crew included. `buildFlatSections` is
+ *  the one place that knows how a row totals (fiscal regime, meal allowance,
+ *  a disabled crew member counting zero), so exports read from it rather than
+ *  re-deriving amounts and drifting from the screen. */
+export const buildBudgetCsvRowsFromSections = (
+  sections: ReadonlyArray<FlatSection>,
+): BudgetCsvRow[] =>
+  sections.flatMap((section) =>
+    section.rows.map((row) => ({
+      category: SECTION_EXPORT_LABEL[section.id],
+      name: row.name,
+      estimatedAmount: row.total,
+      actualAmount: row.kind === "line" ? row.actual : null,
+      notes: row.kind === "line" ? row.raw.notes : null,
+    })),
+  );
+
+export const budgetSectionsToCsv = (
+  sections: ReadonlyArray<FlatSection>,
+): string => rowsToCsv(buildBudgetCsvRowsFromSections(sections));
+
+export const budgetLinesToCsv = (lines: BudgetLine[]): string =>
+  rowsToCsv(buildBudgetCsvRows(lines));

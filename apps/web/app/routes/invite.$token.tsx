@@ -1,18 +1,9 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { createServerFn } from "@tanstack/start";
 import { Suspense } from "react";
 import { Skeleton } from "@oh-writers/ui";
 import type { UserId } from "@oh-writers/domain";
 import { InviteAcceptancePage } from "~/features/teams";
-
-const fetchUser = createServerFn({ method: "GET" }).handler(
-  async (): Promise<{ id: string; name: string; email: string } | null> => {
-    const { getUser } = await import("~/server/context");
-    const user = await getUser();
-    if (!user) return null;
-    return { id: user.id as string, name: user.name, email: user.email };
-  },
-);
+import { fetchInviteUser as fetchUser } from "~/features/auth";
 
 export const Route = createFileRoute("/invite/$token")({
   loader: async ({ params }) => {

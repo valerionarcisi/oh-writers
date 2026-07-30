@@ -3,7 +3,7 @@ import { useRadio, useRadioGroup } from "react-aria";
 import { useRadioGroupState } from "react-stately";
 import type { RadioGroupState } from "react-stately";
 import { useQuery } from "@tanstack/react-query";
-import { Button, Skeleton, Input } from "@oh-writers/ui";
+import { Skeleton, Input } from "@oh-writers/ui";
 import { useTranslation } from "~/features/i18n";
 import {
   modelCatalogueQueryOptions,
@@ -23,11 +23,17 @@ export interface AiModelPickerProps {
   readonly onChange: (value: ModelPickerValue) => void;
 }
 
+type Role = "fast" | "quality";
+
 const formatPrice = (euro: number): string => euro.toFixed(2).replace(".", ",");
 
-// Spec 84 §3 — the two recommended cards are pre-selected by default; the
-// "Avanzate" disclosure exposes the FULL live catalogue (all providers) with
-// a persistent quality-guarantee notice, never a second hardcoded list.
+// Spec 84 §3, revised after a real-use report: the two cards are the ENTRY
+// POINT for changing a role's model — click one and the full catalogue expands
+// beneath, already scoped to that role. The old layout hid the catalogue
+// behind a collapsed "Avanzate" toggle while the cards were radios that could
+// only re-select the recommendation; worse, a card kept showing the
+// recommended model even after a different one was chosen, so changing models
+// looked like it had no effect.
 export function AiModelPicker({
   recommendedFast,
   recommendedQuality,
@@ -35,105 +41,132 @@ export function AiModelPicker({
   onChange,
 }: AiModelPickerProps) {
   const { t } = useTranslation();
-  const [advancedOpen, setAdvancedOpen] = useState(false);
+  // Which role's catalogue is expanded; null = both collapsed.
+  const [openRole, setOpenRole] = useState<Role | null>(null);
+
+  // The catalogue lives up here (not inside the expanded panel) so the cards
+  // can name the model that is ACTUALLY selected, not the recommendation.
+  const catalogueQuery = useQuery(modelCatalogueQueryOptions());
+  const models: CatalogueModel[] = catalogueQuery.data?.isOk
+    ? catalogueQuery.data.value
+    : [];
+
+  const resolve = (id: string, recommended: CatalogueModel) =>
+    id === recommended.id
+      ? recommended
+      : (models.find((m) => m.id === id) ?? null);
 
   return (
     <div className={styles.picker} data-testid="ai-model-picker">
       <p className={styles.intro}>{t("settings.ai.models.intro")}</p>
 
       <div className={styles.cards}>
-        <RecommendedCard
+        <RoleCard
           role="fast"
           label={t("settings.ai.models.fastLabel")}
           priceSuffix={t("settings.ai.models.pricePerFilmSuffix")}
-          model={recommendedFast}
+          changeHint={t("settings.ai.models.changeHint")}
           selectedId={value.fast}
-          onSelect={(id) => onChange({ ...value, fast: id })}
+          selectedModel={resolve(value.fast, recommendedFast)}
+          isOpen={openRole === "fast"}
+          onToggle={() => setOpenRole((r) => (r === "fast" ? null : "fast"))}
         />
-        <RecommendedCard
+        <RoleCard
           role="quality"
           label={t("settings.ai.models.qualityLabel")}
           priceSuffix={t("settings.ai.models.pricePerFilmSuffix")}
-          model={recommendedQuality}
+          changeHint={t("settings.ai.models.changeHint")}
           selectedId={value.quality}
-          onSelect={(id) => onChange({ ...value, quality: id })}
+          selectedModel={resolve(value.quality, recommendedQuality)}
+          isOpen={openRole === "quality"}
+          onToggle={() =>
+            setOpenRole((r) => (r === "quality" ? null : "quality"))
+          }
         />
       </div>
 
-      <button
-        type="button"
-        className={styles.advancedToggle}
-        aria-expanded={advancedOpen}
-        onClick={() => setAdvancedOpen((v) => !v)}
-        data-testid="ai-model-advanced-toggle"
-      >
-        <span className={styles.advancedChevron} aria-hidden="true">
-          {advancedOpen ? "▾" : "▸"}
-        </span>
-        {t("settings.ai.models.advancedToggle")}
-      </button>
-
-      {advancedOpen && <AdvancedCatalogue value={value} onChange={onChange} />}
+      {openRole && (
+        <RoleCatalogue
+          role={openRole}
+          models={models}
+          isLoading={catalogueQuery.isLoading}
+          loadFailed={!catalogueQuery.isLoading && !catalogueQuery.data?.isOk}
+          value={value}
+          onChange={onChange}
+        />
+      )}
     </div>
   );
 }
 
-function RecommendedCard({
+/** One role's slot: shows the model currently filling it and expands the
+ *  catalogue for that role on click. */
+function RoleCard({
   role,
   label,
   priceSuffix,
-  model,
+  changeHint,
   selectedId,
-  onSelect,
+  selectedModel,
+  isOpen,
+  onToggle,
 }: {
-  role: "fast" | "quality";
+  role: Role;
   label: string;
   priceSuffix: string;
-  model: CatalogueModel;
+  changeHint: string;
   selectedId: string;
-  onSelect: (id: string) => void;
+  selectedModel: CatalogueModel | null;
+  isOpen: boolean;
+  onToggle: () => void;
 }) {
-  const isSelected = selectedId === model.id;
   return (
-    <label
-      className={`${styles.card} ${isSelected ? styles.cardSelected : ""}`}
-      data-testid={`ai-model-recommended-${role}`}
+    <button
+      type="button"
+      className={`${styles.card} ${isOpen ? styles.cardSelected : ""}`}
+      aria-expanded={isOpen}
+      onClick={onToggle}
+      data-testid={`ai-model-role-${role}`}
     >
-      <input
-        type="radio"
-        name={`ai-model-${role}`}
-        checked={isSelected}
-        onChange={() => onSelect(model.id)}
-        className={styles.cardRadio}
-      />
       <span className={styles.cardRole}>{label}</span>
-      <span className={styles.cardModelName}>{model.name}</span>
-      <span className={styles.cardPrice}>
-        ~{formatPrice(model.euroPerFeatureFilm)} {priceSuffix}
+      <span className={styles.cardModelName}>
+        {/* While the catalogue is loading a non-recommended id has no name
+            yet — the raw id is still truthful, a stale name would not be. */}
+        {selectedModel?.name ?? selectedId}
       </span>
-    </label>
+      {selectedModel && (
+        <span className={styles.cardPrice}>
+          ~{formatPrice(selectedModel.euroPerFeatureFilm)} {priceSuffix}
+        </span>
+      )}
+      <span className={styles.cardHint} aria-hidden="true">
+        {changeHint} {isOpen ? "▾" : "▸"}
+      </span>
+    </button>
   );
 }
 
-// ─── Advanced: full live catalogue, react-aria radio group ─────────────────
+// ─── The catalogue, scoped to the clicked role ──────────────────────────────
 
-const AdvancedRadioContext = createContext<RadioGroupState | null>(null);
+const CatalogueRadioContext = createContext<RadioGroupState | null>(null);
 
-function AdvancedCatalogue({
+function RoleCatalogue({
+  role,
+  models,
+  isLoading,
+  loadFailed,
   value,
   onChange,
 }: {
+  role: Role;
+  models: CatalogueModel[];
+  isLoading: boolean;
+  loadFailed: boolean;
   value: ModelPickerValue;
   onChange: (value: ModelPickerValue) => void;
 }) {
   const { t } = useTranslation();
   const [search, setSearch] = useState("");
-  const [editingRole, setEditingRole] = useState<"fast" | "quality">("fast");
-  const catalogueQuery = useQuery(modelCatalogueQueryOptions());
-
-  const models: CatalogueModel[] = catalogueQuery.data?.isOk
-    ? catalogueQuery.data.value
-    : [];
 
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -145,12 +178,11 @@ function AdvancedCatalogue({
     );
   }, [models, search]);
 
-  const currentValue = editingRole === "fast" ? value.fast : value.quality;
   const state = useRadioGroupState({
-    value: currentValue,
+    value: role === "fast" ? value.fast : value.quality,
     onChange: (id) =>
       onChange(
-        editingRole === "fast"
+        role === "fast"
           ? { ...value, fast: id as string }
           : { ...value, quality: id as string },
       ),
@@ -166,25 +198,6 @@ function AdvancedCatalogue({
         {t("settings.ai.models.advancedWarning")}
       </p>
 
-      <div className={styles.advancedRoleToggle}>
-        <button
-          type="button"
-          className={`${styles.roleTab} ${editingRole === "fast" ? styles.roleTabActive : ""}`}
-          onClick={() => setEditingRole("fast")}
-          data-testid="ai-model-advanced-role-fast"
-        >
-          {t("settings.ai.models.fastLabel")}
-        </button>
-        <button
-          type="button"
-          className={`${styles.roleTab} ${editingRole === "quality" ? styles.roleTabActive : ""}`}
-          onClick={() => setEditingRole("quality")}
-          data-testid="ai-model-advanced-role-quality"
-        >
-          {t("settings.ai.models.qualityLabel")}
-        </button>
-      </div>
-
       <Input
         type="search"
         value={search}
@@ -193,29 +206,28 @@ function AdvancedCatalogue({
         data-testid="ai-model-search-input"
       />
 
-      {catalogueQuery.isLoading ? (
-        <Skeleton lines={3} ariaLabel="Caricamento catalogo modelli" />
-      ) : !catalogueQuery.data?.isOk ? (
+      {isLoading ? (
+        <Skeleton lines={3} ariaLabel={t("settings.ai.models.loadingAria")} />
+      ) : loadFailed ? (
         <p className={styles.loadError}>{t("settings.ai.models.loadError")}</p>
       ) : (
         <div className={styles.advancedList} {...radioGroupProps}>
-          <AdvancedRadioContext.Provider value={state}>
+          <CatalogueRadioContext.Provider value={state}>
             {filtered.map((m) => (
-              <AdvancedModelRow key={m.id} model={m} />
+              <CatalogueModelRow key={m.id} model={m} />
             ))}
-          </AdvancedRadioContext.Provider>
+          </CatalogueRadioContext.Provider>
         </div>
       )}
     </div>
   );
 }
 
-function AdvancedModelRow({ model }: { model: CatalogueModel }) {
+function CatalogueModelRow({ model }: { model: CatalogueModel }) {
   const { t } = useTranslation();
-  const state = useContext(AdvancedRadioContext);
+  const state = useContext(CatalogueRadioContext);
   const ref = useRef<HTMLInputElement>(null);
-  if (!state)
-    throw new Error("AdvancedModelRow must be inside AdvancedCatalogue");
+  if (!state) throw new Error("CatalogueModelRow must be inside RoleCatalogue");
   const { inputProps } = useRadio(
     { value: model.id, "aria-label": model.name },
     state,

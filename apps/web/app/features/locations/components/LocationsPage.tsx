@@ -34,7 +34,7 @@ import { discoverPlacesInArea } from "../server/discovery.server";
 import { rankPlacesForScene } from "../server/rank.server";
 import type { DrawnCircle } from "../lib/area-search";
 import type { AreaFilterResult } from "../lib/area-filter";
-import { geometryToCircle } from "../lib/area-filter";
+import { geometryToCircle, clampDiscoveryRadius } from "../lib/area-filter";
 import { buildCrossMatches } from "../lib/cross-match";
 import { useExportLocations } from "../hooks/useExportLocations";
 import { LocationMap } from "./LocationMap";
@@ -117,6 +117,7 @@ export function LocationsPage({ projectId }: LocationsPageProps) {
   // fetch real places of the SELECTED requirement's type and render them as
   // hollow pins. Re-runs when the selected scene changes. Cleared on dismiss.
   const [discoverySkipped, setDiscoverySkipped] = useState<string | null>(null);
+  const [discoveryFailed, setDiscoveryFailed] = useState(false);
   useEffect(() => {
     // A new area/scene invalidates any prior atmosphere ranking.
     setRankReasons(new Map());
@@ -133,17 +134,25 @@ export function LocationsPage({ projectId }: LocationsPageProps) {
     if (!circle) return;
 
     let cancelled = false;
+    setDiscoveryFailed(false);
     void (async () => {
       const response = await discoverPlacesInArea({
         data: {
           projectId,
           lat: circle.lat,
           lng: circle.lng,
-          radius_m: circle.radius_m,
+          // Already clamped by geometryToCircle / the drawn circle, but a
+          // rejected radius used to reject INSIDE this promise with no catch:
+          // an unhandled rejection, no pins, and nothing said (issue #68).
+          radius_m: clampDiscoveryRadius(circle.radius_m),
           requirementId: selectedId ?? undefined,
         },
       });
-      if (cancelled || !response.isOk) return;
+      if (cancelled) return;
+      if (!response.isOk) {
+        setDiscoveryFailed(true);
+        return;
+      }
       const { places, skipped } = response.value;
       setFoundPlaces(places.map((r) => r.suggestion));
       setDiscoverySkipped(skipped ? skipped.type : null);
@@ -160,7 +169,11 @@ export function LocationsPage({ projectId }: LocationsPageProps) {
             ]),
         ),
       );
-    })();
+    })().catch(() => {
+      // A throw (network down, server 500) must not become an unhandled
+      // rejection: it reads as "nothing happened" to the user.
+      if (!cancelled) setDiscoveryFailed(true);
+    });
     return () => {
       cancelled = true;
     };
@@ -442,6 +455,26 @@ export function LocationsPage({ projectId }: LocationsPageProps) {
           />
         </div>
         <div className={styles.mapColumn}>
+          {/* Discovery returning nothing must never look like nothing happened:
+              both the failure and the server-skipped case say so (issue #68). */}
+          {discoveryFailed && (
+            <p
+              className={styles.discoveryNotice}
+              role="alert"
+              data-testid="discovery-failed"
+            >
+              {t("locations.discovery.failed")}
+            </p>
+          )}
+          {!discoveryFailed && discoverySkipped !== null && (
+            <p
+              className={styles.discoveryNotice}
+              role="status"
+              data-testid="discovery-skipped"
+            >
+              {t("locations.discovery.skipped")}
+            </p>
+          )}
           {/* Leaflet renders against real pixels and mutates document.head, so
               its SSR output never matches the hydrated DOM. Gate it client-only
               to remove the hydration mismatch by construction. */}
