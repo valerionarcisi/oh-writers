@@ -195,7 +195,13 @@ function ChangeModelsPanel({
       : null;
 
   if (recommendedQuery.isLoading) {
-    return <Skeleton lines={2} tone="agent" ariaLabel="Caricamento modelli" />;
+    return (
+      <Skeleton
+        lines={2}
+        tone="agent"
+        ariaLabel={t("settings.ai.models.loadingAria")}
+      />
+    );
   }
   if (!recommended) {
     return (
