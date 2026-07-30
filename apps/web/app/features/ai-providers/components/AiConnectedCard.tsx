@@ -82,7 +82,7 @@ export function AiConnectedCard({
             <Skeleton
               lines={1}
               widths={["30%"]}
-              ariaLabel="Caricamento saldo"
+              ariaLabel={t("settings.ai.credit.checking")}
             />
           ) : creditsQuery.data?.isOk && remaining != null ? (
             remaining === 0 ? (
@@ -96,8 +96,10 @@ export function AiConnectedCard({
                 className={styles.creditPositive}
                 data-testid="ai-connected-credit-positive"
               >
-                {t("settings.ai.credit.positiveLabel")}{" "}
-                {remaining.toFixed(2).replace(".", ",")} €
+                {/* OpenRouter balances are USD — same figure and currency as
+                    the TopBar pill; only the model estimates are € (converted
+                    in model-catalogue.server.ts). */}
+                {t("settings.ai.credit.positiveLabel")} ${remaining.toFixed(2)}
               </p>
             )
           ) : null}

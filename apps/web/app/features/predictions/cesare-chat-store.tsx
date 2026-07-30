@@ -379,6 +379,13 @@ export function CesareChatStoreProvider({ children }: { children: ReactNode }) {
               invalidateFor(queryClient, [
                 ...WRITTEN_DOMAINS,
               ] as WrittenEntity[]);
+              // Unlike the entity families above, this is not per-tool: EVERY
+              // turn spends provider credit, so the TopBar/settings balance
+              // (prefix covers both keys) refreshes unconditionally instead of
+              // waiting out its 5-minute staleTime.
+              void queryClient.invalidateQueries({
+                queryKey: ["ai-provider", "credits"],
+              });
             })
             .catch(() => undefined);
         }
