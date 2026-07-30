@@ -127,7 +127,8 @@ export const userSettingsKeys = {
     "settings.ai.models.fastLabel": "Fast",
     "settings.ai.models.qualityLabel": "Quality",
     "settings.ai.models.pricePerFilmSuffix": "€ / feature film",
-    "settings.ai.models.advancedToggle": "Advanced",
+    "settings.ai.models.changeHint": "Change",
+    "settings.ai.models.loadingAria": "Loading model catalogue",
     "settings.ai.models.advancedWarning":
       "Cesare's quality is only guaranteed on the recommended models.",
     "settings.ai.models.searchPlaceholder": "Search the full catalogue…",
@@ -275,7 +276,8 @@ export const userSettingsKeys = {
     "settings.ai.models.fastLabel": "Veloce",
     "settings.ai.models.qualityLabel": "Qualità",
     "settings.ai.models.pricePerFilmSuffix": "€ / lungometraggio",
-    "settings.ai.models.advancedToggle": "Avanzate",
+    "settings.ai.models.changeHint": "Cambia",
+    "settings.ai.models.loadingAria": "Caricamento catalogo modelli",
     "settings.ai.models.advancedWarning":
       "La qualità di Cesare è garantita solo sui modelli consigliati.",
     "settings.ai.models.searchPlaceholder": "Cerca nel catalogo completo…",
