@@ -51,6 +51,15 @@ export interface RouteModelInput {
 const HEAVY_GENERATION_REGEX =
   /\b(riscrivi|riscrivere|rigenera|rigenerare|genera(?:mi)?|generare)\b.*\b(tutt[oa]|intero|intera|dall['’ ]?inizio|da\s?capo|da\s?zero|l['’ ]?intero|l['’ ]?intera)\b/i;
 
+// Translating a document — or minting a whole version in another language — is
+// document-scale work whatever the phrasing's length. Observed live (2026-07-30,
+// #118): "puoi farmi una nuova versione scritta in inglese?" is 46 chars, so it
+// sailed past every escalation rule onto the fast tier, whose model answered by
+// PROMISING background work it cannot do instead of acting. The fast tier is
+// for scoped edits; a translation is never one.
+const TRANSLATION_REGEX =
+  /\b(tradu(?:ci|rre|zione|cimi)|translate|translation)\b|\bversione\b.*\bin\s+(inglese|english|francese|french|spagnolo|spanish|tedesco|german)\b/i;
+
 // Multi-constraint prompts encode complex intent. Raised from the old 200 so a
 // normal edit instruction ("aggiungi una scena dopo la 4 e accorcia la 2") still
 // lands on the fast tier; only genuinely long, layered requests escalate.
@@ -78,6 +87,9 @@ export const routeModel = ({
 
   // "Rewrite the whole thing from scratch" — the one heavy interactive intent.
   if (HEAVY_GENERATION_REGEX.test(trimmed)) return "quality";
+
+  // A translation is document-scale work regardless of how briefly it's asked.
+  if (TRANSLATION_REGEX.test(trimmed)) return "quality";
 
   // Everything else — questions and everyday scoped edits — is a fast-tier job.
   return "fast";

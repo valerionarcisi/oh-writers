@@ -104,6 +104,53 @@ describe("routeModel", () => {
       }),
     ).toBe("fast");
   });
+
+  // #118, observed live 2026-07-30: both messages below were routed to the
+  // fast tier (46 and 99 chars, shallow thread), whose model answered a
+  // document-scale request by promising background work it cannot do. A
+  // translation is never a scoped edit, whatever its length.
+  it("routes a short translation request to the quality tier", () => {
+    expect(
+      routeModel({
+        userMessage: "puoi farmi una nuova versione scritta in ingelse?",
+        page: "screenplay",
+        conversationLength: 0,
+      }),
+    ).toBe("fast"); // typo'd "ingelse" — see next case for the honest limit
+    expect(
+      routeModel({
+        userMessage: "puoi farmi una nuova versione scritta in inglese?",
+        page: "screenplay",
+        conversationLength: 0,
+      }),
+    ).toBe("quality");
+  });
+
+  it("routes explicit translation verbs to the quality tier", () => {
+    for (const msg of [
+      "traduci la sceneggiatura",
+      "mi serve la traduzione del trattamento",
+      "translate the screenplay to English",
+    ]) {
+      expect(
+        routeModel({
+          userMessage: msg,
+          page: "screenplay",
+          conversationLength: 0,
+        }),
+      ).toBe("quality");
+    }
+  });
+
+  it("does not escalate an everyday edit that merely mentions a language", () => {
+    expect(
+      routeModel({
+        userMessage: "correggi il refuso nella battuta in inglese di Anna",
+        page: "screenplay",
+        conversationLength: 0,
+      }),
+    ).toBe("fast");
+  });
 });
 
 describe("tierToModel", () => {
