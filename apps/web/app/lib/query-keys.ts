@@ -108,60 +108,66 @@ export type WrittenEntity =
   | "outline"
   | "treatment";
 
+/** Every narrative doc type reads from the same families, so they share one
+ *  list rather than repeating it five times. */
+const DOCUMENT_FAMILIES: ReadonlyArray<readonly unknown[]> = [
+  documents.all(),
+  ["document-versions"],
+  ["documents", "current-version"],
+  // Cesare's applied-but-unpromoted edits; the drafts banner reads this.
+  ["document-drafts"],
+];
+
 /** Every key family that must be re-read when `entity` changes.
  *
  *  Deliberately BROAD: these are prefixes, and over-invalidating costs a
  *  refetch while under-invalidating costs a user staring at stale data and
- *  losing trust in what the screen says. When in doubt, include the family. */
-const FAMILIES_FOR_ENTITY: Record<
+ *  losing trust in what the screen says. When in doubt, include the family.
+ *
+ *  Every entry here is a family that EXISTS in the feature code — verified by
+ *  `query-keys.test.ts`, which greps the real `queryKey:` declarations. An
+ *  invented prefix invalidates nothing and looks exactly like a working one,
+ *  which is how three of them survived the first round of this file.
+ *
+ *  Exported for that test only; writers go through `invalidateFor`. */
+export const FAMILIES_FOR_ENTITY: Record<
   WrittenEntity,
   ReadonlyArray<readonly unknown[]>
 > = {
-  // A narrative edit moves the document AND its version list + active pointer.
-  document: [
-    documents.all(),
-    ["document-versions"],
-    ["documents", "current-version"],
-  ],
-  // A screenplay edit moves scenes, versions and the active pointer.
+  document: DOCUMENT_FAMILIES,
+  // A screenplay edit moves the script, its versions and the active pointer,
+  // plus the surfaces derived from it (proposals, polish, sync state).
   screenplay: [
+    ["screenplay"],
     ["screenplays"],
-    ["scenes"],
     ["versions"],
     ["screenplay-current-version"],
+    ["screenplay-proposals"],
+    ["screenplay-polish"],
+    ["screenplay-sync-state"],
   ],
-  breakdown: [breakdown.all()],
-  budget: [["budget"], ["budget-cast-crew"], ["budget-day-costs"]],
+  breakdown: [breakdown.all(), ["spoglio-progress"]],
+  // The budget fans out into derived views — a topsheet, caps, a weekly split,
+  // per-scene rows. Covering only the base family left those stale, which is
+  // the very bug this module exists to prevent.
+  budget: [
+    ["budget"],
+    ["budget-cast-crew"],
+    ["budget-day-costs"],
+    ["budget-overview"],
+    ["budget-caps"],
+    ["budget-weekly"],
+    ["budget-scenes"],
+  ],
   project: [projects.all()],
-  schedule: [["schedule"], ["shooting-days"]],
+  schedule: [["schedule"]],
   "shooting-plan": [["shooting-plan"], ["shot-plan"], ["blocking"]],
-  locations: [["locations"], ["location-requirements"]],
-  // Every narrative doc type shares the documents + versions families.
-  logline: [
-    documents.all(),
-    ["document-versions"],
-    ["documents", "current-version"],
-  ],
-  soggetto: [
-    documents.all(),
-    ["document-versions"],
-    ["documents", "current-version"],
-  ],
-  synopsis: [
-    documents.all(),
-    ["document-versions"],
-    ["documents", "current-version"],
-  ],
-  outline: [
-    documents.all(),
-    ["document-versions"],
-    ["documents", "current-version"],
-  ],
-  treatment: [
-    documents.all(),
-    ["document-versions"],
-    ["documents", "current-version"],
-  ],
+  locations: [["locations"]],
+  logline: DOCUMENT_FAMILIES,
+  soggetto: DOCUMENT_FAMILIES,
+  synopsis: DOCUMENT_FAMILIES,
+  outline: DOCUMENT_FAMILIES,
+  treatment: DOCUMENT_FAMILIES,
 } as const;
 
 /**
