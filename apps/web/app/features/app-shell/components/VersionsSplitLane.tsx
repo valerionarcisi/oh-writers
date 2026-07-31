@@ -291,9 +291,16 @@ export function VersionsSplitLane({
   // ESC keeps closing the lane from anywhere on the page — including while the
   // writer is typing in the editor beside it, which is exactly where focus now
   // stays — so the listener is on the document, as `useOverlay`'s was.
+  //
+  // #58 — an Escape a field already consumed (the rename input cancels its edit
+  // with preventDefault) must not ALSO close the lane. stopPropagation cannot
+  // express that here: the app hydrates the whole document, so React's
+  // delegated handlers and this listener share the `document` target, and
+  // stopping propagation never silences co-listeners on the same node. The
+  // consumed key is recognised by its defaultPrevented flag instead.
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
+      if (e.key !== "Escape" || e.defaultPrevented) return;
       onClose();
     };
     document.addEventListener("keydown", onKeyDown);

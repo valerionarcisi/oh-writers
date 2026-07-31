@@ -138,12 +138,23 @@ test.describe("Screenplay Versions — master→detail (Spec 66)", () => {
     await page.getByTestId(`version-rename-${firstId}`).click();
     const label = `bozza-${Date.now()}`;
     const input = page.getByTestId(`version-rename-input-${firstId}`);
+    // #58 Bug A: clicking into the field must not activate the row (the input
+    // used to be a child of the row button, whose activation opened the detail).
+    await input.click();
+    await expect(page.getByTestId("versions-split-detail")).toHaveCount(0);
     await input.fill(label);
     await input.press("Enter");
 
-    await expect(
-      page.getByTestId(`versions-split-row-${firstId}`),
-    ).toContainText(label, { timeout: 8_000 });
+    // #58 Bug B: the label element holds EXACTLY the typed text — the "(vN)"
+    // decoration is a separate element, never stored into the user's name.
+    await expect(page.getByTestId(`version-label-${firstId}`)).toHaveText(
+      label,
+      { timeout: 8_000 },
+    );
+    await expect(page.getByTestId(`version-number-${firstId}`)).toHaveText(
+      /^v\d+$/,
+    );
+    await expect(page.getByTestId("versions-split-detail")).toHaveCount(0);
   });
 
   test("Escape cancels the rename WITHOUT closing the Versions panel", async ({

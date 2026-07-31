@@ -246,7 +246,12 @@ export function VersionsSplitDrawer({
           data-testid={`version-dot-${v.id}`}
           aria-hidden
         />
-        <span className={styles.versionLabel}>{versionTitle(v, t)}</span>
+        <span
+          className={styles.versionLabel}
+          data-testid={`version-label-${v.id}`}
+        >
+          {versionTitle(v, t)}
+        </span>
         <span
           className={styles.versionNumber}
           data-testid={`version-number-${v.id}`}
