@@ -21,12 +21,16 @@ import type {
 
 interface TurnSignalsCell {
   classifiedIntent: IntentResult | null;
+  // #118 — names of the tools that EXECUTED (transport-level success) this
+  // turn, recorded by the tool-loop bridge. The promise-guard reads them to
+  // decide whether a confidently-classified write intent actually wrote.
+  executedToolNames: string[];
 }
 
 const storage = new AsyncLocalStorage<TurnSignalsCell>();
 
 export const openTurnSignalsScope = (): void => {
-  storage.enterWith({ classifiedIntent: null });
+  storage.enterWith({ classifiedIntent: null, executedToolNames: [] });
 };
 
 export const setTurnClassifiedIntent = (intent: IntentResult): void => {
@@ -40,6 +44,14 @@ export const getTurnClassifiedIntent = (): IntentResult | null =>
 export const getTurnVersionDirective = (): VersionDirective | null =>
   getTurnClassifiedIntent()?.versionDirective ?? null;
 
+export const recordTurnToolExecution = (toolName: string): void => {
+  const cell = storage.getStore();
+  if (cell) cell.executedToolNames.push(toolName);
+};
+
+export const getTurnExecutedToolNames = (): readonly string[] =>
+  storage.getStore()?.executedToolNames ?? [];
+
 // Test seam: run `fn` inside a fresh scope without relying on enterWith.
 export const runWithTurnSignalsScope = <T>(fn: () => T): T =>
-  storage.run({ classifiedIntent: null }, fn);
+  storage.run({ classifiedIntent: null, executedToolNames: [] }, fn);

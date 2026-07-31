@@ -359,6 +359,15 @@ export interface ClassifyOpts {
   readonly db?: Db;
 }
 
+// #118 — true when the classified intent confidently expected a WRITE act
+// (any intent with a TOOL_BY_INTENT mapping at dispatch confidence). The
+// promise-guard uses this as its closed-data signal: no text pattern-matching
+// on either the user message or the model reply.
+export const expectsWriteAct = (intent: IntentResult | null): boolean =>
+  intent !== null &&
+  TOOL_BY_INTENT[intent.type] !== undefined &&
+  intent.confidence >= CONFIDENCE_THRESHOLD;
+
 /**
  * Resolves which classifier prompt (if any) applies to the page. The screenplay
  * page uses the screenplay-mutation prompt; the narrative document pages use the

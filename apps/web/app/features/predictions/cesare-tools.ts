@@ -20,7 +20,10 @@ import {
   userRequestedNewVersion,
   userConfirmedOverwrite,
 } from "./version-intent";
-import { getTurnVersionDirective } from "./cesare-turn-signals";
+import {
+  getTurnVersionDirective,
+  recordTurnToolExecution,
+} from "./cesare-turn-signals";
 import {
   locationCandidates,
   locationPhotos,
@@ -4953,6 +4956,9 @@ const bridgeLegacyTools = (
             abortSignal,
           );
           if (result.isErr()) return { error: result.error.message };
+          // #118 — an errored tool is deliberately NOT recorded: nothing was
+          // applied, so the promise-guard's notice stays truthful.
+          recordTurnToolExecution(t.name);
           try {
             return JSON.parse(result.value.content) as unknown;
           } catch {

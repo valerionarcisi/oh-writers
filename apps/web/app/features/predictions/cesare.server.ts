@@ -48,7 +48,10 @@ import { classifyIntent, INTENT_SCALE } from "./cesare-intent-classifier";
 import {
   openTurnSignalsScope,
   setTurnClassifiedIntent,
+  getTurnClassifiedIntent,
+  getTurnExecutedToolNames,
 } from "./cesare-turn-signals";
+import { needsNoActionNotice, NO_ACTION_NOTICE } from "./cesare-promise-guard";
 import type {
   DocumentContext,
   ScheduleToolContext,
@@ -2216,7 +2219,22 @@ const callCesareV2 = (
       onStreamEvent,
       forcedFirstTool,
       abortSignal,
-    ).map((reply) => ({ reply, model })),
+    ).map((reply) => {
+      // #118 — promise-guard: the user confidently asked for a write act but
+      // no write tool ran this turn, so whatever the free text says ("procedo,
+      // ti avviserò"), nothing was applied. Say so honestly — streamed into
+      // the live bubble AND appended to the persisted reply.
+      if (
+        needsNoActionNotice(
+          getTurnClassifiedIntent(),
+          getTurnExecutedToolNames(),
+        )
+      ) {
+        onStreamEvent?.({ _tag: "text-delta", text: NO_ACTION_NOTICE });
+        return { reply: reply + NO_ACTION_NOTICE, model };
+      }
+      return { reply, model };
+    }),
   );
 };
 
