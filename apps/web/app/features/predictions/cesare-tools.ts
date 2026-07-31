@@ -20,6 +20,7 @@ import {
   userRequestedNewVersion,
   userConfirmedOverwrite,
 } from "./version-intent";
+import { getTurnVersionDirective } from "./cesare-turn-signals";
 import {
   locationCandidates,
   locationPhotos,
@@ -1632,9 +1633,15 @@ const commitDocumentEdit = (
     `Cesare · ${docTypeLabel(doc.documentType)}`,
     {
       sessionId,
-      userRequestedNewVersion: userRequestedNewVersion(userInstruction),
+      // #119 — classifier directive first, phrase lists as fallback (see
+      // commitOptions in cesare-document-tools.ts for the full rationale).
+      userRequestedNewVersion:
+        getTurnVersionDirective() === "mint" ||
+        userRequestedNewVersion(userInstruction),
       largeEditConfirmed: false,
-      largeEditOverwriteConfirmed: userConfirmedOverwrite(userInstruction),
+      largeEditOverwriteConfirmed:
+        getTurnVersionDirective() === "overwrite" ||
+        userConfirmedOverwrite(userInstruction),
     },
   ).map((outcome) => {
     if (isAsked(outcome)) {

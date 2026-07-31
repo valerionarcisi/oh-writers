@@ -617,3 +617,69 @@ describe("classifyIntent — BYOK routing", () => {
     );
   });
 });
+
+describe("classifyIntent — versionDirective (#119)", () => {
+  it("parses versionDirective alongside the intent", async () => {
+    callHaikuMock.mockReturnValue(
+      okAsync(
+        haikuJson(
+          '{"type":"write_soggetto","confidence":0.9,"versionDirective":"mint"}',
+        ),
+      ),
+    );
+    const result = await classifyIntent({
+      userMessage: "keep this and rewrite it shorter",
+      page: "soggetto",
+      availableTools: DOC_TOOLS,
+    });
+    const intent = result._unsafeUnwrap();
+    expect(intent.type).toBe("write_soggetto");
+    expect(intent.versionDirective).toBe("mint");
+  });
+
+  it("drops an invalid versionDirective value instead of failing the parse", async () => {
+    callHaikuMock.mockReturnValue(
+      okAsync(
+        haikuJson(
+          '{"type":"write_soggetto","confidence":0.9,"versionDirective":"branch"}',
+        ),
+      ),
+    );
+    const result = await classifyIntent({
+      userMessage: "riscrivi il soggetto",
+      page: "soggetto",
+      availableTools: DOC_TOOLS,
+    });
+    const intent = result._unsafeUnwrap();
+    expect(intent.type).toBe("write_soggetto");
+    expect(intent.versionDirective).toBeUndefined();
+  });
+
+  it("leaves versionDirective undefined when the model omits it (the normal case)", async () => {
+    callHaikuMock.mockReturnValue(
+      okAsync(haikuJson('{"type":"write_soggetto","confidence":0.9}')),
+    );
+    const result = await classifyIntent({
+      userMessage: "riscrivi il soggetto",
+      page: "soggetto",
+      availableTools: DOC_TOOLS,
+    });
+    expect(result._unsafeUnwrap().versionDirective).toBeUndefined();
+  });
+});
+
+describe("classifyIntent — valid types derived from INTENT_SCALE", () => {
+  it("parses translate_document (the hand-kept validTypes copy silently dropped it)", async () => {
+    callHaikuMock.mockReturnValue(
+      okAsync(haikuJson('{"type":"translate_document","confidence":0.9}')),
+    );
+    const result = await classifyIntent({
+      userMessage: "traduci tutto in inglese",
+      page: "soggetto",
+      availableTools: new Set([...DOC_TOOLS, "transform_document"]),
+    });
+    const intent = result._unsafeUnwrap();
+    expect(intent.type).toBe("translate_document");
+    expect(intent.suggestedTool).toBe("transform_document");
+  });
+});

@@ -83,10 +83,17 @@ export const INTENT_SCALE: Record<IntentType, "scoped" | "document"> = {
   comment: "scoped",
 };
 
+// #119 — what the user explicitly asked to do with the CURRENT version of the
+// document: keep it and mint a new one, or apply in place. A modifier, not an
+// intent: it rides alongside any type. Absent when the user said nothing about
+// versions (the normal case) — never inferred from edit size.
+export type VersionDirective = "mint" | "overwrite";
+
 export interface IntentResult {
   readonly type: IntentType;
   readonly confidence: number;
   readonly suggestedTool?: string;
+  readonly versionDirective?: VersionDirective;
 }
 
 // Clearly-actionable write/edit/mutation requests must dispatch reliably: a
@@ -171,12 +178,27 @@ const DOCUMENT_INTENT_EXAMPLES = `"scrivimi una logline su un detective che non 
 "dal soggetto fammi la sceneggiatura" → {"type":"write_screenplay","confidence":0.94}
 "scrivi la prima stesura della sceneggiatura" → {"type":"write_screenplay","confidence":0.95}`;
 
+// #119 — shared "version directive" section: the last live phrase-matcher
+// (version-intent.ts) becomes a fallback; the semantic understanding lives
+// here, where any language, paraphrase or typo is covered.
+const VERSION_DIRECTIVE_SECTION = `DIRETTIVA DI VERSIONE (campo opzionale "versionDirective"):
+Oltre al type, rileva se l'utente dice ESPLICITAMENTE cosa fare della versione corrente del documento — in qualsiasi lingua, refusi inclusi:
+- "mint": chiede di CONSERVARE la versione corrente e creare/salvarne una NUOVA ("fanne una nuova versione", "tieni questa e prova…", "salva un checkpoint prima", "keep this and make a new version", "nuova bozza").
+- "overwrite": chiede di APPLICARE la modifica ALLA VERSIONE CORRENTE ("sovrascrivi", "applica sulla versione corrente", "stessa versione", "overwrite this one").
+OMETTI il campo quando l'utente non dice nulla sulla versione (caso normale). NON dedurlo dalla dimensione della modifica: solo da una richiesta esplicita.
+
+Esempi con direttiva:
+"accorcia il trattamento ma tieni questa versione" → {"type":"write_treatment","confidence":0.9,"versionDirective":"mint"}
+"keep this and make a new english version" → {"type":"translate_document","confidence":0.9,"versionDirective":"mint"}
+"sovrascrivi la versione corrente col nuovo finale" → {"type":"write_soggetto","confidence":0.85,"versionDirective":"overwrite"}`;
+
 const SCREENPLAY_SYSTEM_PROMPT = `Sei un classificatore d'intento per Oh Writers. L'utente sta dialogando con Cesare (AI dramaturg). La pagina di contesto è "screenplay", ma in una SESSIONE Cesare questa è anche la pagina di default: l'utente può chiederti di scrivere QUALSIASI documento narrativo (logline, soggetto, sinossi, scaletta, trattamento) oltre a mutare la sceneggiatura. Devi capire SE l'utente sta chiedendo un'azione (mutazione sceneggiatura O scrittura/derivazione/modifica di un documento) e DI CHE TIPO.
 
 Output: SOLO un oggetto JSON, niente prosa attorno. Schema:
 {
   "type": "macro_rewrite" | "micro_edit" | "rewrite_one_scene" | "merge_scenes" | "delete_scene" | "rename" | "write_logline" | "write_soggetto" | "write_synopsis" | "write_outline" | "write_treatment" | "write_screenplay" | "translate_document" | "question" | "comment",
-  "confidence": <number tra 0 e 1>
+  "confidence": <number tra 0 e 1>,
+  "versionDirective": "mint" | "overwrite" (opzionale — ometti se l'utente non parla di versioni)
 }
 
 Definizioni dei type — SCENEGGIATURA:
@@ -215,6 +237,8 @@ Definizioni dei type — GENERICI (NESSUNA azione, resta in chat):
 - comment: osservazione, feedback, brainstorm senza richiesta esecutiva esplicita.
     "questa scena è troppo lunga", "non mi convince Tea", "il soggetto sembra debole".
 
+${VERSION_DIRECTIVE_SECTION}
+
 REGOLE:
 1. Se l'utente chiede CHIARAMENTE di scrivere/generare/derivare/modificare un documento o di mutare la sceneggiatura, scegli il type d'azione con confidence ALTA (>=0.8). Un imperativo ("scrivi", "fammi", "genera", "buttami giù", "rendi", "accorcia", "cambia", "sviluppa", "espandi") rivolto a un'entità è un'AZIONE, non una domanda — anche senza punto interrogativo.
 2. Una vera DOMANDA su cosa esiste/se funziona ("di cosa parla…?", "è chiaro il conflitto?", "che ne pensi?") è SEMPRE question, anche se nomina un documento. Non forzare un'azione su una domanda.
@@ -244,7 +268,8 @@ const DOCUMENT_SYSTEM_PROMPT = `Sei un classificatore d'intento per Oh Writers. 
 Output: SOLO un oggetto JSON, niente prosa attorno. Schema:
 {
   "type": "write_logline" | "write_soggetto" | "write_synopsis" | "write_outline" | "write_treatment" | "write_screenplay" | "translate_document" | "question" | "comment",
-  "confidence": <number tra 0 e 1>
+  "confidence": <number tra 0 e 1>,
+  "versionDirective": "mint" | "overwrite" (opzionale — ometti se l'utente non parla di versioni)
 }
 
 Definizioni dei type d'azione:
@@ -256,6 +281,8 @@ Definizioni dei type generici (NESSUNA scrittura, resta in chat):
     "il conflitto è chiaro?", "la scaletta funziona?", "che ne pensi?".
 - comment: osservazione o feedback senza richiesta di scrittura.
     "il soggetto è debole", "non mi convince il finale".
+
+${VERSION_DIRECTIVE_SECTION}
 
 REGOLE:
 1. Un imperativo ("scrivi", "scrivimi", "fammi", "genera", "buttami giù", "dammi", "abbozza", "sviluppa", "rendi", "accorcia", "cambia", "espandi", "riassumi") rivolto a un'entità è un'AZIONE → scegli il write_* corrispondente con confidence ALTA (>=0.8), anche senza punto interrogativo.
@@ -280,6 +307,14 @@ const DOCUMENT_PAGES: ReadonlySet<string> = new Set([
 
 const NO_OP_INTENT: IntentResult = { type: "question", confidence: 0 };
 
+// Derived from INTENT_SCALE (the closed Record over IntentType) instead of a
+// hand-maintained duplicate list: the previous copy silently dropped
+// "translate_document", so a classified translation parsed to null and the
+// forced transform_document never engaged.
+const VALID_TYPES: ReadonlySet<string> = new Set(Object.keys(INTENT_SCALE));
+
+const VALID_DIRECTIVES: ReadonlySet<string> = new Set(["mint", "overwrite"]);
+
 const parseJsonResponse = (text: string): IntentResult | null => {
   try {
     // Strip optional code-fence wrapping ("```json ... ```").
@@ -288,29 +323,21 @@ const parseJsonResponse = (text: string): IntentResult | null => {
       .replace(/^```(?:json)?\s*/i, "")
       .replace(/\s*```$/i, "")
       .trim();
-    const obj = JSON.parse(cleaned) as { type?: string; confidence?: number };
+    const obj = JSON.parse(cleaned) as {
+      type?: string;
+      confidence?: number;
+      versionDirective?: string;
+    };
     if (!obj.type || typeof obj.confidence !== "number") return null;
-    const validTypes: IntentType[] = [
-      "macro_rewrite",
-      "micro_edit",
-      "rewrite_one_scene",
-      "merge_scenes",
-      "delete_scene",
-      "rename",
-      "write_logline",
-      "write_soggetto",
-      "write_synopsis",
-      "write_outline",
-      "edit_outline_scene",
-      "write_treatment",
-      "write_screenplay",
-      "question",
-      "comment",
-    ];
-    if (!validTypes.includes(obj.type as IntentType)) return null;
+    if (!VALID_TYPES.has(obj.type)) return null;
+    const versionDirective =
+      obj.versionDirective && VALID_DIRECTIVES.has(obj.versionDirective)
+        ? (obj.versionDirective as VersionDirective)
+        : undefined;
     return {
       type: obj.type as IntentType,
       confidence: Math.max(0, Math.min(1, obj.confidence)),
+      ...(versionDirective ? { versionDirective } : {}),
     };
   } catch {
     return null;
