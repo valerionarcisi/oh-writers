@@ -291,6 +291,12 @@ export function VersionsSplitLane({
   // ESC keeps closing the lane from anywhere on the page — including while the
   // writer is typing in the editor beside it, which is exactly where focus now
   // stays — so the listener is on the document, as `useOverlay`'s was.
+  // (`defaultPrevented` cannot be the "already consumed" signal here:
+  // ProseMirror preventDefaults EVERY Escape in an editable view, so honouring
+  // the flag would kill exactly this from-the-editor dismissal. A field that
+  // really consumes Escape silences this listener with
+  // stopImmediatePropagation instead — see the rename input in
+  // VersionsSplitDrawer.)
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;

@@ -13,16 +13,27 @@
 // way to add a version in-test) before asserting list/detail/activate.
 import { test, expect, TEST_TEAM_PROJECT_ID } from "./fixtures";
 import { BASE_URL } from "./fixtures";
+import { reseedTestDb } from "./breakdown/helpers";
 import type { Page } from "@playwright/test";
 
 const SOGGETTO_PATH = `${BASE_URL}/projects/${TEST_TEAM_PROJECT_ID}/soggetto`;
 
+// Mutator pays (#116): this spec renames seed versions, adds rows and moves the
+// active pointer across the shared team project's narrative documents — restore
+// the seed so later specs never depend on file order.
+test.afterAll(() => {
+  reseedTestDb();
+});
+
 // Open the routed Versions surface via the TopBar version chip (Spec 66 phase 6)
 // and return the document id the chip routed to.
-const openVersionsViaChip = async (page: Page): Promise<string> => {
+const openVersionsViaChip = async (
+  page: Page,
+  readyTestId = "soggetto-page",
+): Promise<string> => {
   // The chip publishes into the TopBar after the narrative shell mounts, so wait
   // for the page before reaching for it.
-  await expect(page.getByTestId("soggetto-page")).toBeVisible({
+  await expect(page.getByTestId(readyTestId)).toBeVisible({
     timeout: 15_000,
   });
   const chip = page.getByTestId("topbar-version-chip");
@@ -265,7 +276,16 @@ test.describe("[066] Versions master→detail", () => {
       .toBe(before + 1);
   });
 
-  test("inline rename persists", async ({ authenticatedPage: page }) => {
+  // #58 — renaming was broken twice over: the input was a child of the row's
+  // <button>, so clicking it activated the row and bumped the user into the
+  // version detail (Bug A); and the "(vN)" decoration was concatenated into the
+  // rendered label, so a rename looked as though the suffix had been stored into
+  // the user's text (Bug B). This test pins both: the rename happens without
+  // ever leaving the list, and the saved label is EXACTLY the typed text with
+  // the version number rendered as a separate element.
+  test("inline rename persists — exact label, no (vN) suffix, no detail jump (#58)", async ({
+    authenticatedPage: page,
+  }) => {
     await page.goto(SOGGETTO_PATH);
     await openVersionsViaChip(page);
 
@@ -278,15 +298,97 @@ test.describe("[066] Versions master→detail", () => {
       .getAttribute("data-testid"))!.replace("versions-split-row-", "");
 
     await page.getByTestId(`version-rename-${firstId}`).click();
-    const label = `bozza-${Date.now()}`;
     const input = page.getByTestId(`version-rename-input-${firstId}`);
+    await expect(input).toBeVisible();
+    // Bug A: clicking INTO the field must keep the list on screen — the row's
+    // activation used to swallow this click and open the detail.
+    await input.click();
+    await expect(page.getByTestId("versions-split-detail")).toHaveCount(0);
+    await expect(input).toBeFocused();
+
+    const label = `bozza-${Date.now()}`;
     await input.fill(label);
     await input.press("Enter");
 
-    // The renamed row reflects the new label.
-    await expect(
-      page.getByTestId(`versions-split-row-${firstId}`),
-    ).toContainText(label, { timeout: 8_000 });
+    // Bug B: the label element holds EXACTLY the typed text; the version number
+    // lives in its own element beside it, never concatenated.
+    const labelEl = page.getByTestId(`version-label-${firstId}`);
+    await expect(labelEl).toHaveText(label, { timeout: 8_000 });
+    await expect(page.getByTestId(`version-number-${firstId}`)).toHaveText(
+      /^v\d+$/,
+    );
+
+    // Still on the list — the whole rename never opened the detail.
+    await expect(page.getByTestId("versions-split-detail")).toHaveCount(0);
+
+    // The clean label is what was PERSISTED, not just rendered: it survives a
+    // full reload, still without any "(vN)".
+    await page.reload();
+    await openVersionsViaChip(page);
+    await expect(page.getByTestId(`version-label-${firstId}`)).toHaveText(
+      label,
+      { timeout: 8_000 },
+    );
+  });
+
+  // #58 — the same rename contract on every OTHER surface that hosts the shared
+  // Versions drawer for narrative documents (the screenplay host is covered in
+  // tests/editor/versions-drawer.spec.ts). Same drawer component, but each
+  // segment wires its own document id + mutation hooks, so walk them all.
+  test("inline rename works on synopsis, outline and treatment too (#58)", async ({
+    authenticatedPage: page,
+  }) => {
+    for (const segment of ["synopsis", "outline", "treatment"] as const) {
+      await page.goto(
+        `${BASE_URL}/projects/${TEST_TEAM_PROJECT_ID}/${segment}`,
+      );
+      await openVersionsViaChip(page, "narrative-docs-shell");
+
+      const firstId = (await page
+        .locator('[data-testid^="versions-split-row-"]')
+        .first()
+        .getAttribute("data-testid"))!.replace("versions-split-row-", "");
+
+      await page.getByTestId(`version-rename-${firstId}`).click();
+      const input = page.getByTestId(`version-rename-input-${firstId}`);
+      await expect(input).toBeVisible();
+
+      const label = `bozza-${segment}-${Date.now()}`;
+      await input.fill(label);
+      await input.press("Enter");
+
+      await expect(page.getByTestId(`version-label-${firstId}`)).toHaveText(
+        label,
+        { timeout: 8_000 },
+      );
+      await expect(
+        page.getByTestId("versions-split-detail"),
+        `${segment}: rename must not open the detail`,
+      ).toHaveCount(0);
+    }
+  });
+
+  // #58 counterpart — an Escape the rename field did NOT consume must still
+  // close the panel from anywhere, INCLUDING from inside the ProseMirror
+  // editor beside it. This pins the fix against overreach: ProseMirror
+  // preventDefaults every Escape in an editable view, so recognising
+  // "consumed" by the defaultPrevented flag alone would kill exactly this
+  // dismissal on every editor-hosting page.
+  test("Esc from the editor beside the panel still closes it (#58 counterpart)", async ({
+    authenticatedPage: page,
+  }) => {
+    await page.goto(SOGGETTO_PATH);
+    await openVersionsViaChip(page);
+    await expect(page.getByTestId("versions-split-drawer")).toBeVisible();
+
+    const editor = page.getByTestId("rich-text-editor");
+    await expect(editor).toBeVisible({ timeout: 10_000 });
+    await editor.click();
+    await page.keyboard.press("Escape");
+
+    await expect(page.getByTestId("versions-split-lane")).toHaveCount(0, {
+      timeout: 5_000,
+    });
   });
 
   test("sad path: a malformed ?versions is ignored (fail closed, no drawer)", async ({

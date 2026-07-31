@@ -27,9 +27,14 @@ export interface CollapsedEntry {
 export const collapseVersions = (
   versions: ReadonlyArray<VersionView>,
 ): ReadonlyArray<CollapsedEntry> => {
-  // Group working rows by session so each checkpoint can collect its own.
+  // Group working rows by session so each checkpoint can collect its own, and
+  // note which sessions actually have their checkpoint in the list.
   const workingBySession = new Map<string, VersionView[]>();
+  const sessionsWithCheckpoint = new Set<string>();
   for (const v of versions) {
+    if (v.kind === "checkpoint" && v.cesareSessionId) {
+      sessionsWithCheckpoint.add(v.cesareSessionId);
+    }
     if (v.kind === "working" && v.cesareSessionId) {
       const list = workingBySession.get(v.cesareSessionId) ?? [];
       list.push(v);
@@ -38,30 +43,25 @@ export const collapseVersions = (
   }
 
   const entries: CollapsedEntry[] = [];
-  const claimedSessions = new Set<string>();
   for (const v of versions) {
     if (v.kind === "checkpoint" && v.cesareSessionId) {
       entries.push({
         anchor: v,
         working: workingBySession.get(v.cesareSessionId) ?? [],
       });
-      claimedSessions.add(v.cesareSessionId);
       continue;
     }
     if (v.kind === "working" && v.cesareSessionId) {
-      // Folded under its checkpoint above — skip here. If the checkpoint never
-      // appears, surface the working rows standalone (see the post-pass below).
+      // Folded under its checkpoint — skip here. An orphaned working row (its
+      // checkpoint pruned from the list) stands alone IN PLACE instead: it used
+      // to be appended in a post-pass, which dumped the newest version at the
+      // bottom of the list, out of creation order.
+      if (sessionsWithCheckpoint.has(v.cesareSessionId)) continue;
+      entries.push({ anchor: v, working: [] });
       continue;
     }
     // manual (or screenplay) → standalone.
     entries.push({ anchor: v, working: [] });
-  }
-
-  // Orphaned working rows (no checkpoint in the list): show them standalone so a
-  // pruned/missing checkpoint never hides a version the writer can return to.
-  for (const [session, working] of workingBySession) {
-    if (claimedSessions.has(session)) continue;
-    for (const v of working) entries.push({ anchor: v, working: [] });
   }
 
   return entries;

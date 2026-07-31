@@ -38,6 +38,14 @@
 import { test, expect } from "../fixtures";
 import type { Page } from "@playwright/test";
 import { BASE_URL, waitForEditor } from "../helpers";
+import { reseedTestDb } from "../breakdown/helpers";
+
+// Mutator pays (#116): this spec duplicates, creates, renames, restores and
+// deletes versions of the shared personal project's screenplay — restore the
+// seed so later specs never depend on file order.
+test.afterAll(() => {
+  reseedTestDb();
+});
 
 // Open the routed Versions surface from the unified TopBar version chip (the
 // single entry point) and wait for the shared master→detail drawer to mount.
@@ -138,12 +146,23 @@ test.describe("Screenplay Versions — master→detail (Spec 66)", () => {
     await page.getByTestId(`version-rename-${firstId}`).click();
     const label = `bozza-${Date.now()}`;
     const input = page.getByTestId(`version-rename-input-${firstId}`);
+    // #58 Bug A: clicking into the field must not activate the row (the input
+    // used to be a child of the row button, whose activation opened the detail).
+    await input.click();
+    await expect(page.getByTestId("versions-split-detail")).toHaveCount(0);
     await input.fill(label);
     await input.press("Enter");
 
-    await expect(
-      page.getByTestId(`versions-split-row-${firstId}`),
-    ).toContainText(label, { timeout: 8_000 });
+    // #58 Bug B: the label element holds EXACTLY the typed text — the "(vN)"
+    // decoration is a separate element, never stored into the user's name.
+    await expect(page.getByTestId(`version-label-${firstId}`)).toHaveText(
+      label,
+      { timeout: 8_000 },
+    );
+    await expect(page.getByTestId(`version-number-${firstId}`)).toHaveText(
+      /^v\d+$/,
+    );
+    await expect(page.getByTestId("versions-split-detail")).toHaveCount(0);
   });
 
   test("Escape cancels the rename WITHOUT closing the Versions panel", async ({
