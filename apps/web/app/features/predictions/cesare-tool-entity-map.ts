@@ -79,6 +79,8 @@ const TOOL_ENTITY_MAP: Readonly<Record<string, ToolEntityMapping>> = {
 
   // ── screenplay writes ─────────────────────────────────────────────────────
   rewrite_scene: { access: "write", domain: "screenplay" },
+  merge_scenes: { access: "write", domain: "screenplay" },
+  delete_scene: { access: "write", domain: "screenplay" },
   propose_screenplay_revision: { access: "write", domain: "screenplay" },
   // Renames every occurrence in the SCREENPLAY (cesare-screenplay-tools.ts);
   // it reads like a breakdown entity op but never writes one.

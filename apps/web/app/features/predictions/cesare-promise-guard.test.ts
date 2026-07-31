@@ -48,3 +48,18 @@ describe("needsNoActionNotice (#118)", () => {
     expect(needsNoActionNotice(writeIntent(), ["mystery_tool"])).toBe(true);
   });
 });
+
+// Guardian: every tool the classifier can FORCE must be classified as a write
+// in the entity map — an unmapped forced tool would make the guard call a
+// successful act "no action" (found live: merge_scenes and delete_scene were
+// registered tools missing from the map, so the tracer was mute about them and
+// the guard would have appended a false notice after a successful merge).
+describe("promise-guard ↔ entity-map consistency", () => {
+  it("every TOOL_BY_INTENT target is a write in the entity map", async () => {
+    const { TOOL_BY_INTENT } = await import("./cesare-intent-classifier");
+    const { mappingForTool } = await import("./cesare-tool-entity-map");
+    for (const tool of Object.values(TOOL_BY_INTENT)) {
+      expect(mappingForTool(tool!)?.access, `tool ${tool}`).toBe("write");
+    }
+  });
+});
