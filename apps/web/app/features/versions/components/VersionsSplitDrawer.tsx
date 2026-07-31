@@ -246,7 +246,12 @@ export function VersionsSplitDrawer({
           data-testid={`version-dot-${v.id}`}
           aria-hidden
         />
-        <span className={styles.versionLabel}>{versionTitle(v, t)}</span>
+        <span
+          className={styles.versionLabel}
+          data-testid={`version-label-${v.id}`}
+        >
+          {versionTitle(v, t)}
+        </span>
         <span
           className={styles.versionNumber}
           data-testid={`version-number-${v.id}`}
@@ -303,11 +308,17 @@ export function VersionsSplitDrawer({
                 onChange={(e) => setRenameLabel(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key !== "Enter" && e.key !== "Escape") return;
-                  // Both keys are consumed by the field: without this, Escape
-                  // bubbled to the lane's dismiss handler and cancelling a
-                  // rename also closed the whole Versions panel.
-                  e.stopPropagation();
+                  // Both keys are consumed by the field, and stopPropagation
+                  // alone cannot express that (#58): the app hydrates the whole
+                  // document, so the lane's document-level Escape dismiss is a
+                  // CO-LISTENER of React's root handler on the same node, and
+                  // same-node co-listeners are silenced only by
+                  // stopImmediatePropagation. Without it, cancelling a rename
+                  // also closed the whole Versions panel (and the floating
+                  // Cesare sheet, which dismisses on the same document event).
                   e.preventDefault();
+                  e.stopPropagation();
+                  e.nativeEvent.stopImmediatePropagation();
                   if (e.key === "Enter") {
                     submitRename(v.id);
                     return;
