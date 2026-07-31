@@ -10,10 +10,7 @@ import {
   getUserFromHeaders,
   type AppUser,
 } from "~/server/context";
-import {
-  openAiIdentityScope,
-  setAiRequestIdentity,
-} from "~/features/ai/ai-request-context";
+import { openAiIdentityScope, setAiRequestIdentity } from "~/features/ai";
 import { canEdit, getMembership } from "~/server/permissions";
 import type { Db } from "~/server/db";
 

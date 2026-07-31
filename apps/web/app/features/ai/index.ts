@@ -9,6 +9,13 @@ export {
   AiProviderAuthError,
   AiModelsNotChosenError,
 } from "./anthropic-client";
+export {
+  openAiIdentityScope,
+  setAiRequestIdentity,
+  getAiRequestIdentity,
+  runWithAiIdentityScope,
+} from "./ai-request-context";
+export type { AiRequestIdentity } from "./ai-request-context";
 export type {
   CallHaikuParams,
   HaikuResult,
