@@ -12,19 +12,22 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
+const enabled = process.env["RUN_REAL_AI_SMOKE"] === "1";
+
 // Minimal .env loader (dotenv is not a dependency of apps/web): KEY=VALUE
-// lines only, existing process.env wins.
-for (const line of readFileSync(
-  path.resolve(__dirname, "../../../.env"),
-  "utf8",
-).split("\n")) {
-  const m = /^([A-Z0-9_]+)=(.*)$/.exec(line.trim());
-  if (m?.[1] && m[2] !== undefined && process.env[m[1]] === undefined) {
-    process.env[m[1]] = m[2];
+// lines only, existing process.env wins. Only when the smoke is armed — in CI
+// there is no .env and the file must stay an importable no-op.
+if (enabled) {
+  for (const line of readFileSync(
+    path.resolve(__dirname, "../../../.env"),
+    "utf8",
+  ).split("\n")) {
+    const m = /^([A-Z0-9_]+)=(.*)$/.exec(line.trim());
+    if (m?.[1] && m[2] !== undefined && process.env[m[1]] === undefined) {
+      process.env[m[1]] = m[2];
+    }
   }
 }
-
-const enabled = process.env["RUN_REAL_AI_SMOKE"] === "1";
 const userId =
   process.env["SMOKE_USER_ID"] ?? "00000000-0000-4000-a000-000000000003";
 
