@@ -40,13 +40,30 @@ describe("[OHW-N66] collapseVersions", () => {
     expect(entries.every((e) => e.working.length === 0)).toBe(true);
   });
 
-  it("surfaces orphaned working rows standalone when no checkpoint is present", () => {
+  it("surfaces orphaned working rows standalone, IN PLACE (creation order)", () => {
     const entries = collapseVersions([
       v({ id: "w1", number: 2, kind: "working", cesareSessionId: "sX" }),
       v({ id: "m1", number: 1, kind: "manual" }),
     ]);
-    // The working row is not hidden: it appears as its own entry.
-    expect(entries.map((e) => e.anchor.id).sort()).toEqual(["m1", "w1"]);
+    // The working row is not hidden AND keeps its newest-first position — it
+    // used to be appended after everything else, sinking the newest version to
+    // the bottom of the list.
+    expect(entries.map((e) => e.anchor.id)).toEqual(["w1", "m1"]);
+  });
+
+  it("keeps an orphaned working row in creation order among older manual rows", () => {
+    const entries = collapseVersions([
+      v({ id: "m3", number: 6, kind: "manual" }),
+      v({ id: "m2", number: 4, kind: "manual" }),
+      v({ id: "w-orphan", number: 3, kind: "working", cesareSessionId: "sX" }),
+      v({ id: "m1", number: 1, kind: "manual" }),
+    ]);
+    expect(entries.map((e) => e.anchor.id)).toEqual([
+      "m3",
+      "m2",
+      "w-orphan",
+      "m1",
+    ]);
   });
 
   it("keeps two sessions' working rows under their own checkpoints", () => {
