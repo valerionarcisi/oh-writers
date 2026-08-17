@@ -292,4 +292,70 @@ test.describe("account lifecycle (auth)", () => {
     });
     expect(gone.status).toBe(401);
   });
+
+  test("delete account UI: section + confirm dialog + redirect to /login", async ({
+    browser,
+  }) => {
+    // Fresh user so the seeded fixture is untouched.
+    const email = uniqueEmail();
+    const password = "AuthTest123!";
+    await jsonFetch("/api/auth/sign-up/email", {
+      method: "POST",
+      body: JSON.stringify({ email, password, name: "Delete UI Spec" }),
+    });
+    const verifyTok = rawsignVerifyToken(email, BETTER_AUTH_SECRET);
+    await jsonFetch(
+      `/api/auth/verify-email?token=${verifyTok}&callbackURL=%2F`,
+    );
+
+    // Sign in via API, plant the session cookie in a fresh browser context,
+    // then open /settings — the Delete section must be present.
+    const signin = await jsonFetch("/api/auth/sign-in/email", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    });
+    const setCookieHeaders = signin.headers.get("set-cookie") ?? "";
+    const cookie = setCookieHeaders.split(";")[0]?.trim();
+    expect(cookie).toBeTruthy();
+
+    const ctx = await browser.newContext();
+    const [name, value] = cookie!.split("=") as [string, string];
+    await ctx.addCookies([{ name, value, url: BASE_URL }]);
+    const page = await ctx.newPage();
+
+    await page.goto(`${BASE_URL}/settings`);
+    await expect(page.getByTestId("delete-account-section")).toBeVisible({
+      timeout: 15_000,
+    });
+
+    // Clicking the delete button opens the confirm dialog. Hydration race
+    // guard: the delete button exists server-side before React attaches onClick,
+    // so a single click can land on a handler-less button — retry until a
+    // native <dialog> is actually open (showModal fired).
+    await expect
+      .poll(
+        async () => {
+          await page.getByTestId("delete-account-btn").click({ force: true });
+          await page.waitForTimeout(200);
+          return (await page.locator("dialog[open]").count()) > 0;
+        },
+        { timeout: 15_000 },
+      )
+      .toBe(true);
+    const dialog = page.locator("dialog[open]");
+    await expect(dialog).toContainText("Delete account?");
+    await expect(page.getByTestId("confirm-dialog-confirm-btn")).toBeVisible();
+
+    // Confirming deletes the account and redirects to the login page.
+    await page.getByTestId("confirm-dialog-confirm-btn").click();
+    await page.waitForURL("**/login", { timeout: 15_000 });
+
+    // The account is gone: sign-in now fails.
+    const gone = await jsonFetch("/api/auth/sign-in/email", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    });
+    expect(gone.status).toBe(401);
+    await ctx.close();
+  });
 });
