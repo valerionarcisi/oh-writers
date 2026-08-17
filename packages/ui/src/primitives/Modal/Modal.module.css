@@ -108,3 +108,10 @@
     animation: none;
   }
 }
+
+@media (prefers-reduced-transparency: reduce) {
+  .dialog::backdrop {
+    background: oklch(22% 0 0 / 0.9);
+    backdrop-filter: none;
+  }
+}

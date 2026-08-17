@@ -15,8 +15,13 @@
   transition:
     background var(--ds-duration-1) var(--ds-ease),
     color var(--ds-duration-1) var(--ds-ease),
-    border-color var(--ds-duration-1) var(--ds-ease);
+    border-color var(--ds-duration-1) var(--ds-ease),
+    transform 80ms ease-out;
   text-decoration: none;
+
+  &:active:not(:disabled) {
+    transform: scale(0.97);
+  }
 
   &:focus-visible {
     outline: 2px solid var(--ds-action);

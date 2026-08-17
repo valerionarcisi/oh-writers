@@ -152,3 +152,10 @@
     animation: none;
   }
 }
+
+@media (prefers-reduced-transparency: reduce) {
+  .scrim {
+    background: black;
+    backdrop-filter: none;
+  }
+}

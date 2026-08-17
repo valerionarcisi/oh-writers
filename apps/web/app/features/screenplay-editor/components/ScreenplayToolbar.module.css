@@ -349,6 +349,13 @@
   padding: var(--space-4);
 }
 
+@media (prefers-reduced-transparency: reduce) {
+  .confirmOverlay {
+    background: rgba(0, 0, 0, 0.9);
+    backdrop-filter: none;
+  }
+}
+
 .confirmModal {
   background: var(--ds-surface-deep);
   border: var(--border);
