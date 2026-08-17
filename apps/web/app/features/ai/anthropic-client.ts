@@ -28,6 +28,7 @@ import {
   type AiProviderResolutionError,
 } from "./model-resolver.server";
 import type { ModelTier } from "~/features/predictions/cesare-model-router";
+import { getAiRequestIdentity } from "./ai-request-context";
 
 export {
   AiBudgetExceededError,
@@ -38,6 +39,23 @@ export {
 export type { AiUsageTrigger, AiProviderResolutionError };
 
 const DEFAULT_MODEL = "claude-haiku-4-5";
+
+// #120 — default a call's BYOK identity from the ambient per-request context
+// (published by requireProjectAccess). Explicit params always win; with no
+// ambient identity either (scripts, tests, pre-auth flows) the params pass
+// through untouched and the legacy platform path applies. `tier` stays the
+// caller's own choice — the resolver defaults it to "fast", which matches
+// every previously-uncovered site (all haiku-class or already tier-tagged).
+const withAmbientIdentity = <
+  P extends { readonly userId?: string; readonly db?: Db },
+>(
+  params: P,
+): P => {
+  if (params.userId) return params;
+  const ambient = getAiRequestIdentity();
+  if (!ambient) return params;
+  return { ...params, userId: ambient.userId, db: params.db ?? ambient.db };
+};
 
 // Classify a thrown model error as transient (worth retrying) vs terminal.
 // The source of truth is the AI SDK's own `isRetryable` flag, which `APICallError`
@@ -382,7 +400,7 @@ const runGenerateText = (
   );
 
 export const callHaiku = (
-  params: CallHaikuParams,
+  rawParams: CallHaikuParams,
   operation: string,
 ): ResultAsync<
   HaikuResult,
@@ -391,6 +409,7 @@ export const callHaiku = (
   | AiProviderAuthError
   | AiQuotaExceededError
 > => {
+  const params = withAmbientIdentity(rawParams);
   const trigger: AiUsageTrigger = params.trigger ?? "user";
   return ResultAsync.fromPromise(
     checkDailyBudget(trigger),
@@ -529,7 +548,7 @@ const runStreamGeneration = (
   );
 
 export const streamGeneration = (
-  params: StreamGenerationParams,
+  rawParams: StreamGenerationParams,
   operation: string,
   onDelta: (text: string) => void,
   // #103 — the outer turn's cancel signal (drawer closed / navigation / dropped
@@ -545,6 +564,7 @@ export const streamGeneration = (
   | AiProviderAuthError
   | AiQuotaExceededError
 > => {
+  const params = withAmbientIdentity(rawParams);
   const trigger: AiUsageTrigger = params.trigger ?? "user";
   return ResultAsync.fromPromise(
     checkDailyBudget(trigger),

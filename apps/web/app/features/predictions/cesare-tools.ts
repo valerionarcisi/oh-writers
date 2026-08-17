@@ -21,6 +21,10 @@ import {
   userConfirmedOverwrite,
 } from "./version-intent";
 import {
+  getTurnVersionDirective,
+  recordTurnToolExecution,
+} from "./cesare-turn-signals";
+import {
   locationCandidates,
   locationPhotos,
   locationRequirements,
@@ -1632,9 +1636,15 @@ const commitDocumentEdit = (
     `Cesare · ${docTypeLabel(doc.documentType)}`,
     {
       sessionId,
-      userRequestedNewVersion: userRequestedNewVersion(userInstruction),
+      // #119 — classifier directive first, phrase lists as fallback (see
+      // commitOptions in cesare-document-tools.ts for the full rationale).
+      userRequestedNewVersion:
+        getTurnVersionDirective() === "mint" ||
+        userRequestedNewVersion(userInstruction),
       largeEditConfirmed: false,
-      largeEditOverwriteConfirmed: userConfirmedOverwrite(userInstruction),
+      largeEditOverwriteConfirmed:
+        getTurnVersionDirective() === "overwrite" ||
+        userConfirmedOverwrite(userInstruction),
     },
   ).map((outcome) => {
     if (isAsked(outcome)) {
@@ -4946,6 +4956,9 @@ const bridgeLegacyTools = (
             abortSignal,
           );
           if (result.isErr()) return { error: result.error.message };
+          // #118 — an errored tool is deliberately NOT recorded: nothing was
+          // applied, so the promise-guard's notice stays truthful.
+          recordTurnToolExecution(t.name);
           try {
             return JSON.parse(result.value.content) as unknown;
           } catch {

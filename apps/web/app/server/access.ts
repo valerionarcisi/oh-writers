@@ -10,6 +10,7 @@ import {
   getUserFromHeaders,
   type AppUser,
 } from "~/server/context";
+import { openAiIdentityScope, setAiRequestIdentity } from "~/features/ai";
 import { canEdit, getMembership } from "~/server/permissions";
 import type { Db } from "~/server/db";
 
@@ -98,7 +99,12 @@ const resolveAccessForUser = (
 ): ResultAsync<ProjectAccess, ProjectAccessError> =>
   loadProject(db, projectId).andThen((project) =>
     loadMembership(db, project, user.id).andThen((membership) =>
-      checkAccess(user, project, membership, level),
+      checkAccess(user, project, membership, level).map((access) => {
+        // #120 — fills the cell opened synchronously by the public entry
+        // points below; downstream AI calls default to this identity.
+        setAiRequestIdentity({ userId: access.user.id, db });
+        return access;
+      }),
     ),
   );
 
@@ -106,10 +112,14 @@ export const requireProjectAccess = (
   db: Db,
   projectId: string,
   level: AccessLevel,
-): ResultAsync<ProjectAccess, ProjectAccessError> =>
-  ResultAsync.fromPromise(requireUser(), (e) => e as never).andThen((user) =>
-    resolveAccessForUser(db, projectId, level, user),
+): ResultAsync<ProjectAccess, ProjectAccessError> => {
+  // #120 — must run in the caller's synchronous frame (NOT inside the chain)
+  // so the handler's continuation after `await` inherits the identity cell.
+  openAiIdentityScope();
+  return ResultAsync.fromPromise(requireUser(), (e) => e as never).andThen(
+    (user) => resolveAccessForUser(db, projectId, level, user),
   );
+};
 
 // Headers-explicit variant for API file routes (e.g. `/api/cesare/stream`),
 // where the ambient `getWebRequest()` is not reliably populated. The caller
@@ -121,13 +131,17 @@ export const requireProjectAccessWithHeaders = (
   projectId: string,
   level: AccessLevel,
   headers: Headers,
-): ResultAsync<ProjectAccess, ProjectAccessError> =>
-  ResultAsync.fromPromise(getUserFromHeaders(headers), (e) => e as never).andThen(
-    (user) =>
-      user
-        ? resolveAccessForUser(db, projectId, level, user)
-        : ResultAsync.fromPromise(
-            Promise.reject(new ForbiddenError("read project")),
-            (e) => e as ForbiddenError,
-          ),
+): ResultAsync<ProjectAccess, ProjectAccessError> => {
+  openAiIdentityScope();
+  return ResultAsync.fromPromise(
+    getUserFromHeaders(headers),
+    (e) => e as never,
+  ).andThen((user) =>
+    user
+      ? resolveAccessForUser(db, projectId, level, user)
+      : ResultAsync.fromPromise(
+          Promise.reject(new ForbiddenError("read project")),
+          (e) => e as ForbiddenError,
+        ),
   );
+};

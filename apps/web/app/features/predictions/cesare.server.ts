@@ -45,6 +45,13 @@ import {
 } from "./cesare-tools";
 import { parseOutline } from "~/features/documents";
 import { classifyIntent, INTENT_SCALE } from "./cesare-intent-classifier";
+import {
+  openTurnSignalsScope,
+  setTurnClassifiedIntent,
+  getTurnClassifiedIntent,
+  getTurnExecutedToolNames,
+} from "./cesare-turn-signals";
+import { needsNoActionNotice, NO_ACTION_NOTICE } from "./cesare-promise-guard";
 import type {
   DocumentContext,
   ScheduleToolContext,
@@ -2156,7 +2163,14 @@ export const resolveTurnPlan = (
     userId: byok?.userId,
     db: byok?.db,
   })
-    .map((intent) => plan(intent.suggestedTool, INTENT_SCALE[intent.type]))
+    .map((intent) => {
+      // #119 — publish the classified intent (versionDirective included) to
+      // the ambient turn-signals cell; the tool executors read it when they
+      // resolve the version action. The loop awaits this plan before any tool
+      // runs, so readers always see the final value.
+      setTurnClassifiedIntent(intent);
+      return plan(intent.suggestedTool, INTENT_SCALE[intent.type]);
+    })
     .orElse((error) => {
       // The fallback is deliberate (a broken classifier must never block the
       // writer) but it must never be SILENT again: a dead platform API key
@@ -2205,7 +2219,22 @@ const callCesareV2 = (
       onStreamEvent,
       forcedFirstTool,
       abortSignal,
-    ).map((reply) => ({ reply, model })),
+    ).map((reply) => {
+      // #118 — promise-guard: the user confidently asked for a write act but
+      // no write tool ran this turn, so whatever the free text says ("procedo,
+      // ti avviserò"), nothing was applied. Say so honestly — streamed into
+      // the live bubble AND appended to the persisted reply.
+      if (
+        needsNoActionNotice(
+          getTurnClassifiedIntent(),
+          getTurnExecutedToolNames(),
+        )
+      ) {
+        onStreamEvent?.({ _tag: "text-delta", text: NO_ACTION_NOTICE });
+        return { reply: reply + NO_ACTION_NOTICE, model };
+      }
+      return { reply, model };
+    }),
   );
 };
 
@@ -2218,6 +2247,10 @@ const handleAskCesareV2 = (
   onStreamEvent?: (event: CesareStreamEvent) => void,
   abortSignal?: AbortSignal,
 ): ResultAsync<string, CesareError> => {
+  // #119 — must run in this synchronous frame (before any await) so the whole
+  // turn, tool loop included, inherits the turn-signals cell that
+  // resolveTurnPlan fills with the classified intent.
+  openTurnSignalsScope();
   if (
     process.env["MOCK_AI"] === "true" &&
     !AGENTIC_PAGES.has(data.pageContext.page)

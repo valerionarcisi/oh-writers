@@ -7,6 +7,12 @@
 // is `classifyEditSize`'s job). False negatives are safe (the edit still applies,
 // just overwriting); a false positive would mint an unwanted row, so the matchers
 // require an explicit version/snapshot verb, not merely the word "versione".
+//
+// #119 — since the classifier emits `versionDirective` (any language, typo or
+// paraphrase), these lists are the deterministic FALLBACK for turns without a
+// classifier result (MOCK_AI, non-classifier pages, classifier error). The
+// consumers OR the two sources; do not grow the lists to chase phrasing — new
+// coverage belongs in the classifier prompt.
 
 // Each entry is a phrase the writer uses to ask for a fresh version. Matched
 // case-insensitively as a substring on the normalised instruction.

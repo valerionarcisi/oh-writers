@@ -33,6 +33,7 @@ import {
   userRequestedNewVersion,
   userConfirmedOverwrite,
 } from "./version-intent";
+import { getTurnVersionDirective } from "./cesare-turn-signals";
 
 // BUG-N66 / Spec 76 — the commit policy for a Cesare document edit. A non-null
 // sessionId activates overwrite-into-one-working-row; an explicit "nuova
@@ -48,23 +49,33 @@ import {
 // for every tool in the turn, so OR-ing it in makes the confirmed decision STICKY
 // for the whole turn — once the writer answered the ask, no tool re-asks the same
 // decision.
+// #119 — the classifier's versionDirective (any language, paraphrase or typo)
+// is the semantic source; the Italian phrase lists stay OR-ed in as the
+// deterministic fallback for turns without a classifier (MOCK_AI, non-classifier
+// pages, classifier error). On a conflicting read, mint wins by
+// resolveVersionAction's precedence — the safe outcome.
 const commitOptions = (
   sessionId: string | null,
   instruction: string | null | undefined,
   userInstruction: string | null = null,
-): CommitOptions => ({
-  sessionId,
-  userRequestedNewVersion:
-    userRequestedNewVersion(instruction) ||
-    userRequestedNewVersion(userInstruction),
-  largeEditConfirmed: false,
-  // "Sovrascrivi" on the ask card → apply the large edit in place. Detected from
-  // the re-sent confirmation phrasing (the turn message), mirroring the
-  // new-version intent.
-  largeEditOverwriteConfirmed:
-    userConfirmedOverwrite(instruction) ||
-    userConfirmedOverwrite(userInstruction),
-});
+): CommitOptions => {
+  const directive = getTurnVersionDirective();
+  return {
+    sessionId,
+    userRequestedNewVersion:
+      directive === "mint" ||
+      userRequestedNewVersion(instruction) ||
+      userRequestedNewVersion(userInstruction),
+    largeEditConfirmed: false,
+    // "Sovrascrivi" on the ask card → apply the large edit in place. Detected
+    // from the re-sent confirmation phrasing (the turn message), mirroring the
+    // new-version intent.
+    largeEditOverwriteConfirmed:
+      directive === "overwrite" ||
+      userConfirmedOverwrite(instruction) ||
+      userConfirmedOverwrite(userInstruction),
+  };
+};
 import {
   importAsActiveVersionTx,
   normaliseScreenplayFountain,
