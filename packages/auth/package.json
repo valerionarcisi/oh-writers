@@ -12,10 +12,12 @@
   "dependencies": {
     "@oh-writers/db": "workspace:*",
     "better-auth": "1.4.19",
-    "ioredis": "5.9.3"
+    "ioredis": "5.9.3",
+    "nodemailer": "9.0.5"
   },
   "devDependencies": {
     "@types/node": "22.14.0",
+    "@types/nodemailer": "8.0.1",
     "typescript": "5.9.3"
   }
 }

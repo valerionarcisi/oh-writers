@@ -2,7 +2,13 @@ import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
-import { Button, Input, FormField, SegmentedControl } from "@oh-writers/ui";
+import {
+  Button,
+  Input,
+  FormField,
+  SegmentedControl,
+  useConfirmDialog,
+} from "@oh-writers/ui";
 import { PasswordInput } from "~/features/auth";
 import { unwrapResult } from "@oh-writers/utils";
 import { teamRoleLabel, type Locale } from "@oh-writers/domain";
@@ -55,6 +61,8 @@ export function UserSettingsPage({
         <PasswordSection />
 
         <TeamsSection />
+
+        <DangerZoneSection />
       </div>
     </div>
   );
@@ -433,6 +441,69 @@ function PasswordSection() {
           {isPending
             ? t("settings.password.saving")
             : t("settings.password.save")}
+        </Button>
+      </div>
+    </section>
+  );
+}
+
+// ── Danger zone (account deletion, Spec #127) ─────────────────────────────
+
+function DangerZoneSection() {
+  const { t } = useTranslation();
+  const { confirm } = useConfirmDialog();
+  const [isPending, setIsPending] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
+
+  const handleDelete = () => {
+    if (isPending) return;
+    void confirm({
+      title: t("settings.delete.confirmTitle"),
+      message: t("settings.delete.confirmBody"),
+      confirmLabel: t("settings.delete.confirmLabel"),
+    }).then(async (ok) => {
+      if (!ok) return;
+      setIsPending(true);
+      setApiError(null);
+      try {
+        const result = await authClient.deleteUser();
+        if (result.error) {
+          setApiError(result.error.message ?? t("settings.delete.error"));
+          setIsPending(false);
+          return;
+        }
+        // Deletion is immediate (no email confirmation sender configured) —
+        // the fresh-session guard is satisfied by this signed-in request.
+        window.location.href = "/login";
+      } catch {
+        setApiError(t("settings.delete.error"));
+        setIsPending(false);
+      }
+    });
+  };
+
+  return (
+    <section className={styles.section} data-testid="delete-account-section">
+      <h2 className={styles.sectionTitle}>
+        {t("settings.delete.sectionTitle")}
+      </h2>
+      <p className={styles.emptyState}>{t("settings.delete.description")}</p>
+      {apiError && (
+        <span className={styles.apiError} data-testid="delete-account-error">
+          {apiError}
+        </span>
+      )}
+      <div className={styles.formActions}>
+        <Button
+          variant="danger"
+          size="sm"
+          onClick={handleDelete}
+          disabled={isPending}
+          data-testid="delete-account-btn"
+        >
+          {isPending
+            ? t("settings.delete.deleting")
+            : t("settings.delete.confirmLabel")}
         </Button>
       </div>
     </section>

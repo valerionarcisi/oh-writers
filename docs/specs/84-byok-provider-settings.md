@@ -1,6 +1,6 @@
 # Spec 84 — Provider settings & BYOK: the user brings the account that pays
 
-Status: **Draft**
+Status: **Done** (2026-08-17)
 Depends on: [[Spec 83]] (AI Gateway — the per-user provider resolution lives in its pipeline)
 
 ## Context

@@ -8,6 +8,7 @@ import {
   accounts,
   verifications,
 } from "@oh-writers/db/schema";
+import { sendResetPasswordEmail, sendVerificationEmail } from "./mailer";
 
 const socialProviders: Record<
   string,
@@ -106,10 +107,34 @@ export const auth = betterAuth({
   secondaryStorage: buildSecondaryStorage(),
   emailAndPassword: {
     enabled: true,
-    requireEmailVerification: false,
+    requireEmailVerification: true,
+    sendResetPassword: sendResetPasswordEmail,
+  },
+  emailVerification: {
+    sendVerificationEmail,
+  },
+  user: {
+    deleteUser: {
+      // Account deletion (Spec #127 item 2): enabled so the /api/auth/delete-user
+      // route exists and the settings UI can offer "Elimina account". No
+      // sendDeleteAccountVerification sender yet — deletion is immediate for
+      // a fresh session (the SMTP delete-confirmation is a later refinement).
+      enabled: true,
+    },
   },
   socialProviders,
   trustedOrigins: devOrigins,
+  advanced: {
+    database: {
+      // better-auth generates ids for every model (users/accounts/…). The
+      // "uuid" flag relies on Postgres generating ids, but only `users.id` has
+      // a DB default — accounts/sessions/verifications are `text` PKs without
+      // one → insert 422s. A generateId FUNCTION makes better-auth mint a UUID
+      // itself for every model, valid in both the `uuid` users.id and the
+      // `text` columns. (See 2026-08-17 signup 422.)
+      generateId: () => crypto.randomUUID(),
+    },
+  },
 });
 
 export type Session = typeof auth.$Infer.Session;

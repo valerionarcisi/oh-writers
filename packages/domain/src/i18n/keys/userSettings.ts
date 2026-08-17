@@ -44,6 +44,17 @@ export const userSettingsKeys = {
     // Teams
     "settings.teams.sectionTitle": "Team",
     "settings.teams.empty": "You are not part of any team.",
+    // Account deletion (Spec #127)
+    "settings.delete.sectionTitle": "Delete account",
+    "settings.delete.description":
+      "Permanently deletes your account and all your data. This cannot be undone.",
+    "settings.delete.confirmTitle": "Delete account?",
+    "settings.delete.confirmBody":
+      "This will permanently delete your account and all your projects. This action cannot be undone.",
+    "settings.delete.confirmLabel": "Delete forever",
+    "settings.delete.cancel": "Cancel",
+    "settings.delete.deleting": "Deleting…",
+    "settings.delete.error": "Error while deleting the account.",
     // AI section (link to /settings/ai)
     "settings.aiSection.sectionTitle": "AI",
     "settings.aiSection.description":
@@ -192,6 +203,17 @@ export const userSettingsKeys = {
     // Teams
     "settings.teams.sectionTitle": "Team",
     "settings.teams.empty": "Non fai parte di nessun team.",
+    // Account deletion (Spec #127)
+    "settings.delete.sectionTitle": "Elimina account",
+    "settings.delete.description":
+      "Elimina definitivamente il tuo account e tutti i tuoi dati. Non puoi annullare l'operazione.",
+    "settings.delete.confirmTitle": "Eliminare l'account?",
+    "settings.delete.confirmBody":
+      "Verranno eliminati definitivamente l'account e tutti i progetti. L'operazione non può essere annullata.",
+    "settings.delete.confirmLabel": "Elimina per sempre",
+    "settings.delete.cancel": "Annulla",
+    "settings.delete.deleting": "Eliminazione…",
+    "settings.delete.error": "Errore durante l'eliminazione dell'account.",
     // AI section (link to /settings/ai)
     "settings.aiSection.sectionTitle": "AI",
     "settings.aiSection.description":
