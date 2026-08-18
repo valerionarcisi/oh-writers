@@ -61,3 +61,6 @@ vernissage/*/failures.json
 # Langfuse self-hosted secrets
 infra/langfuse/.env
 backups/
+
+# Local agent working files (issue bodies, dev logs, screenshots)
+.agents/
