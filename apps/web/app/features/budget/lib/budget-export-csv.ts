@@ -1,4 +1,5 @@
 import type { BudgetLine } from "@oh-writers/domain";
+import { toCsv } from "@oh-writers/utils";
 import { SECTION_EXPORT_LABEL, type FlatSection } from "./flat-sections";
 
 export interface BudgetCsvRow {
@@ -17,9 +18,6 @@ const TOP_SHEET_LABELS: Record<string, string> = {
   contingency: "Contingency",
 };
 
-const escapeCsv = (s: string): string =>
-  /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-
 const formatAmount = (v: number | null): string =>
   v === null ? "" : v.toFixed(2);
 
@@ -30,28 +28,20 @@ const rowsToCsv = (rows: ReadonlyArray<BudgetCsvRow>): string => {
     "Amount (EUR)",
     "Actual (EUR)",
     "Notes",
-  ].join(",");
+  ];
 
-  const dataRows = rows.map((r) =>
-    [
-      escapeCsv(r.category),
-      escapeCsv(r.name),
-      formatAmount(r.estimatedAmount),
-      formatAmount(r.actualAmount),
-      escapeCsv(r.notes ?? ""),
-    ].join(","),
-  );
+  const dataRows = rows.map((r) => [
+    r.category,
+    r.name,
+    formatAmount(r.estimatedAmount),
+    formatAmount(r.actualAmount),
+    r.notes ?? "",
+  ]);
 
   const grandTotal = rows.reduce((sum, r) => sum + r.estimatedAmount, 0);
-  const totalRow = [
-    escapeCsv("TOTAL"),
-    "",
-    formatAmount(grandTotal),
-    "",
-    "",
-  ].join(",");
+  const totalRow = ["TOTAL", "", formatAmount(grandTotal), "", ""];
 
-  return [header, ...dataRows, totalRow].join("\n");
+  return toCsv(header, [...dataRows, totalRow]);
 };
 
 export const buildBudgetCsvRows = (lines: BudgetLine[]): BudgetCsvRow[] =>

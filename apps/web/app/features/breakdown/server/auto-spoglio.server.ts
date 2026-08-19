@@ -42,7 +42,7 @@ import {
   DbError,
   ForbiddenError,
 } from "../breakdown.errors";
-import { canEditBreakdown } from "../lib/permissions";
+import { canEditProject } from "@oh-writers/utils";
 import { hashText as hashSceneText } from "@oh-writers/utils/hash";
 import { resolveBreakdownAccessByScene } from "./breakdown-access";
 
@@ -98,7 +98,7 @@ export const runAutoSpoglioForScene = createServerFn({ method: "POST" })
         scene.id,
       );
       if (accessResult.isErr()) return toShape(err(accessResult.error));
-      if (!canEditBreakdown(accessResult.value))
+      if (!canEditProject(accessResult.value))
         return toShape(err(new ForbiddenError("run auto-spoglio")));
       const projectId = accessResult.value.projectId;
 
@@ -365,7 +365,7 @@ export const runAutoSpoglioForVersion = createServerFn({ method: "POST" })
         sceneRows[0]!.id,
       );
       if (accessResult.isErr()) return toShape(err(accessResult.error));
-      if (!canEditBreakdown(accessResult.value))
+      if (!canEditProject(accessResult.value))
         return toShape(err(new ForbiddenError("run auto-spoglio")));
       const projectId = accessResult.value.projectId;
       const locale = await resolveProjectLocale(db, projectId);

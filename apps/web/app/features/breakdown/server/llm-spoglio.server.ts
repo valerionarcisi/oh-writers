@@ -38,7 +38,7 @@ import {
   ForbiddenError,
   LlmSpoglioFailedError,
 } from "../breakdown.errors";
-import { canEditBreakdown } from "../lib/permissions";
+import { canEditProject } from "@oh-writers/utils";
 import { resolveBreakdownAccessByScreenplayVersion } from "./breakdown-access";
 import {
   extractCompleteScenes,
@@ -198,7 +198,7 @@ export const streamFullSpoglio = createServerFn({ method: "POST" })
         data.screenplayVersionId,
       );
       if (accessResult.isErr()) return toShape(err(accessResult.error));
-      if (!canEditBreakdown(accessResult.value))
+      if (!canEditProject(accessResult.value))
         return toShape(err(new ForbiddenError("run llm spoglio")));
       const projectId = accessResult.value.projectId;
 

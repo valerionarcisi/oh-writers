@@ -1,4 +1,8 @@
-import type { LocationRequirement, LocationCandidate } from "@oh-writers/domain";
+import type {
+  LocationRequirement,
+  LocationCandidate,
+} from "@oh-writers/domain";
+import { toCsv } from "@oh-writers/utils";
 
 export interface LocationCsvRow {
   readonly sceneNumbers: string;
@@ -9,9 +13,6 @@ export interface LocationCsvRow {
   readonly notes: string;
 }
 
-const escapeCsv = (s: string): string =>
-  /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-
 const STATUS_LABELS: Record<string, string> = {
   pending: "Da scouting",
   scouting: "In scouting",
@@ -19,7 +20,9 @@ const STATUS_LABELS: Record<string, string> = {
   locked: "Bloccata",
 };
 
-const confirmedCandidate = (req: LocationRequirement): LocationCandidate | null =>
+const confirmedCandidate = (
+  req: LocationRequirement,
+): LocationCandidate | null =>
   req.candidates.find((c) => c.id === req.confirmedCandidateId) ?? null;
 
 export const buildLocationCsvRows = (
@@ -28,7 +31,8 @@ export const buildLocationCsvRows = (
 ): LocationCsvRow[] =>
   requirements.map((req) => {
     const scenes = sceneNumbersByRequirementId[req.id] ?? [];
-    const sceneNumbers = scenes.length > 0 ? scenes.sort((a, b) => a - b).join(", ") : "";
+    const sceneNumbers =
+      scenes.length > 0 ? scenes.sort((a, b) => a - b).join(", ") : "";
     const candidate = confirmedCandidate(req);
 
     return {
@@ -52,19 +56,19 @@ export const locationsToCsv = (
     "Candidata",
     "Indirizzo",
     "Note",
-  ].join(",");
+  ];
 
-  const rows = buildLocationCsvRows(requirements, sceneNumbersByRequirementId).map(
-    (r) =>
-      [
-        escapeCsv(r.sceneNumbers),
-        escapeCsv(r.requirementName),
-        escapeCsv(r.status),
-        escapeCsv(r.candidateName),
-        escapeCsv(r.address),
-        escapeCsv(r.notes),
-      ].join(","),
-  );
+  const rows = buildLocationCsvRows(
+    requirements,
+    sceneNumbersByRequirementId,
+  ).map((r) => [
+    r.sceneNumbers,
+    r.requirementName,
+    r.status,
+    r.candidateName,
+    r.address,
+    r.notes,
+  ]);
 
-  return [header, ...rows].join("\n");
+  return toCsv(header, rows);
 };

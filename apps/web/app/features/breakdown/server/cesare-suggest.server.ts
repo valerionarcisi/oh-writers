@@ -22,7 +22,7 @@ import {
   ForbiddenError,
   RateLimitedError,
 } from "../breakdown.errors";
-import { canEditBreakdown } from "../lib/permissions";
+import { canEditProject } from "@oh-writers/utils";
 import {
   CESARE_SYSTEM_PROMPT,
   FEW_SHOT_EXAMPLES,
@@ -90,7 +90,7 @@ export const suggestBreakdownForScene = createServerFn({ method: "POST" })
         scene.id,
       );
       if (accessResult.isErr()) return toShape(err(accessResult.error));
-      if (!canEditBreakdown(accessResult.value))
+      if (!canEditProject(accessResult.value))
         return toShape(err(new ForbiddenError("run cesare")));
       const projectId = accessResult.value.projectId;
 

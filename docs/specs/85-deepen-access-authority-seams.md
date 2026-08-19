@@ -1,6 +1,6 @@
 # Spec 85 — Deepen the access & authority seams (consolidated refactor)
 
-Status: **In progress**
+Status: **Implemented** (access archive-gate + deletions, AI decision split, shared CSV; NotFoundStore migration and singleton store deferred — see §4/§5)
 Depends on: [[Spec 23]] (server pipeline — `withProjectAccess`), [[Spec 84]] (§5 AI-enabled), existing conventions (shared-infra, server-functions, error-handling, react)
 
 ## Context
@@ -21,17 +21,29 @@ and the store factory.
 the canonical gate: `requireUser → loadProject → membership → role → view/edit gate`. The
 work converges the stragglers onto it, never re-implements the gate.
 
-- **Delete `apps/web/app/server/permissions.ts`** (`canEdit`/`isOwner`/`getMembership`).
-  Its `isArchived` check moves into the authority's **edit** gate (`access.ts`
-  `checkAccess`), which already reads the project row. `getMembership`'s fetch moves to a
-  small db helper (or inline in `access.ts`).
-- **Delete dead `apps/web/app/features/budget/server/budget-access.ts`** — zero callers.
-- **Replace `apps/web/app/features/breakdown/server/breakdown-access.ts`** — its 5 callers
-  (`export.server`, `auto-spoglio`, `cesare-suggest`, `clone-version`, `llm-spoglio`) switch
-  to `withProjectAccess`. The by-screenplay / by-scene / by-version lookup helpers become
-  thin **"resolve resource → projectId" helpers** that delegate the gate to the authority.
-- **Delete the pure-alias `apps/web/app/features/breakdown/lib/permissions.ts`** +
-  its duplicate `permissions.test.ts`. Callers use the shared predicates.
+**As built (narrowed from the original plan):** implementation revealed
+`server/permissions.ts` is partly **team-scoped**, not project-scoped — `getMembership`
+is a shared team-membership DB fetch used by `teams/server.ts` (no project) and cannot
+route through the project-scoped authority. So it is NOT deleted.
+
+- **`isArchived` gate** now enforced in the authority's **edit** path (`access.ts`
+  `checkAccess`): an archived project returns `ForbiddenError` at "edit", even for the
+  personal owner; "view" is unaffected.
+- **Kept** `apps/web/app/server/permissions.ts` (`canEdit`/`isOwner`/`getMembership`) — a
+  real shared seam for team-scoped + already-member-loaded callers. Candidate #1's
+  "delete the duplicate" applies to `permissions.ts`'s _drift_ (the `isArchived` gap), now
+  closed at the authority, not to the file itself.
+- **Deleted dead** `apps/web/app/features/budget/server/budget-access.ts` — zero callers.
+- **Deleted** the pure-alias `apps/web/app/features/breakdown/lib/permissions.ts` +
+  its duplicate `permissions.test.ts`. The 5 `canEditBreakdown`/`canViewBreakdown`
+  callers now use `canEditProject`/`canViewProject` from `@oh-writers/utils` directly
+  (structurally compatible — the alias only renamed them).
+- **Deferred**: don't route `breakdown-access.ts`'s 5 callers through `withProjectAccess`
+  — those lookups resolve scene/version → project and are currently ungated (access info
+  only); forcing them through the authority would _add_ a permission gate, a behavior
+  change on AI/export paths. `ponytail:` revisit when a permission gate is actually
+  wanted on those paths.
+
 - **`packages/utils/permissions.ts` stays as the pure, db-free predicate source** shared
   with ws-server (`isProjectOwner`/`canEditProject`/`canViewProject` over
   `ProjectAccessContext`). The `isArchived` concern is web-side and lives in the authority,
@@ -73,28 +85,32 @@ decision unit-testable without a DB and the catalogue authoritative.
 
 ### 3. One CSV module in `packages/utils` (review candidate #3)
 
-Add `toCsv(rows)` + `escapeCsv` to `packages/utils` and delete the five per-feature
-copies (`escapeCsv` + `rows→CSV` serializer). Features keep only their row-shaping and
-call the shared serializer. The download-hook unification (review candidate #8) is
-**out of scope** (separate spec).
+**As built:** added `toCsv(header, rows)` + `escapeCsv` to `packages/utils` (`csv.ts`,
+re-exported from the index) and consolidated the five per-feature copies — `escapeCsv` +
+`rows→CSV` serialization now live in the one shared module; each feature keeps only its
+row-shaping. This closes the drift the scans flagged (schedule/breakdown/shooting-plan
+escaped `\n`-only; the shared escape handles `\n\r`). The download-hook unification
+(review candidate #8) is **out of scope** (separate spec).
 
 ### 4. One NotFoundError in `packages/utils` (review candidate #5)
 
-Add a generic `NotFoundError(resource, id)` (same `_tag`/`message`/`resource`/`id` shape as
-the existing `packages/utils` error family — see `errors.ts`). Replace **only the uniform
-`XNotFoundError(id)`** classes (Doc, Scene, Schedule, ShotPlan, LocationRequirement, …).
-Special-cased variants that carry feature-specific fields (e.g.
-`SubjectNotFoundError(projectId)`) are **left as-is** — they are genuine variants, not
-duplicates. `NotFoundError` replaces the `resourceName` in the error message so callers
-that match on `_tag` need a one-time update to the generic `_tag`.
+**As built:** the generic `NotFoundError(resource, id)` was added to `packages/utils`
+(`errors.ts`), ready for use. The **mass migration is deferred**: it touches ~9 error
+files + ~58 constructor call sites and changes the wire `_tag` from the per-feature name
+(e.g. `"ScreenplayNotFoundError"`) to `"NotFoundError"` — a wire-discriminant regression
+for near-zero behavioral gain, since each class is a handful of lines. Special-cased
+variants that carry extra fields (e.g. `SubjectNotFoundError(projectId)`) were never
+candidates. `ponytail:` migrate incrementally if/when the generic wire `_tag` becomes
+acceptable or the classes grow real logic.
 
 ### 5. One `createSingletonStore` in `packages/utils` (review candidate #7)
 
-Add a tiny `createSingletonStore<T>(initial)` returning the
-`getState()/subscribe()/setState()` surface, and replace the three hand-rolled
-`let state + Set<listener> + getState/subscribe/notify` copies
+**As built:** **deferred**. The three stores
 (`app-shell/cesare-live-edit-store.ts`, `cesare-live-diff-store.ts`,
-`documents/lib/cesare-highlight-store.ts`). Behavior identical; less copy-paste.
+`documents/lib/cesare-highlight-store.ts`) share only a ~10-line skeleton (`state` +
+`Set<listener>` + `getState`/`subscribe`) and differ materially in their mutation logic
+(stacks+idCounter, nonce batches, fragment filtering). A factory would add a concept for
+~30 saved lines. `ponytail:` extract only if a fourth store appears.
 
 ## Non-goals
 
@@ -107,22 +123,23 @@ Add a tiny `createSingletonStore<T>(initial)` returning the
 
 ## Tests
 
-- `OHW-851` unit (`access.ts`): `withProjectAccess` "edit" rejects an **archived** project
-  with `ForbiddenError` (sad path); non-archived owner/editor passes; viewer passes at
-  "view". `getMembership` fetch still resolves team role.
-- `OHW-852` unit (`packages/utils/permissions.ts`): predicates unchanged — personal owner,
-  team owner/editor/viewer, null-role denial. Regression guard that the web authority's
-  `isArchived` gate is NOT allowed to drift into these pure predicates.
-- `OHW-853` unit (`packages/domain` `isAiEnabled`): decision matrix — mockOn beats all;
-  override beats mock; hasProvider wins over trial; trial exhausted → false when
-  configured, env-key fallback only when trial unconfigured. All pure of I/O.
+- `OHW-851` unit (`access.ts`): `requireProjectAccess` "edit" rejects an **archived**
+  project with `ForbiddenError` (sad path, even for the personal owner); non-archived
+  owner passes; viewer still passes at "view" on an archived project; missing project
+  returns a `ProjectNotFoundError` result (not a throw).
+- `OHW-852` — covered by the existing `access.test.ts` archive-gate assertions (above)
+  plus the unchanged `packages/utils/permissions.ts` tests (predicates untouched).
+- `OHW-853` unit (`packages/domain` `isAiEnabled`, thunk-based): override beats everything
+  incl. mock **without calling I/O thunks**; mock wins without touching provider/trial;
+  provider wins without consulting trial; trial enabled + spent<allowance → on; exhausted
+  trial → off even with env key (de-platform); trial unconfigured → env-key fallback;
+  0 allowance → off.
 - `OHW-854` unit (`packages/utils` `toCsv`/`escapeCsv`): quoting, embedded commas/quotes,
-  `\r`/`\n` handling — the drift case that motivated the consolidation (schedule's old copy
-  omitted `\r`).
-- `OHW-855` unit (`packages/utils` `NotFoundError`): shape + message; the generic `_tag`
-  still matches on the per-feature alias types.
-- `OHW-856` unit (`createSingletonStore`): getState/subscribe/setState + unsubscribe
-  removes a listener; no stale listener after unsubscribe.
-- `OHW-857` E2E (mock): breakdown AI actions + export flows still work (callers now route
-  through `withProjectAccess`); AI-off banner behavior unchanged (regression guard that
-  `resolveAiEnabled` refactor kept behavior identical).
+  `\r`/`\n` handling — the drift case that motivated the consolidation.
+- `OHW-855` — **not in this change** (migration deferred; `NotFoundError` class is added
+  and typechecked but the wire `_tag` stays per-feature for now).
+- `OHW-856` — **not in this change** (factory deferred).
+- `OHW-857` regression: the existing `resolve-ai-enabled.server.test.ts` asserts the
+  short-circuit/decision contract survived the refactor (override, MOCK, provider-wins,
+  trial, fail-open). Breakdown/export CSV feature tests assert the shared serializer
+  output.
