@@ -1,4 +1,5 @@
 import type { ShootingDayView } from "../server/schedule.server";
+import { toCsv } from "@oh-writers/utils";
 
 export interface ScheduleCsvRow {
   day: number;
@@ -12,9 +13,6 @@ export interface ScheduleCsvRow {
   pages: number;
   notes: string;
 }
-
-const escapeCsv = (s: string): string =>
-  /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 
 export const buildScheduleCsvRows = (
   days: ShootingDayView[],
@@ -48,22 +46,20 @@ export const scheduleToCsv = (days: ShootingDayView[]): string => {
     "Cast",
     "Pagine",
     "Note",
-  ].join(",");
+  ];
 
-  const rows = buildScheduleCsvRows(days).map((r) =>
-    [
-      String(r.day),
-      escapeCsv(r.date),
-      String(r.sceneNumber),
-      escapeCsv(r.heading),
-      escapeCsv(r.intExt),
-      escapeCsv(r.dayNight),
-      escapeCsv(r.location),
-      escapeCsv(r.cast),
-      String(r.pages),
-      escapeCsv(r.notes),
-    ].join(","),
-  );
+  const rows = buildScheduleCsvRows(days).map((r) => [
+    String(r.day),
+    r.date,
+    String(r.sceneNumber),
+    r.heading,
+    r.intExt,
+    r.dayNight,
+    r.location,
+    r.cast,
+    String(r.pages),
+    r.notes,
+  ]);
 
-  return [header, ...rows].join("\n");
+  return toCsv(header, rows);
 };

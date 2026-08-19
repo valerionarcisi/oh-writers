@@ -5,7 +5,7 @@ import { toShape, type ResultShape } from "@oh-writers/utils";
 import { requireUser } from "~/server/context";
 import { getDb } from "~/server/db";
 import { DbError, ForbiddenError } from "../breakdown.errors";
-import { canViewBreakdown } from "../lib/permissions";
+import { canViewProject } from "@oh-writers/utils";
 import { breakdownToCsv } from "../lib/export-csv";
 import { buildBreakdownPdf } from "../lib/export-pdf";
 import { resolveBreakdownAccessByProjectId } from "./breakdown-access";
@@ -37,7 +37,7 @@ export const exportBreakdownPdf = createServerFn({ method: "POST" })
       );
       if (accessResult.isErr()) return toShape(err(accessResult.error));
       const access = accessResult.value;
-      if (!canViewBreakdown(access))
+      if (!canViewProject(access))
         return toShape(err(new ForbiddenError("export breakdown")));
 
       const result = await getProjectBreakdownRows(
@@ -85,7 +85,7 @@ export const exportBreakdownCsv = createServerFn({ method: "POST" })
       );
       if (accessResult.isErr()) return toShape(err(accessResult.error));
       const access = accessResult.value;
-      if (!canViewBreakdown(access))
+      if (!canViewProject(access))
         return toShape(err(new ForbiddenError("export breakdown")));
 
       const result = await getProjectBreakdownRows(

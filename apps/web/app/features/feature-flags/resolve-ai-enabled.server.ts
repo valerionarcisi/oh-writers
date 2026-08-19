@@ -1,4 +1,5 @@
 import type { UserId } from "@oh-writers/domain";
+import { isAiEnabled, type AiSourceInput } from "@oh-writers/domain";
 import type { Db } from "~/server/db";
 
 // ⚠️ Bundle-boundary rule (live regression, gate 2026-07-10): this module is
@@ -13,25 +14,16 @@ import type { Db } from "~/server/db";
  * `Features.AI_ENABLED` is OFF exactly when this returns false, hiding every
  * AI surface app-wide behind the single "Attiva l'AI" banner.
  *
+ * Spec 85 #2 — the DECISION moved to the pure `isAiEnabled` in
+ * `@oh-writers/domain` (unit-tested there); this fn only gathers the I/O —
+ * env reads, the BYOK provider lookup and the trial ledger — and reduces it
+ * to an `AiSourceInput`. The decision order (override → mock → provider →
+ * trial → env-key fallback) lives in the pure function.
+ *
  * Narrow seam so the eventual provider/quota lookup (Spec 84 Wave 2, which
  * lives in `features/ai-providers/`) is a one-function change: swap the body,
  * keep the signature. `db` is threaded explicitly (not imported ambiently)
  * so this stays trivially testable without a real database.
- *
- * Spec 84 Wave 3 (this change) — the chain, in order:
- *   1. test override (unchanged)
- *   2. MOCK_AI (unchanged) — the mock client answers every call
- *   3. `hasAiProviderForUser` — a connected BYOK provider always wins
- *   4. trial quota (`AI_TRIAL_QUOTA_EUR` ON && not yet exhausted for this
- *      user) — `isTrialQuotaEnabled`/`getUserTrialSpend` in
- *      `features/ai/ai-usage.server.ts`, the same ledger the gateway's own
- *      `checkTrialQuota` guard reads before a platform-funded call.
- *   5. the transitional `ANTHROPIC_API_KEY` env fallback — ONLY reached when
- *      the trial flag is entirely UNSET (not merely exhausted): once
- *      `AI_TRIAL_QUOTA_EUR` is configured, trial is the sole platform-funded
- *      path and an exhausted trial correctly resolves AI_ENABLED to false
- *      (routing the user to the connect-provider gate), instead of quietly
- *      reviving on the platform key.
  *
  * Fail-open on a DB error at every lookup: a broken provider/ledger query
  * must not itself hide every AI surface in the app — same fail-open contract
@@ -41,35 +33,43 @@ export async function resolveAiEnabled(
   userId: UserId,
   db: Db,
 ): Promise<boolean> {
-  const override = readAiEnabledTestOverride();
-  if (override !== null) return override;
+  const input: AiSourceInput = {
+    override: readAiEnabledTestOverride(),
+    mockOn: process.env["MOCK_AI"] === "true",
+    loadHasProvider: () => hasConnectedProvider(userId, db),
+    loadTrialConfigured: () => isTrialQuotaConfigured(),
+    loadTrialSpend: () => readTrialSpend(userId, db),
+    allowanceEur: Number(process.env["AI_TRIAL_QUOTA_EUR"]),
+    envKeyPresent: Boolean(process.env["ANTHROPIC_API_KEY"]),
+  };
+  return isAiEnabled(input);
+}
 
-  // Mock mode IS an AI source: the scripted mock client answers every AI
-  // call, so the surfaces must stay on in dev/E2E even when the environment
-  // has no real key (CI never sets ANTHROPIC_API_KEY). The test override
-  // above still wins, so the AI-off E2E can force OFF under mock.
-  if (process.env["MOCK_AI"] === "true") return true;
-
+const hasConnectedProvider = async (
+  userId: UserId,
+  db: Db,
+): Promise<boolean> => {
   const { hasAiProviderForUser } =
     await import("~/features/ai-providers/ai-providers.server");
-  const hasProvider = await hasAiProviderForUser(userId, db).match(
+  return hasAiProviderForUser(userId, db).match(
     (has) => has,
     () => false,
   );
-  if (hasProvider) return true;
+};
 
+const isTrialQuotaConfigured = async (): Promise<boolean> => {
+  const { isTrialQuotaEnabled } = await import("~/features/ai");
+  // `raw > 0`, not mere env presence — matches the pre-Spec-85 chain so a
+  // 0/negative/blank allowance stays OFF and the env-key fallback applies.
+  return isTrialQuotaEnabled();
+};
+
+const readTrialSpend = async (userId: UserId, db: Db): Promise<number> => {
   const { isTrialQuotaEnabled, getUserTrialSpend } =
     await import("~/features/ai");
-  if (isTrialQuotaEnabled()) {
-    const allowanceEur = Number(process.env["AI_TRIAL_QUOTA_EUR"]);
-    const spentEur = await getUserTrialSpend(userId, db).catch(() => 0);
-    return spentEur < allowanceEur;
-  }
-
-  // Spec 84 de-platform: when AI_TRIAL_QUOTA_EUR is set, the env-key fallback
-  // is retired — trial is the only platform-funded path.
-  return Boolean(process.env["ANTHROPIC_API_KEY"]);
-}
+  if (!isTrialQuotaEnabled()) return 0;
+  return getUserTrialSpend(userId, db).catch(() => 0);
+};
 
 /**
  * Test/dev-only override, gated the same way as `POST /api/test/mock-context`

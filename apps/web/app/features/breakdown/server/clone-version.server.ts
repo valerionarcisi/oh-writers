@@ -13,7 +13,7 @@ import { hashText } from "@oh-writers/utils/hash";
 import { requireUser } from "~/server/context";
 import { getDb } from "~/server/db";
 import { DbError, ForbiddenError } from "../breakdown.errors";
-import { canEditBreakdown } from "../lib/permissions";
+import { canEditProject } from "@oh-writers/utils";
 import { findElementInText } from "../lib/re-match";
 import { resolveBreakdownAccessByScreenplayVersion } from "./breakdown-access";
 
@@ -42,7 +42,7 @@ export const cloneBreakdownToVersion = createServerFn({ method: "POST" })
         data.toVersionId,
       );
       if (accessResult.isErr()) return toShape(err(accessResult.error));
-      if (!canEditBreakdown(accessResult.value))
+      if (!canEditProject(accessResult.value))
         return toShape(err(new ForbiddenError("clone breakdown")));
 
       const result = await ResultAsync.fromPromise(

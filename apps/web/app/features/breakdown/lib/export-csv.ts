@@ -1,4 +1,5 @@
 import { CATEGORY_META, type BreakdownCategory } from "@oh-writers/domain";
+import { toCsv } from "@oh-writers/utils";
 
 export interface ExportRow {
   category: BreakdownCategory;
@@ -8,21 +9,14 @@ export interface ExportRow {
   scenes: number[];
 }
 
-const escapeCsv = (s: string): string =>
-  /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-
 export const breakdownToCsv = (rows: ExportRow[]): string => {
-  const header = ["Categoria", "Nome", "Descrizione", "Totale", "Scene"].join(
-    ",",
-  );
-  const lines = rows.map((r) =>
-    [
-      escapeCsv(CATEGORY_META[r.category].labelIt),
-      escapeCsv(r.name),
-      escapeCsv(r.description ?? ""),
-      String(r.totalQuantity),
-      escapeCsv(r.scenes.join(", ")),
-    ].join(","),
-  );
-  return [header, ...lines].join("\n");
+  const header = ["Categoria", "Nome", "Descrizione", "Totale", "Scene"];
+  const lines = rows.map((r) => [
+    CATEGORY_META[r.category].labelIt,
+    r.name,
+    r.description ?? "",
+    String(r.totalQuantity),
+    r.scenes.join(", "),
+  ]);
+  return toCsv(header, lines);
 };

@@ -1,3 +1,5 @@
+import { toCsv } from "@oh-writers/utils";
+
 export interface ShotListCsvScene {
   sceneNumber: number;
   heading: string;
@@ -12,9 +14,6 @@ export interface ShotListCsvShot {
   notes: string | null;
   estimatedMinutes: number | null;
 }
-
-const escapeCsv = (s: string): string =>
-  /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 
 const formatMinutes = (m: number | null): string =>
   m === null ? "" : String(m);
@@ -33,40 +32,36 @@ export const shotListToCsv = (scenes: ShotListCsvScene[]): string => {
     "Movimento",
     "Min. stim.",
     "Note",
-  ].join(",");
+  ];
 
-  const lines: string[] = [];
+  const lines: string[][] = [];
   for (const scene of scenes) {
     if (scene.shots.length === 0) {
-      lines.push(
-        [
-          escapeCsv(String(scene.sceneNumber)),
-          escapeCsv(scene.heading),
-          "",
-          "",
-          "",
-          "",
-          "",
-          "",
-        ].join(","),
-      );
+      lines.push([
+        String(scene.sceneNumber),
+        scene.heading,
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+      ]);
     } else {
       for (const shot of scene.shots) {
-        lines.push(
-          [
-            escapeCsv(String(scene.sceneNumber)),
-            escapeCsv(scene.heading),
-            escapeCsv(String(shot.position + 1)),
-            escapeCsv(shot.camera),
-            escapeCsv(shot.size),
-            escapeCsv(shot.movement),
-            formatMinutes(shot.estimatedMinutes),
-            escapeCsv(shot.notes ?? ""),
-          ].join(","),
-        );
+        lines.push([
+          String(scene.sceneNumber),
+          scene.heading,
+          String(shot.position + 1),
+          shot.camera,
+          shot.size,
+          shot.movement,
+          formatMinutes(shot.estimatedMinutes),
+          shot.notes ?? "",
+        ]);
       }
     }
   }
 
-  return [header, ...lines].join("\n");
+  return toCsv(header, lines);
 };

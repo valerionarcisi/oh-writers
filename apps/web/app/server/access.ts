@@ -82,6 +82,12 @@ const checkAccess = (
           (e) => e as ForbiddenError,
         );
   }
+  if (project.isArchived) {
+    return ResultAsync.fromPromise(
+      Promise.reject(new ForbiddenError("edit archived project")),
+      (e) => e as ForbiddenError,
+    );
+  }
   if (!canEdit(project, user.id, membership)) {
     return ResultAsync.fromPromise(
       Promise.reject(new ForbiddenError("edit project")),

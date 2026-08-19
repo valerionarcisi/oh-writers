@@ -56,3 +56,19 @@ export class ValidationError {
     this.message = `Validation failed on ${field}: ${reason}`;
   }
 }
+
+// Generic "an entity does not exist" — Spec 85 #4. Replaces the per-feature
+// uniform `XNotFoundError(id)` classes (Doc, Scene, Schedule, ShotPlan, …).
+// Features whose NotFound carries extra fields (e.g. SubjectNotFoundError by
+// projectId) keep their own class: they are genuine variants, not duplicates.
+export class NotFoundError {
+  readonly _tag = "NotFoundError" as const;
+  readonly message: string;
+
+  constructor(
+    readonly resource: string,
+    readonly id: string,
+  ) {
+    this.message = `${resource} not found: ${id}`;
+  }
+}
