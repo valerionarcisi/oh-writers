@@ -68,7 +68,7 @@ export function RegisterForm() {
     });
     setIsSubmitting(false);
 
-    if ("error" in signUpResult && signUpResult.error) {
+    if (signUpResult.error) {
       setApiError(
         signUpResult.error.message ?? t("auth.register.error.createFailed"),
       );

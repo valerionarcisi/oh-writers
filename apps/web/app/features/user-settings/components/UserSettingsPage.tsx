@@ -347,7 +347,7 @@ function PasswordSection() {
         newPassword: parsed.data.next,
         revokeOtherSessions: false,
       });
-      if ("error" in result && result.error) {
+      if (result.error) {
         setApiError(result.error.message ?? t("settings.password.changeError"));
       } else {
         setSuccess(true);
@@ -467,7 +467,7 @@ function DangerZoneSection() {
       setApiError(null);
       try {
         const result = await authClient.deleteUser();
-        if ("error" in result && result.error) {
+        if (result.error) {
           setApiError(result.error.message ?? t("settings.delete.error"));
           setIsPending(false);
           return;

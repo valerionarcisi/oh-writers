@@ -65,7 +65,7 @@ export function LoginForm({ availableProviders }: LoginFormProps) {
     const signInResult = await authClient.signIn.email({ email, password });
     setIsSubmitting(false);
 
-    if ("error" in signInResult && signInResult.error) {
+    if (signInResult.error) {
       setApiError(t("auth.error.invalidCredentials"));
       return;
     }
