@@ -10,15 +10,17 @@ Mapped to the MVP roadmap item **infra/08 — Infrastructure / 08b — Cloud dep
 ## Current state
 
 A production `Dockerfile` (`docker/Dockerfile`, multi-stage) and
-`docker/docker-compose.yml` already exist and build `web` + `ws-server`. What is
-missing is the operational hardening required to run a live system.
+`docker/docker-compose.yml` exist and both `web` + `ws-server` targets build
+and run (verified locally: both containers start and answer their health
+checks). What is missing is the operational hardening required to run a live
+system.
 
 ## Blockers (must-fix to run a real instance)
 
 | #   | Gap                                                                                                                                                                                                        | Issue |
 | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
 | 1   | **Migrations on deploy** — `docker-compose.yml` never runs `drizzle-kit migrate`; on first boot the DB is empty. Need a migration job/entrypoint before `web`/`ws-server` start.                           | #125  |
-| 2   | **`ws-server` has no deploy target** — its `build` script is a no-op ("no deploy target yet"). Yjs realtime co-writing won't ship until it is compiled and socket-secured.                                 | #125  |
+| 2   | ~~**`ws-server` has no deploy target**~~ — DONE. `tsup` now compiles it to `dist/`; the Docker `ws-server` target builds and serves a working image (verified: `/health` responds).                        | #125  |
 | 3   | **No TLS / reverse proxy** — `web:3000` and `ws-server:1234` are published raw. Need a proxy (Caddy/Traefik/nginx) for HTTPS + WebSocket upgrade, otherwise auth cookies and Yjs sync travel in plaintext. | #125  |
 | 4   | **Hand-managed secrets** — `BETTER_AUTH_SECRET`, `ANTHROPIC_API_KEY`, `POSTGRES_PASSWORD` need a real secret store (Docker secrets / Vault / platform env), not `.env`.                                    | #125  |
 

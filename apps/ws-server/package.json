@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch --env-file-if-exists=../web/.env src/index.ts",
-    "build": "echo 'ws-server runs via tsx; no build step (no deploy target yet — see infra/08b)'",
-    "start": "tsx --env-file-if-exists=../web/.env src/index.ts",
+    "build": "tsup",
+    "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
     "test:unit": "vitest run"
   },
@@ -28,6 +28,7 @@
   "devDependencies": {
     "@types/node": "22.14.0",
     "@types/ws": "8.5.13",
+    "tsup": "^8.5.1",
     "tsx": "4.19.2",
     "typescript": "5.9.3",
     "vitest": "2.1.9"
