@@ -69,14 +69,14 @@ const buildSecondaryStorage = (): BetterAuthOptions["secondaryStorage"] => {
   redis.on("error", () => undefined);
 
   return {
-    get: async (key) => {
+    get: async (key: string) => {
       try {
         return (await redis.get(key)) ?? null;
       } catch {
         return null;
       }
     },
-    set: async (key, value, ttl) => {
+    set: async (key: string, value: string, ttl?: number) => {
       try {
         if (ttl) await redis.set(key, value, "EX", ttl);
         else await redis.set(key, value);
@@ -84,7 +84,7 @@ const buildSecondaryStorage = (): BetterAuthOptions["secondaryStorage"] => {
         // Best-effort cache write; the Postgres primary store is authoritative.
       }
     },
-    delete: async (key) => {
+    delete: async (key: string) => {
       try {
         await redis.del(key);
       } catch {

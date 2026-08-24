@@ -61,15 +61,17 @@ export function RegisterForm() {
     }
 
     setIsSubmitting(true);
-    const { error } = await authClient.signUp.email({
+    const signUpResult = await authClient.signUp.email({
       name: result.data.name,
       email: result.data.email,
       password: result.data.password,
     });
     setIsSubmitting(false);
 
-    if (error) {
-      setApiError(error.message ?? t("auth.register.error.createFailed"));
+    if ("error" in signUpResult && signUpResult.error) {
+      setApiError(
+        signUpResult.error.message ?? t("auth.register.error.createFailed"),
+      );
       return;
     }
 
