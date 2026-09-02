@@ -4,7 +4,7 @@ import {
   Outlet,
   Scripts,
 } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ToastProvider, ConfirmDialogProvider } from "@oh-writers/ui";
 import type { Locale } from "@oh-writers/domain";
@@ -56,6 +56,12 @@ export const Route = createRootRoute({
 function RootLayout() {
   const [queryClient] = useState(() => new QueryClient());
   const { locale, isDevEnvironment, isAiEnabled } = Route.useLoaderData();
+
+  useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js");
+    }
+  }, []);
 
   return (
     <html lang={locale}>

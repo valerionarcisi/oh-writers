@@ -8,9 +8,8 @@ import { BASE_URL } from "./fixtures";
  * installability contract: a broken manifest fails silently — the browser just
  * declines to offer "Add to Home Screen", with nothing in the console.
  *
- * Offline behaviour is deliberately NOT covered here: no service worker ships
- * yet (see the issue — caching server-fn responses would resurrect the staleness
- * bugs #111 just fixed).
+ * The service worker only caches the app shell (manifest + icons), not
+ * server-fn responses — the staleness bugs #111 fixed stay fixed.
  */
 test.describe("#112 PWA installability", () => {
   test("the manifest is served and describes an installable app", async ({
@@ -73,5 +72,24 @@ test.describe("#112 PWA installability", () => {
       "content",
       /viewport-fit=cover/,
     );
+  });
+
+  test("the service worker registers and activates", async ({
+    authenticatedPage: page,
+  }) => {
+    await page.goto(`${BASE_URL}/dashboard`);
+
+    const state = await page.evaluate(async () => {
+      const reg = await navigator.serviceWorker.ready;
+      const worker = reg.active;
+      if (!worker || worker.state === "activated") return worker?.state;
+      return new Promise((resolve) => {
+        worker.addEventListener("statechange", () => resolve(worker.state), {
+          once: true,
+        });
+      });
+    });
+
+    expect(state).toBe("activated");
   });
 });
