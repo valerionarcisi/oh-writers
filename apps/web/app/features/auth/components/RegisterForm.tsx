@@ -44,6 +44,7 @@ export function RegisterForm() {
   const router = useRouter();
   const { t } = useTranslation();
   const registerSchema = buildRegisterSchema(t);
+  const [step, setStep] = useState<"form" | "check-email">("form");
   const [values, setValues] = useState<FormValues>({
     name: "",
     email: "",
@@ -102,8 +103,39 @@ export function RegisterForm() {
       return;
     }
 
+    // better-auth returns `token: null` whenever sign-up creates the account
+    // but issues no session (currently: requireEmailVerification in
+    // packages/auth/src/index.ts). Route to the check-email step instead of
+    // a dashboard that would just bounce back to /login with no explanation
+    // (issue #133).
+    if (!signUpResult.data?.token) {
+      setStep("check-email");
+      return;
+    }
+
     router.navigate({ to: "/dashboard" });
   };
+
+  if (step === "check-email") {
+    return (
+      <div className={styles.wrapper}>
+        <div className={styles.header}>
+          <span className={styles.logo}>Oh Writers</span>
+          <h1 className={styles.heading}>
+            {t("auth.register.checkEmailHeading")}
+          </h1>
+        </div>
+        <p className={styles.footer}>
+          {t("auth.register.checkEmailMessage")} <strong>{values.email}</strong>
+        </p>
+        <p className={styles.footer}>
+          <Link to="/login" className={styles.link}>
+            {t("auth.register.signIn")}
+          </Link>
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.wrapper}>

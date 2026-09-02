@@ -43,7 +43,12 @@ test.describe("[Spec 88] legal baseline", () => {
 
     await page.getByRole("checkbox").check();
     await page.getByRole("button", { name: /create account/i }).click();
-    await page.waitForURL("**/dashboard", { timeout: 15_000 });
+
+    // requireEmailVerification is on (packages/auth/src/index.ts): signUp
+    // creates the account but issues no session, so the form must show the
+    // check-email step rather than navigate to /dashboard (issue #133).
+    await expect(page.getByText(/check your email/i)).toBeVisible();
+    await expect(page).toHaveURL(/\/register/);
   });
 
   test("cookie notice dismisses and stays dismissed after reload", async ({

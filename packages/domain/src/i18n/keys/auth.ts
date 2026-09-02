@@ -45,6 +45,8 @@ export const authKeys = {
     "auth.register.submit": "Create account",
     "auth.register.haveAccount": "Already have an account?",
     "auth.register.signIn": "Sign in",
+    "auth.register.checkEmailHeading": "Check your email",
+    "auth.register.checkEmailMessage": "We sent a verification link to",
   },
   it: {
     // Login — validation
@@ -90,5 +92,7 @@ export const authKeys = {
     "auth.register.submit": "Create account",
     "auth.register.haveAccount": "Already have an account?",
     "auth.register.signIn": "Sign in",
+    "auth.register.checkEmailHeading": "Check your email",
+    "auth.register.checkEmailMessage": "We sent a verification link to",
   },
 } as const satisfies LocaleDict;
