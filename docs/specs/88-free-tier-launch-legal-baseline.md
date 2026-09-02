@@ -1,6 +1,6 @@
 # Spec 88 — Free-tier launch: legal baseline with AI off
 
-Status: **Planned**
+Status: **Done** (2026-09-02)
 Depends on: [[Spec 84]] (`Features.AI_ENABLED` — the master AI switch this spec relies on, unmodified)
 
 ## Context
