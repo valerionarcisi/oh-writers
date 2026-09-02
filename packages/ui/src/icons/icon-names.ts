@@ -1,5 +1,6 @@
 // packages/ui/src/icons/icon-names.ts
 export const ICON_NAMES = [
+  "home",
   "search",
   "bell",
   "clock",

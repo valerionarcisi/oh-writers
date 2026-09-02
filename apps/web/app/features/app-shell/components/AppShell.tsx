@@ -1662,7 +1662,7 @@ function AppShellInner({
             home={{
               id: "home",
               label: t("nav.home"),
-              icon: "⌂",
+              icon: "home",
               href: "/dashboard",
             }}
             sections={fullSections}

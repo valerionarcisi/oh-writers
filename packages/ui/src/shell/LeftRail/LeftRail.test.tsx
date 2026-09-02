@@ -602,7 +602,7 @@ describe("LeftRail", () => {
     const { getByText } = render(
       <LeftRail
         brand={{ label: "Oh Writers", onPress: vi.fn() }}
-        home={{ id: "home", label: "Home", icon: "⌂", href: "/dashboard" }}
+        home={{ id: "home", label: "Home", icon: "home", href: "/dashboard" }}
         sections={[]}
         onNavigate={onNavigate}
       />,
