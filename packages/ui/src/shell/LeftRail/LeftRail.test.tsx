@@ -596,4 +596,29 @@ describe("LeftRail", () => {
     expect(queryByText("Sessione 5")).toBeNull();
     expect(queryByText("Sessione 6")).toBeNull();
   });
+
+  it("renders the home row and navigates on click", () => {
+    const onNavigate = vi.fn();
+    const { getByText } = render(
+      <LeftRail
+        brand={{ label: "Oh Writers", onPress: vi.fn() }}
+        home={{ id: "home", label: "Home", icon: "⌂", href: "/dashboard" }}
+        sections={[]}
+        onNavigate={onNavigate}
+      />,
+    );
+    fireEvent.click(getByText("Home"));
+    expect(onNavigate).toHaveBeenCalledWith("/dashboard");
+  });
+
+  it("omits the home row when not provided", () => {
+    const { queryByText } = render(
+      <LeftRail
+        brand={{ label: "Oh Writers", onPress: vi.fn() }}
+        sections={[]}
+        onNavigate={vi.fn()}
+      />,
+    );
+    expect(queryByText("Home")).toBeNull();
+  });
 });

@@ -1465,6 +1465,7 @@ function AppShellInner({
       ...(projectId ? { onGear: handleProjectSettings, gearMenuItems } : {}),
       hasUnreadNotifications: hasUnseen,
       avatarLabel: deriveInitials(user.name),
+      avatarImageUrl: user.avatarUrl,
       // The ⊟ split toggle belongs to the chat surface only (the session
       // conversation) — on an editor page the diff lives inline, so the toggle
       // is omitted there (no button rendered).
@@ -1658,6 +1659,12 @@ function AppShellInner({
                   }
                 : undefined
             }
+            home={{
+              id: "home",
+              label: t("nav.home"),
+              icon: "⌂",
+              href: "/dashboard",
+            }}
             sections={fullSections}
             // The rail renders the "Sessioni Cesare" section whenever
             // `onSessionsOpen` is set, even with an empty `sessions` list (it

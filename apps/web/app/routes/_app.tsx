@@ -54,6 +54,7 @@ export const Route = createFileRoute("/_app")({
         name: user.name,
         email: user.email,
         locale: user.locale,
+        avatarUrl: user.avatarUrl,
       },
     };
   },

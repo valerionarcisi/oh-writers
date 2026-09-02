@@ -116,6 +116,10 @@ export type LeftRailProps = {
      *  header opens this menu instead of firing `onPress`. */
     menuItems?: ReadonlyArray<DropdownMenuItem>;
   };
+  /** Standalone "Home" entry, rendered above the labelled sections — always
+   *  present regardless of project context (unlike `sections`, which is
+   *  empty outside a project). A single unlabelled row, not a section. */
+  home?: RailNavItem;
   /** Sviluppo / Produzione / Recenti — each rendered as a labelled section.
    *  Section ordering is preserved. */
   sections: ReadonlyArray<RailSection>;
@@ -645,6 +649,7 @@ function visibleRailSessions(sessions: ReadonlyArray<CesareSessionItem>): {
 export function LeftRail({
   brand,
   project,
+  home,
   sections,
   sessions,
   onSessionSelect,
@@ -900,6 +905,15 @@ export function LeftRail({
           {tools.map((tool) => (
             <ToolButton key={tool.id} tool={tool} />
           ))}
+        </div>
+      )}
+
+      {home && (
+        <div className={styles.sectionItems}>
+          <RailItemButton
+            item={home}
+            onActivate={() => onNavigate(home.href)}
+          />
         </div>
       )}
 

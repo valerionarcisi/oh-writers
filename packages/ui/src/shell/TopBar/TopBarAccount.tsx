@@ -11,7 +11,7 @@
 // (`notifications-btn` / `profile-btn` / `settings-btn`) so the move is
 // transparent to existing E2E selectors.
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { useButton } from "react-aria";
 import { Icon } from "../../icons/Icon";
 import {
@@ -39,8 +39,14 @@ export type TopBarAccountActions = {
   gearMenuItems?: DropdownMenuItem[];
   /** Renders the unread dot on the bell. */
   hasUnreadNotifications: boolean;
-  /** 1–2 letter initials shown in the avatar circle. */
+  /** 1–2 letter initials shown in the avatar circle when no image is set
+   *  (also the alt text and fallback if the image fails to load). */
   avatarLabel: string;
+  /** Profile photo URL (own upload or the OAuth provider's avatar), or
+   *  `null` when the account has none. When present, shown instead of the
+   *  initials; falls back to initials on a load error (broken URL, revoked
+   *  provider image, offline). */
+  avatarImageUrl: string | null;
   /** Toggle the SplitDrawer (⊟, Claude-style). Omitted → the toggle is hidden.
    *  When `canToggleSplit` is false the button renders disabled. */
   onToggleSplit?: () => void;
@@ -62,6 +68,29 @@ export type TopBarAccountLabels = {
 export interface TopBarAccountProps {
   account: TopBarAccountActions;
   labels: TopBarAccountLabels;
+}
+
+// Shows the profile photo when set; falls back to initials on missing URL or
+// a failed image load (broken link, revoked OAuth avatar, offline).
+function AvatarGlyph({
+  imageUrl,
+  label,
+}: {
+  imageUrl: string | null;
+  label: string;
+}) {
+  const [failed, setFailed] = useState(false);
+  if (imageUrl && !failed) {
+    return (
+      <img
+        src={imageUrl}
+        alt={label}
+        className={styles.accountAvatarImg}
+        onError={() => setFailed(true)}
+      />
+    );
+  }
+  return <span aria-hidden="true">{label}</span>;
 }
 
 export function TopBarAccount({ account, labels }: TopBarAccountProps) {
@@ -134,7 +163,12 @@ export function TopBarAccount({ account, labels }: TopBarAccountProps) {
       </button>
       {account.avatarMenuItems ? (
         <DropdownMenu
-          trigger={<span aria-hidden="true">{account.avatarLabel}</span>}
+          trigger={
+            <AvatarGlyph
+              imageUrl={account.avatarImageUrl}
+              label={account.avatarLabel}
+            />
+          }
           items={account.avatarMenuItems}
           align="end"
           triggerClassName={[styles.accountBtn, styles.accountAvatar].join(" ")}
@@ -150,7 +184,10 @@ export function TopBarAccount({ account, labels }: TopBarAccountProps) {
           data-topbar-account="avatar"
           data-testid="profile-btn"
         >
-          <span aria-hidden="true">{account.avatarLabel}</span>
+          <AvatarGlyph
+            imageUrl={account.avatarImageUrl}
+            label={account.avatarLabel}
+          />
         </button>
       )}
       {account.gearMenuItems ? (

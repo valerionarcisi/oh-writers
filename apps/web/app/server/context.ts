@@ -12,6 +12,11 @@ export type AppUser = {
   name: string;
   email: string;
   locale: Locale;
+  /** Profile photo — the OAuth provider's avatar (Better Auth's `image`
+   *  field) when the user signed up via Google/GitHub. Null for
+   *  email/password accounts (no upload flow yet — TopBarAccount falls back
+   *  to initials). */
+  avatarUrl: string | null;
 };
 
 // ─── Dev-only auth bypass ──────────────────────────────────────────────────────
@@ -31,6 +36,7 @@ const DEV_BYPASS_USER: AppUser = {
   name: "Test User",
   email: "test@ohwriters.dev",
   locale: "it" as Locale,
+  avatarUrl: null,
 };
 
 let devBypassLogged = false;
@@ -100,6 +106,7 @@ export const getUserFromHeaders = async (
     name: session.user.name,
     email: session.user.email,
     locale: (rows[0]?.locale ?? "en") as Locale,
+    avatarUrl: session.user.image ?? null,
   };
 };
 

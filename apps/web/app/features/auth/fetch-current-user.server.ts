@@ -6,6 +6,7 @@ export type SerializableUser = {
   name: string;
   email: string;
   locale: Locale;
+  avatarUrl: string | null;
 };
 
 /**
@@ -28,6 +29,7 @@ export const fetchCurrentUser = createServerFn({ method: "GET" }).handler(
       name: user.name,
       email: user.email,
       locale: user.locale,
+      avatarUrl: user.avatarUrl,
     };
   },
 );

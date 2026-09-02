@@ -3,6 +3,8 @@ import type { LocaleDict } from "./types.js";
 /** Shared nav / shell / status / action keys (Spec 18b PR-2). */
 export const commonKeys = {
   en: {
+    // Navigation — shell
+    "nav.home": "Home",
     // Navigation — document types
     "nav.soggetto": "Soggetto",
     "nav.synopsis": "Synopsis",
@@ -34,6 +36,8 @@ export const commonKeys = {
     "action.signOut": "Sign out",
   },
   it: {
+    // Navigation — shell
+    "nav.home": "Home",
     // Navigation — document types
     "nav.soggetto": "Soggetto",
     "nav.synopsis": "Sinossi",
