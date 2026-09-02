@@ -14,6 +14,7 @@ import {
 import type { Locale } from "@oh-writers/domain";
 import { LocaleProvider } from "~/features/i18n";
 import { FeatureProvider } from "~/features/feature-flags";
+import { CookieBanner } from "~/features/legal/components/CookieBanner";
 import "../styles/global.css";
 
 export const Route = createRootRoute({
@@ -108,6 +109,7 @@ function RootLayout() {
               <ToastProvider>
                 <ConfirmDialogProvider>
                   <Outlet />
+                  <CookieBanner />
                 </ConfirmDialogProvider>
               </ToastProvider>
             </QueryClientProvider>

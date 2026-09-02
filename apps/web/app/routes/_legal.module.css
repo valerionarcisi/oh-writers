@@ -1,0 +1,42 @@
+/* Shared layout for public legal pages (privacy, terms) */
+
+.page {
+  min-block-size: 100vh;
+  display: flex;
+  justify-content: center;
+  padding: var(--space-8) var(--space-6);
+  background: var(--ds-bg);
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  inline-size: 100%;
+  max-inline-size: 640px;
+}
+
+.heading {
+  font-family: var(--font-sans);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  color: var(--ds-text);
+  margin: 0;
+}
+
+.draftNotice {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--ds-warning);
+  border-radius: var(--radius-md);
+  background: var(--ds-warning-soft);
+  font-size: var(--text-sm);
+  color: var(--ds-text);
+  margin: 0;
+}
+
+.body {
+  font-size: var(--text-base);
+  line-height: 1.6;
+  color: var(--ds-text);
+  margin: 0;
+}

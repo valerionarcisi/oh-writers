@@ -11,7 +11,9 @@
 // Import Routes
 
 import { Route as rootRoute } from "./routes/__root";
+import { Route as TermsImport } from "./routes/terms";
 import { Route as RegisterImport } from "./routes/register";
+import { Route as PrivacyImport } from "./routes/privacy";
 import { Route as LoginImport } from "./routes/login";
 import { Route as AppImport } from "./routes/_app";
 import { Route as IndexImport } from "./routes/index";
@@ -55,9 +57,21 @@ import { Route as AppProjectsIdScreenplayDiffV1V2Import } from "./routes/_app.pr
 
 // Create/Update Routes
 
+const TermsRoute = TermsImport.update({
+  id: "/terms",
+  path: "/terms",
+  getParentRoute: () => rootRoute,
+} as any);
+
 const RegisterRoute = RegisterImport.update({
   id: "/register",
   path: "/register",
+  getParentRoute: () => rootRoute,
+} as any);
+
+const PrivacyRoute = PrivacyImport.update({
+  id: "/privacy",
+  path: "/privacy",
   getParentRoute: () => rootRoute,
 } as any);
 
@@ -335,11 +349,25 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof LoginImport;
       parentRoute: typeof rootRoute;
     };
+    "/privacy": {
+      id: "/privacy";
+      path: "/privacy";
+      fullPath: "/privacy";
+      preLoaderRoute: typeof PrivacyImport;
+      parentRoute: typeof rootRoute;
+    };
     "/register": {
       id: "/register";
       path: "/register";
       fullPath: "/register";
       preLoaderRoute: typeof RegisterImport;
+      parentRoute: typeof rootRoute;
+    };
+    "/terms": {
+      id: "/terms";
+      path: "/terms";
+      fullPath: "/terms";
+      preLoaderRoute: typeof TermsImport;
       parentRoute: typeof rootRoute;
     };
     "/_app/crash-test": {
@@ -726,7 +754,9 @@ export interface FileRoutesByFullPath {
   "/": typeof IndexRoute;
   "": typeof AppRouteWithChildren;
   "/login": typeof LoginRoute;
+  "/privacy": typeof PrivacyRoute;
   "/register": typeof RegisterRoute;
+  "/terms": typeof TermsRoute;
   "/crash-test": typeof AppCrashTestRoute;
   "/dashboard": typeof AppDashboardRoute;
   "/not-found": typeof AppNotFoundRoute;
@@ -770,7 +800,9 @@ export interface FileRoutesByTo {
   "/": typeof IndexRoute;
   "": typeof AppRouteWithChildren;
   "/login": typeof LoginRoute;
+  "/privacy": typeof PrivacyRoute;
   "/register": typeof RegisterRoute;
+  "/terms": typeof TermsRoute;
   "/crash-test": typeof AppCrashTestRoute;
   "/dashboard": typeof AppDashboardRoute;
   "/not-found": typeof AppNotFoundRoute;
@@ -813,7 +845,9 @@ export interface FileRoutesById {
   "/": typeof IndexRoute;
   "/_app": typeof AppRouteWithChildren;
   "/login": typeof LoginRoute;
+  "/privacy": typeof PrivacyRoute;
   "/register": typeof RegisterRoute;
+  "/terms": typeof TermsRoute;
   "/_app/crash-test": typeof AppCrashTestRoute;
   "/_app/dashboard": typeof AppDashboardRoute;
   "/_app/not-found": typeof AppNotFoundRoute;
@@ -859,7 +893,9 @@ export interface FileRouteTypes {
     | "/"
     | ""
     | "/login"
+    | "/privacy"
     | "/register"
+    | "/terms"
     | "/crash-test"
     | "/dashboard"
     | "/not-found"
@@ -902,7 +938,9 @@ export interface FileRouteTypes {
     | "/"
     | ""
     | "/login"
+    | "/privacy"
     | "/register"
+    | "/terms"
     | "/crash-test"
     | "/dashboard"
     | "/not-found"
@@ -943,7 +981,9 @@ export interface FileRouteTypes {
     | "/"
     | "/_app"
     | "/login"
+    | "/privacy"
     | "/register"
+    | "/terms"
     | "/_app/crash-test"
     | "/_app/dashboard"
     | "/_app/not-found"
@@ -988,7 +1028,9 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute;
   AppRoute: typeof AppRouteWithChildren;
   LoginRoute: typeof LoginRoute;
+  PrivacyRoute: typeof PrivacyRoute;
   RegisterRoute: typeof RegisterRoute;
+  TermsRoute: typeof TermsRoute;
   DevTokensRoute: typeof DevTokensRoute;
   InviteTokenRoute: typeof InviteTokenRoute;
 }
@@ -997,7 +1039,9 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
   LoginRoute: LoginRoute,
+  PrivacyRoute: PrivacyRoute,
   RegisterRoute: RegisterRoute,
+  TermsRoute: TermsRoute,
   DevTokensRoute: DevTokensRoute,
   InviteTokenRoute: InviteTokenRoute,
 };
@@ -1015,7 +1059,9 @@ export const routeTree = rootRoute
         "/",
         "/_app",
         "/login",
+        "/privacy",
         "/register",
+        "/terms",
         "/dev/tokens",
         "/invite/$token"
       ]
@@ -1059,8 +1105,14 @@ export const routeTree = rootRoute
     "/login": {
       "filePath": "login.tsx"
     },
+    "/privacy": {
+      "filePath": "privacy.tsx"
+    },
     "/register": {
       "filePath": "register.tsx"
+    },
+    "/terms": {
+      "filePath": "terms.tsx"
     },
     "/_app/crash-test": {
       "filePath": "_app.crash-test.tsx",

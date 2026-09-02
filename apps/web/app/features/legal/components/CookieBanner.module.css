@@ -1,0 +1,8 @@
+.wrapper {
+  position: fixed;
+  inset-block-end: var(--space-4);
+  inset-inline: var(--space-4);
+  z-index: var(--z-toast);
+  max-inline-size: 640px;
+  margin-inline: auto;
+}

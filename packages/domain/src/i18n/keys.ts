@@ -13,6 +13,7 @@ import { fundraisingKeys } from "./keys/fundraising.js";
 import { predictionsKeys } from "./keys/predictions.js";
 import { teamsKeys } from "./keys/teams.js";
 import { authKeys } from "./keys/auth.js";
+import { legalKeys } from "./keys/legal.js";
 import { userSettingsKeys } from "./keys/userSettings.js";
 import { versionsKeys } from "./keys/versions.js";
 import { dashboardKeys } from "./keys/dashboard.js";
@@ -40,6 +41,7 @@ const AREA_DICTS = [
   predictionsKeys,
   teamsKeys,
   authKeys,
+  legalKeys,
   userSettingsKeys,
   versionsKeys,
   dashboardKeys,
@@ -71,6 +73,7 @@ type AllEnKeys = (typeof commonKeys)["en"] &
   (typeof predictionsKeys)["en"] &
   (typeof teamsKeys)["en"] &
   (typeof authKeys)["en"] &
+  (typeof legalKeys)["en"] &
   (typeof userSettingsKeys)["en"] &
   (typeof versionsKeys)["en"] &
   (typeof dashboardKeys)["en"];
