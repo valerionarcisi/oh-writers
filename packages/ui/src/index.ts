@@ -84,7 +84,6 @@ export { Icon } from "./icons/Icon";
 export type { IconProps } from "./icons/Icon";
 export type { IconName } from "./icons/icon-names";
 export { ICON_NAMES } from "./icons/icon-names";
-export { SpriteLoader } from "./icons/SpriteLoader";
 
 // ─── DS-v2 Primitives ───────────────────────────────────────
 export { Scrim } from "./primitives/Scrim/Scrim";

@@ -4,13 +4,14 @@ import { render } from "@testing-library/react";
 import { Icon } from "./Icon";
 
 describe("Icon", () => {
-  it("renders an SVG referencing the correct sprite symbol", () => {
+  it("renders an SVG for the named icon", () => {
     const { container } = render(<Icon name="search" />);
     const svg = container.querySelector("svg");
     expect(svg).not.toBeNull();
-    const use = svg!.querySelector("use");
-    expect(use).not.toBeNull();
-    expect(use!.getAttribute("href")).toBe("#i-search");
+    // lucide-react adds a per-icon `lucide-<kebab-name>` CSS class to every
+    // rendered svg; a stable way to assert the right icon rendered without
+    // depending on lucide's internal path markup.
+    expect(svg!.getAttribute("class")).toContain("lucide-search");
   });
 
   it("uses default size 16x16 when not specified", () => {

@@ -6,11 +6,7 @@ import {
 } from "@tanstack/react-router";
 import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  ToastProvider,
-  ConfirmDialogProvider,
-  SpriteLoader,
-} from "@oh-writers/ui";
+import { ToastProvider, ConfirmDialogProvider } from "@oh-writers/ui";
 import type { Locale } from "@oh-writers/domain";
 import { LocaleProvider } from "~/features/i18n";
 import { FeatureProvider } from "~/features/feature-flags";
@@ -98,7 +94,6 @@ function RootLayout() {
         <HeadContent />
       </head>
       <body>
-        <SpriteLoader />
         <LocaleProvider locale={locale}>
           <FeatureProvider
             locale={locale}
