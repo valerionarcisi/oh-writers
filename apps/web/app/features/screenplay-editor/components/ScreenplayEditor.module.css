@@ -62,7 +62,23 @@
   }
 }
 
+/*
+ * Despite the name, this used to be an in-flow flex child — with the page
+ * scrolling on `document.documentElement` (not an inner overflow container),
+ * it only became visible once the reader scrolled all the way to the bottom
+ * of the screenplay, which on a real multi-page script is effectively never.
+ * Now genuinely fixed to the viewport so scene/page counts stay visible
+ * while writing. Anchored past the rail's width (following the same
+ * body[data-shell] pattern LeftRail/BottomDock/FloatingDock already use) so
+ * it never sits under the sidebar; z-index stays below the BottomDock/
+ * FloatingDock pills (z-index 30 / --cesare-drawer-z) so those still read as
+ * on top at the bottom-left/bottom-right corners. Found live 2026-09-03.
+ */
 .stickyFooter {
+  position: fixed;
+  inset-inline: 240px 0;
+  inset-block-end: 0;
+  z-index: 20;
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -72,6 +88,11 @@
   background: var(--ds-surface);
   font-size: var(--text-xs);
   color: var(--ds-text-2);
+}
+
+:global(body[data-shell="collapsed"]) .stickyFooter,
+:global(body[data-shell="focus"]) .stickyFooter {
+  inset-inline-start: 0;
 }
 
 .counter {
@@ -157,6 +178,14 @@
   align-items: center;
   padding-block: var(--ds-space-4);
   padding-inline: 0;
+  /* Now that .stickyFooter is a fixed overlay rather than an in-flow last
+     child (see its own comment), the last lines of a script that fills the
+     viewport would otherwise sit right under it — this reserves the same
+     ~40px so the page's own scroll (whichever element actually ends up
+     scrolling — .editorArea's overflow:auto, or the document itself when an
+     ancestor's height:100% doesn't resolve) never hides content behind the
+     bar. */
+  padding-block-end: calc(var(--ds-space-4) + 40px);
 }
 
 /*
