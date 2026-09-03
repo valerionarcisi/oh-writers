@@ -605,12 +605,16 @@ export function NarrativeEditor({
     );
   }
 
-  const layout = layoutForType(type);
   // Treatment shows the chapter index (H2/H3 TOC) stacked above the margin notes
   // in the SAME right aside, so the document column isn't squeezed by a separate
   // left column. Spec 84 §5: the margin notes column is a Cesare surface
   // (editorial advice + "Esplora con Cesare" entry point) — hidden entirely
-  // when AI is off, not just emptied.
+  // when AI is off, not just emptied. Treatment's TOC keeps the aside non-empty
+  // regardless of AI state, so only collapse to "single" when NEITHER renders —
+  // otherwise the reserved 320px column sits empty and the page column reads as
+  // off-center (found live 2026-09-03: measured 176px off the available center).
+  const hasRightAside = isTreatment || isAiEnabled;
+  const layout = hasRightAside ? layoutForType(type) : "single";
   const rightAside = (
     <>
       {isTreatment && <TreatmentToc content={content} />}

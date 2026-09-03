@@ -9,7 +9,12 @@
   display: flex;
   flex-direction: column;
   min-block-size: 100%;
-  background: var(--ds-surface-alt);
+  /* Same token as .editorArea (ScreenplayEditor.module.css) — that module's
+     own comment calls for "a continuous off-white background, not a dark
+     strip" around the page. A different token here left a visible second,
+     slightly darker band on either side of the page's actual background
+     column (found live 2026-09-03, measured as two concentric greys). */
+  background: var(--ds-bg);
   color: var(--ds-text);
   font-family: var(--ds-font-sans);
 }
