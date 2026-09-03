@@ -75,6 +75,20 @@ export const authKeys = {
     "auth.register.signIn": "Sign in",
     "auth.register.checkEmailHeading": "Check your email",
     "auth.register.checkEmailMessage": "We sent a verification link to",
+    // Splash screen — rotating quote (one picked at random client-side per
+    // load, see SplashScreen.tsx). Author names are kept as-is in both
+    // locales; only the quote body is translated.
+    "splash.quote.0":
+      "If you have a problem with the third act, the real problem is in the first act.",
+    "splash.quoteAuthor.0": "Billy Wilder",
+    "splash.quote.1": "Nobody knows anything.",
+    "splash.quoteAuthor.1": "William Goldman",
+    "splash.quote.2": "Story is about eternal, universal forms, not formulas.",
+    "splash.quoteAuthor.2": "Robert McKee",
+    "splash.quote.3": "Drama is life with the dull bits cut out.",
+    "splash.quoteAuthor.3": "Alfred Hitchcock",
+    "splash.quote.4": "Give me the same thing... only different.",
+    "splash.quoteAuthor.4": "Blake Snyder, Save the Cat!",
   },
   it: {
     // Login — validation
@@ -150,5 +164,19 @@ export const authKeys = {
     "auth.register.signIn": "Sign in",
     "auth.register.checkEmailHeading": "Check your email",
     "auth.register.checkEmailMessage": "We sent a verification link to",
+    // Splash screen — rotating quote (see the `en` block above for the
+    // sourcing note). Quote body translated; author name kept verbatim.
+    "splash.quote.0":
+      "Se hai un problema con il terzo atto, il problema vero è nel primo atto.",
+    "splash.quoteAuthor.0": "Billy Wilder",
+    "splash.quote.1": "Nessuno sa niente.",
+    "splash.quoteAuthor.1": "William Goldman",
+    "splash.quote.2":
+      "La storia riguarda forme eterne e universali, non formule.",
+    "splash.quoteAuthor.2": "Robert McKee",
+    "splash.quote.3": "Il dramma è la vita con le parti noiose tagliate.",
+    "splash.quoteAuthor.3": "Alfred Hitchcock",
+    "splash.quote.4": "Dammi la stessa cosa... ma diversa.",
+    "splash.quoteAuthor.4": "Blake Snyder, Save the Cat!",
   },
 } as const satisfies LocaleDict;

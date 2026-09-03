@@ -1,7 +1,7 @@
 /* apps/web/app/features/app-shell/components/SplashScreen.module.css */
 
 /* Brand splash on cold load. Paper (light) canvas over the whole app, lockup
-   centered; pure CSS keyframes drive the whole 3.2s life then the overlay
+   centered; pure CSS keyframes drive the whole 4.2s life then the overlay
    stays hidden forwards (fill mode), and `pointer-events: none` so it never
    blocks the app once gone (and never degrades the a11y tree interactions). */
 .splash {
@@ -13,7 +13,7 @@
   background: var(--ds-bg);
   color: var(--ds-text);
   pointer-events: none;
-  animation: splash-life 3.2s both;
+  animation: splash-life 4.2s both;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -38,6 +38,15 @@
   }
 }
 
+/* Lockup + quote share one column, sized to the lockup's own rendered width
+   (`grid` collapses the column to its widest row — the lockup, since it's
+   `white-space: nowrap` — so the quote below is genuinely capped to that
+   same measure, not an independent guess at a pixel value). */
+.stack {
+  display: inline-grid;
+  justify-items: center;
+}
+
 /* The lockup itself: `oh-` 600 + clay cursor bar + `writers` italic 400.
    All Fraunces (loaded globally in __root head), falling back to
    Georgia/serif if offline — same fallback the exported SVGs prescribe.. */
@@ -50,6 +59,32 @@
   line-height: 1;
   opacity: 0;
   animation: lockup-in 0.4s ease 0.45s both;
+}
+
+/* Quote: same reveal (timing + easing) as the lockup, same measure (the
+   `.stack` grid column is sized by the lockup's own nowrap width, so this
+   just fills it and wraps), smaller serif italic underneath. */
+.quote {
+  grid-column: 1;
+  margin-block-start: 1.1em;
+  inline-size: 100%;
+  font-family: Fraunces, Georgia, serif;
+  font-style: italic;
+  font-size: 1.1rem;
+  line-height: 1.5;
+  text-align: center;
+  color: var(--ds-text-muted, var(--ds-text));
+  opacity: 0;
+  animation: lockup-in 0.4s ease 0.45s both;
+}
+
+.quoteAuthor {
+  display: block;
+  margin-block-start: 0.4em;
+  font-style: normal;
+  font-size: 0.8em;
+  letter-spacing: 0.02em;
+  opacity: 0.7;
 }
 
 @keyframes lockup-in {
