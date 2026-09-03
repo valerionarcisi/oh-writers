@@ -89,6 +89,7 @@ export const getUserTeams = createServerFn({ method: "GET" }).handler(
             .select({
               id: teams.id,
               name: teams.name,
+              slug: teams.slug,
               avatarUrl: teams.avatarUrl,
               role: teamMembers.role,
             })
@@ -101,6 +102,7 @@ export const getUserTeams = createServerFn({ method: "GET" }).handler(
             rows.map((r) => ({
               id: r.id,
               name: r.name,
+              slug: r.slug,
               avatarUrl: r.avatarUrl ?? null,
               role: r.role as TeamRole,
             })),

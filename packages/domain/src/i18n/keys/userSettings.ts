@@ -49,6 +49,7 @@ export const userSettingsKeys = {
     // Teams
     "settings.teams.sectionTitle": "Team",
     "settings.teams.empty": "You are not part of any team.",
+    "settings.teams.create": "Create team",
     // Account deletion (Spec #127)
     "settings.delete.sectionTitle": "Delete account",
     "settings.delete.description":
@@ -215,6 +216,7 @@ export const userSettingsKeys = {
     // Teams
     "settings.teams.sectionTitle": "Team",
     "settings.teams.empty": "Non fai parte di nessun team.",
+    "settings.teams.create": "Crea team",
     // Account deletion (Spec #127)
     "settings.delete.sectionTitle": "Elimina account",
     "settings.delete.description":

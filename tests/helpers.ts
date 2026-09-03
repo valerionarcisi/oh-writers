@@ -1,3 +1,5 @@
+import { execSync } from "node:child_process";
+import path from "node:path";
 import { expect, type Page } from "@playwright/test";
 
 // Mirror the port resolution in `playwright.config.ts` / `fixtures.ts`: the
@@ -6,6 +8,29 @@ import { expect, type Page } from "@playwright/test";
 const WEB_PORT = process.env["WEB_PORT"] ?? "3002";
 export const BASE_URL =
   process.env["BASE_URL"] ?? `http://localhost:${WEB_PORT}`;
+
+/**
+ * Reseed the test database to the pristine seed state.
+ *
+ * The suite shares a single seeded DB (workers: 1). Any spec whose tests
+ * mutate shared rows — e.g. bulk-confirm/archive committing pending ghosts,
+ * or a password change that doesn't durably restore before the next test's
+ * sign-in — calls this in a `beforeAll`/`afterAll` to restore known-good
+ * state. Mirrors `global-setup.ts`.
+ */
+export const reseedTestDb = () => {
+  const root = path.resolve(__dirname, "..");
+  execSync("pnpm --filter @oh-writers/db seed:reset", {
+    cwd: root,
+    stdio: "ignore",
+    env: {
+      ...process.env,
+      DATABASE_URL:
+        process.env["DATABASE_URL_TEST"] ??
+        "postgresql://oh-writers:oh-writers@localhost:5432/oh-writers_test",
+    },
+  });
+};
 
 export async function waitForEditor(page: Page) {
   const editor = page.locator(".ProseMirror").first();

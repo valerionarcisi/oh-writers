@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Plus } from "lucide-react";
 import { z } from "zod";
 import {
   Button,
@@ -558,9 +559,15 @@ function TeamsSection() {
 
   return (
     <section className={styles.section}>
-      <h2 className={styles.sectionTitle}>
-        {t("settings.teams.sectionTitle")}
-      </h2>
+      <div className={styles.sectionHeader}>
+        <h2 className={styles.sectionTitle}>
+          {t("settings.teams.sectionTitle")}
+        </h2>
+        <Link to="/teams/new" className={styles.newTeamBtn}>
+          <Plus size={14} strokeWidth={1.5} />
+          {t("settings.teams.create")}
+        </Link>
+      </div>
 
       {teamsQuery.isLoading ? null : teamList.length === 0 ? (
         <p className={styles.emptyState} data-testid="teams-empty-state">
@@ -569,7 +576,12 @@ function TeamsSection() {
       ) : (
         <div className={styles.teamList} data-testid="teams-list">
           {teamList.map((team) => (
-            <div key={team.id} className={styles.teamRow}>
+            <Link
+              key={team.id}
+              to="/teams/$slug"
+              params={{ slug: team.slug }}
+              className={styles.teamRow}
+            >
               {team.avatarUrl ? (
                 <img
                   src={team.avatarUrl}
@@ -585,7 +597,7 @@ function TeamsSection() {
               <span className={styles.roleBadge}>
                 {teamRoleLabel(team.role, locale)}
               </span>
-            </div>
+            </Link>
           ))}
         </div>
       )}
