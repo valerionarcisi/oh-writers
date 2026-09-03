@@ -20,6 +20,7 @@ export {
   useSaveScreenplay,
   useAutoSave,
 } from "./hooks/useScreenplay";
+export { useImportPdf } from "./hooks/useImportPdf";
 export {
   useVersions,
   useVersion,

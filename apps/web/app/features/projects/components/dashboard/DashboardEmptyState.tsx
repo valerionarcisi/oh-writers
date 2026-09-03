@@ -1,6 +1,7 @@
 import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@oh-writers/ui";
 import { DashboardImportFountainButton } from "./DashboardImportFountainButton";
+import { DashboardImportPdfButton } from "./DashboardImportPdfButton";
 import { useTranslation } from "~/features/i18n";
 import styles from "./DashboardEmptyState.module.css";
 
@@ -66,6 +67,7 @@ export function DashboardEmptyState() {
           {t("dashboard.empty.createFirst")}
         </Button>
         <DashboardImportFountainButton />
+        <DashboardImportPdfButton />
         <Button variant="ghost" type="button" disabled>
           {t("dashboard.empty.fromTemplate")}
         </Button>

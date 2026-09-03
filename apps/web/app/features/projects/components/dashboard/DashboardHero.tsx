@@ -1,6 +1,7 @@
 import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@oh-writers/ui";
 import { DashboardImportFountainButton } from "./DashboardImportFountainButton";
+import { DashboardImportPdfButton } from "./DashboardImportPdfButton";
 import { useTranslation } from "~/features/i18n";
 import styles from "./DashboardHero.module.css";
 
@@ -22,16 +23,20 @@ export function DashboardHero({ stats }: Props) {
     <section className={styles.hero}>
       <div className={styles.left}>
         <h1 className={styles.title}>{t("dashboard.hero.title")}</h1>
-        <div className={styles.strip} aria-label={t("dashboard.hero.summaryLabel")}>
+        <div
+          className={styles.strip}
+          aria-label={t("dashboard.hero.summaryLabel")}
+        >
           <b data-num>{stats.activeCount}</b>{" "}
           {t("dashboard.hero.activeProjects")}{" "}
           <b data-num>{stats.totalScenes}</b> {t("dashboard.hero.totalScenes")}{" "}
-          <b data-num>{stats.totalDays}</b> {t("dashboard.hero.daysAndLastEdit")}{" "}
-          <b>{stats.lastEditLabel}</b>
+          <b data-num>{stats.totalDays}</b>{" "}
+          {t("dashboard.hero.daysAndLastEdit")} <b>{stats.lastEditLabel}</b>
         </div>
       </div>
       <div className={styles.actions}>
         <DashboardImportFountainButton />
+        <DashboardImportPdfButton />
         <Button
           variant="primary"
           type="button"

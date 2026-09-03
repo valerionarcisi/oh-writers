@@ -1,11 +1,12 @@
 import { useRef, useState } from "react";
 import { Link, useRouter } from "@tanstack/react-router";
 import { z } from "zod";
-import type { TranslationKey } from "@oh-writers/domain";
+import { buildPasswordSchema, type TranslationKey } from "@oh-writers/domain";
 import { Button, useHydratedInput } from "@oh-writers/ui";
 import { authClient } from "~/lib/auth-client";
 import { useTranslation } from "~/features/i18n";
 import { PasswordInput } from "./PasswordInput";
+import { OAuthButtons } from "./OAuthButtons";
 import styles from "./RegisterForm.module.css";
 
 const RegisterSchema = z.object({
@@ -31,7 +32,10 @@ export function buildRegisterSchema(t: (key: TranslationKey) => string) {
         .min(1, t("auth.register.validation.nameRequired"))
         .max(100, t("auth.register.validation.nameTooLong")),
       email: z.string().email(t("auth.register.validation.emailInvalid")),
-      password: z.string().min(8, t("auth.register.validation.passwordMin")),
+      password: buildPasswordSchema({
+        min: t("auth.register.validation.passwordMin"),
+        complexity: t("auth.register.validation.passwordComplexity"),
+      }),
       consent: z.boolean(),
     })
     .refine((data) => data.consent === true, {
@@ -40,7 +44,11 @@ export function buildRegisterSchema(t: (key: TranslationKey) => string) {
     });
 }
 
-export function RegisterForm() {
+interface RegisterFormProps {
+  availableProviders: string[];
+}
+
+export function RegisterForm({ availableProviders }: RegisterFormProps) {
   const router = useRouter();
   const { t } = useTranslation();
   const registerSchema = buildRegisterSchema(t);
@@ -235,6 +243,11 @@ export function RegisterForm() {
             ? t("auth.register.submitting")
             : t("auth.register.submit")}
         </Button>
+
+        <OAuthButtons
+          availableProviders={availableProviders}
+          callbackURL="/dashboard"
+        />
       </form>
 
       <p className={styles.footer}>

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useRouter } from "@tanstack/react-router";
 import { z } from "zod";
+import { buildPasswordSchema } from "@oh-writers/domain";
 import { authClient } from "~/lib/auth-client";
 import { useTranslation } from "~/features/i18n";
 import { PasswordInput } from "./PasswordInput";
@@ -18,7 +19,10 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
   const router = useRouter();
   const { t } = useTranslation();
   const passwordSchema = z.object({
-    password: z.string().min(8, t("auth.resetPassword.validation.passwordMin")),
+    password: buildPasswordSchema({
+      min: t("auth.resetPassword.validation.passwordMin"),
+      complexity: t("auth.resetPassword.validation.passwordComplexity"),
+    }),
   });
   const [password, setPassword] = useState("");
   const [passwordError, setPasswordError] = useState<string | null>(null);

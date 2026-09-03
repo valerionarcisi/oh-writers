@@ -1,5 +1,17 @@
 import { z } from "zod";
 
+/** Shared password strength rule for signup, reset, and change-password —
+ *  one regex so the three forms can't drift apart. */
+export function buildPasswordSchema(messages: {
+  min: string;
+  complexity: string;
+}) {
+  return z
+    .string()
+    .min(8, messages.min)
+    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/, messages.complexity);
+}
+
 export const UserSchema = z.object({
   id: z.string().uuid(),
   email: z.string().email(),

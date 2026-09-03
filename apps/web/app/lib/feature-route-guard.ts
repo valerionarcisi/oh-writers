@@ -12,10 +12,7 @@ import {
   type Feature,
 } from "@oh-writers/domain";
 
-export async function requireFeature(
-  feature: Feature,
-  projectId: string,
-): Promise<void> {
+async function resolveEnabledFeatures(): Promise<ReadonlySet<Feature>> {
   const { resolveLocale } =
     await import("~/features/i18n/resolve-locale.server");
   const { resolveAiEnabledForCurrentUser } =
@@ -24,13 +21,31 @@ export async function requireFeature(
     resolveLocale(),
     resolveAiEnabledForCurrentUser(),
   ]);
-  const enabled = resolveFeatures({
+  return resolveFeatures({
     market: marketFromLocale(locale),
     plan: DEFAULT_PLAN,
     isDevEnvironment: import.meta.env.DEV,
     isAiEnabled,
   });
+}
+
+export async function requireFeature(
+  feature: Feature,
+  projectId: string,
+): Promise<void> {
+  const enabled = await resolveEnabledFeatures();
   if (!enabled.has(feature)) {
     throw redirect({ to: "/projects/$id", params: { id: projectId } });
+  }
+}
+
+/** Same OFF=unreachable gate as `requireFeature`, for a route with no
+ *  project context (e.g. account-level settings pages). */
+export async function requireFeatureOrDashboard(
+  feature: Feature,
+): Promise<void> {
+  const enabled = await resolveEnabledFeatures();
+  if (!enabled.has(feature)) {
+    throw redirect({ to: "/dashboard" });
   }
 }

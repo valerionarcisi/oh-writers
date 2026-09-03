@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
@@ -11,9 +11,15 @@ import {
 } from "@oh-writers/ui";
 import { PasswordInput } from "~/features/auth";
 import { unwrapResult } from "@oh-writers/utils";
-import { teamRoleLabel, type Locale } from "@oh-writers/domain";
+import {
+  teamRoleLabel,
+  buildPasswordSchema,
+  type Locale,
+} from "@oh-writers/domain";
 import { authClient } from "~/lib/auth-client";
 import { useLocale, useTranslation } from "~/features/i18n";
+import { useFeature } from "~/features/feature-flags";
+import { Features } from "@oh-writers/domain";
 import {
   updateUserProfile,
   updateUserLocale,
@@ -52,6 +58,7 @@ export function UserSettingsPage({
           initialName={name}
           email={email}
           initialAvatarUrl={avatarUrl}
+          profileLoaded={profileQuery.isSuccess}
         />
 
         <LanguageSection />
@@ -74,10 +81,12 @@ function ProfileSection({
   initialName,
   email,
   initialAvatarUrl,
+  profileLoaded,
 }: {
   initialName: string;
   email: string;
   initialAvatarUrl: string | null;
+  profileLoaded: boolean;
 }) {
   const { t } = useTranslation();
   const profileSchema = z.object({
@@ -101,6 +110,20 @@ function ProfileSection({
   }>({});
   const [success, setSuccess] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
+
+  // `initialAvatarUrl` (and, in principle, `initialName`) can arrive after
+  // mount, once the profile query resolves — but useState's initializer only
+  // runs once, so those real values were silently dropped. Adopt them the
+  // moment the query first succeeds; the `adopted` ref stops this from
+  // re-firing on a later background refetch and stomping a draft the user
+  // is mid-typing.
+  const adoptedProfile = useRef(false);
+  useEffect(() => {
+    if (!profileLoaded || adoptedProfile.current) return;
+    adoptedProfile.current = true;
+    setName(initialName);
+    setAvatarUrl(initialAvatarUrl ?? "");
+  }, [profileLoaded, initialName, initialAvatarUrl]);
 
   const previewUrl = avatarUrl.trim() || null;
 
@@ -279,6 +302,8 @@ function LanguageSection() {
 
 function AiSection() {
   const { t } = useTranslation();
+  const isAiEnabled = useFeature(Features.AI_ENABLED);
+  if (!isAiEnabled) return null;
   return (
     <section className={styles.section} data-testid="ai-section">
       <h2 className={styles.sectionTitle}>
@@ -305,14 +330,26 @@ function PasswordSection() {
   const [isPending, setIsPending] = useState(false);
 
   if (providersQuery.isLoading) return null;
-  if (!hasPassword) return null;
+  if (!hasPassword) {
+    return (
+      <section className={styles.section} data-testid="password-sso-section">
+        <h2 className={styles.sectionTitle}>
+          {t("settings.password.ssoSectionTitle")}
+        </h2>
+        <p className={styles.emptyState}>{t("settings.password.ssoMessage")}</p>
+      </section>
+    );
+  }
 
   const passwordSchema = z
     .object({
       current: z
         .string()
         .min(1, t("settings.password.validation.currentRequired")),
-      next: z.string().min(8, t("settings.password.validation.nextMin")),
+      next: buildPasswordSchema({
+        min: t("settings.password.validation.nextMin"),
+        complexity: t("settings.password.validation.nextComplexity"),
+      }),
       confirm: z
         .string()
         .min(1, t("settings.password.validation.confirmRequired")),

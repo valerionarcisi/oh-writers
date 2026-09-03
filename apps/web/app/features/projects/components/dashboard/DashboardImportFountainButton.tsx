@@ -1,13 +1,6 @@
 import { useRef, useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
-import { useQueryClient } from "@tanstack/react-query";
-import { ResultAsync } from "neverthrow";
 import { Button } from "@oh-writers/ui";
-import {
-  useSaveScreenplay,
-  screenplayQueryOptions,
-} from "~/features/screenplay-editor";
-import { useCreateProject } from "../../hooks/useProjects";
+import { useCreateProjectFromScreenplay } from "../../hooks/useCreateProjectFromScreenplay";
 import { useTranslation } from "~/features/i18n";
 import styles from "./DashboardImportFountainButton.module.css";
 
@@ -27,10 +20,7 @@ const titleFromFileName = (fileName: string, fallbackTitle: string): string => {
  */
 export function DashboardImportFountainButton() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const createProject = useCreateProject();
-  const saveScreenplay = useSaveScreenplay();
+  const { createAndImport } = useCreateProjectFromScreenplay();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isImporting, setImporting] = useState(false);
@@ -48,54 +38,15 @@ export function DashboardImportFountainButton() {
     setImporting(true);
     setError(null);
 
-    const outcome = await ResultAsync.fromPromise(
-      file.text(),
-      () => "read" as const,
-    )
-      .andThen((fountain) =>
-        ResultAsync.fromPromise(
-          createProject.mutateAsync({
-            title: titleFromFileName(
-              file.name,
-              t("dashboard.import.defaultTitle"),
-            ),
-            format: "feature",
-          }),
-          () => "create" as const,
-        ).map((project) => ({ project, fountain })),
-      )
-      .andThen(({ project, fountain }) =>
-        ResultAsync.fromPromise(
-          queryClient.fetchQuery(screenplayQueryOptions(project.id)),
-          () => "screenplay" as const,
-        ).andThen((result) =>
-          result.isOk
-            ? ResultAsync.fromPromise(
-                saveScreenplay.mutateAsync({
-                  screenplayId: result.value.id,
-                  content: fountain,
-                  pmDoc: null,
-                }),
-                () => "save" as const,
-              ).map(() => project)
-            : ResultAsync.fromPromise(
-                Promise.reject(new Error("no-screenplay")),
-                () => "screenplay" as const,
-              ),
-        ),
-      );
+    const fountain = await file.text();
+    const title = titleFromFileName(
+      file.name,
+      t("dashboard.import.defaultTitle"),
+    );
+    const ok = await createAndImport(title, fountain);
 
     setImporting(false);
-
-    if (outcome.isErr()) {
-      setError(t("dashboard.import.failed"));
-      return;
-    }
-
-    void navigate({
-      to: "/projects/$id/screenplay",
-      params: { id: outcome.value.id },
-    });
+    if (!ok) setError(t("dashboard.import.failed"));
   };
 
   return (

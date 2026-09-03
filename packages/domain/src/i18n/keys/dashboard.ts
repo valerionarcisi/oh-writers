@@ -73,6 +73,10 @@ export const dashboardKeys = {
     "dashboard.import.failed": "Import failed. Please try again.",
     "dashboard.import.importing": "Importing…",
     "dashboard.import.label": "Import Fountain",
+    // Import PDF
+    "dashboard.importPdf.label": "Import PDF",
+    "dashboard.importPdf.importing": "Importing…",
+    "dashboard.importPdf.failed": "Import failed. Please try again.",
     // Project cards (grid + compact)
     "dashboard.card.openProject": "Open project",
     "dashboard.card.openEditor": "Open the editor of",
@@ -122,7 +126,8 @@ export const dashboardKeys = {
     "dashboard.page.sectionArchived": "Archiviati",
     "dashboard.page.sectionAll": "Tutti i progetti",
     "dashboard.page.results": "risultati",
-    "dashboard.page.noMatches": "Nessun progetto corrisponde ai filtri attuali.",
+    "dashboard.page.noMatches":
+      "Nessun progetto corrisponde ai filtri attuali.",
     // Viewbar tabs
     "dashboard.viewbar.label": "Filtri progetti",
     "dashboard.viewbar.tabAll": "Tutti",
@@ -169,6 +174,10 @@ export const dashboardKeys = {
     "dashboard.import.failed": "Importazione non riuscita. Riprova.",
     "dashboard.import.importing": "Importazione…",
     "dashboard.import.label": "Importa Fountain",
+    // Import PDF
+    "dashboard.importPdf.label": "Importa PDF",
+    "dashboard.importPdf.importing": "Importazione…",
+    "dashboard.importPdf.failed": "Importazione non riuscita. Riprova.",
     // Project cards (grid + compact)
     "dashboard.card.openProject": "Apri il progetto",
     "dashboard.card.openEditor": "Apri l'editor di",

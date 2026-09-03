@@ -1,7 +1,9 @@
 import { createFileRoute, getRouteApi } from "@tanstack/react-router";
 import { z } from "zod";
+import { Features } from "@oh-writers/domain";
 import { titleHead } from "~/lib/document-title";
 import { AiSettingsPage } from "~/features/ai-providers";
+import { requireFeatureOrDashboard } from "~/lib/feature-route-guard";
 
 // Spec 84 §2.3 (Wave 3) — the wizard's real destination. `?connected=1`
 // arrives from the OAuth callback right after a successful key exchange;
@@ -16,6 +18,7 @@ const AiSettingsSearchSchema = z.object({
 export const Route = createFileRoute("/_app/settings_/ai")({
   head: () => titleHead("AI"),
   validateSearch: AiSettingsSearchSchema,
+  beforeLoad: () => requireFeatureOrDashboard(Features.AI_ENABLED),
   component: AiSettingsRoute,
 });
 

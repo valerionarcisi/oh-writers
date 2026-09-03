@@ -25,6 +25,8 @@ export const userSettingsKeys = {
       "Enter the current password",
     "settings.password.validation.nextMin":
       "The new password must be at least 8 characters",
+    "settings.password.validation.nextComplexity":
+      "The new password must include an uppercase letter, a lowercase letter, and a number",
     "settings.password.validation.confirmRequired": "Confirm the new password",
     "settings.password.validation.mismatch": "Passwords do not match",
     // Password
@@ -36,6 +38,9 @@ export const userSettingsKeys = {
     "settings.password.updated": "Password updated!",
     "settings.password.saving": "Saving…",
     "settings.password.save": "Update password",
+    "settings.password.ssoSectionTitle": "Password",
+    "settings.password.ssoMessage":
+      "You signed in with Google or GitHub, so there is no password to manage here.",
     // Language
     "settings.language.optionIt": "Italiano",
     "settings.language.optionEn": "English",
@@ -183,6 +188,8 @@ export const userSettingsKeys = {
       "Inserisci la password attuale",
     "settings.password.validation.nextMin":
       "La nuova password deve avere almeno 8 caratteri",
+    "settings.password.validation.nextComplexity":
+      "La nuova password deve contenere una lettera maiuscola, una minuscola e un numero",
     "settings.password.validation.confirmRequired":
       "Conferma la nuova password",
     "settings.password.validation.mismatch": "Le password non corrispondono",
@@ -195,6 +202,9 @@ export const userSettingsKeys = {
     "settings.password.updated": "Password aggiornata!",
     "settings.password.saving": "Salvataggio…",
     "settings.password.save": "Aggiorna password",
+    "settings.password.ssoSectionTitle": "Password",
+    "settings.password.ssoMessage":
+      "Hai effettuato l'accesso con Google o GitHub, quindi non c'è una password da gestire qui.",
     // Language
     "settings.language.optionIt": "Italiano",
     "settings.language.optionEn": "English",

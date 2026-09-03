@@ -23,7 +23,11 @@ export const updateUserProfile = createServerFn({ method: "POST" })
         ResultAsync.fromPromise(
           db
             .update(users)
-            .set({ name: data.name, avatarUrl: data.avatarUrl, updatedAt: new Date() })
+            .set({
+              name: data.name,
+              avatarUrl: data.avatarUrl,
+              updatedAt: new Date(),
+            })
             .where(eq(users.id, user.id))
             .returning({ name: users.name, avatarUrl: users.avatarUrl }),
           (e) => new DbError("updateUserProfile", e),
@@ -56,74 +60,90 @@ export const updateUserLocale = createServerFn({ method: "POST" })
     );
   });
 
-export const getUserAccountProviders = createServerFn({ method: "GET" }).handler(
+export const getUserAccountProviders = createServerFn({
+  method: "GET",
+}).handler(async () => {
+  const user = await requireUser();
+  return toShape(
+    await ResultAsync.fromSafePromise(getDb()).andThen((db) =>
+      ResultAsync.fromPromise(
+        db
+          .select({ providerId: accounts.providerId })
+          .from(accounts)
+          .where(eq(accounts.userId, user.id)),
+        (e) => new DbError("getUserAccountProviders", e),
+      ).andThen((rows) =>
+        ok({ hasPassword: rows.some((r) => r.providerId === "credential") }),
+      ),
+    ),
+  );
+});
+
+export const getUserTeams = createServerFn({ method: "GET" }).handler(
   async () => {
     const user = await requireUser();
     return toShape(
       await ResultAsync.fromSafePromise(getDb()).andThen((db) =>
         ResultAsync.fromPromise(
           db
-            .select({ providerId: accounts.providerId })
-            .from(accounts)
-            .where(eq(accounts.userId, user.id)),
-          (e) => new DbError("getUserAccountProviders", e),
+            .select({
+              id: teams.id,
+              name: teams.name,
+              avatarUrl: teams.avatarUrl,
+              role: teamMembers.role,
+            })
+            .from(teamMembers)
+            .innerJoin(teams, eq(teamMembers.teamId, teams.id))
+            .where(eq(teamMembers.userId, user.id)),
+          (e) => new DbError("getUserTeams", e),
         ).andThen((rows) =>
-          ok({ hasPassword: rows.some((r) => r.providerId === "credential") }),
+          ok(
+            rows.map((r) => ({
+              id: r.id,
+              name: r.name,
+              avatarUrl: r.avatarUrl ?? null,
+              role: r.role as TeamRole,
+            })),
+          ),
         ),
       ),
     );
   },
 );
 
-export const getUserTeams = createServerFn({ method: "GET" }).handler(async () => {
-  const user = await requireUser();
-  return toShape(
-    await ResultAsync.fromSafePromise(getDb()).andThen((db) =>
-      ResultAsync.fromPromise(
-        db
-          .select({
-            id: teams.id,
-            name: teams.name,
-            avatarUrl: teams.avatarUrl,
-            role: teamMembers.role,
-          })
-          .from(teamMembers)
-          .innerJoin(teams, eq(teamMembers.teamId, teams.id))
-          .where(eq(teamMembers.userId, user.id)),
-        (e) => new DbError("getUserTeams", e),
-      ).andThen((rows) =>
-        ok(
-          rows.map((r) => ({
-            id: r.id,
-            name: r.name,
-            avatarUrl: r.avatarUrl ?? null,
-            role: r.role as TeamRole,
-          })),
+export const getUserProfile = createServerFn({ method: "GET" }).handler(
+  async () => {
+    const user = await requireUser();
+    return toShape(
+      await ResultAsync.fromSafePromise(getDb()).andThen((db) =>
+        ResultAsync.fromPromise(
+          db
+            .select({
+              name: users.name,
+              email: users.email,
+              avatarUrl: users.avatarUrl,
+              image: users.image,
+            })
+            .from(users)
+            .where(eq(users.id, user.id))
+            .then((rows) => rows[0] ?? null),
+          (e) => new DbError("getUserProfile", e),
+        ).andThen((row) =>
+          row
+            ? ok({
+                name: row.name,
+                email: row.email,
+                // `avatarUrl` is the user-set field (this settings form); `image`
+                // is Better Auth's OAuth-populated photo. Same precedence as the
+                // TopBar avatar (avatarUrl wins if the user overrode it).
+                avatarUrl: row.avatarUrl ?? row.image ?? null,
+              })
+            : ok({ name: user.name, email: user.email, avatarUrl: null }),
         ),
       ),
-    ),
-  );
-});
-
-export const getUserProfile = createServerFn({ method: "GET" }).handler(async () => {
-  const user = await requireUser();
-  return toShape(
-    await ResultAsync.fromSafePromise(getDb()).andThen((db) =>
-      ResultAsync.fromPromise(
-        db
-          .select({ name: users.name, email: users.email, avatarUrl: users.avatarUrl })
-          .from(users)
-          .where(eq(users.id, user.id))
-          .then((rows) => rows[0] ?? null),
-        (e) => new DbError("getUserProfile", e),
-      ).andThen((row) =>
-        row
-          ? ok({ name: row.name, email: row.email, avatarUrl: row.avatarUrl ?? null })
-          : ok({ name: user.name, email: user.email, avatarUrl: null }),
-      ),
-    ),
-  );
-});
+    );
+  },
+);
 
 // queryOptions for TanStack Query
 import { queryOptions } from "@tanstack/react-query";

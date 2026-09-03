@@ -51,12 +51,16 @@ export const authKeys = {
     "auth.resetPassword.error": "Failed to reset password",
     "auth.resetPassword.validation.passwordMin":
       "Password must be at least 8 characters",
+    "auth.resetPassword.validation.passwordComplexity":
+      "Password must include an uppercase letter, a lowercase letter, and a number",
     // Register
     "auth.register.validation.nameRequired": "Name is required",
     "auth.register.validation.nameTooLong": "Name is too long",
     "auth.register.validation.emailInvalid": "Enter a valid email address",
     "auth.register.validation.passwordMin":
       "Password must be at least 8 characters",
+    "auth.register.validation.passwordComplexity":
+      "Password must include an uppercase letter, a lowercase letter, and a number",
     "auth.register.error.createFailed": "Failed to create account",
     "auth.register.heading": "Create account",
     "auth.register.fieldName": "Name",
@@ -121,6 +125,8 @@ export const authKeys = {
     "auth.resetPassword.error": "Impossibile reimpostare la password",
     "auth.resetPassword.validation.passwordMin":
       "La password deve contenere almeno 8 caratteri",
+    "auth.resetPassword.validation.passwordComplexity":
+      "La password deve contenere una lettera maiuscola, una minuscola e un numero",
     // Register — kept verbatim (this page currently renders English in both
     // locales; preserve that until the register copy is localised).
     "auth.register.validation.nameRequired": "Name is required",
@@ -128,6 +134,8 @@ export const authKeys = {
     "auth.register.validation.emailInvalid": "Enter a valid email address",
     "auth.register.validation.passwordMin":
       "Password must be at least 8 characters",
+    "auth.register.validation.passwordComplexity":
+      "Password must include an uppercase letter, a lowercase letter, and a number",
     "auth.register.error.createFailed": "Failed to create account",
     "auth.register.heading": "Create account",
     "auth.register.fieldName": "Name",
