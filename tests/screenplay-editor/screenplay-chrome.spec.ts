@@ -10,7 +10,7 @@
  */
 
 import type { Page } from "@playwright/test";
-import { test, expect } from "../fixtures";
+import { test, expect, TEST_TEAM_PROJECT_ID } from "../fixtures";
 import { BASE_URL, waitForEditor } from "../helpers";
 
 const SCREENPLAY_PATH = (projectId: string) =>
@@ -158,5 +158,76 @@ test.describe("[Spec 55a] screenplay chrome", () => {
     await expect(
       page.getByRole("button", { name: "Esci da Focus" }),
     ).toBeVisible();
+  });
+
+  test("the scene/page counter footer stays visible after scrolling past the first page", async ({
+    authenticatedPage: page,
+  }) => {
+    // Uses the seeded team project (9 scenes / multi-page script) — the
+    // regression only shows on a script long enough to scroll. Was an
+    // in-flow last child ("stickyFooter" despite never being sticky) that
+    // only entered the viewport once the reader scrolled to the very
+    // bottom of the document — on a real script, effectively never. Found
+    // live 2026-09-03.
+    await page.goto(SCREENPLAY_PATH(TEST_TEAM_PROJECT_ID));
+    await waitForEditor(page);
+
+    const footer = page.getByTestId("screenplay-counters-footer");
+    await expect(footer).toBeVisible();
+    const initialBox = await footer.boundingBox();
+    expect(initialBox).not.toBeNull();
+
+    await page.mouse.wheel(0, 5000);
+    await page.waitForTimeout(200);
+
+    await expect(footer).toBeVisible();
+    const scrolledBox = await footer.boundingBox();
+    expect(scrolledBox).not.toBeNull();
+    // Fixed to the viewport: its position relative to the browser window
+    // does not move when the page content scrolls underneath it.
+    expect(scrolledBox!.y).toBeCloseTo(initialBox!.y, 0);
+  });
+
+  test("the scene counter reflects the loaded screenplay's real scene count, not 0, before any edit", async ({
+    authenticatedPage: page,
+  }) => {
+    // pmDoc (the source countHeadings reads) is null until the first local
+    // edit populates it — a screenplay that's freshly imported or simply
+    // opened cold showed "SCENE 0" regardless of its real content. Found
+    // live 2026-09-03 importing a 2-scene Fountain file.
+    await page.goto(SCREENPLAY_PATH(TEST_TEAM_PROJECT_ID));
+    await waitForEditor(page);
+
+    const footer = page.getByTestId("screenplay-counters-footer");
+    await expect(footer).toBeVisible();
+    // Text is visually uppercase via CSS text-transform — the DOM/accessible
+    // text is lowercase and has no separator between the label and the
+    // number ("scene9pagine12"), so match on the exact digit run.
+    await expect(footer).not.toContainText(/scene0(?!\d)/i);
+    await expect(footer).toContainText(/scene9(?!\d)/i);
+  });
+
+  test("no scene-heading picker pops up unprompted when the editor opens with its default selection inside a heading", async ({
+    authenticatedPage: page,
+  }) => {
+    // The team project's screenplay opens directly on a scene heading (its
+    // first block), so ProseMirror's default atStart() selection lands
+    // inside the heading's "prefix" slot. computeSlotSuggestions returns the
+    // WHOLE known-prefix vocabulary for an empty typed value, and the plugin
+    // view's update() fires on mount (before any real keystroke) — together
+    // that showed a full INT./EST. picker with zero user interaction. Found
+    // live 2026-09-03.
+    await page.goto(SCREENPLAY_PATH(TEST_TEAM_PROJECT_ID));
+    await waitForEditor(page);
+    await page.waitForTimeout(300);
+
+    // The dropdown <ul> containers exist in the DOM from mount (they toggle
+    // display:none/block rather than being added/removed) — the bug was
+    // visibility, so assert none of them are actually shown.
+    const pickers = page.locator('ul[data-picker-slot], ul[role="listbox"]');
+    const count = await pickers.count();
+    for (let i = 0; i < count; i += 1) {
+      await expect(pickers.nth(i)).toBeHidden();
+    }
   });
 });

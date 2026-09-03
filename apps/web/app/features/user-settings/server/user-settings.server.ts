@@ -7,6 +7,7 @@ import { ForbiddenError, DbError } from "@oh-writers/utils";
 import { users, accounts, teams, teamMembers } from "@oh-writers/db/schema";
 import { requireUser } from "~/server/context";
 import { getDb } from "~/server/db";
+import { parseAvatarUrl } from "~/server/helpers";
 import type { TeamRole } from "@oh-writers/domain";
 
 const UpdateProfileSchema = z.object({
@@ -138,7 +139,10 @@ export const getUserProfile = createServerFn({ method: "GET" }).handler(
                 // `avatarUrl` is the user-set field (this settings form); `image`
                 // is Better Auth's OAuth-populated photo. Same precedence as the
                 // TopBar avatar (avatarUrl wins if the user overrode it).
-                avatarUrl: row.avatarUrl ?? row.image ?? null,
+                // `image` is sanitised the same way as the TopBar's own read —
+                // a malformed OAuth-provider value falls back to null/initials
+                // instead of a broken <img>.
+                avatarUrl: row.avatarUrl ?? parseAvatarUrl(row.image) ?? null,
               })
             : ok({ name: user.name, email: user.email, avatarUrl: null }),
         ),

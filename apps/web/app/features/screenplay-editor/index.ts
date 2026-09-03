@@ -90,6 +90,7 @@ export type { ScreenplayError } from "./screenplay.errors";
 export type { VersionView } from "./screenplay-versions.schema";
 export type { VersionsError } from "./screenplay-versions.errors";
 export type { ImportPdfError } from "./pdf-import.errors";
+export type { TitlePageDocJSON } from "./lib/title-page-from-pdf";
 
 // Lib — PDF import
 export { fountainFromPdf } from "./lib/fountain-from-pdf";

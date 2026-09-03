@@ -79,6 +79,20 @@ test.describe("[OHW-846] AI-off state", () => {
     await page.goto(`/projects/${TEST_PERSONAL_PROJECT_ID}/shooting-plan`);
     await expect(page.getByTestId("shooting-plan-cesare-btn")).toHaveCount(0);
 
+    // Gear menu: no "AI · credits & models" entry — /settings/ai itself
+    // redirects to the dashboard with AI off (see below), so a visible entry
+    // here would look like a dead click. Found live 2026-09-03.
+    await page.goto(`/projects/${TEST_PERSONAL_PROJECT_ID}/screenplay`);
+    const settingsBtn = page.getByTestId("settings-btn");
+    await expect(settingsBtn).toBeVisible({ timeout: 15_000 });
+    await expect(async () => {
+      await settingsBtn.click();
+      await expect(page.getByTestId("gear-menu-account-settings")).toBeVisible({
+        timeout: 2_000,
+      });
+    }).toPass({ timeout: 15_000 });
+    await expect(page.getByTestId("gear-menu-ai-credits")).toHaveCount(0);
+
     // Settings: no AI section, and a direct visit to /settings/ai redirects
     // away (route guard, not just the link hidden).
     await page.goto("/settings");

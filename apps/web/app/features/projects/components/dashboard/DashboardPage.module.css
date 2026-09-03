@@ -4,7 +4,15 @@
   display: flex;
   flex-direction: column;
   gap: var(--ds-space-4);
+  /* inline-size: 100% + max-inline-size + margin-inline: auto is the correct
+     trio for a capped-width centered column. inline-size alone (no 100%) lets
+     this flex item (parent .shell is display:flex) shrink to its content's
+     minimum width instead of filling up to the cap — margin-inline: auto then
+     "centers" that collapsed, too-narrow box, which reads as badly off-center
+     rather than centered. Found live 2026-09-03. */
+  inline-size: 100%;
   max-inline-size: 1280px;
+  margin-inline: auto;
 }
 
 @container (max-width: 720px) {

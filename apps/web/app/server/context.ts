@@ -6,6 +6,7 @@ import {
   type Locale,
   type UserId,
 } from "@oh-writers/domain";
+import { parseAvatarUrl } from "./helpers";
 
 export type AppUser = {
   id: UserId;
@@ -106,7 +107,7 @@ export const getUserFromHeaders = async (
     name: session.user.name,
     email: session.user.email,
     locale: (rows[0]?.locale ?? "en") as Locale,
-    avatarUrl: session.user.image ?? null,
+    avatarUrl: parseAvatarUrl(session.user.image),
   };
 };
 

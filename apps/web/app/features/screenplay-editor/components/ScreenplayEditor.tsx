@@ -31,6 +31,7 @@ import {
 import { estimatePageCount } from "../lib/page-counter";
 import { docToFountain } from "../lib/doc-to-fountain";
 import { fountainToDoc } from "../lib/fountain-to-doc";
+import { SCENE_HEADING_RE } from "../lib/fountain-from-pdf";
 import type { ElementType } from "../lib/fountain-element-detector";
 import { setElement } from "../lib/schema-commands";
 import { ProseMirrorView } from "./ProseMirrorView";
@@ -85,6 +86,7 @@ import { useSaveScreenplay } from "../hooks/useScreenplay";
 import {
   useTitlePageState,
   useUpdateTitlePageState,
+  titlePageDocForWire,
 } from "~/features/projects";
 import type { TitlePageDocJSON } from "../lib/title-page-from-pdf";
 import { ImportedTitlePageConfirm } from "./ImportedTitlePageConfirm";
@@ -145,9 +147,9 @@ type ViewingState =
       savedPmDoc: Record<string, unknown> | null;
     };
 
-// Walk the PM doc JSON and count `heading` nodes — drives the "s.N/M"
-// toolbar indicator. Cheap recursion; the doc rarely exceeds a few hundred
-// nodes even for feature-length screenplays.
+// Walk the PM doc JSON and count `heading` nodes — drives the scene counter
+// in the footer's DocStats. Cheap recursion; the doc rarely exceeds a few
+// hundred nodes even for feature-length screenplays.
 const countHeadings = (doc: Record<string, unknown> | null): number => {
   if (!doc) return 0;
   let count = 0;
@@ -160,6 +162,16 @@ const countHeadings = (doc: Record<string, unknown> | null): number => {
   walk(doc);
   return count;
 };
+
+// pmDoc is null "on first open, before the first save fills the column"
+// (see ProseMirrorView's initialDoc doc comment) — it's only populated by
+// onDocChange, which fires on a local edit, not on the initial CRDT/fountain
+// load. Without this fallback, the scene counter reads "0" for any freshly
+// imported or newly opened screenplay until the writer types something.
+// Mirrors the existing fallbackTotalPages pattern below for the same reason.
+const countSceneHeadingLines = (fountain: string): number =>
+  fountain.split("\n").filter((line) => SCENE_HEADING_RE.test(line.trim()))
+    .length;
 
 type PmJsonNode = {
   type?: string;
@@ -461,7 +473,7 @@ export const ScreenplayEditor = forwardRef<
       updateTitlePage.mutate({
         projectId: screenplay.projectId,
         state: {
-          doc: doc as unknown as Record<string, NonNullable<unknown>>,
+          doc: titlePageDocForWire(doc),
           draftDate: current?.draftDate ?? null,
           draftColor: current?.draftColor ?? null,
         },
@@ -638,7 +650,9 @@ export const ScreenplayEditor = forwardRef<
   const fallbackTotalPages = estimatePageCount(content);
   const currentPage = pageInfo.current;
   const totalPages = Math.max(pageInfo.total, fallbackTotalPages);
-  const totalScenes = countHeadings(pmDoc);
+  const totalScenes = pmDoc
+    ? countHeadings(pmDoc)
+    : countSceneHeadingLines(content);
   // Spec 63 S2 — compare dirtiness on the CANONICAL fountain so a stored
   // screenplay whose only difference from the editor's serialisation is
   // indentation / blank-line normalisation is NOT seen as a local edit. Without

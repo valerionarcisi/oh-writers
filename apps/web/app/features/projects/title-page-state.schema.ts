@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { DRAFT_COLOR_VALUES, type DraftColor } from "./title-page.schema";
+import type { TitlePageDocJSON } from "~/features/screenplay-editor";
 
 const DateString = z
   .string()
@@ -25,6 +26,18 @@ export const TitlePageStateSchema = z.object({
 });
 
 export type TitlePageState = z.infer<typeof TitlePageStateSchema>;
+
+// The wire schema above deliberately accepts any plain object (see comment
+// on TitlePageDocSchema) — TitlePageDocJSON (the PDF title-page extractor's
+// output shape) is runtime-compatible (plain JSON) but structurally distinct
+// from `Record<string, unknown>` to TypeScript, since it has fixed-shape
+// fields rather than an index signature. Centralises the one unavoidable
+// cast here so it exists in exactly one place instead of being re-typed at
+// every call site that hands a title-page doc to this mutation.
+export const titlePageDocForWire = (
+  doc: TitlePageDocJSON,
+): Record<string, NonNullable<unknown>> =>
+  doc as unknown as Record<string, NonNullable<unknown>>;
 
 export const EMPTY_TITLE_PAGE_STATE: TitlePageState = {
   doc: null,

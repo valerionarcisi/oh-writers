@@ -114,7 +114,14 @@ class AutocompleteDropdown {
   }
 
   update(editorState: EditorState) {
-    const suggestions = computeSuggestions(editorState);
+    // Same guard as scene-slot-picker.ts's SlotDropdown.update — a view
+    // update fires on mount too (before any real keystroke), and an empty
+    // typed prefix matches startsWith("") for every known value, so a
+    // document that opens with the default selection inside an eligible
+    // block would otherwise show a full suggestions list unprompted.
+    const suggestions = this.view.hasFocus()
+      ? computeSuggestions(editorState)
+      : [];
     const next = reducer(this.state, {
       type: "suggestions/compute",
       suggestions,

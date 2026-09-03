@@ -79,7 +79,16 @@ class SlotDropdown {
   }
 
   update(editorState: EditorState) {
-    const suggestions = computeSlotSuggestions(editorState, this.slot);
+    // Every ProseMirror view update (including the very first one right
+    // after mount, before any real keystroke) runs through here. Without
+    // this guard, a document whose default atStart() selection happens to
+    // land inside a "prefix"/"title" node (e.g. an imported screenplay that
+    // opens directly on a scene heading) shows every known value in the
+    // picker — filterSuggestions returns the WHOLE vocabulary for empty
+    // typed text — with no user interaction at all. Found live 2026-09-03.
+    const suggestions = this.view.hasFocus()
+      ? computeSlotSuggestions(editorState, this.slot)
+      : [];
     const next = reducer(this.state, {
       type: "suggestions/compute",
       suggestions,
