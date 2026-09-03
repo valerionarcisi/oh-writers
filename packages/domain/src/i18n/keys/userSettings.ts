@@ -60,6 +60,8 @@ export const userSettingsKeys = {
     "settings.delete.cancel": "Cancel",
     "settings.delete.deleting": "Deleting…",
     "settings.delete.error": "Error while deleting the account.",
+    "settings.delete.errorTeamOwner":
+      "You are the sole owner of a team with other members or pending invitations. Transfer ownership before deleting your account.",
     // AI section (link to /settings/ai)
     "settings.aiSection.sectionTitle": "AI",
     "settings.aiSection.description":
@@ -224,6 +226,8 @@ export const userSettingsKeys = {
     "settings.delete.cancel": "Annulla",
     "settings.delete.deleting": "Eliminazione…",
     "settings.delete.error": "Errore durante l'eliminazione dell'account.",
+    "settings.delete.errorTeamOwner":
+      "Sei l'unico proprietario di un team con altri membri o inviti in sospeso. Trasferisci la proprietà prima di eliminare l'account.",
     // AI section (link to /settings/ai)
     "settings.aiSection.sectionTitle": "AI",
     "settings.aiSection.description":

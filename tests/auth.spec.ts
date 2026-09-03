@@ -441,4 +441,91 @@ test.describe("account lifecycle (auth)", () => {
     expect(gone.status).toBe(401);
     await ctx.close();
   });
+
+  test("delete account is blocked when the user is the sole owner of a team with a pending invitation (GH #137)", async ({
+    browser,
+  }) => {
+    // Fresh owner so the seeded "Test Team" fixture is untouched.
+    const email = uniqueEmail();
+    const password = "AuthTest123!";
+    await jsonFetch("/api/auth/sign-up/email", {
+      method: "POST",
+      body: JSON.stringify({ email, password, name: "Team Owner Spec" }),
+    });
+    const verifyTok = rawsignVerifyToken(email, BETTER_AUTH_SECRET);
+    await jsonFetch(
+      `/api/auth/verify-email?token=${verifyTok}&callbackURL=%2F`,
+    );
+
+    const signin = await jsonFetch("/api/auth/sign-in/email", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    });
+    const setCookieHeaders = signin.headers.get("set-cookie") ?? "";
+    const cookie = setCookieHeaders.split(";")[0]?.trim();
+    expect(cookie).toBeTruthy();
+
+    const ctx = await browser.newContext();
+    const [cookieName, cookieValue] = cookie!.split("=") as [string, string];
+    await ctx.addCookies([
+      { name: cookieName, value: cookieValue, url: BASE_URL },
+    ]);
+    const page = await ctx.newPage();
+
+    // Create a team (the fresh user becomes its sole owner) and invite
+    // someone else — the invitation alone (accepted or not) is enough to
+    // block deletion, since the invite still references invitedBy = this user.
+    // Fresh signups default to the English locale (see users.locale), unlike
+    // the seeded fixtures used elsewhere — this page renders in English.
+    await page.goto("/teams/new");
+    const uniqueName = `Owner Guard Team ${Date.now()}`;
+    const nameInput = page.getByLabel("Team name");
+    await nameInput.click();
+    await nameInput.pressSequentially(uniqueName, { delay: 20 });
+    const createBtn = page.getByRole("button", { name: "Create team" });
+    await expect(createBtn).toBeEnabled({ timeout: 5_000 });
+    await createBtn.click();
+    // "new" itself matches a naive /teams/[a-z0-9-]+ pattern, so wait for the
+    // dashboard heading (post-navigation) rather than the URL alone.
+    await page.waitForURL(/\/teams\/(?!new$)[a-z0-9-]+$/, { timeout: 10_000 });
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible({
+      timeout: 10_000,
+    });
+    const teamSlug = new URL(page.url()).pathname.split("/").pop();
+
+    await page.goto(`/teams/${teamSlug}/members`);
+    const inviteEmail = `owner-guard-invite-${Date.now()}@example.com`;
+    const emailInput = page.getByPlaceholder("email@example.com");
+    const inviteBtn = page.getByRole("button", { name: "Invite" });
+    await expect(async () => {
+      await emailInput.fill(inviteEmail);
+      await expect(inviteBtn).toBeEnabled({ timeout: 1_000 });
+    }).toPass({ timeout: 15_000 });
+    await inviteBtn.click();
+    await expect(
+      page.getByTestId("invitations-list").getByText(inviteEmail),
+    ).toBeVisible({ timeout: 8_000 });
+
+    // The API rejects the deletion with a clear message instead of a raw FK
+    // violation, and the account survives (still able to sign in).
+    const del = await fetch(`${BASE_URL}/api/auth/delete-user`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Origin: BASE_URL,
+        Cookie: cookie!,
+      },
+      body: "{}",
+    });
+    expect(del.status).toBe(400);
+    const delBody = (await del.json()) as { message?: string };
+    expect(delBody.message ?? "").toMatch(/sole owner|team/i);
+
+    const stillThere = await jsonFetch("/api/auth/sign-in/email", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    });
+    expect(stillThere.status).toBe(200);
+    await ctx.close();
+  });
 });
