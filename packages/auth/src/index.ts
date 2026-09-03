@@ -9,6 +9,7 @@ import {
   verifications,
 } from "@oh-writers/db/schema";
 import { sendResetPasswordEmail, sendVerificationEmail } from "./mailer";
+export { sendTeamInviteEmail } from "./mailer";
 
 const socialProviders: Record<
   string,

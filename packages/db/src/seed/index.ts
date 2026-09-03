@@ -79,6 +79,7 @@ async function hashPassword(password: string): Promise<string> {
 
 const TEST_USER_ID = "00000000-0000-4000-a000-000000000001";
 const TEST_VIEWER_ID = "00000000-0000-4000-a000-000000000002";
+const TEST_EDITOR_ID = "00000000-0000-4000-a000-000000000032";
 const TEST_PROJECT_ID = "00000000-0000-4000-a000-000000000010";
 const TEST_TEAM_PROJECT_ID = "00000000-0000-4000-a000-000000000011";
 const TEST_SCREENPLAY_ID = "00000000-0000-4000-a000-000000000020";
@@ -93,6 +94,10 @@ const TEST_NAME = "Test User";
 const TEST_VIEWER_EMAIL = "viewer@ohwriters.dev";
 const TEST_VIEWER_PASSWORD = "viewerpassword123";
 const TEST_VIEWER_NAME = "Viewer User";
+
+const TEST_EDITOR_EMAIL = "editor@ohwriters.dev";
+const TEST_EDITOR_PASSWORD = "editorpassword123";
+const TEST_EDITOR_NAME = "Editor User";
 
 const TEST_TEAM_PROJECT_TITLE = "Team Thriller";
 
@@ -413,7 +418,35 @@ export async function seed() {
 
   console.log("  -> Viewer user created");
 
-  // 7. Team — test user (owner) + viewer user (viewer)
+  // 6b. Editor user — for E2E role-guard tests (write-permission coverage
+  // alongside the read-only viewer above)
+  const hashedEditorPassword = await hashPassword(TEST_EDITOR_PASSWORD);
+
+  await db
+    .insert(users)
+    .values({
+      id: TEST_EDITOR_ID,
+      email: TEST_EDITOR_EMAIL,
+      name: TEST_EDITOR_NAME,
+      emailVerified: true,
+      locale: "it",
+    })
+    .onConflictDoNothing();
+
+  await db
+    .insert(accounts)
+    .values({
+      id: `credential:${TEST_EDITOR_ID}`,
+      userId: TEST_EDITOR_ID,
+      accountId: TEST_EDITOR_ID,
+      providerId: "credential",
+      password: hashedEditorPassword,
+    })
+    .onConflictDoNothing();
+
+  console.log("  -> Editor user created");
+
+  // 7. Team — test user (owner) + viewer user (viewer) + editor user (editor)
   await db
     .insert(teams)
     .values({
@@ -436,6 +469,11 @@ export async function seed() {
         teamId: TEST_TEAM_ID,
         userId: TEST_VIEWER_ID,
         role: "viewer" as const,
+      },
+      {
+        teamId: TEST_TEAM_ID,
+        userId: TEST_EDITOR_ID,
+        role: "editor" as const,
       },
     ])
     .onConflictDoNothing();
@@ -784,6 +822,7 @@ export async function seed() {
   console.log("");
   console.log("  Login: valerio@ohwriters.dev / valerio123");
   console.log("  Viewer: collab@ohwriters.dev / collab123");
+  console.log("  Test Team editor: editor@ohwriters.dev / editorpassword123");
   console.log("");
 }
 

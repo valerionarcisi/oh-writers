@@ -21,6 +21,9 @@ const TEST_PASSWORD = "testpassword123";
 const TEST_VIEWER_EMAIL = "viewer@ohwriters.dev";
 const TEST_VIEWER_PASSWORD = "viewerpassword123";
 
+const TEST_EDITOR_EMAIL = "editor@ohwriters.dev";
+const TEST_EDITOR_PASSWORD = "editorpassword123";
+
 // Matches the seeded team project ID (see packages/db/src/seed/index.ts).
 // Both the owner and the viewer have access to this project; the viewer
 // can read but not write.
@@ -34,6 +37,7 @@ export const TEST_PERSONAL_PROJECT_ID = "00000000-0000-4000-a000-000000000010";
 type AuthFixtures = {
   authenticatedPage: Page;
   authenticatedViewerPage: Page;
+  authenticatedEditorPage: Page;
   testProjectId: string;
 };
 
@@ -108,6 +112,17 @@ export const test = base.extend<AuthFixtures>({
       browser,
       TEST_VIEWER_EMAIL,
       TEST_VIEWER_PASSWORD,
+      testInfo.project.use.baseURL ?? BASE_URL,
+    );
+    await use(page);
+    await page.context().close();
+  },
+
+  authenticatedEditorPage: async ({ browser }, use, testInfo) => {
+    const page = await signInAndOpenPage(
+      browser,
+      TEST_EDITOR_EMAIL,
+      TEST_EDITOR_PASSWORD,
       testInfo.project.use.baseURL ?? BASE_URL,
     );
     await use(page);

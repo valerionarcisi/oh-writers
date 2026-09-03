@@ -36,10 +36,15 @@ export const useCreateProject = () => {
   return useMutation({
     mutationFn: async (input: CreateProjectData) =>
       unwrapResult(await createProject({ data: input })),
-    onSuccess: () => {
+    onSuccess: (_, input) => {
       void queryClient.invalidateQueries({
         queryKey: ["projects", "personal"],
       });
+      if (input.teamId) {
+        void queryClient.invalidateQueries({
+          queryKey: ["projects", "team", input.teamId],
+        });
+      }
     },
   });
 };

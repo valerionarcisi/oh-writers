@@ -1,9 +1,10 @@
 import { Link } from "@tanstack/react-router";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useSuspenseQuery, useQuery } from "@tanstack/react-query";
 import { match } from "ts-pattern";
 import { Users, Settings, Plus } from "lucide-react";
 import { useTranslation } from "~/features/i18n";
 import { teamQueryOptions } from "../server/teams.server";
+import { teamProjectsQueryOptions } from "~/features/projects";
 import styles from "./TeamDashboardPage.module.css";
 
 interface TeamDashboardPageProps {
@@ -27,6 +28,9 @@ export function TeamDashboardPage({ slug }: TeamDashboardPageProps) {
 
   const { members, invitations, ...team } = result.value;
   const currentUserRole = members.find(() => true)?.role ?? null; // shown for display; actual gating done server-side
+
+  const projectsQuery = useQuery(teamProjectsQueryOptions(team.id));
+  const projects = projectsQuery.data ?? [];
 
   return (
     <div className={styles.page}>
@@ -76,12 +80,34 @@ export function TeamDashboardPage({ slug }: TeamDashboardPageProps) {
           <h2 className={styles.sectionTitle}>
             {t("teams.dashboard.projectsTitle")}
           </h2>
-          <Link to="/dashboard" className={styles.newProjectBtn}>
+          <Link
+            to="/projects/new"
+            search={{ teamId: team.id }}
+            className={styles.newProjectBtn}
+          >
             <Plus size={14} strokeWidth={1.5} />
             {t("teams.dashboard.newProject")}
           </Link>
         </div>
-        <p className={styles.emptyHint}>{t("teams.dashboard.projectsHint")}</p>
+        {projects.length === 0 ? (
+          <p className={styles.emptyHint}>
+            {t("teams.dashboard.projectsHint")}
+          </p>
+        ) : (
+          <ul className={styles.memberList} data-testid="team-projects-list">
+            {projects.map((project) => (
+              <li key={project.id} className={styles.memberRow}>
+                <Link
+                  to="/projects/$id"
+                  params={{ id: project.id }}
+                  className={styles.memberDetails}
+                >
+                  <span className={styles.listItemLabel}>{project.title}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       <section className={styles.section}>

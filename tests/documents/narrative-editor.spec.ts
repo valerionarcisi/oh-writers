@@ -33,6 +33,13 @@
 import { test, expect, TEST_TEAM_PROJECT_ID } from "../fixtures";
 import { BASE_URL } from "../helpers";
 import { reseedTestDb } from "../breakdown/helpers";
+import {
+  FAST_AUTOSAVE_SCRIPT,
+  pmEditorLocator,
+  focusPmEditor,
+  readPmEditorText,
+  waitForAutosave,
+} from "../pm-editor-helpers";
 
 // Mutator pays (#116): the content-caps test types a 250-char unbroken run
 // of "x" into the shared seed doc. Left in place, narrative-export (the next
@@ -49,55 +56,9 @@ const SYNOPSIS_PATH = (projectId: string) =>
 const TREATMENT_PATH = (projectId: string) =>
   `${BASE_URL}/projects/${projectId}/treatment`;
 
-// Used to make the auto-save debounce testable. Set via
-// page.addInitScript before navigation.
-const FAST_AUTOSAVE_SCRIPT = `window.__ohWritersAutoSaveDelayMs = 300;`;
-
-// Spec 04e — synopsis/treatment use a vanilla ProseMirror contenteditable,
-// not a textarea. Logline still uses a textarea via TextEditor.
-const pmEditorLocator = (page: import("@playwright/test").Page) =>
-  page.locator('[data-testid="rich-text-editor"] [contenteditable="true"]');
-
-const focusPmEditor = async (page: import("@playwright/test").Page) => {
-  const editor = pmEditorLocator(page);
-  await editor.click();
-  const isEmpty = await editor.evaluate(
-    (el) => (el.textContent ?? "").trim().length === 0,
-  );
-  if (!isEmpty) {
-    await page.keyboard.press(
-      process.platform === "darwin" ? "Meta+A" : "Control+A",
-    );
-    await page.keyboard.press("Delete");
-  }
-};
-
-const readPmEditorText = async (
-  page: import("@playwright/test").Page,
-): Promise<string> => {
-  const editor = pmEditorLocator(page);
-  return await editor.evaluate((el) => {
-    const blocks = Array.from(el.querySelectorAll("p, h2, h3, li"));
-    return blocks
-      .map((b) => (b.textContent ?? "").trim())
-      .filter((t) => t.length > 0)
-      .join("\n");
-  });
-};
-
-// Narrative docs are autosave-only (Spec 04e) — there is no manual Cmd/Ctrl+S
-// flush on the PM surface. Tests shrink the 30s debounce to 300ms via
-// FAST_AUTOSAVE_SCRIPT, then await the autosave round-trip. This helper waits
-// for the saveDocument POST to land so the SaveStatus pill can flip to "saved".
-const waitForAutosave = async (page: import("@playwright/test").Page) => {
-  await page.waitForResponse(
-    (resp) =>
-      resp.url().includes("saveDocument") &&
-      resp.request().method() === "POST" &&
-      resp.ok(),
-    { timeout: 10_000 },
-  );
-};
+// FAST_AUTOSAVE_SCRIPT, pmEditorLocator, focusPmEditor, readPmEditorText,
+// and waitForAutosave now live in ../pm-editor-helpers (shared with
+// teams/team-roles-collaboration.spec.ts).
 
 // The SaveStatus moved to the shell-level indicator (SaveStatusIndicator →
 // SavePill). Match by its stable testid + data-state so the assertion is
