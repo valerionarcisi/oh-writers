@@ -51,3 +51,14 @@ export const useFeature = (feature: Feature): boolean =>
   useEnabledFeatures().has(feature);
 
 export const useFeatures = (): ReadonlySet<Feature> => useEnabledFeatures();
+
+/**
+ * Same as `useFeature`, but `null` instead of throwing when used outside a
+ * `FeatureProvider` (Storybook, isolated unit tests, or any consumer that
+ * must itself stay usable without a mounted provider — e.g. `useCesareOpen`).
+ * Prefer `useFeature` everywhere a `FeatureProvider` is guaranteed.
+ */
+export const useOptionalFeature = (feature: Feature): boolean | null => {
+  const ctx = useContext(FeatureContext);
+  return ctx ? ctx.has(feature) : null;
+};

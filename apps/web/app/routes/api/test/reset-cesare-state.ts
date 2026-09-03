@@ -114,6 +114,15 @@ export const APIRoute = createAPIFileRoute("/api/test/reset-cesare-state")({
       // Recreate the seed "Versione 1" only for non-empty docs, mirroring
       // seedFirstDocumentVersions in the seed.
       if (seedContent.length > 0) {
+        // `documents.createdBy` is nullable (set null when the author's
+        // account is deleted); a seeded test document always has one, so a
+        // missing value here means the seed itself is broken — fail loud
+        // rather than writing a version with a fabricated author.
+        if (!doc.createdBy) {
+          throw new Error(
+            `reset-cesare-state: document ${doc.id} has no createdBy — seed is broken`,
+          );
+        }
         const [version] = await db
           .insert(documentVersions)
           .values({
