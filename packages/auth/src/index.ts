@@ -1,14 +1,81 @@
-import { betterAuth, type BetterAuthOptions } from "better-auth";
+import { betterAuth, APIError, type BetterAuthOptions } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { Redis } from "ioredis";
+import { eq, and, isNull, ne, type SQL } from "drizzle-orm";
+import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import { db } from "@oh-writers/db";
 import {
   users,
   sessions,
   accounts,
   verifications,
+  teams,
+  teamMembers,
+  teamInvitations,
 } from "@oh-writers/db/schema";
+import { translate, type Locale } from "@oh-writers/domain";
 import { sendResetPasswordEmail, sendVerificationEmail } from "./mailer";
+export { sendTeamInviteEmail } from "./mailer";
+
+const existsRow = async (
+  table: PgTable,
+  idColumn: PgColumn,
+  condition: SQL,
+): Promise<boolean> => {
+  const [row] = await db
+    .select({ id: idColumn })
+    .from(table)
+    .where(condition)
+    .limit(1);
+  return row !== undefined;
+};
+
+/**
+ * Blocks account deletion when the user is the sole owner of a team that
+ * still has other members or pending invitations — deleting would otherwise
+ * hit the RESTRICT FK on teams.createdBy / teamInvitations.invitedBy as a raw
+ * Postgres error. See GH #137: the product decision is to block with a clear
+ * message rather than auto-reassign ownership or cascade-delete the team.
+ *
+ * This throws (rather than returning a neverthrow Result) because it plugs
+ * into better-auth's own `deleteUser.beforeDelete` hook contract, which only
+ * understands "throw to abort" — not an app-level server-fn boundary.
+ */
+const guardTeamOwnershipBeforeDelete = async (user: {
+  id: string;
+  locale?: Locale;
+}): Promise<void> => {
+  const ownedTeams = await db
+    .select({ id: teams.id })
+    .from(teams)
+    .where(eq(teams.createdBy, user.id));
+  if (ownedTeams.length === 0) return;
+
+  for (const team of ownedTeams) {
+    const hasOtherMember = await existsRow(
+      teamMembers,
+      teamMembers.id,
+      and(eq(teamMembers.teamId, team.id), ne(teamMembers.userId, user.id))!,
+    );
+    const hasPendingInvitation = await existsRow(
+      teamInvitations,
+      teamInvitations.id,
+      and(
+        eq(teamInvitations.teamId, team.id),
+        isNull(teamInvitations.acceptedAt),
+      )!,
+    );
+
+    if (hasOtherMember || hasPendingInvitation) {
+      throw new APIError("BAD_REQUEST", {
+        message: translate(
+          user.locale ?? "en",
+          "settings.delete.errorTeamOwner",
+        ),
+      });
+    }
+  }
+};
 
 const socialProviders: Record<
   string,
@@ -120,6 +187,7 @@ export const auth = betterAuth({
       // sendDeleteAccountVerification sender yet — deletion is immediate for
       // a fresh session (the SMTP delete-confirmation is a later refinement).
       enabled: true,
+      beforeDelete: guardTeamOwnershipBeforeDelete,
     },
   },
   socialProviders,

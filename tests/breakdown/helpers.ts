@@ -1,31 +1,11 @@
-import { execSync } from "node:child_process";
-import path from "node:path";
 import { type Page, expect } from "@playwright/test";
 import { BASE_URL } from "../fixtures";
 
-/**
- * Reseed the test database to the pristine seed state.
- *
- * The breakdown suite shares a single seeded DB (workers: 1). Some specs mutate
- * shared rows permanently — e.g. bulk-confirm/archive in the per-project view
- * commits the auto-spoglio pending ghosts to accepted, so by the time the
- * alphabetically-later ghost-interaction tests run there are no
- * `[data-ghost="true"]` occurrences left. Tests that REQUIRE pristine pending
- * ghosts call this in a `beforeAll` to restore them. Mirrors global-setup.
- */
-export const reseedTestDb = () => {
-  const root = path.resolve(__dirname, "..", "..");
-  execSync("pnpm --filter @oh-writers/db seed:reset", {
-    cwd: root,
-    stdio: "ignore",
-    env: {
-      ...process.env,
-      DATABASE_URL:
-        process.env["DATABASE_URL_TEST"] ??
-        "postgresql://oh-writers:oh-writers@localhost:5432/oh-writers_test",
-    },
-  });
-};
+// `reseedTestDb` lives in `tests/helpers.ts` — it's a general test-DB utility
+// used across many unrelated spec folders (teams, documents, cesare, user
+// settings…), not something specific to breakdown. Re-exported here so the
+// existing `../breakdown/helpers` import sites keep working.
+export { reseedTestDb } from "../helpers";
 
 export const TEAM_PROJECT_ID = "00000000-0000-4000-a000-000000000011";
 export const TEAM_VERSION_ID = "00000000-0000-4000-a000-000000000023";

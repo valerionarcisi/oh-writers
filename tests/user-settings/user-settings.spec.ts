@@ -14,9 +14,12 @@
  *
  * Teams section:
  *   [507] Teams section lists user's teams with role
+ *   [508] Clicking a team row navigates to that team's dashboard
+ *   [509] "Create team" link navigates to /teams/new
  */
 
 import { test, expect } from "../fixtures";
+import { reseedTestDb } from "../helpers";
 import {
   navigateToSettings,
   waitForProfileSection,
@@ -178,30 +181,74 @@ test("[506] Valid password change succeeds", async ({
 
 // ── Teams section ─────────────────────────────────────────────────────────────
 
-test("[507] Teams section lists user's teams with role", async ({
-  authenticatedPage: page,
-}) => {
-  await navigateToSettings(page);
-  await waitForProfileSection(page);
+// Own describe block so `beforeAll` below scopes to just these tests — a
+// top-level `test.beforeAll` in this file runs once before [500], not "right
+// before [507]" as file position alone would suggest.
+test.describe("teams section", () => {
+  // [506] changes the seeded owner's password and restores it in the same
+  // test, but the restore's server-side commit isn't reliably durable before
+  // the next test's own sign-in fixture runs (observed: intermittent 401
+  // here when run right after [506] in the same file/worker). Reseeding
+  // before this section guarantees a known-good password regardless of that
+  // race.
+  test.beforeAll(() => {
+    reseedTestDb();
+  });
 
-  // Wait for the teams query to resolve — either list or empty state appears
-  const teamsList = page.getByTestId("teams-list");
-  const emptyState = page.getByTestId("teams-empty-state");
+  test("[507] Teams section lists user's teams with role", async ({
+    authenticatedPage: page,
+  }) => {
+    await navigateToSettings(page);
+    await waitForProfileSection(page);
 
-  await expect(teamsList.or(emptyState)).toBeVisible({ timeout: 10_000 });
+    // Wait for the teams query to resolve — either list or empty state appears
+    const teamsList = page.getByTestId("teams-list");
+    const emptyState = page.getByTestId("teams-empty-state");
 
-  const hasTeams = await teamsList.isVisible();
-  if (hasTeams) {
-    // Each team row contains a name and a role badge
-    const rows = teamsList.locator('[class*="teamRow"]');
-    const count = await rows.count();
-    expect(count).toBeGreaterThan(0);
+    await expect(teamsList.or(emptyState)).toBeVisible({ timeout: 10_000 });
 
-    // The first row should have both a team name and a role label
-    const firstRow = rows.first();
-    await expect(firstRow.locator('[class*="teamName"]')).toBeVisible();
-    await expect(firstRow.locator('[class*="roleBadge"]')).toBeVisible();
-  } else {
-    await expect(emptyState).toContainText("Non fai parte di nessun team.");
-  }
+    const hasTeams = await teamsList.isVisible();
+    if (hasTeams) {
+      // Each team row contains a name and a role badge
+      const rows = teamsList.locator('[class*="teamRow"]');
+      const count = await rows.count();
+      expect(count).toBeGreaterThan(0);
+
+      // The first row should have both a team name and a role label
+      const firstRow = rows.first();
+      await expect(firstRow.locator('[class*="teamName"]')).toBeVisible();
+      await expect(firstRow.locator('[class*="roleBadge"]')).toBeVisible();
+    } else {
+      await expect(emptyState).toContainText("Non fai parte di nessun team.");
+    }
+  });
+
+  test("[508] Clicking a team row navigates to that team's dashboard", async ({
+    authenticatedPage: page,
+  }) => {
+    // The seeded owner (test@ohwriters.dev) always has "Test Team".
+    await navigateToSettings(page);
+    await waitForProfileSection(page);
+
+    const teamsList = page.getByTestId("teams-list");
+    await expect(teamsList).toBeVisible({ timeout: 10_000 });
+    const firstRow = teamsList.locator('[class*="teamRow"]').first();
+    await firstRow.click();
+
+    await page.waitForURL(/\/teams\/[a-z0-9-]+$/, { timeout: 10_000 });
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  });
+
+  test('[509] "Create team" link navigates to /teams/new', async ({
+    authenticatedPage: page,
+  }) => {
+    await navigateToSettings(page);
+    await waitForProfileSection(page);
+
+    await page.getByRole("link", { name: "Crea team" }).click();
+    await page.waitForURL(/\/teams\/new$/, { timeout: 10_000 });
+    await expect(
+      page.getByRole("heading", { name: "Nuovo team" }),
+    ).toBeVisible();
+  });
 });

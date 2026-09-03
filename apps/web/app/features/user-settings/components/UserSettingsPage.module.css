@@ -146,6 +146,29 @@
 
 /* ── Teams ───────────────────────────────────────────────────────────────── */
 
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.newTeamBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  border: var(--border);
+  border-radius: var(--radius-md);
+  background: var(--color-accent);
+  color: var(--color-accent-fg, #fff);
+  font-size: var(--text-sm);
+  text-decoration: none;
+
+  &:hover {
+    opacity: 0.9;
+  }
+}
+
 .teamList {
   display: flex;
   flex-direction: column;
@@ -159,6 +182,12 @@
   padding: var(--space-3) var(--space-4);
   background: var(--color-surface-inset);
   border-radius: var(--radius-md);
+  text-decoration: none;
+  color: inherit;
+
+  &:hover {
+    background: var(--color-surface-hover);
+  }
 }
 
 .teamAvatar {

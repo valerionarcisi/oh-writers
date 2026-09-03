@@ -73,6 +73,18 @@ test.describe("[OHW-846] AI-off state", () => {
     await page.waitForURL(`**/projects/${TEST_PERSONAL_PROJECT_ID}`, {
       timeout: 15_000,
     });
+
+    // Shooting plan dock: no "Cesare" button (2026-09-03 audit finding — was
+    // the one AI surface still reachable with AI disabled).
+    await page.goto(`/projects/${TEST_PERSONAL_PROJECT_ID}/shooting-plan`);
+    await expect(page.getByTestId("shooting-plan-cesare-btn")).toHaveCount(0);
+
+    // Settings: no AI section, and a direct visit to /settings/ai redirects
+    // away (route guard, not just the link hidden).
+    await page.goto("/settings");
+    await expect(page.getByTestId("ai-section")).toHaveCount(0);
+    await page.goto("/settings/ai");
+    await page.waitForURL("**/dashboard", { timeout: 15_000 });
   });
 
   test("dismissing the AI-off banner persists across reload", async ({
@@ -102,5 +114,46 @@ test.describe("[OHW-846] AI-off state", () => {
 
     await page.goto(`/projects/${TEST_PERSONAL_PROJECT_ID}/breakdown`);
     await expect(page.getByTestId("breakdown-respoglio-cta")).toBeVisible();
+
+    await page.goto(`/projects/${TEST_PERSONAL_PROJECT_ID}/shooting-plan`);
+    await expect(page.getByTestId("shooting-plan-cesare-btn")).toBeVisible();
+
+    await page.goto("/settings");
+    await expect(page.getByTestId("ai-section")).toBeVisible();
+  });
+
+  test("the narrative layout collapses to a single centered column when AI is off (no empty reserved margin-notes width)", async ({
+    authenticatedPage: page,
+  }) => {
+    // 2026-09-03 live audit: with margin notes hidden, the narrative editor
+    // still reserved 320px for the empty column, leaving the page column
+    // measurably off-center. layoutForType always returned "two"; the fix
+    // collapses to "single" whenever nothing renders in the right aside.
+    // Uses Sinossi (NarrativeEditor/NarrativeDocsShell) — Soggetto renders
+    // through the separate FreeNarrativeEditor, which this fix doesn't touch.
+    await setAiEnabled(page, false);
+    await page.goto(`/projects/${TEST_PERSONAL_PROJECT_ID}/synopsis`);
+    await expect(page.getByTestId("ai-off-banner")).toBeVisible();
+    await expect(page.getByTestId("narrative-layout-single")).toBeVisible();
+    await expect(page.getByTestId("narrative-layout-two")).toHaveCount(0);
+
+    await setAiEnabled(page, true);
+    await page.goto(`/projects/${TEST_PERSONAL_PROJECT_ID}/synopsis`);
+    await expect(page.getByTestId("ai-off-banner")).toHaveCount(0);
+    await expect(page.getByTestId("narrative-layout-two")).toBeVisible();
+    await expect(page.getByTestId("narrative-layout-single")).toHaveCount(0);
+  });
+
+  test("Treatment keeps its two-column layout with AI off (the chapter index still renders in the right aside)", async ({
+    authenticatedPage: page,
+  }) => {
+    // Unlike Synopsis, Treatment's right aside always renders TreatmentToc
+    // regardless of AI state — hasRightAside must stay true so it never
+    // collapses to "single" (which would hide/squeeze the TOC).
+    await setAiEnabled(page, false);
+    await page.goto(`/projects/${TEST_PERSONAL_PROJECT_ID}/treatment`);
+    await expect(page.getByTestId("ai-off-banner")).toBeVisible();
+    await expect(page.getByTestId("narrative-layout-two")).toBeVisible();
+    await expect(page.getByTestId("narrative-layout-single")).toHaveCount(0);
   });
 });

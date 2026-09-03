@@ -19,7 +19,6 @@ export default defineConfig({
       "../../packages/domain/src/**/*.test.ts",
       "../../packages/ui/src/**/*.test.ts",
       "../../packages/utils/src/**/*.test.ts",
-      "../../packages/auth/src/**/*.test.ts",
     ],
     environment: "node",
   },

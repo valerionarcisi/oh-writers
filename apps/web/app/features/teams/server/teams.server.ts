@@ -13,6 +13,7 @@ import {
   users,
 } from "@oh-writers/db/schema";
 import type { Team, TeamMember, TeamInvitation } from "@oh-writers/db/schema";
+import { sendTeamInviteEmail } from "@oh-writers/auth";
 import { requireUser, getUser } from "~/server/context";
 import { getDb } from "~/server/db";
 import type { Db } from "~/server/db";
@@ -378,13 +379,26 @@ export const inviteMember = createServerFn({ method: "POST" })
                     expiresAt,
                   })
                   .returning()
-                  .then((rows) => {
+                  .then(async (rows) => {
                     const inv = rows[0];
                     if (!inv) throw new Error("Insert returned no rows");
-                    // Log invite URL — no email sending yet
                     const origin =
                       process.env["APP_ORIGIN"] ?? "http://localhost:3000";
-                    console.info(`[TEAM INVITE] ${origin}/invite/${token}`);
+                    const url = `${origin}/invite/${token}`;
+                    console.info(`[TEAM INVITE] ${url}`);
+                    // Best-effort: sendTeamInviteEmail never throws (see
+                    // mailer.ts) so an SMTP outage can't turn this insert into
+                    // a 500 — the invitation row already exists and the link
+                    // above is always available as a fallback.
+                    const team = await db.query.teams.findFirst({
+                      where: eq(teams.id, data.teamId),
+                    });
+                    await sendTeamInviteEmail({
+                      to: data.email,
+                      teamName: team?.name ?? "Oh Writers",
+                      inviterName: user.name,
+                      url,
+                    });
                     return inv;
                   }),
                 (e) => new DbError("inviteMember.insert", e),
@@ -433,12 +447,22 @@ export const resendInvite = createServerFn({ method: "POST" })
               .set({ expiresAt })
               .where(eq(teamInvitations.id, data.invitationId))
               .returning()
-              .then((rows) => {
+              .then(async (rows) => {
                 const inv = rows[0];
                 if (!inv) throw new Error("Update returned no rows");
                 const origin =
                   process.env["APP_ORIGIN"] ?? "http://localhost:3000";
-                console.info(`[TEAM INVITE] ${origin}/invite/${inv.token}`);
+                const url = `${origin}/invite/${inv.token}`;
+                console.info(`[TEAM INVITE] ${url}`);
+                const team = await db.query.teams.findFirst({
+                  where: eq(teams.id, inv.teamId),
+                });
+                await sendTeamInviteEmail({
+                  to: inv.email,
+                  teamName: team?.name ?? "Oh Writers",
+                  inviterName: user.name,
+                  url,
+                });
                 return inv;
               }),
             (e) => new DbError("resendInvite.update", e),

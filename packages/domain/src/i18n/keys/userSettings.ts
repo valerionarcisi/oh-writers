@@ -49,6 +49,7 @@ export const userSettingsKeys = {
     // Teams
     "settings.teams.sectionTitle": "Team",
     "settings.teams.empty": "You are not part of any team.",
+    "settings.teams.create": "Create team",
     // Account deletion (Spec #127)
     "settings.delete.sectionTitle": "Delete account",
     "settings.delete.description":
@@ -60,6 +61,8 @@ export const userSettingsKeys = {
     "settings.delete.cancel": "Cancel",
     "settings.delete.deleting": "Deleting…",
     "settings.delete.error": "Error while deleting the account.",
+    "settings.delete.errorTeamOwner":
+      "You are the sole owner of a team with other members or pending invitations. Transfer ownership before deleting your account.",
     // AI section (link to /settings/ai)
     "settings.aiSection.sectionTitle": "AI",
     "settings.aiSection.description":
@@ -213,6 +216,7 @@ export const userSettingsKeys = {
     // Teams
     "settings.teams.sectionTitle": "Team",
     "settings.teams.empty": "Non fai parte di nessun team.",
+    "settings.teams.create": "Crea team",
     // Account deletion (Spec #127)
     "settings.delete.sectionTitle": "Elimina account",
     "settings.delete.description":
@@ -224,6 +228,8 @@ export const userSettingsKeys = {
     "settings.delete.cancel": "Annulla",
     "settings.delete.deleting": "Eliminazione…",
     "settings.delete.error": "Errore durante l'eliminazione dell'account.",
+    "settings.delete.errorTeamOwner":
+      "Sei l'unico proprietario di un team con altri membri o inviti in sospeso. Trasferisci la proprietà prima di eliminare l'account.",
     // AI section (link to /settings/ai)
     "settings.aiSection.sectionTitle": "AI",
     "settings.aiSection.description":

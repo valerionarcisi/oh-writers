@@ -72,3 +72,15 @@ export const sendVerificationEmail = async (opts: {
     subject: "Oh Writers — Verifica il tuo indirizzo email",
     text: `Ciao,\n\nbenvenuto in Oh Writers. Per completare la registrazione verifica il tuo indirizzo email:\n\n${opts.url}\n\nSe non hai creato tu un account, ignora questa email.`,
   });
+
+export const sendTeamInviteEmail = async (opts: {
+  to: string;
+  teamName: string;
+  inviterName: string;
+  url: string;
+}): Promise<void> =>
+  sendMail({
+    to: opts.to,
+    subject: `${opts.inviterName} ti ha invitato a "${opts.teamName}" su Oh Writers`,
+    text: `Ciao,\n\n${opts.inviterName} ti ha invitato a collaborare sul team "${opts.teamName}" su Oh Writers.\n\nApri questo link per accettare l'invito:\n${opts.url}\n\nSe non ti aspettavi questo invito, puoi ignorare questa email.`,
+  });
