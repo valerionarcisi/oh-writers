@@ -17,6 +17,7 @@ import {
 import {
   EFFORT_LEVELS,
   EFFORT_LABELS,
+  Features,
   type EffortLevel,
 } from "@oh-writers/domain";
 import { ScriptPanel } from "./ScriptPanel";
@@ -26,6 +27,7 @@ import { ParallelPlansEditor } from "./ParallelPlansEditor";
 import { ShootingPlanDock } from "./ShootingPlanDock";
 import { useCesareOpen, useSetActiveScene } from "~/features/app-shell";
 import { useTranslation } from "~/features/i18n";
+import { useFeature } from "~/features/feature-flags";
 import { useExportShotList } from "../hooks/useExportShotList";
 import styles from "./ShootingPlanPage.module.css";
 
@@ -46,6 +48,7 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const openCesare = useCesareOpen();
+  const isAiEnabled = useFeature(Features.AI_ENABLED);
   const setActiveScene = useSetActiveScene();
   const { showToast } = useToast();
   const { exportCsv, exportPdf } = useExportShotList(projectId);
@@ -259,7 +262,8 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
             <>
               <span className={styles.headerMetaSep}>·</span>
               <span className={styles.headerMetaChip}>
-                {formatMinutes(totalMinutesAll)} {t("shootingPlan.page.planned")}
+                {formatMinutes(totalMinutesAll)}{" "}
+                {t("shootingPlan.page.planned")}
               </span>
             </>
           )}
@@ -429,7 +433,7 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
         }
         onExport={exportCsv}
         onPrint={exportPdf}
-        onCesareClick={openCesare}
+        onCesareClick={isAiEnabled ? openCesare : undefined}
       />
     </div>
   );
