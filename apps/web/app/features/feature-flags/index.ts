@@ -1,1 +1,6 @@
-export { FeatureProvider, useFeature, useFeatures } from "./feature-context";
+export {
+  FeatureProvider,
+  useFeature,
+  useFeatures,
+  useOptionalFeature,
+} from "./feature-context";

@@ -29,9 +29,9 @@ export const documents = pgTable(
     content: text("content").notNull().default(""),
     currentVersionId: uuid("current_version_id"),
     yjsState: bytea("yjs_state"),
-    createdBy: uuid("created_by")
-      .notNull()
-      .references(() => users.id),
+    createdBy: uuid("created_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
