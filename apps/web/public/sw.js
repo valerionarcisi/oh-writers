@@ -1,8 +1,8 @@
 // ponytail: app-shell cache only (icons + manifest), not a full offline-first
 // asset precache. Upgrade to vite-plugin-pwa/Workbox if per-route offline or
 // background sync is actually needed.
-const CACHE = "ohw-shell-v1";
-const SHELL_ASSETS = ["/manifest.webmanifest", "/icon.svg", "/icon-maskable.svg"];
+const CACHE = "ohw-shell-v2";
+const SHELL_ASSETS = ["/manifest.webmanifest", "/icon.svg", "/icon-maskable.svg", "/favicon-32.png", "/favicon-192.png", "/apple-touch-icon-180.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL_ASSETS)));

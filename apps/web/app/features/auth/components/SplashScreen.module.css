@@ -1,0 +1,126 @@
+/* apps/web/app/features/app-shell/components/SplashScreen.module.css */
+
+/* Brand splash on cold load. Paper (light) canvas over the whole app, lockup
+   centered; pure CSS keyframes drive the whole 3.2s life then the overlay
+   stays hidden forwards (fill mode), and `pointer-events: none` so it never
+   blocks the app once gone (and never degrades the a11y tree interactions). */
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  display: grid;
+  place-items: center;
+  background: var(--ds-bg);
+  color: var(--ds-text);
+  pointer-events: none;
+  animation: splash-life 3.2s both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .splash {
+    display: none;
+  }
+}
+
+@keyframes splash-life {
+  0% {
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  88% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+/* The lockup itself: `oh-` 600 + clay cursor bar + `writers` italic 400.
+   All Fraunces (loaded globally in __root head), falling back to
+   Georgia/serif if offline — same fallback the exported SVGs prescribe.. */
+.lockup {
+  display: inline-flex;
+  align-items: baseline;
+  white-space: nowrap;
+  font-family: Fraunces, Georgia, serif;
+  font-size: clamp(2.5rem, 8vw, 4.5rem);
+  line-height: 1;
+  opacity: 0;
+  animation: lockup-in 0.4s ease 0.45s both;
+}
+
+@keyframes lockup-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.oh {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.cursor {
+  align-self: center;
+  inline-size: 0.14em;
+  block-size: 0.72em;
+  margin-inline: 0.06em 0.1em;
+  background: var(--ds-action);
+  /* Blinks just twice (breathes life into the mark), then stays lit — the
+     cursor is static in-app (see the brand note), and the splash blink dies down
+     after ~1.2s matching the "blink briefly, then stop" choice. */
+  animation: splash-blink 1.2s both 0.15s;
+}
+
+@keyframes splash-blink {
+  0%,
+  12% {
+    opacity: 1;
+  }
+  22%,
+  34% {
+    opacity: 0;
+  }
+  44%,
+  56% {
+    opacity: 1;
+  }
+  66%,
+  78% {
+    opacity: 0;
+  }
+  88%,
+  100% {
+    opacity: 1;
+  }
+}
+
+.writers {
+  font-style: italic;
+  font-weight: 400;
+}
+
+/* Typewriter: each letter snaps in ~90ms, 130ms apart — letters stagger
+   themselves via a custom property `--i` (0-based index) set per letter. */
+.letter {
+  display: inline-block;
+  opacity: 0;
+  animation: letter-in 0.09s steps(2, end) calc(1s + var(--i) * 0.13s) both;
+}
+
+@keyframes letter-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

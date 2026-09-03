@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { Link, useRouter } from "@tanstack/react-router";
 import { z } from "zod";
 import { buildPasswordSchema, type TranslationKey } from "@oh-writers/domain";
-import { Button, useHydratedInput } from "@oh-writers/ui";
+import { BrandWordmark, Button, useHydratedInput } from "@oh-writers/ui";
 import { authClient } from "~/lib/auth-client";
 import { useTranslation } from "~/features/i18n";
 import { PasswordInput } from "./PasswordInput";
@@ -128,7 +128,7 @@ export function RegisterForm({ availableProviders }: RegisterFormProps) {
     return (
       <div className={styles.wrapper}>
         <div className={styles.header}>
-          <span className={styles.logo}>Oh Writers</span>
+          <BrandWordmark className={styles.brandWordmark} />
           <h1 className={styles.heading}>
             {t("auth.register.checkEmailHeading")}
           </h1>
@@ -148,7 +148,7 @@ export function RegisterForm({ availableProviders }: RegisterFormProps) {
   return (
     <div className={styles.wrapper}>
       <div className={styles.header}>
-        <span className={styles.logo}>Oh Writers</span>
+        <BrandWordmark className={styles.brandWordmark} />
         <h1 className={styles.heading}>{t("auth.register.heading")}</h1>
       </div>
 

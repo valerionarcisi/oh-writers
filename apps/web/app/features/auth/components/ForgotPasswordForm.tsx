@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { z } from "zod";
 import { authClient } from "~/lib/auth-client";
 import { useTranslation } from "~/features/i18n";
+import { BrandWordmark } from "@oh-writers/ui";
 import styles from "./LoginForm.module.css";
 
 export function ForgotPasswordForm() {
@@ -41,8 +42,7 @@ export function ForgotPasswordForm() {
     return (
       <div className={styles.card}>
         <div className={styles.brand}>
-          <span className={styles.brandMark}>O</span>
-          <span className={styles.brandName}>Oh Writers</span>
+          <BrandWordmark className={styles.brandWordmark} />
         </div>
         <div className={styles.headingBlock}>
           <h1 className={styles.heading}>
@@ -64,8 +64,7 @@ export function ForgotPasswordForm() {
   return (
     <div className={styles.card}>
       <div className={styles.brand}>
-        <span className={styles.brandMark}>O</span>
-        <span className={styles.brandName}>Oh Writers</span>
+        <BrandWordmark className={styles.brandWordmark} />
       </div>
       <div className={styles.headingBlock}>
         <h1 className={styles.heading}>{t("auth.forgotPassword.heading")}</h1>

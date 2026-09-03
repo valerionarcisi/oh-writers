@@ -80,7 +80,13 @@ function RootLayout() {
         <link rel="manifest" href="/manifest.webmanifest" />
         <meta name="theme-color" content="#1c1a17" />
         <link rel="icon" href="/icon.svg" type="image/svg+xml" />
-        <link rel="apple-touch-icon" href="/icon.svg" />
+        <link
+          rel="icon"
+          type="image/png"
+          sizes="32x32"
+          href="/favicon-32.png"
+        />
+        <link rel="apple-touch-icon" href="/apple-touch-icon-180.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-title" content="Oh Writers" />
         <meta

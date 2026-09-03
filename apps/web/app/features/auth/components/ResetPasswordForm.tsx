@@ -5,6 +5,7 @@ import { buildPasswordSchema } from "@oh-writers/domain";
 import { authClient } from "~/lib/auth-client";
 import { useTranslation } from "~/features/i18n";
 import { PasswordInput } from "./PasswordInput";
+import { BrandWordmark } from "@oh-writers/ui";
 import styles from "./LoginForm.module.css";
 
 interface ResetPasswordFormProps {
@@ -62,8 +63,7 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
     return (
       <div className={styles.card}>
         <div className={styles.brand}>
-          <span className={styles.brandMark}>O</span>
-          <span className={styles.brandName}>Oh Writers</span>
+          <BrandWordmark className={styles.brandWordmark} />
         </div>
         <p className={styles.apiError}>
           {t("auth.resetPassword.invalidToken")}
@@ -81,8 +81,7 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
     return (
       <div className={styles.card}>
         <div className={styles.brand}>
-          <span className={styles.brandMark}>O</span>
-          <span className={styles.brandName}>Oh Writers</span>
+          <BrandWordmark className={styles.brandWordmark} />
         </div>
         <p className={styles.footer}>{t("auth.resetPassword.success")}</p>
         <button
@@ -99,8 +98,7 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
   return (
     <div className={styles.card}>
       <div className={styles.brand}>
-        <span className={styles.brandMark}>O</span>
-        <span className={styles.brandName}>Oh Writers</span>
+        <BrandWordmark className={styles.brandWordmark} />
       </div>
       <div className={styles.headingBlock}>
         <h1 className={styles.heading}>{t("auth.resetPassword.heading")}</h1>
