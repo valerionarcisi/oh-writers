@@ -35,7 +35,7 @@ test.describe("[Spec 88] legal baseline", () => {
     await page
       .getByLabel(/^email/i)
       .fill(`legal-baseline-${unique}@ohwriters.dev`);
-    await page.getByLabel(/^password/i).fill("password123");
+    await page.getByLabel(/^password/i).fill("Password123");
 
     await page.getByRole("button", { name: /create account/i }).click();
     await expect(page.getByText(/you must accept/i)).toBeVisible();

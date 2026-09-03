@@ -89,6 +89,13 @@ const signInAndOpenPage = async (
   if (cookies.length > 0) {
     await context.addCookies(cookies);
   }
+  // Spec 88's cookie notice is a fixed, high-z bottom banner covering the
+  // dock/composer area on first load; every other fixture below assumes it
+  // is already dismissed (a returning user's actual state), same as
+  // `legal-baseline.spec.ts` verifies for a fresh visitor.
+  await context.addInitScript(() => {
+    window.localStorage.setItem("ohw:cookie-banner-dismissed", "1");
+  });
   const page = await context.newPage();
   await page.goto(`${baseURL}/dashboard`);
   await page.waitForURL("**/dashboard", { timeout: 15_000 });
