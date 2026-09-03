@@ -50,11 +50,26 @@ export function ShootingPlanDock({
         title={t("shootingPlan.dock.generateTitle")}
       >
         {isGenerating ? (
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={styles.spinIcon}>
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            className={styles.spinIcon}
+          >
             <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
           </svg>
         ) : (
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+          >
             <path d="M5 3h14M5 3v18l7-4 7 4V3" />
           </svg>
         )}
@@ -70,7 +85,14 @@ export function ShootingPlanDock({
         className={styles.btnGhost}
         title={t("shootingPlan.dock.prefillTitle")}
       >
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+        <svg
+          width="13"
+          height="13"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+        >
           <path d="M3 12a9 9 0 1 1 3 6.7" />
           <path d="M3 19v-6h6" />
         </svg>
@@ -100,20 +122,24 @@ export function ShootingPlanDock({
         <kbd className={styles.kbd}>⌘P</kbd>
       </button>
 
-      <div className={styles.sep} aria-hidden="true" />
+      {onCesareClick && (
+        <>
+          <div className={styles.sep} aria-hidden="true" />
 
-      <button
-        type="button"
-        className={styles.cesareBtn}
-        title={t("shootingPlan.dock.openCesare")}
-        onClick={onCesareClick}
-      >
-        <span className={styles.cesareDot} aria-hidden="true" />
-        Cesare
-        {suggestedShotCount > 0 && (
-          <span className={styles.cesareCount}>{suggestedShotCount}</span>
-        )}
-      </button>
+          <button
+            type="button"
+            className={styles.cesareBtn}
+            title={t("shootingPlan.dock.openCesare")}
+            onClick={onCesareClick}
+          >
+            <span className={styles.cesareDot} aria-hidden="true" />
+            Cesare
+            {suggestedShotCount > 0 && (
+              <span className={styles.cesareCount}>{suggestedShotCount}</span>
+            )}
+          </button>
+        </>
+      )}
     </div>
   );
 }
