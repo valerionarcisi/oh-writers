@@ -1661,9 +1661,6 @@ function AppShellInner({
             brand={{
               label: "Oh Writers",
               onPress: handleBrandClick,
-              // N-21 — hide the redundant wordmark when no project is open;
-              // the "O" mark stands alone (Notion-style minimal header).
-              showLabel: Boolean(projectName),
             }}
             project={
               projectName

@@ -915,7 +915,7 @@ export function LeftRail({
       )}
 
       {home && (
-        <div className={styles.sectionItems}>
+        <div className={[styles.sectionItems, styles.homeRow].join(" ")}>
           <RailItemButton
             item={home}
             onActivate={() => onNavigate(home.href)}

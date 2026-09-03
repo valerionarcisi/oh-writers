@@ -73,6 +73,8 @@
   block-size: 26px;
   inline-size: 26px;
   flex-shrink: 0;
+  border-radius: var(--ds-radius-md);
+  transition: opacity 0.15s ease;
 }
 
 .brandCompact .brandWordmark,
@@ -83,8 +85,20 @@
 .brandCompact .brandBadge,
 :global(body[data-shell="collapsed"]) .brandLockup .brandBadge {
   display: block;
-  block-size: 40px;
-  inline-size: 40px;
+  block-size: 28px;
+  inline-size: 28px;
+}
+
+/* Collapsed rail: the badge already carries its own dark rounded-square
+   shape, so the generic button-hover rectangle behind it just clashes with
+   mismatched geometry. Hover feedback comes from the badge dimming instead. */
+.brand:has(.brandCompact):hover,
+:global(body[data-shell="collapsed"]) .brand:hover {
+  background: transparent;
+}
+
+.brand:hover .brandCompact .brandBadge {
+  opacity: 0.8;
 }
 
 .project {
@@ -203,6 +217,14 @@
   display: flex;
   flex-direction: column;
   gap: 1px;
+}
+
+/* Collapsed rail overlay: the brand badge already navigates to the
+   dashboard, so a separate "Home" row would be a second control for the
+   same destination. Hide it only there — the expanded rail keeps it as a
+   normal nav row (with active-state highlighting the badge can't show). */
+:global(body[data-shell="collapsed"]) .homeRow {
+  display: none;
 }
 
 /* ── Nav item ──────────────────────────────────────────────── */
