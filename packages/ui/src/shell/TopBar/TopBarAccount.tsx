@@ -87,6 +87,11 @@ function AvatarGlyph({
         alt={label}
         className={styles.accountAvatarImg}
         onError={() => setFailed(true)}
+        // Google's avatar CDN (lh3.googleusercontent.com) rejects the
+        // request when it carries a cross-origin Referer, which the browser
+        // then renders as its own broken-image icon rather than firing
+        // onError with a graceful fallback. no-referrer avoids that.
+        referrerPolicy="no-referrer"
       />
     );
   }
