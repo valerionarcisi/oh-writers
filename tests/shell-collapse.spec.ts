@@ -161,6 +161,15 @@ test.describe("[044-B] Shell collapse / focus transitions", () => {
       )
       .toBe("open");
 
+    // #135 — in the collapsed overlay the compact badge is shown alone:the
+    // full wordmark must be hidden,no layout jump.
+    await expect(
+      page.getByTestId("left-rail").getByTestId("brand-wordmark"),
+    ).toBeHidden();
+    await expect(
+      page.getByTestId("left-rail").getByTestId("brand-badge"),
+    ).toBeVisible();
+
     // The overlay must NOT reflow the editor as a column — the rail floats above
     // it. A real column reflow would NARROW the editor by ~the rail width
     // (~240px). Benign layout shifts (a scrollbar gutter mounting, the page

@@ -55,28 +55,36 @@
   }
 }
 
-.brandMark {
-  inline-size: 26px;
-  block-size: 26px;
-  border-radius: 50%;
-  background: var(--ds-text);
-  color: var(--ds-text-on-dark);
-  font-family: var(--ds-font-display);
-  font-weight: 600;
-  font-size: 14px;
+.brandLockup {
   display: grid;
   place-items: center;
   flex-shrink: 0;
 }
 
-.brandName {
-  font-family: var(--ds-font-display);
-  font-size: 15px;
-  font-weight: 500;
-  color: var(--ds-text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.brandWordmark {
+  display: block;
+  block-size: 22px;
+  inline-size: auto;
+  max-inline-size: 170px;
+}
+
+.brandBadge {
+  display: none;
+  block-size: 26px;
+  inline-size: 26px;
+  flex-shrink: 0;
+}
+
+.brandCompact .brandWordmark,
+:global(body[data-shell="collapsed"]) .brandLockup .brandWordmark {
+  display: none;
+}
+
+.brandCompact .brandBadge,
+:global(body[data-shell="collapsed"]) .brandLockup .brandBadge {
+  display: block;
+  block-size: 40px;
+  inline-size: 40px;
 }
 
 .project {

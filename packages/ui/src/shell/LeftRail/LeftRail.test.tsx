@@ -35,7 +35,7 @@ const SESSIONS: ReadonlyArray<CesareSessionItem> = [
 
 describe("LeftRail", () => {
   it("renders brand and project header", () => {
-    const { getByText } = render(
+    const { getByText, getByLabelText } = render(
       <LeftRail
         brand={{ label: "Oh Writers", onPress: vi.fn() }}
         project={{ title: "Non fa ridere" }}
@@ -43,7 +43,7 @@ describe("LeftRail", () => {
         onNavigate={vi.fn()}
       />,
     );
-    expect(getByText("Oh Writers")).toBeTruthy();
+    expect(getByLabelText("Oh Writers")).toBeTruthy();
     expect(getByText("Non fa ridere")).toBeTruthy();
   });
 

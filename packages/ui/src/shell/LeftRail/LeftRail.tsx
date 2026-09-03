@@ -7,6 +7,7 @@ import type { IconName } from "../../icons/icon-names";
 import { DropdownMenu } from "../../components/DropdownMenu";
 import type { DropdownMenuItem } from "../../components/DropdownMenu";
 import { GearGlyph } from "../TopBar/GearGlyph";
+import { BrandWordmark, BrandBadge } from "../../brand/BrandAssets";
 import styles from "./LeftRail.module.css";
 
 export type RailNavItem = {
@@ -620,7 +621,6 @@ function RailGlyph({ icon }: { icon: string }) {
     </span>
   );
 }
-
 // Rail visible-rows policy: at most 3 pinned + as many unpinned as fit,
 // capped at 5 rows total. When the full session list exceeds 5, the rail
 // shows the capped slice plus a "Vedi tutte (N)" link to the full sessions
@@ -832,12 +832,18 @@ export function LeftRail({
           className={styles.brand}
           data-rail-brand=""
         >
-          <span className={styles.brandMark} aria-hidden="true">
-            O
+          <span
+            className={[
+              styles.brandLockup,
+              brand.showLabel === false ? styles.brandCompact : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+            aria-hidden="true"
+          >
+            <BrandWordmark className={styles.brandWordmark} />
+            <BrandBadge className={styles.brandBadge} />
           </span>
-          {brand.showLabel !== false && (
-            <span className={styles.brandName}>{brand.label}</span>
-          )}
         </button>
         {overlay?.onLockOpen && (
           <button

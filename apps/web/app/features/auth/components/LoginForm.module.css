@@ -17,26 +17,11 @@
   margin-block-end: var(--space-2);
 }
 
-.brandMark {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: var(--ds-clay-500);
-  color: var(--ds-white);
-  font-family: var(--ds-font-serif, "Fraunces", serif);
-  font-size: var(--text-base);
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.brandName {
-  font-family: var(--ds-font-serif, "Fraunces", serif);
-  font-size: var(--text-base);
-  font-weight: 500;
-  color: var(--ds-text);
-  letter-spacing: -0.01em;
+.brandWordmark {
+  display: block;
+  block-size: 22px;
+  inline-size: auto;
+  max-inline-size: 170px;
 }
 
 /* ── Heading ─────────────────────────────────────────────── */

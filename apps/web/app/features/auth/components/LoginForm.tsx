@@ -1,9 +1,10 @@
 import { useRef, useState } from "react";
 import { Link, useRouter } from "@tanstack/react-router";
 import { z } from "zod";
-import { useHydratedInput } from "@oh-writers/ui";
+import { useHydratedInput, BrandWordmark } from "@oh-writers/ui";
 import { authClient } from "~/lib/auth-client";
 import { useTranslation } from "~/features/i18n";
+import { SplashScreen } from "./SplashScreen";
 import { PasswordInput } from "./PasswordInput";
 import { OAuthButtons } from "./OAuthButtons";
 import styles from "./LoginForm.module.css";
@@ -75,120 +76,128 @@ export function LoginForm({ availableProviders }: LoginFormProps) {
   };
 
   return (
-    <div className={styles.card}>
-      {/* Logo / wordmark */}
-      <div className={styles.brand}>
-        <span className={styles.brandMark}>O</span>
-        <span className={styles.brandName}>Oh Writers</span>
-      </div>
+    <>
+      <SplashScreen />
+      <div className={styles.card}>
+        {/* Brand wordmark (#134) */}
+        <div className={styles.brand}>
+          <BrandWordmark className={styles.brandWordmark} />
+        </div>
 
-      <div className={styles.headingBlock}>
-        <h1 className={styles.heading}>
-          {step === "email"
-            ? t("auth.login.headingSignIn")
-            : t("auth.login.headingWelcomeBack")}
-        </h1>
-        {step === "password" && (
-          <p className={styles.emailPill}>
-            {email}
-            <button
-              type="button"
-              className={styles.changeEmail}
-              onClick={() => {
-                setStep("email");
-                setApiError(null);
-                setPasswordError(null);
-              }}
-            >
-              {t("auth.login.changeEmail")}
-            </button>
-          </p>
-        )}
-      </div>
+        <div className={styles.headingBlock}>
+          <h1 className={styles.heading}>
+            {step === "email"
+              ? t("auth.login.headingSignIn")
+              : t("auth.login.headingWelcomeBack")}
+          </h1>
+          {step === "password" && (
+            <p className={styles.emailPill}>
+              {email}
+              <button
+                type="button"
+                className={styles.changeEmail}
+                onClick={() => {
+                  setStep("email");
+                  setApiError(null);
+                  setPasswordError(null);
+                }}
+              >
+                {t("auth.login.changeEmail")}
+              </button>
+            </p>
+          )}
+        </div>
 
-      {apiError && <p className={styles.apiError}>{apiError}</p>}
+        {apiError && <p className={styles.apiError}>{apiError}</p>}
 
-      {step === "email" ? (
-        <form onSubmit={handleEmailContinue} className={styles.form} noValidate>
-          <div className={styles.field}>
-            <label className={styles.label} htmlFor="email">
-              {t("auth.field.email")}
-            </label>
-            <input
-              ref={emailRef}
-              id="email"
-              type="email"
-              autoComplete="email"
-              autoFocus
-              className={`${styles.input} ${emailError ? styles.inputError : ""}`}
-              value={email}
-              onChange={(e) => {
-                setEmail(e.target.value);
-                setEmailError(null);
-              }}
-              placeholder={t("auth.placeholder.email")}
-            />
-            {emailError && (
-              <span className={styles.fieldError}>{emailError}</span>
-            )}
-          </div>
-
-          <button type="submit" className={styles.primaryBtn}>
-            {t("auth.action.continue")}
-          </button>
-
-          <OAuthButtons
-            availableProviders={availableProviders}
-            callbackURL="/dashboard"
-          />
-        </form>
-      ) : (
-        <form
-          onSubmit={handlePasswordSubmit}
-          className={styles.form}
-          noValidate
-        >
-          <div className={styles.field}>
-            <label className={styles.label} htmlFor="password">
-              {t("auth.field.password")}
-            </label>
-            <PasswordInput
-              id="password"
-              autoComplete="current-password"
-              autoFocus
-              hasError={!!passwordError}
-              value={password}
-              onChange={(e) => {
-                setPassword(e.target.value);
-                setPasswordError(null);
-              }}
-              placeholder="••••••••"
-            />
-            {passwordError && (
-              <span className={styles.fieldError}>{passwordError}</span>
-            )}
-          </div>
-
-          <Link to="/forgot-password" className={styles.forgotPassword}>
-            {t("auth.login.forgotPassword")}
-          </Link>
-
-          <button
-            type="submit"
-            className={styles.primaryBtn}
-            disabled={isSubmitting}
+        {step === "email" ? (
+          <form
+            onSubmit={handleEmailContinue}
+            className={styles.form}
+            noValidate
           >
-            {isSubmitting ? t("auth.login.submitting") : t("auth.login.submit")}
-          </button>
-        </form>
-      )}
+            <div className={styles.field}>
+              <label className={styles.label} htmlFor="email">
+                {t("auth.field.email")}
+              </label>
+              <input
+                ref={emailRef}
+                id="email"
+                type="email"
+                autoComplete="email"
+                autoFocus
+                className={`${styles.input} ${emailError ? styles.inputError : ""}`}
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setEmailError(null);
+                }}
+                placeholder={t("auth.placeholder.email")}
+              />
+              {emailError && (
+                <span className={styles.fieldError}>{emailError}</span>
+              )}
+            </div>
 
-      <p className={styles.footer}>
-        {t("auth.login.noAccount")}{" "}
-        <Link to="/register" className={styles.footerLink}>
-          {t("auth.login.register")}
-        </Link>
-      </p>
-    </div>
+            <button type="submit" className={styles.primaryBtn}>
+              {t("auth.action.continue")}
+            </button>
+
+            <OAuthButtons
+              availableProviders={availableProviders}
+              callbackURL="/dashboard"
+            />
+          </form>
+        ) : (
+          <form
+            onSubmit={handlePasswordSubmit}
+            className={styles.form}
+            noValidate
+          >
+            <div className={styles.field}>
+              <label className={styles.label} htmlFor="password">
+                {t("auth.field.password")}
+              </label>
+              <PasswordInput
+                id="password"
+                autoComplete="current-password"
+                autoFocus
+                hasError={!!passwordError}
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  setPasswordError(null);
+                }}
+                placeholder="••••••••"
+              />
+              {passwordError && (
+                <span className={styles.fieldError}>{passwordError}</span>
+              )}
+            </div>
+
+            <Link to="/forgot-password" className={styles.forgotPassword}>
+              {t("auth.login.forgotPassword")}
+            </Link>
+
+            <button
+              type="submit"
+              className={styles.primaryBtn}
+              disabled={isSubmitting}
+            >
+              {isSubmitting
+                ? t("auth.login.submitting")
+                : t("auth.login.submit")}
+            </button>
+          </form>
+        )}
+
+        <p className={styles.footer}>
+          {t("auth.login.noAccount")}{" "}
+          <Link to="/register" className={styles.footerLink}>
+            {t("auth.login.register")}
+          </Link>
+        </p>
+      </div>
+    </>
   );
 }

@@ -43,6 +43,7 @@ export type {
   ContextMenuItem,
 } from "./components/ContextMenu";
 export { DropdownMenu } from "./components/DropdownMenu";
+export { BrandWordmark, BrandBadge } from "./brand/BrandAssets";
 export type {
   DropdownMenuProps,
   DropdownMenuItem,
