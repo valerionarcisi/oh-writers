@@ -85,6 +85,7 @@ import { useSaveScreenplay } from "../hooks/useScreenplay";
 import {
   useTitlePageState,
   useUpdateTitlePageState,
+  titlePageDocForWire,
 } from "~/features/projects";
 import type { TitlePageDocJSON } from "../lib/title-page-from-pdf";
 import { ImportedTitlePageConfirm } from "./ImportedTitlePageConfirm";
@@ -461,7 +462,7 @@ export const ScreenplayEditor = forwardRef<
       updateTitlePage.mutate({
         projectId: screenplay.projectId,
         state: {
-          doc: doc as unknown as Record<string, NonNullable<unknown>>,
+          doc: titlePageDocForWire(doc),
           draftDate: current?.draftDate ?? null,
           draftColor: current?.draftColor ?? null,
         },

@@ -145,9 +145,13 @@ export function useImportPdf({
         if (hasExistingContent) {
           setStatus({ type: "confirm", fountain, titlePageDoc });
         } else {
+          // Title page first: a caller that needs both pieces together (e.g.
+          // creating a fresh project and applying the detected title in one
+          // go) can read it synchronously inside its own onImport instead of
+          // juggling a ref to bridge the two callbacks.
+          if (titlePageDoc) onTitlePageDetected?.(titlePageDoc);
           onImport(fountain);
           announceImport(fountain);
-          if (titlePageDoc) onTitlePageDetected?.(titlePageDoc);
           setStatus({ type: "idle" });
         }
       })

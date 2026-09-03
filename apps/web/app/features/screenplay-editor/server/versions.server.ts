@@ -115,16 +115,41 @@ export const ensureFirstVersion = async (
 
   if (!screenplay) return;
 
-  await db.insert(screenplayVersions).values({
-    screenplayId,
-    number: 1,
-    label: "Versione 1",
-    content: screenplay.content,
-    pageCount: screenplay.pageCount,
-    draftColor: FIRST_DRAFT_COLOR,
-    draftDate: todayIsoDate(),
-    createdBy: userId,
-  });
+  // Same server-side CRDT seeding as importAsActiveVersionTx below, for the
+  // same reason: a NULL snapshot on a version that already has non-empty
+  // content (e.g. the dashboard's "Import PDF"/"Import Fountain" flow, which
+  // saves fountain text into a freshly-created screenplay before any client
+  // ever connects) leaves the realtime room to seed itself empty on first
+  // connect — the editor renders blank even though screenplays.content has
+  // the imported text. Found live 2026-09-03 (blank editor after PDF import).
+  const snapshot = yjsSnapshotFromFountain(screenplay.content);
+
+  const inserted = await db
+    .insert(screenplayVersions)
+    .values({
+      screenplayId,
+      number: 1,
+      label: "Versione 1",
+      content: screenplay.content,
+      pageCount: screenplay.pageCount,
+      yjsSnapshot: snapshot,
+      draftColor: FIRST_DRAFT_COLOR,
+      draftDate: todayIsoDate(),
+      createdBy: userId,
+    })
+    .returning()
+    .then((rows) => rows[0]);
+  if (!inserted) return;
+
+  // Point the screenplay at its own first version, and mirror the same CRDT
+  // onto the screenplay-level state — same double-write as the other two
+  // version-creation paths above, so a legacy (non-version-scoped) realtime
+  // room also loads correctly if one is ever opened before currentVersionId
+  // propagates to the client.
+  await db
+    .update(screenplays)
+    .set({ currentVersionId: inserted.id, yjsState: snapshot })
+    .where(eq(screenplays.id, screenplayId));
 };
 
 // ─── Authorization helper ─────────────────────────────────────────────────────

@@ -5,7 +5,10 @@ import {
   useSaveScreenplay,
   screenplayQueryOptions,
 } from "~/features/screenplay-editor";
+import type { TitlePageDocJSON } from "~/features/screenplay-editor";
 import { useCreateProject } from "./useProjects";
+import { useUpdateTitlePageState } from "./useTitlePageState";
+import { titlePageDocForWire } from "../title-page-state.schema";
 
 /**
  * Shared round-trip behind the dashboard's "Import Fountain" and "Import PDF"
@@ -20,10 +23,12 @@ export function useCreateProjectFromScreenplay() {
   const queryClient = useQueryClient();
   const createProject = useCreateProject();
   const saveScreenplay = useSaveScreenplay();
+  const updateTitlePageState = useUpdateTitlePageState();
 
   const createAndImport = async (
     title: string,
     content: string,
+    titlePageDoc?: TitlePageDocJSON | null,
   ): Promise<boolean> => {
     const outcome = await ResultAsync.fromPromise(
       createProject.mutateAsync({ title, format: "feature" }),
@@ -41,7 +46,7 @@ export function useCreateProjectFromScreenplay() {
                 pmDoc: null,
               }),
               () => "save" as const,
-            ).map(() => project)
+            ).map((saved) => ({ project, saved }))
           : ResultAsync.fromPromise(
               Promise.reject(new Error("no-screenplay")),
               () => "screenplay" as const,
@@ -50,10 +55,39 @@ export function useCreateProjectFromScreenplay() {
     );
 
     if (outcome.isErr()) return false;
+    const { project, saved } = outcome.value;
+
+    // Write the just-saved screenplay straight into the query cache before
+    // navigating. useSaveScreenplay's onSuccess only *invalidates* this key,
+    // which refetches active queries — but the screenplay route isn't mounted
+    // yet at this point, so the stale entry (content: "" from the fetchQuery
+    // above, before the save) survives until navigation. ScreenplayEditor
+    // seeds its local `content` state from that prop on mount, and its own
+    // autosave then persists the empty string right over the imported text.
+    // Found live 2026-09-03 (PDF import producing a blank editor).
+    queryClient.setQueryData(screenplayQueryOptions(project.id).queryKey, {
+      isOk: true,
+      value: saved,
+    });
+
+    // A PDF's title page is applied to the fresh project's own (empty) title
+    // page — syncProjectTitle stays true (the default) since this project's
+    // placeholder name ("Imported screenplay" etc.) is meant to be replaced,
+    // unlike importing a PDF into an already-named existing project.
+    if (titlePageDoc) {
+      await updateTitlePageState.mutateAsync({
+        projectId: project.id,
+        state: {
+          doc: titlePageDocForWire(titlePageDoc),
+          draftDate: null,
+          draftColor: null,
+        },
+      });
+    }
 
     void navigate({
       to: "/projects/$id/screenplay",
-      params: { id: outcome.value.id },
+      params: { id: project.id },
     });
     return true;
   };
