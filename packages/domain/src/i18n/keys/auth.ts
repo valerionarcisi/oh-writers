@@ -24,9 +24,33 @@ export const authKeys = {
     "auth.login.submit": "Sign in",
     "auth.login.noAccount": "Don't have an account?",
     "auth.login.register": "Sign up",
+    "auth.login.forgotPassword": "Forgot password?",
     // Password input
     "auth.password.hide": "Hide password",
     "auth.password.show": "Show password",
+    // Forgot password
+    "auth.forgotPassword.heading": "Reset your password",
+    "auth.forgotPassword.instructions":
+      "Enter your email and we'll send you a link to reset your password.",
+    "auth.forgotPassword.submit": "Send reset link",
+    "auth.forgotPassword.submitting": "Sending…",
+    "auth.forgotPassword.sentHeading": "Check your email",
+    "auth.forgotPassword.sentMessage":
+      "If an account exists for that email, we've sent a link to reset your password to",
+    "auth.forgotPassword.backToLogin": "Back to sign in",
+    // Reset password
+    "auth.resetPassword.heading": "Choose a new password",
+    "auth.resetPassword.fieldPassword": "New password",
+    "auth.resetPassword.placeholderPassword": "Min. 8 characters",
+    "auth.resetPassword.submit": "Reset password",
+    "auth.resetPassword.submitting": "Resetting…",
+    "auth.resetPassword.success":
+      "Your password has been reset. You can now sign in.",
+    "auth.resetPassword.invalidToken":
+      "This reset link is invalid or has expired. Request a new one.",
+    "auth.resetPassword.error": "Failed to reset password",
+    "auth.resetPassword.validation.passwordMin":
+      "Password must be at least 8 characters",
     // Register
     "auth.register.validation.nameRequired": "Name is required",
     "auth.register.validation.nameTooLong": "Name is too long",
@@ -70,9 +94,33 @@ export const authKeys = {
     "auth.login.submit": "Accedi",
     "auth.login.noAccount": "Non hai un account?",
     "auth.login.register": "Registrati",
+    "auth.login.forgotPassword": "Password dimenticata?",
     // Password input
     "auth.password.hide": "Nascondi password",
     "auth.password.show": "Mostra password",
+    // Forgot password
+    "auth.forgotPassword.heading": "Reimposta la password",
+    "auth.forgotPassword.instructions":
+      "Inserisci la tua email e ti invieremo un link per reimpostare la password.",
+    "auth.forgotPassword.submit": "Invia link di reset",
+    "auth.forgotPassword.submitting": "Invio in corso…",
+    "auth.forgotPassword.sentHeading": "Controlla la tua email",
+    "auth.forgotPassword.sentMessage":
+      "Se esiste un account con questa email, ti abbiamo inviato un link per reimpostare la password a",
+    "auth.forgotPassword.backToLogin": "Torna al login",
+    // Reset password
+    "auth.resetPassword.heading": "Scegli una nuova password",
+    "auth.resetPassword.fieldPassword": "Nuova password",
+    "auth.resetPassword.placeholderPassword": "Min. 8 caratteri",
+    "auth.resetPassword.submit": "Reimposta password",
+    "auth.resetPassword.submitting": "Reimpostazione in corso…",
+    "auth.resetPassword.success":
+      "La tua password è stata reimpostata. Ora puoi accedere.",
+    "auth.resetPassword.invalidToken":
+      "Questo link di reset non è valido o è scaduto. Richiedine uno nuovo.",
+    "auth.resetPassword.error": "Impossibile reimpostare la password",
+    "auth.resetPassword.validation.passwordMin":
+      "La password deve contenere almeno 8 caratteri",
     // Register — kept verbatim (this page currently renders English in both
     // locales; preserve that until the register copy is localised).
     "auth.register.validation.nameRequired": "Name is required",

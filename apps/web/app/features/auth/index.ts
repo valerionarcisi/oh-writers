@@ -1,6 +1,8 @@
 export { LoginForm } from "./components/LoginForm";
 export { RegisterForm } from "./components/RegisterForm";
 export { PasswordInput } from "./components/PasswordInput";
+export { ForgotPasswordForm } from "./components/ForgotPasswordForm";
+export { ResetPasswordForm } from "./components/ResetPasswordForm";
 
 // Route-loader server functions (login / register / invite). Exported here so
 // the route files import from the barrel like every other cross-feature use.

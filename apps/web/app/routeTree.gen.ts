@@ -12,9 +12,11 @@
 
 import { Route as rootRoute } from "./routes/__root";
 import { Route as TermsImport } from "./routes/terms";
+import { Route as ResetPasswordImport } from "./routes/reset-password";
 import { Route as RegisterImport } from "./routes/register";
 import { Route as PrivacyImport } from "./routes/privacy";
 import { Route as LoginImport } from "./routes/login";
+import { Route as ForgotPasswordImport } from "./routes/forgot-password";
 import { Route as AppImport } from "./routes/_app";
 import { Route as IndexImport } from "./routes/index";
 import { Route as InviteTokenImport } from "./routes/invite.$token";
@@ -63,6 +65,12 @@ const TermsRoute = TermsImport.update({
   getParentRoute: () => rootRoute,
 } as any);
 
+const ResetPasswordRoute = ResetPasswordImport.update({
+  id: "/reset-password",
+  path: "/reset-password",
+  getParentRoute: () => rootRoute,
+} as any);
+
 const RegisterRoute = RegisterImport.update({
   id: "/register",
   path: "/register",
@@ -78,6 +86,12 @@ const PrivacyRoute = PrivacyImport.update({
 const LoginRoute = LoginImport.update({
   id: "/login",
   path: "/login",
+  getParentRoute: () => rootRoute,
+} as any);
+
+const ForgotPasswordRoute = ForgotPasswordImport.update({
+  id: "/forgot-password",
+  path: "/forgot-password",
   getParentRoute: () => rootRoute,
 } as any);
 
@@ -342,6 +356,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AppImport;
       parentRoute: typeof rootRoute;
     };
+    "/forgot-password": {
+      id: "/forgot-password";
+      path: "/forgot-password";
+      fullPath: "/forgot-password";
+      preLoaderRoute: typeof ForgotPasswordImport;
+      parentRoute: typeof rootRoute;
+    };
     "/login": {
       id: "/login";
       path: "/login";
@@ -361,6 +382,13 @@ declare module "@tanstack/react-router" {
       path: "/register";
       fullPath: "/register";
       preLoaderRoute: typeof RegisterImport;
+      parentRoute: typeof rootRoute;
+    };
+    "/reset-password": {
+      id: "/reset-password";
+      path: "/reset-password";
+      fullPath: "/reset-password";
+      preLoaderRoute: typeof ResetPasswordImport;
       parentRoute: typeof rootRoute;
     };
     "/terms": {
@@ -753,9 +781,11 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren);
 export interface FileRoutesByFullPath {
   "/": typeof IndexRoute;
   "": typeof AppRouteWithChildren;
+  "/forgot-password": typeof ForgotPasswordRoute;
   "/login": typeof LoginRoute;
   "/privacy": typeof PrivacyRoute;
   "/register": typeof RegisterRoute;
+  "/reset-password": typeof ResetPasswordRoute;
   "/terms": typeof TermsRoute;
   "/crash-test": typeof AppCrashTestRoute;
   "/dashboard": typeof AppDashboardRoute;
@@ -799,9 +829,11 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   "/": typeof IndexRoute;
   "": typeof AppRouteWithChildren;
+  "/forgot-password": typeof ForgotPasswordRoute;
   "/login": typeof LoginRoute;
   "/privacy": typeof PrivacyRoute;
   "/register": typeof RegisterRoute;
+  "/reset-password": typeof ResetPasswordRoute;
   "/terms": typeof TermsRoute;
   "/crash-test": typeof AppCrashTestRoute;
   "/dashboard": typeof AppDashboardRoute;
@@ -844,9 +876,11 @@ export interface FileRoutesById {
   __root__: typeof rootRoute;
   "/": typeof IndexRoute;
   "/_app": typeof AppRouteWithChildren;
+  "/forgot-password": typeof ForgotPasswordRoute;
   "/login": typeof LoginRoute;
   "/privacy": typeof PrivacyRoute;
   "/register": typeof RegisterRoute;
+  "/reset-password": typeof ResetPasswordRoute;
   "/terms": typeof TermsRoute;
   "/_app/crash-test": typeof AppCrashTestRoute;
   "/_app/dashboard": typeof AppDashboardRoute;
@@ -892,9 +926,11 @@ export interface FileRouteTypes {
   fullPaths:
     | "/"
     | ""
+    | "/forgot-password"
     | "/login"
     | "/privacy"
     | "/register"
+    | "/reset-password"
     | "/terms"
     | "/crash-test"
     | "/dashboard"
@@ -937,9 +973,11 @@ export interface FileRouteTypes {
   to:
     | "/"
     | ""
+    | "/forgot-password"
     | "/login"
     | "/privacy"
     | "/register"
+    | "/reset-password"
     | "/terms"
     | "/crash-test"
     | "/dashboard"
@@ -980,9 +1018,11 @@ export interface FileRouteTypes {
     | "__root__"
     | "/"
     | "/_app"
+    | "/forgot-password"
     | "/login"
     | "/privacy"
     | "/register"
+    | "/reset-password"
     | "/terms"
     | "/_app/crash-test"
     | "/_app/dashboard"
@@ -1027,9 +1067,11 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute;
   AppRoute: typeof AppRouteWithChildren;
+  ForgotPasswordRoute: typeof ForgotPasswordRoute;
   LoginRoute: typeof LoginRoute;
   PrivacyRoute: typeof PrivacyRoute;
   RegisterRoute: typeof RegisterRoute;
+  ResetPasswordRoute: typeof ResetPasswordRoute;
   TermsRoute: typeof TermsRoute;
   DevTokensRoute: typeof DevTokensRoute;
   InviteTokenRoute: typeof InviteTokenRoute;
@@ -1038,9 +1080,11 @@ export interface RootRouteChildren {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
+  ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
   PrivacyRoute: PrivacyRoute,
   RegisterRoute: RegisterRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   TermsRoute: TermsRoute,
   DevTokensRoute: DevTokensRoute,
   InviteTokenRoute: InviteTokenRoute,
@@ -1058,9 +1102,11 @@ export const routeTree = rootRoute
       "children": [
         "/",
         "/_app",
+        "/forgot-password",
         "/login",
         "/privacy",
         "/register",
+        "/reset-password",
         "/terms",
         "/dev/tokens",
         "/invite/$token"
@@ -1102,6 +1148,9 @@ export const routeTree = rootRoute
         "/_app/projects/$id_/shooting-plan_/blocking-editor"
       ]
     },
+    "/forgot-password": {
+      "filePath": "forgot-password.tsx"
+    },
     "/login": {
       "filePath": "login.tsx"
     },
@@ -1110,6 +1159,9 @@ export const routeTree = rootRoute
     },
     "/register": {
       "filePath": "register.tsx"
+    },
+    "/reset-password": {
+      "filePath": "reset-password.tsx"
     },
     "/terms": {
       "filePath": "terms.tsx"

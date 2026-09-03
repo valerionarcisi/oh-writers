@@ -199,6 +199,10 @@ export function LoginForm({ availableProviders }: LoginFormProps) {
             )}
           </div>
 
+          <Link to="/forgot-password" className={styles.forgotPassword}>
+            {t("auth.login.forgotPassword")}
+          </Link>
+
           <button
             type="submit"
             className={styles.primaryBtn}

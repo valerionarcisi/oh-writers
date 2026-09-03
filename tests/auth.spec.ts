@@ -194,6 +194,89 @@ test.describe("account lifecycle (auth)", () => {
     expect(newTry.status, `sign-in with new pwd ${newTry.status}`).toBe(200);
   });
 
+  test("password reset UI: forgot-password link → request form → reset-password page → sign in with new password", async ({
+    page,
+  }) => {
+    // Distinct from the API-only reset test above (Spec 88 gap): the email
+    // link points at a UI route (/reset-password?token=...), not the raw
+    // better-auth API endpoint — that route didn't exist before this fix.
+    const email = uniqueEmail();
+    const password = "AuthTest123!";
+    const newPassword = "AuthUiReset456!";
+
+    const signup = await jsonFetch("/api/auth/sign-up/email", {
+      method: "POST",
+      body: JSON.stringify({ email, password, name: "Reset UI Spec" }),
+    });
+    expect(signup.status).toBeLessThan(400);
+    const verifyTok = rawsignVerifyToken(email, BETTER_AUTH_SECRET);
+    await jsonFetch(
+      `/api/auth/verify-email?token=${verifyTok}&callbackURL=%2F`,
+    );
+
+    await page.goto("/login");
+    await page.waitForLoadState("networkidle");
+    await page.getByLabel(/^email/i).fill(email);
+    await page.getByRole("button", { name: "Continue", exact: true }).click();
+    await page.getByRole("link", { name: /forgot password/i }).click();
+    await page.waitForURL("**/forgot-password");
+
+    await page.getByLabel(/^email/i).fill(email);
+    await page.getByRole("button", { name: /send reset link/i }).click();
+    await expect(page.getByText(/check your email/i)).toBeVisible();
+
+    // Real SMTP delivery is out of scope here (covered by the mailer unit
+    // test + the manual Mailtrap check) — read the token better-auth
+    // persisted in `verifications`, then drive the real UI route with it,
+    // exactly as the emailed link would.
+    const token = await fetchResetToken(email);
+    expect(token, "reset token persisted in verifications").toBeTruthy();
+
+    await page.goto(`/reset-password?token=${token}`);
+    await page.waitForLoadState("networkidle");
+    await expect(
+      page.getByRole("heading", { name: /choose a new password/i }),
+    ).toBeVisible();
+    await page.getByLabel(/new password/i).fill(newPassword);
+    await page.getByRole("button", { name: /reset password/i }).click();
+    await expect(page.getByText(/password has been reset/i)).toBeVisible();
+
+    const oldTry = await jsonFetch("/api/auth/sign-in/email", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    });
+    expect(oldTry.status).toBe(401);
+    const newTry = await jsonFetch("/api/auth/sign-in/email", {
+      method: "POST",
+      body: JSON.stringify({ email, password: newPassword }),
+    });
+    expect(newTry.status, `sign-in with new pwd ${newTry.status}`).toBe(200);
+  });
+
+  test("reset-password page shows an error for a missing/invalid token", async ({
+    page,
+  }) => {
+    await page.goto("/reset-password");
+    await expect(page.getByText(/invalid or has expired/i)).toBeVisible();
+
+    await page.goto("/reset-password?token=not-a-real-token");
+    await page.waitForLoadState("networkidle");
+    await expect(
+      page.getByRole("heading", { name: /choose a new password/i }),
+    ).toBeVisible();
+    await page.getByLabel(/new password/i).fill("SomeNewPass123!");
+    await page.getByRole("button", { name: /reset password/i }).click();
+    // better-auth rejects the bogus token at submit time — the page must
+    // surface that as an apiError and stay on the form, not navigate away or
+    // show success.
+    await expect(
+      page.getByText(/invalid|expired|failed to reset/i),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /choose a new password/i }),
+    ).toBeVisible();
+  });
+
   test("change password as the signed-in user", async ({ browser }) => {
     // Use a fresh user so the seeded test@ohwriters.dev fixture is untouched
     // (change-password mutates the account's credential).
