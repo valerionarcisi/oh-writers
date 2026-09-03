@@ -1265,6 +1265,15 @@ function AppShellInner({
     }
   }, [projectId, router]);
 
+  // Gates the rail nav (and everything derived from it below — palette
+  // section jumps, the gear menu's AI entry) through DEV_ONLY/market rules.
+  const enabledFeatures = useFeatures();
+  // Spec 84 §5 — the master AI switch. OFF hides the Cesare drawer, its
+  // BottomDock/dock affordance, and the LeftRail "Sessioni Cesare" section
+  // entirely (not disabled — absent), leaving only the AI-off banner
+  // (rendered per-page, not here) as the sole trace of AI.
+  const isAiEnabled = enabledFeatures.has(Features.AI_ENABLED);
+
   // Gear dropdown (live request 2026-07-13, slimmed same day) — settings
   // destinations ONLY: project / account / AI. The project pages already live
   // in the LeftRail; duplicating them here was noise. Built only inside a
@@ -1284,14 +1293,29 @@ function AppShellInner({
         onClick: handleUserSettings,
         testId: "gear-menu-account-settings",
       },
-      {
-        label: t("shell.gearMenu.aiCredits"),
-        icon: "✦",
-        onClick: () => handleNavigate("/settings/ai"),
-        testId: "gear-menu-ai-credits",
-      },
+      // /settings/ai itself redirects to the dashboard when AI is off
+      // (requireFeatureOrDashboard) — showing this entry then would look
+      // like a dead click. Same "OFF = hidden" contract as every other AI
+      // surface (Spec 84 §5). Found live 2026-09-03.
+      ...(isAiEnabled
+        ? [
+            {
+              label: t("shell.gearMenu.aiCredits"),
+              icon: "✦",
+              onClick: () => handleNavigate("/settings/ai"),
+              testId: "gear-menu-ai-credits",
+            },
+          ]
+        : []),
     ];
-  }, [projectId, handleNavigate, handleProjectSettings, handleUserSettings, t]);
+  }, [
+    projectId,
+    isAiEnabled,
+    handleNavigate,
+    handleProjectSettings,
+    handleUserSettings,
+    t,
+  ]);
 
   // N-24 — the rail project header carries a chevron-down (the universal
   // "opens a menu" affordance), so it opens a project menu rather than a bare
@@ -1335,15 +1359,6 @@ function AppShellInner({
       router,
     ],
   );
-
-  // Gates the rail nav (and everything derived from it below — palette
-  // section jumps) through DEV_ONLY/market rules.
-  const enabledFeatures = useFeatures();
-  // Spec 84 §5 — the master AI switch. OFF hides the Cesare drawer, its
-  // BottomDock/dock affordance, and the LeftRail "Sessioni Cesare" section
-  // entirely (not disabled — absent), leaving only the AI-off banner
-  // (rendered per-page, not here) as the sole trace of AI.
-  const isAiEnabled = enabledFeatures.has(Features.AI_ENABLED);
 
   const paletteItems = useMemo<CommandPaletteItem[]>(() => {
     const items: CommandPaletteItem[] = [
