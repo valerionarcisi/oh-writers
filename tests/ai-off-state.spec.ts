@@ -73,6 +73,18 @@ test.describe("[OHW-846] AI-off state", () => {
     await page.waitForURL(`**/projects/${TEST_PERSONAL_PROJECT_ID}`, {
       timeout: 15_000,
     });
+
+    // Shooting plan dock: no "Cesare" button (2026-09-03 audit finding — was
+    // the one AI surface still reachable with AI disabled).
+    await page.goto(`/projects/${TEST_PERSONAL_PROJECT_ID}/shooting-plan`);
+    await expect(page.getByTestId("shooting-plan-cesare-btn")).toHaveCount(0);
+
+    // Settings: no AI section, and a direct visit to /settings/ai redirects
+    // away (route guard, not just the link hidden).
+    await page.goto("/settings");
+    await expect(page.getByTestId("ai-section")).toHaveCount(0);
+    await page.goto("/settings/ai");
+    await page.waitForURL("**/dashboard", { timeout: 15_000 });
   });
 
   test("dismissing the AI-off banner persists across reload", async ({
@@ -102,5 +114,11 @@ test.describe("[OHW-846] AI-off state", () => {
 
     await page.goto(`/projects/${TEST_PERSONAL_PROJECT_ID}/breakdown`);
     await expect(page.getByTestId("breakdown-respoglio-cta")).toBeVisible();
+
+    await page.goto(`/projects/${TEST_PERSONAL_PROJECT_ID}/shooting-plan`);
+    await expect(page.getByTestId("shooting-plan-cesare-btn")).toBeVisible();
+
+    await page.goto("/settings");
+    await expect(page.getByTestId("ai-section")).toBeVisible();
   });
 });

@@ -131,6 +131,7 @@ export function ShootingPlanDock({
             className={styles.cesareBtn}
             title={t("shootingPlan.dock.openCesare")}
             onClick={onCesareClick}
+            data-testid="shooting-plan-cesare-btn"
           >
             <span className={styles.cesareDot} aria-hidden="true" />
             Cesare
