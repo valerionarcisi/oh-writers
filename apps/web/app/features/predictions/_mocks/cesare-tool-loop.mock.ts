@@ -1151,13 +1151,22 @@ const lastToolResultsErrored = (
   return false;
 };
 
-// The conversation key uses the first user message so subsequent tool-result
-// turns within the same loop advance the turn index correctly.
+// The conversation key uses the LATEST user message, not the first: a
+// session persists across multiple sent turns, so `prompt` accumulates every
+// prior turn's messages too. Keying on the first user message in that
+// accumulated history would collide two DIFFERENT turns onto the SAME
+// scenario's turn counter (the 2nd send reads the 1st's already-advanced —
+// or already-deleted — index and falls through to the wrong branch). Within
+// one turn's own tool-loop (model call → tool call → model call again to
+// read the result), that turn's user message is still the most recent one
+// when the loop starts, so scanning from the end correctly identifies THIS
+// turn's scenario in both cases.
 const conversationKeyFromPrompt = (
   prompt: MockDoGenerateOptions["prompt"],
 ): string => {
-  for (const msg of prompt) {
-    if (msg.role !== "user") continue;
+  for (let i = prompt.length - 1; i >= 0; i--) {
+    const msg = prompt[i];
+    if (!msg || msg.role !== "user") continue;
     const parts = msg.content as Array<{ type: string; text?: string }>;
     const text = parts
       .filter((p) => p.type === "text" && typeof p.text === "string")

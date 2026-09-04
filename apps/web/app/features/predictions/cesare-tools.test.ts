@@ -21,7 +21,7 @@ import { DbError } from "@oh-writers/utils";
 describe("extractSideChannelMarkers — honest success for write tools", () => {
   const markersFor = (toolName: string, content: string): string[] => {
     const acc: string[] = [];
-    extractSideChannelMarkers(toolName, content, acc);
+    extractSideChannelMarkers(toolName, content, acc, "test-project-id");
     return acc;
   };
 

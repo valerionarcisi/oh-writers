@@ -70,6 +70,8 @@ const seedLongSoggetto = async (page: Page): Promise<void> => {
     data: { data: { versionId, content: LONG_SOGGETTO } },
   });
   expect(saved.ok()).toBe(true);
+
+  await closeVersionsLane(page);
 };
 
 // Open the routed Versions surface via the TopBar version chip (Spec 66 moved
@@ -90,6 +92,19 @@ const openVersionsViaUi = async (page: Page): Promise<string> => {
 const countVersionRows = async (page: Page): Promise<number> =>
   page.locator('[data-testid^="versions-split-row-"]').count();
 
+// Close the Versions split lane. A plain `page.goto` without `?versions=`
+// doesn't reliably clear it (the shared aux-lane history survives the
+// navigation — Spec 78 A6), and a lane left open makes the next "Apri
+// Cesare" click promote Cesare INTO that lane instead of opening the
+// floating sheet `openCesareSheet` expects, hanging its `data-cesare` poll.
+const closeVersionsLane = async (page: Page): Promise<void> => {
+  const lane = page.getByTestId("versions-split-lane");
+  if (await lane.isVisible().catch(() => false)) {
+    await lane.getByLabel("Chiudi").click();
+    await expect(lane).toBeHidden({ timeout: 5_000 });
+  }
+};
+
 test.describe("[N66] Cesare version checkpoints", () => {
   test.beforeEach(async ({ authenticatedPage }) => {
     await resetCesareState(authenticatedPage, TEST_TEAM_PROJECT_ID);
@@ -107,6 +122,7 @@ test.describe("[N66] Cesare version checkpoints", () => {
     });
     const documentId = await openVersionsViaUi(page);
     const rowsBefore = await countVersionRows(page);
+    await closeVersionsLane(page);
 
     // Two consecutive small edits in the same Cesare session.
     await openCesareSheet(page);
@@ -209,10 +225,7 @@ test.describe("[N66] Cesare version checkpoints", () => {
     const documentId = await openVersionsViaUi(page);
     const before = await countVersionRows(page);
     // Close Versions so the Cesare click opens the floating sheet.
-    await page.goto(SOGGETTO_PATH(TEST_TEAM_PROJECT_ID));
-    await expect(page.getByTestId("soggetto-page")).toBeVisible({
-      timeout: 15_000,
-    });
+    await closeVersionsLane(page);
 
     await openCesareSheet(page);
     await sendCesareMessage(page, "Piccola modifica: cambia una parola");

@@ -24,6 +24,7 @@ import {
   getTurnVersionDirective,
   recordTurnToolExecution,
 } from "./cesare-turn-signals";
+import { invalidateGlobalContext } from "./context/global-context.server";
 import {
   locationCandidates,
   locationPhotos,
@@ -2796,6 +2797,7 @@ export const extractSideChannelMarkers = (
   toolName: string,
   toolResultContent: string,
   accumulator: string[],
+  projectId: string,
 ): void => {
   if (toolName === "propose_blocking_for_scene") {
     try {
@@ -2860,6 +2862,14 @@ export const extractSideChannelMarkers = (
     try {
       const payload = JSON.parse(toolResultContent) as Record<string, unknown>;
       if (payload && payload["applied_live"] === true) {
+        // buildGlobalContext memoizes the project's document content for 60s
+        // (context/global-context.server.ts). A second Cesare turn sent
+        // within that window — same session, seconds apart — would otherwise
+        // read the PRE-edit content from cache: `apply_text_edit`'s `find`
+        // fails against text this turn's own predecessor already changed,
+        // and the model reports the doc-applied tools' own no-material
+        // failure text. Drop the cache the instant a document write commits.
+        invalidateGlobalContext(projectId);
         accumulator.push(
           `<!--ohw:doc-applied:${JSON.stringify({
             document_type: payload["document_type"],
@@ -3124,6 +3134,7 @@ const runLegacyToolLoopEffect = (
                 block.name,
                 value.content,
                 textAccumulator,
+                args.projectId,
               );
               return value;
             }),
@@ -3424,6 +3435,7 @@ const runProductionToolLoopEffect = (
                 toolCall.toolName,
                 JSON.stringify(toolResult.output),
                 textAccumulator,
+                args.projectId,
               );
             }
           }

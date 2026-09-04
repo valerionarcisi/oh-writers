@@ -171,6 +171,14 @@ export async function waitForCesareReply(page: Page): Promise<string> {
       timeout: 60_000,
     })
     .toBeGreaterThanOrEqual(2);
+  // The assistant bubble mounts as a `LoadingIndicator` (aria-busy, no <p>)
+  // before its text streams in — the paragraph count above can pass on the
+  // user's bubble alone while the assistant is still "sta rispondendo".
+  // Wait for that indicator to clear so the last <p> is genuinely the
+  // settled reply, not a premature read of the user's own echoed text.
+  await expect(log.locator('[aria-busy="true"]')).toHaveCount(0, {
+    timeout: 60_000,
+  });
   const n = await paragraphs.count();
   if (n === 0) return "";
   return (await paragraphs.nth(n - 1).textContent()) ?? "";
@@ -312,4 +320,81 @@ export async function waitForMidFlightOrSkip(
     .then(() => true)
     .catch(() => false);
   skip(!caughtMidFlight, "turn settled before the field could be checked");
+}
+
+/**
+ * A long soggetto baseline carrying both mock size-classification anchors
+ * (see `MOCK_SCENARIOS` in `_mocks/cesare-tool-loop.mock.ts`):
+ *   "libraio di quartiere" → the small-edit scenario ("cambia libraio")
+ *                            swaps one word — well under the 0.4 large-edit
+ *                            ratio, so `commitOrAsk` overwrites in place.
+ *   "PRINCIPIO"            → the large-edit scenario replaces it with a long
+ *                            new body — clears the ratio, so `commitOrAsk`
+ *                            asks (`applied_live: false`, no doc-applied
+ *                            marker) instead of auto-applying.
+ * Any test that needs a deterministic small OR large edit against the
+ * soggetto (rather than the default seed, which contains neither anchor)
+ * seeds this first.
+ */
+export const LONG_SOGGETTO =
+  "<p>PRINCIPIO. In una cittadina di provincia vive un libraio di quartiere " +
+  "che ogni mattina alza la saracinesca della bottega ereditata dal padre. " +
+  "Le giornate scorrono lente tra clienti abitudinari, scaffali polverosi e " +
+  "il profumo della carta vecchia, mentre fuori il mondo cambia senza chiedere " +
+  "permesso. Una sera, tra le pagine di un volume mai venduto, trova una lettera " +
+  "che lo costringe a guardare il proprio passato con occhi nuovi e a decidere " +
+  "se restare immobile o partire verso ciò che ha sempre rimandato.</p>";
+
+/**
+ * Seed the soggetto's active version with `LONG_SOGGETTO` via the document
+ * version server fns directly (the only URL-stable way to set arbitrary
+ * content), so the edit-size classification has a real, known previous
+ * content to diff against. Opens Versions to resolve the document id, then
+ * closes the lane again — left open, it makes the next "Apri Cesare" click
+ * promote Cesare INTO the shared aux lane instead of opening the floating
+ * sheet (Spec 78 A6).
+ */
+export async function seedLongSoggetto(
+  page: Page,
+  projectId: string,
+): Promise<void> {
+  await page.goto(`${BASE_URL}/projects/${projectId}/soggetto`);
+  await expect(page.getByTestId("soggetto-page")).toBeVisible({
+    timeout: 15_000,
+  });
+
+  const chip = page.getByTestId("topbar-version-chip");
+  await expect(chip).toBeVisible({ timeout: 15_000 });
+  await chip.click();
+  const lane = page.getByTestId("versions-split-lane");
+  await expect(lane).toBeVisible({ timeout: 5_000 });
+  const documentId = await page.evaluate(
+    () => new URL(location.href).searchParams.get("versions") ?? "",
+  );
+  expect(documentId).not.toBe("");
+  await lane.getByLabel("Chiudi").click();
+  await expect(lane).toBeHidden({ timeout: 5_000 });
+
+  const createUrl =
+    `${BASE_URL}/_server/app_features_documents_server_versions_server_ts` +
+    `--createVersionFromScratch_createServerFn_handler?createServerFn`;
+  const created = await page.request.post(createUrl, {
+    headers: { "Content-Type": "application/json" },
+    data: { data: { documentId } },
+  });
+  expect(created.ok()).toBe(true);
+  const body = (await created.json()) as {
+    result?: { value?: { id?: string } };
+  };
+  const versionId = body.result?.value?.id;
+  expect(versionId).toBeTruthy();
+
+  const saveUrl =
+    `${BASE_URL}/_server/app_features_documents_server_versions_server_ts` +
+    `--saveVersionContent_createServerFn_handler?createServerFn`;
+  const saved = await page.request.post(saveUrl, {
+    headers: { "Content-Type": "application/json" },
+    data: { data: { versionId, content: LONG_SOGGETTO } },
+  });
+  expect(saved.ok()).toBe(true);
 }
