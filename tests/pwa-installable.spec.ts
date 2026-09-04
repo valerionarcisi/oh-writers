@@ -48,8 +48,16 @@ test.describe("#112 PWA installability", () => {
     ).json()) as { icons?: Array<{ src: string }> };
 
     for (const icon of manifest.icons ?? []) {
-      const iconRes = await page.request.get(`${BASE_URL}${icon.src}`);
-      expect(iconRes.ok(), `${icon.src} should resolve`).toBe(true);
+      // The static asset genuinely exists (verified on disk in every build) —
+      // under CI load, right after the dev server boots, a request can land
+      // before Vite has finished serving the public/ dir for the first time.
+      // One retry after a short beat clears it; a real 404 still fails.
+      await expect
+        .poll(
+          async () => (await page.request.get(`${BASE_URL}${icon.src}`)).ok(),
+          { timeout: 5_000 },
+        )
+        .toBe(true);
     }
   });
 

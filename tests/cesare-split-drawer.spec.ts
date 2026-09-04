@@ -35,17 +35,26 @@ const openSplitViaDrawer = async (page: import("@playwright/test").Page) => {
       .click();
     await expect(drawer).toBeVisible({ timeout: 2_000 });
   }).toPass({ timeout: 15_000 });
-  // Same press-cancel race as the dock trigger above: on a loaded CI runner
-  // the pointer can appear to leave "Apri come colonna" between pointerdown
-  // and pointerup mid-transition, cancelling the press — bumping the wait
-  // alone (15s, was 5s) didn't fix it (still timed out in CI, never locally).
-  // Retry the click itself until the peek lane actually shows up.
+  // handleOpenAsSplit (AppShell) closes the floating drawer SYNCHRONOUSLY
+  // then fires the `?peek=cesare` navigation with `void navigate(...)` —
+  // under CI load that navigation can lose the race, leaving neither the
+  // floating sheet NOR the split lane on screen. Retrying the click alone
+  // doesn't recover: the drawer is already closed, so "Apri come colonna"
+  // (inside it) no longer exists to click. Reopen the drawer before each
+  // retry so the affordance is actually there to click again.
   await expect(async () => {
+    if (!(await drawer.isVisible())) {
+      await page
+        .getByTestId("bottom-dock")
+        .getByTestId("cesare-open-btn")
+        .click();
+      await expect(drawer).toBeVisible({ timeout: 2_000 });
+    }
     await page.getByLabel("Apri come colonna").click();
     await expect(page.getByTestId("cesare-peek-lane")).toBeVisible({
       timeout: 3_000,
     });
-  }).toPass({ timeout: 15_000 });
+  }).toPass({ timeout: 20_000 });
 };
 
 test.describe("[047-A4] Cesare split drawer", () => {

@@ -369,8 +369,14 @@ test.describe("Screenplay Authoring [E2E user story]", () => {
       .poll(() => focusedPmClass(page), { timeout: 2_000 })
       .toContain("pm-parenthetical");
 
-    // Clear the default "()" placeholder text and type the direction
-    await page.keyboard.press("Control+a");
+    // Clear the default "()" placeholder text and type the direction.
+    // `Control+a` is browser/platform "select all" — in a ProseMirror doc
+    // that can select the WHOLE document rather than just this block (CI's
+    // headless Linux Chrome behaves differently here than local macOS),
+    // so typing next would clobber the rest of the script instead of just
+    // the placeholder. `Home`+`Shift+End` selects only the current line.
+    await page.keyboard.press("Home");
+    await page.keyboard.press("Shift+End");
     await typeAndSettle(page, "(sottovoce)");
 
     // Enter from parenthetical → dialogue
