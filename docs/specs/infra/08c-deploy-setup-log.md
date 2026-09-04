@@ -10,6 +10,16 @@ references to where they live (Fly secrets, password manager, etc).
 
 ---
 
+## GitHub branch protection
+
+`main` and `beta` both require the 5 QA jobs green (Typecheck, Lint,
+Guardrails, Unit (Vitest), E2E (Mock, Playwright)) before merge, no
+force-push, no branch deletion. `enforce_admins: false` — the repo owner can
+still bypass in a genuine emergency. Set 2026-09-04 via `gh api
+repos/.../branches/{main,beta}/protection`.
+
+---
+
 ## Domain
 
 - **Registered**: `ohwriters.com` on Namecheap, 2026-09-04 (order 213122647)
