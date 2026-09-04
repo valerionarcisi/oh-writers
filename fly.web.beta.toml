@@ -27,7 +27,7 @@ primary_region = 'fra'
     timeout = '5s'
     grace_period = '10s'
     method = 'GET'
-    path = '/'
+    path = '/api/health'
 
 [[vm]]
   size = 'shared-cpu-1x'
