@@ -92,7 +92,9 @@ this list whenever the shard count changes).
 - **Plan**: Free (0.5GB storage, autoscale to 2 CU, scale-to-zero when idle, 10 branches)
 - **Neon Auth**: left off — Better Auth is the app's auth system, no need for Neon's
 - **Connection string**: copied by Valerio, not stored in this file — goes straight into `fly secrets set`
-- **Not yet done**: run `pnpm db:migrate` against this database (schema is currently empty)
+- **Migrations**: ✅ run 2026-09-04 against both `production` and `beta`
+  branches via `scripts/migrate-neon.sh` (idempotent — safe to re-run, skips
+  already-applied migrations)
 
 ## Upstash (Redis)
 
