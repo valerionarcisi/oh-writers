@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { Locale } from "@oh-writers/domain";
 
 // DB strategy: mock @oh-writers/db (same approach as
@@ -126,5 +126,39 @@ describe("guardTeamOwnershipBeforeDelete (via deleteUser.beforeDelete)", () => {
     await expect(runGuard({ id: "u1" })).rejects.toMatchObject({
       body: { message: expect.stringMatching(/sole owner/i) },
     });
+  });
+});
+
+describe("trustedOrigins", () => {
+  const ORIGINAL_BETTER_AUTH_URL = process.env["BETTER_AUTH_URL"];
+
+  afterEach(() => {
+    if (ORIGINAL_BETTER_AUTH_URL === undefined) {
+      delete process.env["BETTER_AUTH_URL"];
+    } else {
+      process.env["BETTER_AUTH_URL"] = ORIGINAL_BETTER_AUTH_URL;
+    }
+  });
+
+  it("includes only localhost dev ports when BETTER_AUTH_URL is unset", async () => {
+    delete process.env["BETTER_AUTH_URL"];
+    const { auth } = await setup();
+    expect(auth.options.trustedOrigins).toEqual(
+      expect.arrayContaining(["http://localhost:3000"]),
+    );
+    expect(auth.options.trustedOrigins).not.toContain(
+      "https://app.ohwriters.com",
+    );
+  });
+
+  it("appends BETTER_AUTH_URL when set, without dropping dev origins", async () => {
+    process.env["BETTER_AUTH_URL"] = "https://app.ohwriters.com";
+    const { auth } = await setup();
+    expect(auth.options.trustedOrigins).toEqual(
+      expect.arrayContaining([
+        "http://localhost:3000",
+        "https://app.ohwriters.com",
+      ]),
+    );
   });
 });
