@@ -1,3 +1,9 @@
+## [1.1.0-beta.6](https://github.com/valerionarcisi/oh-writers/compare/v1.1.0-beta.5...v1.1.0-beta.6) (2026-09-04)
+
+### Bug Fixes
+
+* remove AI-off banner and let breakdown auto-spoglio run without AI ([5c192ea](https://github.com/valerionarcisi/oh-writers/commit/5c192ea9f7c5337aa53b8e7a07b9aec55322726d))
+
 ## [1.1.0-beta.5](https://github.com/valerionarcisi/oh-writers/compare/v1.1.0-beta.4...v1.1.0-beta.5) (2026-09-04)
 
 ### Bug Fixes
