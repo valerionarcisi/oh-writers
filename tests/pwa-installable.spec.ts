@@ -48,17 +48,8 @@ test.describe("#112 PWA installability", () => {
     ).json()) as { icons?: Array<{ src: string }> };
 
     for (const icon of manifest.icons ?? []) {
-      // The static asset genuinely exists (verified on disk in every build).
-      // The `chromium` project (unlike `mock-ui`) has no warmup dependency,
-      // so on a loaded CI runner this can be the very first request the dev
-      // server sees — a cold Vite public/ dir serve, not a real 404. 5s
-      // wasn't enough; 20s covers a genuinely cold start.
-      await expect
-        .poll(
-          async () => (await page.request.get(`${BASE_URL}${icon.src}`)).ok(),
-          { timeout: 20_000 },
-        )
-        .toBe(true);
+      const iconRes = await page.request.get(`${BASE_URL}${icon.src}`);
+      expect(iconRes.ok(), `${icon.src} should resolve`).toBe(true);
     }
   });
 
@@ -86,11 +77,6 @@ test.describe("#112 PWA installability", () => {
   test("the service worker registers and activates", async ({
     authenticatedPage: page,
   }) => {
-    // Same cold-start cause as the icon-resolve test above: the `chromium`
-    // project has no warmup dependency, and SW install/activation itself
-    // fetches the icons the manifest declares. 90s (the suite default)
-    // wasn't enough under CI load.
-    test.setTimeout(150_000);
     await page.goto(`${BASE_URL}/dashboard`);
 
     const state = await page.evaluate(async () => {
