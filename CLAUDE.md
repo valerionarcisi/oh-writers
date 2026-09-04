@@ -42,7 +42,7 @@ Detailed rules live in `docs/conventions/`. Load the file that matches the task:
 
 **Work queue:** the [GitHub Project board](https://github.com/users/valerionarcisi/projects/3) is the single live queue (columns NOW/NEXT/ICEBOX/Done) — bugs (Issues) + feature draft cards. `gh project item-list 3 --owner valerionarcisi` reads it. **WIP = 1** — one card in NOW at a time, taken to merge, then `/clear` and pull the next. `docs/BACKLOG.md` is the frozen pre-2026-06-24 snapshot (rich topic/audit context the cards link back to). Spec/LEARNINGS detail still lives in the .md files, not the conversation, so context stays small.
 
-**Branch strategy (2026-09-04):** PRs target `beta`, not `main`. `beta` is the pre-release/staging channel — QA + a real deploy to `beta.ohwriters.com` happen there first. `main` is production-only, reached via a second PR (`beta`→`main`) once `beta` is verified stable. Both branches carry automated semantic-release versioning (`beta` gets pre-release versions like `1.3.0-beta.1`; `main` cuts the real release). See `README.md` §12 Deployment and `docs/specs/infra/08c-deploy-setup-log.md`.
+**Branch strategy (2026-09-04):** PRs target `beta`, not `main` — see [Deploy & Release](#deploy--release) below.
 
 1. Read the relevant feature folder and its schema files first
 2. Identify which domain owns the logic (see Domain Boundaries)
@@ -187,3 +187,92 @@ Commit format: `type: description` (no `[OHW]` prefix — dropped 2026-06-26)
 - `test:` adding or modifying tests
 
 No AI signatures in commits.
+
+---
+
+## Deploy & Release
+
+Set up 2026-09-04. Full account/resource inventory and setup history:
+[`docs/specs/infra/08c-deploy-setup-log.md`](docs/specs/infra/08c-deploy-setup-log.md).
+Target architecture and rationale:
+[`docs/specs/infra/08b-cloud-deploy.md`](docs/specs/infra/08b-cloud-deploy.md).
+
+### Environments
+
+Two Fly.io environments, each with its own Neon Postgres branch and Upstash
+Redis database (isolated — a bug or a destructive test on `beta` cannot
+touch prod data):
+
+|           | Production                                           | Beta (staging)                                                                   |
+| --------- | ---------------------------------------------------- | -------------------------------------------------------------------------------- |
+| Branch    | `main`                                               | `beta`                                                                           |
+| Web       | `app.ohwriters.com` (`fly.web.toml`)                 | `beta.ohwriters.com` (`fly.web.beta.toml`)                                       |
+| WS server | `ws.ohwriters.com` (`fly.ws-server.toml`), always-on | `ws-beta.ohwriters.com` (`fly.ws-server.beta.toml`), scales to zero              |
+| Postgres  | Neon `production` branch                             | Neon `beta` branch (copy-on-write off prod — has real prod data, not anonymized) |
+| Redis     | Upstash `ohwriters_redis`                            | Upstash `ohwriters_redis_beta`                                                   |
+
+### Normal flow — feature or fix
+
+```
+feature branch → PR into beta → merge (QA gate) → auto-deployed... (*)
+                                                  ↓
+                              verify on beta.ohwriters.com
+                                                  ↓
+                    PR beta → main → merge (QA gate again) → release cut
+```
+
+1. Branch off `beta`, not `main`.
+2. PR targets `beta`. Branch protection on `beta` requires 6 QA jobs green
+   (Typecheck, Lint, Guardrails, Unit, E2E Mock, Production build) before
+   merge — no force-push, no direct push.
+3. Once merged, verify the change on `beta.ohwriters.com` (deploy today is
+   manual — `fly deploy --config fly.web.beta.toml` /
+   `fly.ws-server.beta.toml`; a CI-triggered auto-deploy is not built yet).
+4. When `beta` looks stable, open a second PR `beta`→`main`. Same QA gate.
+5. Merging to `main` triggers `semantic-release` (`.github/workflows/release.yml`):
+   bumps `package.json`, updates `CHANGELOG.md`, tags, cuts a GitHub Release.
+   A push to `beta` does the same but as a pre-release (`1.3.0-beta.1`, …) —
+   same version counter, distinct channel, both configured in `.releaserc.json`.
+6. Deploy to production: `fly deploy --config fly.web.toml` /
+   `fly.ws-server.toml` (also manual for now).
+
+_(\*) "Auto-deployed" is aspirational — today both beta and prod deploys are
+manual `fly deploy` runs. Wire up a GitHub Actions deploy job per
+environment before treating this as hands-off._
+
+Database migrations: `scripts/migrate-neon.sh` runs `pnpm db:migrate`
+against both Neon branches from a local gitignored env file (Neon
+connection strings are never pasted into chat or committed — same pattern
+as `scripts/fly-secrets-set*.sh`). Re-run whenever a new migration needs to
+reach either environment; it's idempotent.
+
+### Hotfix (production is broken, can't wait for the beta cycle)
+
+The two-PR flow above is the default because it gates every change through
+a real deployed staging check. A hotfix skips that gate deliberately — use
+it ONLY for a production-breaking bug that cannot wait, not as a shortcut
+for "I'm confident this is fine."
+
+1. Branch off `main` (not `beta`): `git checkout -b hotfix/<short-name> main`.
+2. Fix, test locally, PR **into `main` directly**. Same branch-protection QA
+   gate applies — a hotfix does not skip QA, only the beta staging step.
+3. Merge → `semantic-release` cuts a patch release on `main` as usual →
+   `fly deploy --config fly.web.toml` / `fly.ws-server.toml` to ship it.
+4. **Immediately backmerge `main` into `beta`** (see below) — otherwise the
+   fix is live in prod but silently absent from `beta`, and the next normal
+   `beta`→`main` promotion could reintroduce the bug by overwriting it.
+
+### Backmerge (keep beta caught up with a hotfix)
+
+```bash
+git checkout beta
+git pull origin beta
+git merge main   # brings the hotfix (and its release commit) into beta
+git push origin beta
+```
+
+If this produces a conflict, resolve it favoring `main`'s fix — `beta` is
+downstream of `main` after a hotfix, not the other way around. After
+pushing, `beta`'s own `semantic-release` run will fold the hotfix into its
+next pre-release version, so `beta` and `main` stay reconcilable (`beta`
+never permanently diverges from what's already in prod).
