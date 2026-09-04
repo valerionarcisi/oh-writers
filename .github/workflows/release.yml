@@ -43,3 +43,40 @@ jobs:
           # resolve entry for package @oh-writers/db". Redundant anyway:
           # qa.yml already gated everything on this commit before merge.
           HUSKY: "0"
+      # deploy.yml used to listen for this workflow via `workflow_run`, but
+      # that trigger only fires for runs whose workflow file is on the
+      # default branch (main) — so it silently never fired for beta releases.
+      # Deploying directly from here, in the same job/branch context, has no
+      # such ambiguity. `git rev-parse HEAD` after semantic-release tells us
+      # whether it actually pushed a release commit (it no-ops on a branch
+      # with nothing releasable).
+      - name: Check whether a release was cut
+        id: released
+        run: |
+          if [ "$(git rev-parse HEAD)" != "${{ github.sha }}" ]; then
+            echo "did_release=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "did_release=false" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+        if: steps.released.outputs.did_release == 'true'
+      - name: Deploy web (production)
+        if: steps.released.outputs.did_release == 'true' && github.ref_name == 'main'
+        run: flyctl deploy --config fly.web.toml --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      - name: Deploy ws-server (production)
+        if: steps.released.outputs.did_release == 'true' && github.ref_name == 'main'
+        run: flyctl deploy --config fly.ws-server.toml --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      - name: Deploy web (beta)
+        if: steps.released.outputs.did_release == 'true' && github.ref_name == 'beta'
+        run: flyctl deploy --config fly.web.beta.toml --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      - name: Deploy ws-server (beta)
+        if: steps.released.outputs.did_release == 'true' && github.ref_name == 'beta'
+        run: flyctl deploy --config fly.ws-server.beta.toml --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

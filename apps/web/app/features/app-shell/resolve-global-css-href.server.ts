@@ -38,29 +38,54 @@ const resolveGlobalCssHrefImpl = async (): Promise<string | undefined> => {
   if (cache) return cache.href;
 
   const { readFile } = await import("node:fs/promises");
-  const { join } = await import("node:path");
+  const { dirname, join } = await import("node:path");
+  const { fileURLToPath } = await import("node:url");
 
-  try {
-    const manifestPath = join(
+  // Where the manifest sits relative to a known anchor differs by how the
+  // server was launched: docker/Dockerfile.web copies .output's CONTENTS
+  // straight into /app (no .output prefix survives there), while a local
+  // `vinxi build` + `node .output/server/index.mjs` keeps the .output
+  // wrapper — so a single hardcoded relative path can't cover both. Nitro
+  // also rewrites every chunk's `import.meta.url` to read a single
+  // `globalThis._importMeta_.url` set once in server/index.mjs to ITS OWN
+  // url (confirmed by reading the compiled output) rather than leaving
+  // each chunk's real location, so "here" always resolves to server/ no
+  // matter which chunk this code lands in after bundling. Try every
+  // layout this could be; the first real file wins.
+  const here = dirname(fileURLToPath(import.meta.url));
+  const candidates = [
+    join(here, "..", "public", "_build", ".vite", "manifest.json"),
+    join(here, "..", "..", "public", "_build", ".vite", "manifest.json"),
+    join(
       process.cwd(),
       ".output",
       "public",
       "_build",
       ".vite",
       "manifest.json",
-    );
-    const manifest = JSON.parse(
-      await readFile(manifestPath, "utf8"),
-    ) as ViteManifest;
-    cache = { href: findGlobalCssHref(manifest) };
-  } catch (error) {
-    const { logger } = await import("~/server/logger");
-    logger.error(
-      { cause: String(error) },
-      "app_shell.global_css_href_resolve_failed",
-    );
-    cache = { href: undefined };
+    ),
+    join(process.cwd(), "public", "_build", ".vite", "manifest.json"),
+  ];
+
+  let lastError: unknown;
+  for (const manifestPath of candidates) {
+    try {
+      const manifest = JSON.parse(
+        await readFile(manifestPath, "utf8"),
+      ) as ViteManifest;
+      cache = { href: findGlobalCssHref(manifest) };
+      return cache.href;
+    } catch (error) {
+      lastError = error;
+    }
   }
+
+  const { logger } = await import("~/server/logger");
+  logger.error(
+    { cause: String(lastError) },
+    "app_shell.global_css_href_resolve_failed",
+  );
+  cache = { href: undefined };
   return cache.href;
 };
 
