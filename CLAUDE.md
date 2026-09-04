@@ -214,11 +214,11 @@ touch prod data):
 ### Normal flow — feature or fix
 
 ```
-feature branch → PR into beta → merge (QA gate) → auto-deployed... (*)
-                                                  ↓
-                              verify on beta.ohwriters.com
-                                                  ↓
-                    PR beta → main → merge (QA gate again) → release cut
+feature branch → PR into beta → merge (QA gate) → Release (tag) → Deploy (Fly)
+                                                                  ↓
+                                          verify on beta.ohwriters.com
+                                                                  ↓
+                            PR beta → main → merge (QA gate again) → Release → Deploy
 ```
 
 1. Branch off `beta`, not `main`.
@@ -228,23 +228,25 @@ feature branch → PR into beta → merge (QA gate) → auto-deployed... (*)
    commit and rebase-merge are disabled repo-wide) — a PR's intermediate
    `wip`/`fix typo` commits never reach `beta`'s history, so
    `semantic-release`'s changelog only ever sees one clean commit per PR.
-3. Once merged, verify the change on `beta.ohwriters.com` (deploy today is a
-   manual run of the wrapper: `pnpm deploy:beta` — deploys web then
-   ws-server; a CI-triggered auto-deploy is not built yet).
-4. When `beta` looks stable, open a second PR `beta`→`main`. Same QA gate.
-5. Merging to `main` triggers `semantic-release` (`.github/workflows/release.yml`):
-   bumps `package.json`, updates `CHANGELOG.md`, tags, cuts a GitHub Release.
-   A push to `beta` does the same but as a pre-release (`1.0.0-beta.1`, then
-   `.2`, …) — same version counter, distinct channel, both configured in
-   `.releaserc.json`. First-ever release on `main` is always `1.0.0` by
-   semantic-release convention, regardless of commit history.
-6. Deploy to production: `pnpm deploy:prod` — same wrapper, prompts
-   for an explicit `prod` confirmation before touching the live environment
-   (also manual for now).
+3. Merging triggers `semantic-release` (`.github/workflows/release.yml`):
+   updates `CHANGELOG.md`, tags, cuts a GitHub pre-release
+   (`1.0.0-beta.1`, `.2`, …).
+4. `.github/workflows/deploy.yml` runs on Release's completion, at the exact
+   commit Release ran on: `flyctl deploy` for `fly.web.beta.toml` and
+   `fly.ws-server.beta.toml`. Fully automatic — verify the change live on
+   `beta.ohwriters.com` once it lands (`gh run list` / the Actions tab to
+   watch it).
+5. When `beta` looks stable, open a second PR `beta`→`main`. Same QA gate.
+6. Merging to `main` triggers the same Release → Deploy cascade, but cuts a
+   real release (`1.0.0`, `1.1.0`, …) and deploys `fly.web.toml` /
+   `fly.ws-server.toml` to `app.ohwriters.com`. First-ever release on `main`
+   is always `1.0.0` by semantic-release convention, regardless of commit
+   history.
 
-_(\*) "Auto-deployed" is aspirational — today both beta and prod deploys are
-a manual run of `pnpm deploy:beta` / `pnpm deploy:prod`. Wire up a GitHub Actions deploy job per
-environment before treating this as hands-off._
+`pnpm deploy:beta` / `pnpm deploy:prod` (→ `scripts/deploy.sh`) still exist
+for a manual out-of-band deploy — re-shipping the current `beta`/`main` tip
+without going through Release again (e.g. after a Fly-side config change
+with no code change). The normal flow doesn't need them.
 
 Database migrations: `scripts/migrate-neon.sh` runs `pnpm db:migrate`
 against both Neon branches from a local gitignored env file (Neon

@@ -572,12 +572,21 @@ Two environments, both on **Fly.io** — one provider for both the web app and t
 | Redis      | Upstash `ohwriters_redis`                | Upstash `ohwriters_redis_beta`                     |
 | Email      | Resend (SMTP relay)                      | Resend (same key, staging `MAIL_FROM`)             |
 
+Deploys are automatic: `.github/workflows/deploy.yml` runs `flyctl deploy`
+for the right environment whenever `.github/workflows/release.yml` finishes
+successfully on `beta` or `main` — merge a PR, and once QA + Release are
+green the change ships to Fly with no manual step.
+
 ```bash
-pnpm deploy:prod   # deploys web + ws-server, prompts for confirmation
+pnpm deploy:prod   # manual out-of-band deploy, prompts for confirmation
 pnpm deploy:beta   # same, no confirmation prompt
 ```
 
-Not wired into CI yet — see the "Deploy & Release" section of `CLAUDE.md` for the full branch flow (including the hotfix/backmerge path) this wrapper fits into.
+Use the manual scripts only to re-ship the current `beta`/`main` tip without
+running Release again (e.g. after a Fly-side config change with no code
+change) — the normal flow above doesn't need them. See the "Deploy &
+Release" section of `CLAUDE.md` for the full branch flow, including the
+hotfix/backmerge path.
 
 Secrets are managed via `fly secrets set` — see `scripts/fly-secrets-set.sh` / `fly-secrets-set-smtp.sh` (prod) and `scripts/fly-secrets-set-beta.sh` (beta) for the local-file-based helper flow that avoids pasting credentials into a shell command or chat history.
 
