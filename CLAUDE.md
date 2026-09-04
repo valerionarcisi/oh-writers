@@ -42,6 +42,8 @@ Detailed rules live in `docs/conventions/`. Load the file that matches the task:
 
 **Work queue:** the [GitHub Project board](https://github.com/users/valerionarcisi/projects/3) is the single live queue (columns NOW/NEXT/ICEBOX/Done) — bugs (Issues) + feature draft cards. `gh project item-list 3 --owner valerionarcisi` reads it. **WIP = 1** — one card in NOW at a time, taken to merge, then `/clear` and pull the next. `docs/BACKLOG.md` is the frozen pre-2026-06-24 snapshot (rich topic/audit context the cards link back to). Spec/LEARNINGS detail still lives in the .md files, not the conversation, so context stays small.
 
+**Branch strategy (2026-09-04):** PRs target `beta`, not `main`. `beta` is the pre-release/staging channel — QA + a real deploy to `beta.ohwriters.com` happen there first. `main` is production-only, reached via a second PR (`beta`→`main`) once `beta` is verified stable. Both branches carry automated semantic-release versioning (`beta` gets pre-release versions like `1.3.0-beta.1`; `main` cuts the real release). See `README.md` §12 Deployment and `docs/specs/infra/08c-deploy-setup-log.md`.
+
 1. Read the relevant feature folder and its schema files first
 2. Identify which domain owns the logic (see Domain Boundaries)
 3. Validate inputs with Zod before any logic runs

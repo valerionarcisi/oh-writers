@@ -105,8 +105,10 @@ oh-writers/
 │   ├── BACKLOG.md              # Frozen pre-2026-06-24 work-queue snapshot
 │   ├── conventions/            # Per-topic coding conventions
 │   └── specs/                  # Feature specs
-├── fly.web.toml                # Fly.io deploy config — web app
-├── fly.ws-server.toml          # Fly.io deploy config — ws-server
+├── fly.web.toml                # Fly.io deploy config — web app (production)
+├── fly.ws-server.toml          # Fly.io deploy config — ws-server (production)
+├── fly.web.beta.toml           # Fly.io deploy config — web app (beta/staging)
+├── fly.ws-server.beta.toml     # Fly.io deploy config — ws-server (beta/staging)
 ├── SPEC.md                     # Product overview and feature set
 ├── CLAUDE.md                   # Coding guidelines for Claude Code
 ├── playwright.config.ts
@@ -423,9 +425,18 @@ test: add e2e for team invitation flow
 
 No AI signatures in commits.
 
-### PR target branch
+### Branch strategy
 
-Target `main` — there is no separate `develop` branch.
+`beta` is the default target for day-to-day PRs — it's the pre-release/
+staging channel: pushes there trigger QA and deploy to the beta Fly
+environment (`beta.ohwriters.com`), giving each change a real deployed
+environment before it reaches production. When `beta` is verified stable,
+open a second PR `beta`→`main` to release — that push is what actually
+ships to production (`app.ohwriters.com`) and cuts the next real semver
+version (see [Deployment](#12-deployment)).
+
+Two PRs per change is the deliberate cost of that gate; there is no
+separate long-lived `develop` branch beyond `beta`.
 
 ---
 
@@ -550,26 +561,30 @@ docker build -f docker/Dockerfile.ws-server -t oh-writers-ws .
 
 ## 12. Deployment
 
-Production runs on **Fly.io** — one provider for both the web app and the WebSocket server, chosen for pay-per-use pricing at near-zero traffic (see `docs/specs/infra/08b-cloud-deploy.md` for the full architecture rationale and `docs/specs/infra/08c-deploy-setup-log.md` for the concrete account/resource setup log).
+Two environments, both on **Fly.io** — one provider for both the web app and the WebSocket server, chosen for pay-per-use pricing at near-zero traffic (see `docs/specs/infra/08b-cloud-deploy.md` for the full architecture rationale and `docs/specs/infra/08c-deploy-setup-log.md` for the concrete account/resource setup log).
 
-| Component  | Host                                                            |
-| ---------- | --------------------------------------------------------------- |
-| Web (SSR)  | Fly.io (`fly.web.toml`) — scales to zero when idle              |
-| WebSocket  | Fly.io (`fly.ws-server.toml`) — always-on, stateful connections |
-| PostgreSQL | Neon (serverless, free tier)                                    |
-| Redis      | Upstash (serverless, free tier)                                 |
-| Email      | Resend (SMTP relay)                                             |
-| DNS        | Cloudflare                                                      |
+| Component  | Production                               | Beta (staging)                                     |
+| ---------- | ---------------------------------------- | -------------------------------------------------- |
+| Domain     | `app.ohwriters.com` / `ws.ohwriters.com` | `beta.ohwriters.com` / `ws-beta.ohwriters.com`     |
+| Web (SSR)  | Fly.io (`fly.web.toml`)                  | Fly.io (`fly.web.beta.toml`)                       |
+| WebSocket  | Fly.io (`fly.ws-server.toml`), always-on | Fly.io (`fly.ws-server.beta.toml`), scales to zero |
+| PostgreSQL | Neon `production` branch                 | Neon `beta` branch (copy-on-write off prod)        |
+| Redis      | Upstash `ohwriters_redis`                | Upstash `ohwriters_redis_beta`                     |
+| Email      | Resend (SMTP relay)                      | Resend (same key, staging `MAIL_FROM`)             |
 
 ```bash
-# Deploy the web app
+# Production
 fly deploy --config fly.web.toml
-
-# Deploy the WebSocket server
 fly deploy --config fly.ws-server.toml
+
+# Beta / staging
+fly deploy --config fly.web.beta.toml
+fly deploy --config fly.ws-server.beta.toml
 ```
 
-Secrets are managed via `fly secrets set` — see `scripts/fly-secrets-set.sh` and `scripts/fly-secrets-set-smtp.sh` for the local-file-based helper flow that avoids pasting credentials into a shell command or chat history.
+Secrets are managed via `fly secrets set` — see `scripts/fly-secrets-set.sh` / `fly-secrets-set-smtp.sh` (prod) and `scripts/fly-secrets-set-beta.sh` (beta) for the local-file-based helper flow that avoids pasting credentials into a shell command or chat history.
+
+`VITE_WS_URL` is a Vite build-time variable baked into the client bundle — each environment passes its own value via `[build.args]` in its `fly.web*.toml`, not as a runtime secret. See `docker/Dockerfile.web`.
 
 ---
 
