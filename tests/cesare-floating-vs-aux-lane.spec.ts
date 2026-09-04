@@ -317,8 +317,12 @@ test.describe("[Spec 51] lazy Cesare session creation", () => {
     await expect(page.getByTestId("cesare-peek-lane")).toBeVisible({
       timeout: 8_000,
     });
-    await page.waitForTimeout(800);
+    // The rail's session list re-fetches after this navigation — under CI
+    // load a fixed 800ms sleep could read it mid-refetch (briefly empty, a
+    // spurious 0 rather than a real regression). Poll instead of sleeping.
     // Unchanged — the column is just a surface; no message has been sent.
-    expect(await sessionRowCount(page)).toBe(baseline);
+    await expect
+      .poll(() => sessionRowCount(page), { timeout: 5_000 })
+      .toBe(baseline);
   });
 });

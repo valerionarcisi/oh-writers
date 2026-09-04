@@ -220,14 +220,16 @@ test.describe("Screenplay Authoring [E2E user story]", () => {
     // inserts an empty action as the last body block, giving Alt+s a valid target.
     await goToNewLine(page);
     await page.keyboard.press("Alt+s");
-    await page.waitForTimeout(150);
-    expect(await focusedPmClass(page)).toContain("pm-heading-prefix");
+    await expect
+      .poll(() => focusedPmClass(page), { timeout: 2_000 })
+      .toContain("pm-heading-prefix");
 
     // Type prefix then Space to hop to title (Space in prefix = navigation)
     await page.keyboard.type("INT.");
     await page.keyboard.press("Space");
-    await page.waitForTimeout(80);
-    expect(await focusedPmClass(page)).toContain("pm-heading-title");
+    await expect
+      .poll(() => focusedPmClass(page), { timeout: 2_000 })
+      .toContain("pm-heading-title");
 
     await page.keyboard.type("CUCINA - NOTTE");
 
@@ -243,8 +245,9 @@ test.describe("Screenplay Authoring [E2E user story]", () => {
 
     // Enter from title → new action block
     await page.keyboard.press("Enter");
-    await page.waitForTimeout(80);
-    expect(await focusedPmClass(page)).toContain("pm-action");
+    await expect
+      .poll(() => focusedPmClass(page), { timeout: 2_000 })
+      .toContain("pm-action");
 
     // ── Action ─────────────────────────────────────────────────────────────
     await typeAndSettle(
@@ -255,8 +258,9 @@ test.describe("Screenplay Authoring [E2E user story]", () => {
 
     // ── GIUSEPPE ───────────────────────────────────────────────────────────
     await page.keyboard.press("Alt+c");
-    await page.waitForTimeout(80);
-    expect(await focusedPmClass(page)).toContain("pm-character");
+    await expect
+      .poll(() => focusedPmClass(page), { timeout: 2_000 })
+      .toContain("pm-character");
 
     // Typo: type "Giseppe" then backspace-correct to "GIUSEPPE"
     await page.keyboard.type("Giseppe");
@@ -265,8 +269,9 @@ test.describe("Screenplay Authoring [E2E user story]", () => {
     await page.keyboard.press("Escape"); // dismiss autocomplete if open
 
     await page.keyboard.press("Enter"); // → dialogue
-    await page.waitForTimeout(80);
-    expect(await focusedPmClass(page)).toContain("pm-dialogue");
+    await expect
+      .poll(() => focusedPmClass(page), { timeout: 2_000 })
+      .toContain("pm-dialogue");
 
     await typeAndSettle(
       page,
@@ -330,15 +335,17 @@ test.describe("Screenplay Authoring [E2E user story]", () => {
     // places the cursor in the empty prefix — no backspace dance needed.
     await typeAndSettle(page, "CAMERA - NOTTE");
     await page.keyboard.press("Alt+s");
-    await page.waitForTimeout(150);
-    expect(await focusedPmClass(page)).toContain("pm-heading-prefix");
+    await expect
+      .poll(() => focusedPmClass(page), { timeout: 2_000 })
+      .toContain("pm-heading-prefix");
 
     // Prefix is empty — type it, then Space hops to title (which already
     // contains "CAMERA - NOTTE" from the converted action block).
     await page.keyboard.type("INT.");
     await page.keyboard.press("Space");
-    await page.waitForTimeout(80);
-    expect(await focusedPmClass(page)).toContain("pm-heading-title");
+    await expect
+      .poll(() => focusedPmClass(page), { timeout: 2_000 })
+      .toContain("pm-heading-title");
     await page.keyboard.press("Enter");
     await page.waitForTimeout(80);
 
@@ -358,8 +365,9 @@ test.describe("Screenplay Authoring [E2E user story]", () => {
 
     // Alt+p from dialogue → parenthetical
     await page.keyboard.press("Alt+p");
-    await page.waitForTimeout(80);
-    expect(await focusedPmClass(page)).toContain("pm-parenthetical");
+    await expect
+      .poll(() => focusedPmClass(page), { timeout: 2_000 })
+      .toContain("pm-parenthetical");
 
     // Clear the default "()" placeholder text and type the direction
     await page.keyboard.press("Control+a");
@@ -367,8 +375,9 @@ test.describe("Screenplay Authoring [E2E user story]", () => {
 
     // Enter from parenthetical → dialogue
     await page.keyboard.press("Enter");
-    await page.waitForTimeout(80);
-    expect(await focusedPmClass(page)).toContain("pm-dialogue");
+    await expect
+      .poll(() => focusedPmClass(page), { timeout: 2_000 })
+      .toContain("pm-dialogue");
 
     await typeAndSettle(page, "Mi dispiace.");
 
@@ -533,8 +542,9 @@ test.describe("Screenplay Authoring [E2E user story]", () => {
 
     // ── Transition: FINE. ──────────────────────────────────────────────────
     await page.keyboard.press("Alt+t");
-    await page.waitForTimeout(80);
-    expect(await focusedPmClass(page)).toContain("pm-transition");
+    await expect
+      .poll(() => focusedPmClass(page), { timeout: 2_000 })
+      .toContain("pm-transition");
     await typeAndSettle(page, "FINE.");
 
     // ── Final Fountain check ───────────────────────────────────────────────

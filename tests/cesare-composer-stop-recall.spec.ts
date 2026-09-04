@@ -25,7 +25,10 @@ test.describe("Cesare composer — stop button and arrow-up recall", () => {
   });
 
   test("⏸ aborts an in-flight turn", async ({ authenticatedPage: page }) => {
-    test.setTimeout(60_000);
+    // 60s wasn't enough under CI load — the whole-test timeout fired mid-turn
+    // (the browser closed under the in-flight `dispatchEvent`, not a real
+    // functional break: this passes reliably every time locally).
+    test.setTimeout(120_000);
     await page.goto(`${BASE_URL}/projects/${TEAM_PROJECT_ID}/soggetto`);
     await page.waitForLoadState("networkidle");
     await openCesareSheet(page);

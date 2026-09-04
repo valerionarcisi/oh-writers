@@ -35,13 +35,17 @@ const openSplitViaDrawer = async (page: import("@playwright/test").Page) => {
       .click();
     await expect(drawer).toBeVisible({ timeout: 2_000 });
   }).toPass({ timeout: 15_000 });
-  await page.getByLabel("Apri come colonna").click();
-  // 15s (not 5s): under CI load the floating→split promotion can take longer
-  // than local — the failure mode observed there is exactly this step timing
-  // out, never a real functional break (retried locally, this always passes).
-  await expect(page.getByTestId("cesare-peek-lane")).toBeVisible({
-    timeout: 15_000,
-  });
+  // Same press-cancel race as the dock trigger above: on a loaded CI runner
+  // the pointer can appear to leave "Apri come colonna" between pointerdown
+  // and pointerup mid-transition, cancelling the press — bumping the wait
+  // alone (15s, was 5s) didn't fix it (still timed out in CI, never locally).
+  // Retry the click itself until the peek lane actually shows up.
+  await expect(async () => {
+    await page.getByLabel("Apri come colonna").click();
+    await expect(page.getByTestId("cesare-peek-lane")).toBeVisible({
+      timeout: 3_000,
+    });
+  }).toPass({ timeout: 15_000 });
 };
 
 test.describe("[047-A4] Cesare split drawer", () => {
