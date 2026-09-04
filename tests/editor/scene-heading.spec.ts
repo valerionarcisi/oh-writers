@@ -272,8 +272,9 @@ test.describe("Structured Scene Heading [09x]", () => {
     await page.keyboard.press("Enter");
     expect(await focusedSlot(page)).toContain("pm-action");
     await page.keyboard.press("Alt+s");
-    await page.waitForTimeout(100);
-    expect(await focusedSlot(page)).toContain("pm-heading-prefix");
+    await expect
+      .poll(() => focusedSlot(page), { timeout: 2_000 })
+      .toContain("pm-heading-prefix");
 
     // Type "I" — doc has "INT." headings, picker should appear
     await page.keyboard.type("I");

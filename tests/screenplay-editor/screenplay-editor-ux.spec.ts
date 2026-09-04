@@ -82,9 +82,9 @@ test.describe("Tab/Enter flow matrix — Spec 05e", () => {
     // Type title text then Enter
     await page.keyboard.type("OFFICE - DAY");
     await page.keyboard.press("Enter");
-    await page.waitForTimeout(100);
-
-    expect(await focusedBlockType(page)).toBe("action");
+    await expect
+      .poll(() => focusedBlockType(page), { timeout: 2_000 })
+      .toBe("action");
   });
 
   test("[411] Character → Enter → produces Dialogue element", async ({
@@ -94,15 +94,16 @@ test.describe("Tab/Enter flow matrix — Spec 05e", () => {
     await goToNewLine(page);
 
     await page.keyboard.press("Alt+c");
-    await page.waitForTimeout(100);
-    expect(await focusedBlockType(page)).toBe("character");
+    await expect
+      .poll(() => focusedBlockType(page), { timeout: 2_000 })
+      .toBe("character");
 
     await page.keyboard.type("MARIO");
     await page.keyboard.press("Escape"); // dismiss autocomplete if open
     await page.keyboard.press("Enter");
-    await page.waitForTimeout(100);
-
-    expect(await focusedBlockType(page)).toBe("dialogue");
+    await expect
+      .poll(() => focusedBlockType(page), { timeout: 2_000 })
+      .toBe("dialogue");
   });
 
   test("[412] Dialogue → Enter (with text) → produces Character element", async ({
@@ -122,10 +123,10 @@ test.describe("Tab/Enter flow matrix — Spec 05e", () => {
     // We are now on dialogue — type text then Enter
     await page.keyboard.type("Ciao a tutti.");
     await page.keyboard.press("Enter");
-    await page.waitForTimeout(100);
-
     // Dialogue with text → next speaker (character)
-    expect(await focusedBlockType(page)).toBe("character");
+    await expect
+      .poll(() => focusedBlockType(page), { timeout: 2_000 })
+      .toBe("character");
   });
 
   test("[413] Parenthetical → Enter → produces Dialogue element", async ({
@@ -144,13 +145,14 @@ test.describe("Tab/Enter flow matrix — Spec 05e", () => {
 
     // Switch to parenthetical directly
     await page.keyboard.press("Alt+p");
-    await page.waitForTimeout(100);
-    expect(await focusedBlockType(page)).toBe("parenthetical");
+    await expect
+      .poll(() => focusedBlockType(page), { timeout: 2_000 })
+      .toBe("parenthetical");
 
     await page.keyboard.press("Enter");
-    await page.waitForTimeout(100);
-
-    expect(await focusedBlockType(page)).toBe("dialogue");
+    await expect
+      .poll(() => focusedBlockType(page), { timeout: 2_000 })
+      .toBe("dialogue");
   });
 
   test("[414] Transition → Enter → produces Scene Heading", async ({
@@ -160,8 +162,9 @@ test.describe("Tab/Enter flow matrix — Spec 05e", () => {
     await goToNewLine(page);
 
     await page.keyboard.press("Alt+t");
-    await page.waitForTimeout(100);
-    expect(await focusedBlockType(page)).toBe("transition");
+    await expect
+      .poll(() => focusedBlockType(page), { timeout: 2_000 })
+      .toBe("transition");
 
     await page.keyboard.type("CUT TO:");
     await page.keyboard.press("Enter");
@@ -182,9 +185,9 @@ test.describe("Tab/Enter flow matrix — Spec 05e", () => {
     expect(await focusedBlockType(page)).toBe("action");
 
     await page.keyboard.press("Tab");
-    await page.waitForTimeout(100);
-
-    expect(await focusedBlockType(page)).toBe("character");
+    await expect
+      .poll(() => focusedBlockType(page), { timeout: 2_000 })
+      .toBe("character");
   });
 
   test("[416] Character → Tab → switches to Parenthetical", async ({
@@ -194,13 +197,14 @@ test.describe("Tab/Enter flow matrix — Spec 05e", () => {
     await goToNewLine(page);
 
     await page.keyboard.press("Alt+c");
-    await page.waitForTimeout(200);
-    expect(await focusedBlockType(page)).toBe("character");
+    await expect
+      .poll(() => focusedBlockType(page), { timeout: 2_000 })
+      .toBe("character");
 
     await page.keyboard.press("Tab");
-    await page.waitForTimeout(200);
-
-    expect(await focusedBlockType(page)).toBe("parenthetical");
+    await expect
+      .poll(() => focusedBlockType(page), { timeout: 2_000 })
+      .toBe("parenthetical");
   });
 
   test("[417] Dialogue → Tab → exits to Action", async ({
@@ -210,13 +214,14 @@ test.describe("Tab/Enter flow matrix — Spec 05e", () => {
     await goToNewLine(page);
 
     await page.keyboard.press("Alt+d");
-    await page.waitForTimeout(100);
-    expect(await focusedBlockType(page)).toBe("dialogue");
+    await expect
+      .poll(() => focusedBlockType(page), { timeout: 2_000 })
+      .toBe("dialogue");
 
     await page.keyboard.press("Tab");
-    await page.waitForTimeout(100);
-
-    expect(await focusedBlockType(page)).toBe("action");
+    await expect
+      .poll(() => focusedBlockType(page), { timeout: 2_000 })
+      .toBe("action");
   });
 });
 
@@ -247,9 +252,9 @@ test.describe("Cmd+Number shortcuts — Spec 05e", () => {
 
     expect(await focusedBlockType(page)).toBe("action");
     await page.keyboard.press("ControlOrMeta+3");
-    await page.waitForTimeout(100);
-
-    expect(await focusedBlockType(page)).toBe("character");
+    await expect
+      .poll(() => focusedBlockType(page), { timeout: 2_000 })
+      .toBe("character");
   });
 
   test("[422] ⌘+4 on any line → switches to Dialogue", async ({
@@ -260,9 +265,9 @@ test.describe("Cmd+Number shortcuts — Spec 05e", () => {
 
     expect(await focusedBlockType(page)).toBe("action");
     await page.keyboard.press("ControlOrMeta+4");
-    await page.waitForTimeout(100);
-
-    expect(await focusedBlockType(page)).toBe("dialogue");
+    await expect
+      .poll(() => focusedBlockType(page), { timeout: 2_000 })
+      .toBe("dialogue");
   });
 
   test("[423] ⌘+6 on any line → switches to Transition", async ({
@@ -273,9 +278,9 @@ test.describe("Cmd+Number shortcuts — Spec 05e", () => {
 
     expect(await focusedBlockType(page)).toBe("action");
     await page.keyboard.press("ControlOrMeta+6");
-    await page.waitForTimeout(100);
-
-    expect(await focusedBlockType(page)).toBe("transition");
+    await expect
+      .poll(() => focusedBlockType(page), { timeout: 2_000 })
+      .toBe("transition");
   });
 });
 
@@ -336,9 +341,9 @@ test.describe("Element toolbar — Spec 05e", () => {
     const characterButton = toolbar.locator('[data-element="character"]');
     await expect(characterButton).toBeVisible();
     await characterButton.click();
-    await page.waitForTimeout(100);
-
-    expect(await focusedBlockType(page)).toBe("character");
+    await expect
+      .poll(() => focusedBlockType(page), { timeout: 2_000 })
+      .toBe("character");
 
     // The Character button must now carry aria-pressed="true"
     await expect(characterButton).toHaveAttribute("aria-pressed", "true");
@@ -356,8 +361,9 @@ test.describe("Autocomplete — Spec 05e", () => {
 
     // Switch to character block
     await page.keyboard.press("Alt+c");
-    await page.waitForTimeout(100);
-    expect(await focusedBlockType(page)).toBe("character");
+    await expect
+      .poll(() => focusedBlockType(page), { timeout: 2_000 })
+      .toBe("character");
 
     // Type a character name then "(" to trigger extension suggestions
     await page.keyboard.type("FILIPPO", { delay: 50 });
@@ -381,8 +387,9 @@ test.describe("Autocomplete — Spec 05e", () => {
 
     // Switch to transition block
     await page.keyboard.press("Alt+t");
-    await page.waitForTimeout(100);
-    expect(await focusedBlockType(page)).toBe("transition");
+    await expect
+      .poll(() => focusedBlockType(page), { timeout: 2_000 })
+      .toBe("transition");
 
     // Typing nothing yet — the autocomplete computes from an empty prefix,
     // so all transitions should be suggested. Type a single char to trigger.
