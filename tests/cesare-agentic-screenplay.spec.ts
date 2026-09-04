@@ -3,6 +3,7 @@ import { BASE_URL } from "./fixtures";
 import { TEAM_PROJECT_ID } from "./breakdown/helpers";
 import {
   openCesareSheet,
+  closeCesareSheet,
   resetScreenplayState,
   sendCesareWithRetry,
 } from "./helpers/cesare";
@@ -97,6 +98,12 @@ test.describe("[Spec 34] Cesare Agentic — Screenplay", () => {
       "Rinomina Giulio in Lucia.",
     );
     expect(reply.toLowerCase()).toMatch(/rinomina|propost/);
+    // The floating drawer sits bottom-right, over the SAME region of the
+    // script where the rename proposal's accept/reject pair renders inline
+    // (the plugin decorates the character's actual scene, not a fixed
+    // location) — closing it first is what makes the click land on the
+    // real card instead of racing the drawer's own pointer-events.
+    await closeCesareSheet(authenticatedPage);
 
     // Bulk-accept the single proposal — the PM plugin replaces every
     // whole-word occurrence in one transaction.
@@ -156,6 +163,10 @@ test.describe("[Spec 34] Cesare Agentic — Screenplay", () => {
     );
     // The turn must SAY something — a tool-only turn no longer renders blank.
     expect(reply.trim().length).toBeGreaterThan(0);
+    // The floating drawer sits bottom-right, over the SAME region of the
+    // script where the rename proposal's accept/reject pair renders inline —
+    // close it first so the click lands on the real card.
+    await closeCesareSheet(authenticatedPage);
 
     // Exactly ONE proposal card for the whole rename (no per-occurrence flood).
     const cards = authenticatedPage.locator('[data-testid="proposal-accept"]');

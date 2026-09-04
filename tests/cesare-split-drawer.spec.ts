@@ -36,8 +36,11 @@ const openSplitViaDrawer = async (page: import("@playwright/test").Page) => {
     await expect(drawer).toBeVisible({ timeout: 2_000 });
   }).toPass({ timeout: 15_000 });
   await page.getByLabel("Apri come colonna").click();
+  // 15s (not 5s): under CI load the floating→split promotion can take longer
+  // than local — the failure mode observed there is exactly this step timing
+  // out, never a real functional break (retried locally, this always passes).
   await expect(page.getByTestId("cesare-peek-lane")).toBeVisible({
-    timeout: 5_000,
+    timeout: 15_000,
   });
 };
 

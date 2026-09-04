@@ -226,12 +226,24 @@ test.describe("[Spec 47a] Cesare stream round-trip", () => {
     );
     await authenticatedPage.waitForLoadState("networkidle");
 
+    // `waitForResponse` + `res.text()` races the CDP response buffer for a
+    // chunked NDJSON stream — the body can already be gone by the time
+    // Playwright asks for it (`No data found for resource with given
+    // identifier`), and `res.finished()` doesn't reliably settle for a
+    // streamed response either. Route interception sidesteps both: Playwright
+    // hands us the COMPLETE response body directly (it has already buffered
+    // it to build the `route.fulfill` passthrough), no CDP round-trip.
+    let capturedBody: string | null = null;
+    await authenticatedPage.route("**/api/cesare/stream", async (route) => {
+      const response = await route.fetch();
+      capturedBody = await response.text();
+      await route.fulfill({ response, body: capturedBody });
+    });
     const streamBody = (async () => {
-      const res = await authenticatedPage.waitForResponse(
-        (r) => r.url().includes("/api/cesare/stream") && r.status() === 200,
-        { timeout: 30_000 },
-      );
-      return res.text();
+      await pwExpect
+        .poll(() => capturedBody, { timeout: 30_000 })
+        .not.toBeNull();
+      return capturedBody as unknown as string;
     })();
 
     await openCesare(authenticatedPage);

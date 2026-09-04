@@ -82,7 +82,12 @@ export function ConfirmDialog({
             variant={destructive ? "danger" : "primary"}
             onClick={() => onConfirm(trimmed)}
             disabled={!canConfirm}
-            autoFocus={!input}
+            // `Dialog` re-runs focus itself once the native <dialog> is
+            // genuinely open (React's own `autoFocus` fires too early —
+            // before `showModal()` — and silently no-ops); `data-autofocus`
+            // is what it looks for, since React never reflects `autoFocus`
+            // as a DOM attribute a selector could find.
+            {...(!input ? { "data-autofocus": true } : {})}
             data-testid="confirm-dialog-confirm-btn"
           >
             {confirmLabel}

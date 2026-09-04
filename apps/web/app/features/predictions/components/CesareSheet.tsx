@@ -476,7 +476,20 @@ export function CesareSheet({
       }
       // `create`: mint the row NOW, with this first message, so it is born with a
       // turn + a derived title (never an empty placeholder — Bug 3b).
-      const session = await createSession.mutateAsync(undefined);
+      let session: Awaited<ReturnType<typeof createSession.mutateAsync>>;
+      try {
+        session = await createSession.mutateAsync(undefined);
+      } catch {
+        // #047-A1 — a transport failure here (network down, server 500) must
+        // still surface a failed bubble, never drop the turn silently. Send
+        // into the synthetic pending session: `chat.send`'s own stream/askCesare
+        // attempt fails the same way (same broken transport) and settles the
+        // bubble `failed` through the normal path — BUG #42's silent-success
+        // case (a REAL session existed but the turn landed on the wrong one)
+        // doesn't apply here, since no session was ever created to route to.
+        void chat.send(text);
+        return;
+      }
       setActiveSessionId(session.id);
       chat.selectSession(session.id);
       await chat.send(text, session.id);

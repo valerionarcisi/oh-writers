@@ -61,6 +61,16 @@ export function Dialog({
     if (!dialog) return;
     if (isOpen && !dialog.open) {
       dialog.showModal();
+      // React's `autoFocus` prop runs the actual DOM focus() at MOUNT — before
+      // `showModal()` — targeting a button that isn't focusable yet (elements
+      // inside a closed <dialog> can't receive focus), so it silently no-ops;
+      // `showModal()` then defaults focus to the <dialog> element itself, not
+      // the intended button. React also never reflects `autoFocus` as the DOM
+      // `autofocus` attribute (it's applied imperatively), so a plain
+      // `[autofocus]` selector can't find the target either — `data-autofocus`
+      // is the one signal that actually survives to the DOM. Re-run the focus
+      // once the dialog is genuinely open.
+      dialog.querySelector<HTMLElement>("[data-autofocus]")?.focus();
     } else if (!isOpen && dialog.open) {
       dialog.close();
     }
