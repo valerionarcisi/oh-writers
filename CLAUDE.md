@@ -229,7 +229,7 @@ feature branch → PR into beta → merge (QA gate) → auto-deployed... (*)
    `wip`/`fix typo` commits never reach `beta`'s history, so
    `semantic-release`'s changelog only ever sees one clean commit per PR.
 3. Once merged, verify the change on `beta.ohwriters.com` (deploy today is a
-   manual run of the wrapper: `./scripts/deploy.sh beta` — deploys web then
+   manual run of the wrapper: `pnpm deploy:beta` — deploys web then
    ws-server; a CI-triggered auto-deploy is not built yet).
 4. When `beta` looks stable, open a second PR `beta`→`main`. Same QA gate.
 5. Merging to `main` triggers `semantic-release` (`.github/workflows/release.yml`):
@@ -238,12 +238,12 @@ feature branch → PR into beta → merge (QA gate) → auto-deployed... (*)
    `.2`, …) — same version counter, distinct channel, both configured in
    `.releaserc.json`. First-ever release on `main` is always `1.0.0` by
    semantic-release convention, regardless of commit history.
-6. Deploy to production: `./scripts/deploy.sh prod` — same wrapper, prompts
+6. Deploy to production: `pnpm deploy:prod` — same wrapper, prompts
    for an explicit `prod` confirmation before touching the live environment
    (also manual for now).
 
 _(\*) "Auto-deployed" is aspirational — today both beta and prod deploys are
-a manual run of `scripts/deploy.sh`. Wire up a GitHub Actions deploy job per
+a manual run of `pnpm deploy:beta` / `pnpm deploy:prod`. Wire up a GitHub Actions deploy job per
 environment before treating this as hands-off._
 
 Database migrations: `scripts/migrate-neon.sh` runs `pnpm db:migrate`
@@ -263,7 +263,7 @@ for "I'm confident this is fine."
 2. Fix, test locally, PR **into `main` directly**. Same branch-protection QA
    gate applies — a hotfix does not skip QA, only the beta staging step.
 3. Merge → `semantic-release` cuts a patch release on `main` as usual →
-   `./scripts/deploy.sh prod` to ship it.
+   `pnpm deploy:prod` to ship it.
 4. **Immediately backmerge `main` into `beta`** (see below) — otherwise the
    fix is live in prod but silently absent from `beta`, and the next normal
    `beta`→`main` promotion could reintroduce the bug by overwriting it.

@@ -573,8 +573,8 @@ Two environments, both on **Fly.io** — one provider for both the web app and t
 | Email      | Resend (SMTP relay)                      | Resend (same key, staging `MAIL_FROM`)             |
 
 ```bash
-./scripts/deploy.sh prod   # deploys web + ws-server, prompts for confirmation
-./scripts/deploy.sh beta   # same, no confirmation prompt
+pnpm deploy:prod   # deploys web + ws-server, prompts for confirmation
+pnpm deploy:beta   # same, no confirmation prompt
 ```
 
 Not wired into CI yet — see the "Deploy & Release" section of `CLAUDE.md` for the full branch flow (including the hotfix/backmerge path) this wrapper fits into.
