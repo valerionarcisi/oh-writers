@@ -1,9 +1,59 @@
 # Spec 87 — EU AI Act compliance baseline
 
-Status: **Planned**. Owner: Valerio (legal/classification items are his call,
-not Claude's — flagged below).
+Status: **Superseded** (2026-09-04). Owner: Valerio.
 
-## Context
+## What superseded it
+
+This spec's original items 1 and 2 were written as a cautious first pass
+without checking the Regulation's primary text directly (no EUR-Lex citation
+in the original version below). A proper research pass against the Official
+Journal text (Regulation (EU) 2024/1689, EUR-Lex CELEX 32024R1689) reached
+the opposite conclusion for Cesare's actual usage pattern — see
+[`docs/research/2026-09-04-eu-ai-act-article-50-cesare.md`](../research/2026-09-04-eu-ai-act-article-50-cesare.md),
+tracked as GitHub issue
+[#147](https://github.com/valerionarcisi/oh-writers/issues/147) (closed).
+
+- **Item 1 (explicit AI disclosure, Art. 50(1))**: not required. Cesare is a
+  panel the account owner opens by name, not the "unknowing third party"
+  scenario Art. 50(1) targets — and even under an extensive reading, the
+  "obvious from context" exemption is already satisfied by the visible
+  "Cesare" branding across every surface.
+- **Item 2 (AI-generated content marking, Art. 50(4))**: not required either.
+  Documents stay private inside the writer's project and are never published
+  by the tool itself — the article's threshold ("published... to inform the
+  public on matters of public interest") never triggers. Even if it did, the
+  human-review/editorial-control exemption is already met by the existing
+  auto-version-before-AI-edit flow.
+
+That said, item 2's underlying idea — a visible marker on exports touched by
+Cesare — survives as a **proactive product decision, not a legal
+requirement**: Valerio wants to avoid friction with producers/festivals as
+industry AI-disclosure norms tighten, even where the law doesn't require it
+yet. This is now tracked as its own feature, **"AI disclosure stamp"**, in
+[#148](https://github.com/valerionarcisi/oh-writers/issues/148), with its own
+scope (trigger: any Cesare touch in a document's history → permanent stamp;
+covers narrative docs, screenplay, breakdown, and schedule exports) decided
+in a separate grilling session. Do not re-derive scope here — #148 owns it.
+
+- **Items 3, 4, 5** (human-oversight documentation, data-minimization audit
+  on `assemble-system-prompt.ts`, Langfuse logging/traceability
+  verification) are unaffected by the Art. 50 reading above — they don't
+  depend on it. None of them involves a hard-to-reverse decision, so they
+  don't warrant staying as spec items; each became its own lightweight
+  GitHub issue instead:
+  - Human-oversight documentation: [#149](https://github.com/valerionarcisi/oh-writers/issues/149)
+  - Data-minimization audit: [#150](https://github.com/valerionarcisi/oh-writers/issues/150)
+  - Logging/traceability verification: [#151](https://github.com/valerionarcisi/oh-writers/issues/151)
+
+## Original spec (kept for history, no longer the plan)
+
+<details>
+<summary>Original content, 2026-09-02</summary>
+
+Status was: **Planned**. Owner: Valerio (legal/classification items are his
+call, not Claude's — flagged below).
+
+### Context
 
 Oh Writers embeds an AI agent (Cesare) that reads and writes user documents.
 The EU AI Act's transparency obligation (Art. 50 — in force since 2026-08)
@@ -19,7 +69,7 @@ and the compliance deadline calendar are organizational decisions outside
 what Claude can decide or implement — tracked here as open items for Valerio,
 not designed.
 
-## Decision — code-actionable items
+### Decision — code-actionable items
 
 1. **Explicit AI disclosure (Art. 50), in the Cesare drawer/session UI.**
    A persistent, unmissable string identifying Cesare as an AI system —
@@ -49,7 +99,7 @@ not designed.
    traceability request, and for how long. Verification task, not new
    logging infra, unless the audit finds a gap.
 
-## Explicitly not this spec (Valerio's call, not code)
+### Explicitly not this spec (Valerio's call, not code)
 
 - Risk-tier classification of the product under Annex III.
 - Anthropic's own GPAI-provider conformity (their obligation, not ours to
@@ -58,7 +108,7 @@ not designed.
 - Internal AI-usage policy document, privacy-notice wording, compliance
   deadline tracking.
 
-## Domain & files
+### Domain & files
 
 - `apps/web/app/features/ai-providers/` — disclosure string, AI-content
   marker on export.
@@ -67,7 +117,7 @@ not designed.
 - `apps/web/app/context/assemble-system-prompt.ts` — data-minimization audit
   target (read-only review first).
 
-## Tests (OHW-086)
+### Tests (OHW-086)
 
 - `tests/ai-disclosure.spec.ts` — opening a Cesare session (peek and full
   route) renders the AI-disclosure string; present in both IT and EN locales.
@@ -76,10 +126,12 @@ not designed.
   the marker; a fully human-authored doc does not (sad path — no false
   positive).
 
-## Definition of Done
+### Definition of Done
 
 Disclosure string live + E2E green · export marker shipped once scope is
 decided (may split into a follow-up spec if the scope answer is non-trivial)
 · data-minimization finding written up (even if "no change needed") ·
 `docs/BACKLOG.md` updated · this spec updated to record the classification
 decision once Valerio makes it.
+
+</details>
