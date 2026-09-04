@@ -225,19 +225,22 @@ feature branch → PR into beta → merge (QA gate) → auto-deployed... (*)
 2. PR targets `beta`. Branch protection on `beta` requires 6 QA jobs green
    (Typecheck, Lint, Guardrails, Unit, E2E Mock, Production build) before
    merge — no force-push, no direct push.
-3. Once merged, verify the change on `beta.ohwriters.com` (deploy today is
-   manual — `fly deploy --config fly.web.beta.toml` /
-   `fly.ws-server.beta.toml`; a CI-triggered auto-deploy is not built yet).
+3. Once merged, verify the change on `beta.ohwriters.com` (deploy today is a
+   manual run of the wrapper: `./scripts/deploy.sh beta` — deploys web then
+   ws-server; a CI-triggered auto-deploy is not built yet).
 4. When `beta` looks stable, open a second PR `beta`→`main`. Same QA gate.
 5. Merging to `main` triggers `semantic-release` (`.github/workflows/release.yml`):
    bumps `package.json`, updates `CHANGELOG.md`, tags, cuts a GitHub Release.
-   A push to `beta` does the same but as a pre-release (`1.3.0-beta.1`, …) —
-   same version counter, distinct channel, both configured in `.releaserc.json`.
-6. Deploy to production: `fly deploy --config fly.web.toml` /
-   `fly.ws-server.toml` (also manual for now).
+   A push to `beta` does the same but as a pre-release (`1.0.0-beta.1`, then
+   `.2`, …) — same version counter, distinct channel, both configured in
+   `.releaserc.json`. First-ever release on `main` is always `1.0.0` by
+   semantic-release convention, regardless of commit history.
+6. Deploy to production: `./scripts/deploy.sh prod` — same wrapper, prompts
+   for an explicit `prod` confirmation before touching the live environment
+   (also manual for now).
 
 _(\*) "Auto-deployed" is aspirational — today both beta and prod deploys are
-manual `fly deploy` runs. Wire up a GitHub Actions deploy job per
+a manual run of `scripts/deploy.sh`. Wire up a GitHub Actions deploy job per
 environment before treating this as hands-off._
 
 Database migrations: `scripts/migrate-neon.sh` runs `pnpm db:migrate`
@@ -257,7 +260,7 @@ for "I'm confident this is fine."
 2. Fix, test locally, PR **into `main` directly**. Same branch-protection QA
    gate applies — a hotfix does not skip QA, only the beta staging step.
 3. Merge → `semantic-release` cuts a patch release on `main` as usual →
-   `fly deploy --config fly.web.toml` / `fly.ws-server.toml` to ship it.
+   `./scripts/deploy.sh prod` to ship it.
 4. **Immediately backmerge `main` into `beta`** (see below) — otherwise the
    fix is live in prod but silently absent from `beta`, and the next normal
    `beta`→`main` promotion could reintroduce the bug by overwriting it.

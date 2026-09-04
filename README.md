@@ -573,14 +573,11 @@ Two environments, both on **Fly.io** — one provider for both the web app and t
 | Email      | Resend (SMTP relay)                      | Resend (same key, staging `MAIL_FROM`)             |
 
 ```bash
-# Production
-fly deploy --config fly.web.toml
-fly deploy --config fly.ws-server.toml
-
-# Beta / staging
-fly deploy --config fly.web.beta.toml
-fly deploy --config fly.ws-server.beta.toml
+./scripts/deploy.sh prod   # deploys web + ws-server, prompts for confirmation
+./scripts/deploy.sh beta   # same, no confirmation prompt
 ```
+
+Not wired into CI yet — see the "Deploy & Release" section of `CLAUDE.md` for the full branch flow (including the hotfix/backmerge path) this wrapper fits into.
 
 Secrets are managed via `fly secrets set` — see `scripts/fly-secrets-set.sh` / `fly-secrets-set-smtp.sh` (prod) and `scripts/fly-secrets-set-beta.sh` (beta) for the local-file-based helper flow that avoids pasting credentials into a shell command or chat history.
 
