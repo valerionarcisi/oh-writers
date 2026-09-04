@@ -84,7 +84,7 @@ an external OAuth console.
 
 ## Next steps (in order)
 
-1. `fly secrets set` on both apps (see table above)
+1. ~~`fly secrets set` on both apps~~ — done 2026-09-04
 2. First `fly deploy --config fly.web.toml`, verify `/` health check
 3. `fly deploy --config fly.ws-server.toml`, verify `/health` and a live Yjs round-trip
 4. Once Cloudflare nameservers finish propagating: add DNS records `app.ohwriters.com` and `ws.ohwriters.com` pointing at the two Fly apps (CNAME to `<app>.fly.dev`, proxied or DNS-only — decide when we get there)
