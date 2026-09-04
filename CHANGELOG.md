@@ -1,3 +1,9 @@
+## [1.1.0-beta.3](https://github.com/valerionarcisi/oh-writers/compare/v1.1.0-beta.2...v1.1.0-beta.3) (2026-09-04)
+
+### Bug Fixes
+
+* strip leaked h3 imports from the production client bundle ([5a4c014](https://github.com/valerionarcisi/oh-writers/commit/5a4c01433d6bc3a9b49b8cbc03fa55471742f961))
+
 ## [1.1.0-beta.2](https://github.com/valerionarcisi/oh-writers/compare/v1.1.0-beta.1...v1.1.0-beta.2) (2026-09-04)
 
 ### Bug Fixes
