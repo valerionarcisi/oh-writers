@@ -1,3 +1,9 @@
+## [1.1.0-beta.5](https://github.com/valerionarcisi/oh-writers/compare/v1.1.0-beta.4...v1.1.0-beta.5) (2026-09-04)
+
+### Bug Fixes
+
+* manifest path resolution and deploy trigger for beta ([9ad76fb](https://github.com/valerionarcisi/oh-writers/commit/9ad76fb7f2f95c835437bcefc28595b1d4fd4125))
+
 ## [1.1.0-beta.4](https://github.com/valerionarcisi/oh-writers/compare/v1.1.0-beta.3...v1.1.0-beta.4) (2026-09-04)
 
 ### Bug Fixes
