@@ -1,3 +1,10 @@
+## [1.1.0-beta.4](https://github.com/valerionarcisi/oh-writers/compare/v1.1.0-beta.3...v1.1.0-beta.4) (2026-09-04)
+
+### Bug Fixes
+
+* import resolveGlobalCssHref through the app-shell barrel ([1a4c14f](https://github.com/valerionarcisi/oh-writers/commit/1a4c14f1f86b53a5ceee55d9e728b013a1c8514a))
+* link global stylesheet in production HTML ([e2225ce](https://github.com/valerionarcisi/oh-writers/commit/e2225ce6fdafaedc644d2eec3df813fc19d85a5a))
+
 ## [1.1.0-beta.3](https://github.com/valerionarcisi/oh-writers/compare/v1.1.0-beta.2...v1.1.0-beta.3) (2026-09-04)
 
 ### Bug Fixes
