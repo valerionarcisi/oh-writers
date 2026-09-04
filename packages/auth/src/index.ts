@@ -102,6 +102,12 @@ const devOrigins = ["3000", "3001", "3002", "3003", "3004", "3005"].map(
   (p) => `http://localhost:${p}`,
 );
 
+// Production origin isn't a dev port — without it, Better Auth rejects every
+// sign-in request from the real deployed domain as an untrusted origin.
+const trustedOrigins = process.env["BETTER_AUTH_URL"]
+  ? [...devOrigins, process.env["BETTER_AUTH_URL"]]
+  : devOrigins;
+
 /**
  * Redis-backed secondary session store, OPT-IN via `AUTH_USE_REDIS=true`.
  *
@@ -191,7 +197,7 @@ export const auth = betterAuth({
     },
   },
   socialProviders,
-  trustedOrigins: devOrigins,
+  trustedOrigins,
   advanced: {
     database: {
       // better-auth generates ids for every model (users/accounts/…). The

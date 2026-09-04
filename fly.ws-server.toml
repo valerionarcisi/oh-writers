@@ -1,29 +1,31 @@
-app = "oh-writers-ws-server"
-primary_region = "fra"
+# fly.toml app configuration file generated for oh-writers-ws-server on 2026-09-04T11:36:17+02:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'oh-writers-ws-server'
+primary_region = 'fra'
 
 [build]
-  dockerfile = "docker/Dockerfile.ws-server"
+  dockerfile = 'docker/Dockerfile.ws-server'
 
 [env]
-  WS_PORT = "1234"
+  WS_PORT = '1234'
 
 [http_service]
   internal_port = 1234
   force_https = true
-  # ponytail: kept always-on (min=1) — WS connections are stateful/long-lived,
-  # scale-to-zero would drop active realtime sessions on cold start. Web can
-  # scale to zero freely because HTTP requests are stateless.
-  auto_stop_machines = "off"
+  auto_stop_machines = 'off'
   auto_start_machines = true
   min_machines_running = 1
 
   [[http_service.checks]]
-    grace_period = "10s"
-    interval = "30s"
-    method = "GET"
-    path = "/health"
-    timeout = "5s"
+    interval = '30s'
+    timeout = '5s'
+    grace_period = '10s'
+    method = 'GET'
+    path = '/health'
 
 [[vm]]
-  size = "shared-cpu-1x"
-  memory = "512mb"
+  size = 'shared-cpu-1x'
+  memory = '512mb'
