@@ -291,17 +291,19 @@ function BreakdownPageContent({ projectId }: Props) {
   );
   useTopBarSlotPublisher("actions", breakdownActions);
 
+  // ponytail: auto-spoglio is regex/WordNet, not AI — it must run regardless
+  // of isAiEnabled (was wrongly gated on it, leaving no elements to underline
+  // with AI off).
   const autoSpoglioStartedRef = useRef(false);
   useEffect(() => {
     if (import.meta.env.MOCK_AI) return;
-    if (!isAiEnabled) return;
     if (!canEdit) return;
     if (versionId.length === 0) return;
     if (autoSpoglioStartedRef.current) return;
     if (!autoSpoglio.isIdle) return;
     autoSpoglioStartedRef.current = true;
     autoSpoglio.mutate();
-  }, [autoSpoglio, canEdit, isAiEnabled, versionId]);
+  }, [autoSpoglio, canEdit, versionId]);
 
   // Project-wide breakdown rows → highlight elements (all scenes).
   const { data: projectRows } = useQuery(

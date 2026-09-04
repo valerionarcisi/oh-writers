@@ -13,7 +13,6 @@ import {
 } from "@oh-writers/ui";
 import {
   canonicalNarrativeHtml,
-  AiOffBanner,
   CesareUpdatedBanner,
   ExportPdfModal,
   ExportSiaeModal,
@@ -432,10 +431,8 @@ function SoggettoPageReady({
         }
       >
         <div className={styles.pageShell}>
-          {isAiEnabled ? (
+          {isAiEnabled && (
             <CesareUpdatedBanner documentType={DocumentTypes.SOGGETTO} />
-          ) : (
-            <AiOffBanner userId={currentUser.id} />
           )}
           <FreeNarrativeEditor
             content={soggettoContent}

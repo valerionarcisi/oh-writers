@@ -37,7 +37,6 @@ import { useSession } from "~/lib/auth-client";
 import { OutlineEditor } from "./OutlineEditor";
 import { NarrativeDocsShell } from "./NarrativeDocsShell";
 import { MarginNotesColumn } from "./MarginNotesColumn";
-import { AiOffBanner } from "./AiOffBanner";
 import { TreatmentToc } from "./TreatmentToc";
 import { getNarrativeSchema } from "../lib/narrative-schema";
 import { canonicalNarrativeHtml } from "../lib/narrative-html";
@@ -681,9 +680,6 @@ export function NarrativeEditor({
         rightAside={rightAside}
         topBarActions={docActionsMenu}
       >
-        {!isAiEnabled && realtimeUser && (
-          <AiOffBanner userId={realtimeUser.id} />
-        )}
         {draftBanner}
         {editorBody}
       </NarrativeDocsShell>

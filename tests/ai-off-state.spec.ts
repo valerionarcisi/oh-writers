@@ -1,5 +1,6 @@
 import { test, expect, TEST_PERSONAL_PROJECT_ID, BASE_URL } from "./fixtures";
 import type { Page } from "@playwright/test";
+import { navigateToBreakdown, TEAM_PROJECT_ID } from "./breakdown/helpers";
 
 /**
  * OHW-846 — Spec 84 §5 AI-off state.
@@ -34,19 +35,17 @@ test.describe("[OHW-846] AI-off state", () => {
     await setAiEnabled(authenticatedPage, null);
   });
 
-  test("OFF hides every AI surface: dock, rail sessions, margin notes, breakdown respoglio — and shows exactly one banner", async ({
+  test("OFF hides every AI surface: dock, rail sessions, margin notes, breakdown respoglio — no banner anywhere", async ({
     authenticatedPage: page,
   }) => {
     await setAiEnabled(page, false);
 
-    // Soggetto: AiOffBanner shown, no CesareUpdatedBanner slot, no margin notes.
+    // Soggetto: no AiOffBanner (removed — AI off means no AI, no nag to
+    // reactivate it), no CesareUpdatedBanner slot, no margin notes.
     await page.goto(`/projects/${TEST_PERSONAL_PROJECT_ID}/soggetto`);
-    await expect(page.getByTestId("ai-off-banner")).toBeVisible();
+    await expect(page.getByTestId("ai-off-banner")).toHaveCount(0);
     await expect(page.getByTestId("margin-notes-column")).toHaveCount(0);
     await expect(page.getByTestId("cesare-updated-banner")).toHaveCount(0);
-
-    // Exactly one banner on the page.
-    await expect(page.getByTestId("ai-off-banner")).toHaveCount(1);
 
     // Shell-level surfaces: no BottomDock, no LeftRail "Sessioni Cesare" entry.
     await expect(page.getByTestId("bottom-dock")).toHaveCount(0);
@@ -55,8 +54,7 @@ test.describe("[OHW-846] AI-off state", () => {
 
     // Scaletta (Outline via the shared NarrativeEditor mount): same coverage.
     await page.goto(`/projects/${TEST_PERSONAL_PROJECT_ID}/outline`);
-    await expect(page.getByTestId("ai-off-banner")).toBeVisible();
-    await expect(page.getByTestId("ai-off-banner")).toHaveCount(1);
+    await expect(page.getByTestId("ai-off-banner")).toHaveCount(0);
     await expect(page.getByTestId("margin-notes-column")).toHaveCount(0);
 
     // Breakdown: no "Ri-spogliare con AI" CTA, no stale/auto-spoglio banners.
@@ -101,24 +99,22 @@ test.describe("[OHW-846] AI-off state", () => {
     await page.waitForURL("**/dashboard", { timeout: 15_000 });
   });
 
-  test("dismissing the AI-off banner persists across reload", async ({
+  test("auto-spoglio (regex/WordNet, no AI) still extracts elements on mount with AI off", async ({
     authenticatedPage: page,
   }) => {
     await setAiEnabled(page, false);
-    await page.goto(`/projects/${TEST_PERSONAL_PROJECT_ID}/soggetto`);
+    await navigateToBreakdown(page, TEAM_PROJECT_ID);
 
-    const banner = page.getByTestId("ai-off-banner");
-    await expect(banner).toBeVisible();
-    await page.getByTestId("ai-off-banner-dismiss").click();
-    await expect(banner).toHaveCount(0);
-
-    await page.reload();
-    await expect(page.getByTestId("ai-off-banner")).toHaveCount(0);
+    // The mount-time extraction pass is regex/WordNet, not an LLM call — it
+    // must keep populating highlights even with Features.AI_ENABLED off, so
+    // the writer isn't stuck underlining every scene by hand.
+    const reader = page.getByTestId("readonly-screenplay-view");
+    await expect(
+      reader.locator('[data-element-id]:not([data-ghost="true"])').first(),
+    ).toBeVisible({ timeout: 15_000 });
   });
 
-  test("ON restores every AI surface and shows no stale banner", async ({
-    authenticatedPage: page,
-  }) => {
+  test("ON restores every AI surface", async ({ authenticatedPage: page }) => {
     await setAiEnabled(page, true);
 
     await page.goto(`/projects/${TEST_PERSONAL_PROJECT_ID}/soggetto`);
@@ -147,7 +143,7 @@ test.describe("[OHW-846] AI-off state", () => {
     // through the separate FreeNarrativeEditor, which this fix doesn't touch.
     await setAiEnabled(page, false);
     await page.goto(`/projects/${TEST_PERSONAL_PROJECT_ID}/synopsis`);
-    await expect(page.getByTestId("ai-off-banner")).toBeVisible();
+    await expect(page.getByTestId("ai-off-banner")).toHaveCount(0);
     await expect(page.getByTestId("narrative-layout-single")).toBeVisible();
     await expect(page.getByTestId("narrative-layout-two")).toHaveCount(0);
 
@@ -166,7 +162,7 @@ test.describe("[OHW-846] AI-off state", () => {
     // collapses to "single" (which would hide/squeeze the TOC).
     await setAiEnabled(page, false);
     await page.goto(`/projects/${TEST_PERSONAL_PROJECT_ID}/treatment`);
-    await expect(page.getByTestId("ai-off-banner")).toBeVisible();
+    await expect(page.getByTestId("ai-off-banner")).toHaveCount(0);
     await expect(page.getByTestId("narrative-layout-two")).toBeVisible();
     await expect(page.getByTestId("narrative-layout-single")).toHaveCount(0);
   });
