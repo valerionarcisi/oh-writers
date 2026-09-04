@@ -1,3 +1,9 @@
+## [1.1.0-beta.2](https://github.com/valerionarcisi/oh-writers/compare/v1.1.0-beta.1...v1.1.0-beta.2) (2026-09-04)
+
+### Bug Fixes
+
+* dedicated /api/health endpoint for Fly health checks ([e98428c](https://github.com/valerionarcisi/oh-writers/commit/e98428ccea9e5ff6b7684aedf474122b1321a674))
+
 ## [1.1.0-beta.1](https://github.com/valerionarcisi/oh-writers/compare/v1.0.0...v1.1.0-beta.1) (2026-09-04)
 
 ### Features
