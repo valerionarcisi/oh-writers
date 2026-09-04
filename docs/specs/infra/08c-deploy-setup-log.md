@@ -157,6 +157,46 @@ appends `BETTER_AUTH_URL` (already set as a Fly secret) when present.
 No social login (Google/GitHub OAuth) configured yet — nothing to update on
 an external OAuth console.
 
+**Verified working end-to-end on beta, 2026-09-04**: real sign-up
+(`POST /api/auth/sign-up/email` → 200, "check your email" state, no console
+errors) against the live deployed app. Confirmed via `fly secrets list`
+`DIGEST` column (never print raw values) that `BETTER_AUTH_SECRET` and
+`DATABASE_URL` differ between `oh-writers-web` (prod) and `oh-writers-web-beta`
+— a session issued on one environment is not valid on the other, and each
+environment's `users`/`sessions` rows are independent (beta's Neon branch is
+copy-on-write off prod, diverges after the branch point).
+
+**SSO buttons are correctly absent, not broken**: `OAuthButtons.tsx` reads
+`availableProviders` (derived server-side from whether
+`GOOGLE_CLIENT_ID`/`GITHUB_CLIENT_ID` are set) and renders nothing when the
+list is empty — same "OFF = hidden" contract as feature flags. Neither prod
+nor beta has ever had these 4 secrets set (`GOOGLE_CLIENT_ID`,
+`GOOGLE_CLIENT_SECRET`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` all absent
+on both — confirmed via `fly secrets list`), so this isn't a regression, it's
+a feature that was never turned on. **Activation is pending on Valerio**
+creating the OAuth apps (needs real Google/GitHub console access):
+
+1. Google Cloud Console → APIs & Services → Credentials → OAuth client ID
+   (Web application). Add BOTH redirect URIs to the same client:
+   `https://app.ohwriters.com/api/auth/callback/google` and
+   `https://beta.ohwriters.com/api/auth/callback/google`.
+2. GitHub → Settings → Developer settings → OAuth Apps → New OAuth App.
+   GitHub only accepts one callback URL per app — create ONE app for prod
+   (`https://app.ohwriters.com/api/auth/callback/github`) and, if beta GitHub
+   login is wanted too, a SECOND app for beta
+   (`https://beta.ohwriters.com/api/auth/callback/github`).
+3. Put the values in a local gitignored `.env.oauth.local`
+   (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GITHUB_CLIENT_ID`,
+   `GITHUB_CLIENT_SECRET`, and optionally `GITHUB_CLIENT_ID_BETA` /
+   `GITHUB_CLIENT_SECRET_BETA` for the second GitHub app) and run
+   `pnpm secrets:oauth` (`scripts/fly-secrets-set-oauth.sh`) — pushes to both
+   `oh-writers-web` and `oh-writers-web-beta` as Fly secrets, merges into the
+   existing secret set, never printed or committed.
+4. No redeploy needed to pick up new secrets on their own — `fly secrets set`
+   restarts the app's machines automatically. Verify by reloading `/login`:
+   the "Continue with Google"/"Continue with GitHub" buttons appear as soon
+   as `GOOGLE_CLIENT_ID`/`GITHUB_CLIENT_ID` are present.
+
 ## Email (Resend)
 
 - **Account**: `valerio.narcisi@gmail.com` (pre-existing Resend account, one

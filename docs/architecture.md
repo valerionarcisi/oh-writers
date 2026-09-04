@@ -28,7 +28,7 @@
 ### AI
 
 - **Vercel AI SDK** (`ai` + `@ai-sdk/anthropic`) — the transport to Claude (`generateText` / `streamText` / tool-calling). This is the model layer; we do not call raw `@anthropic-ai/sdk` from feature code.
-- **Effect-TS** is the orchestration engine of the AI bounded context (`features/predictions` + the AI server fns of other features + the shared client). Effect *wraps* the AI SDK — it does not replace it — adding structured interruption, typed retry/timeout, resource lifecycle (Layers), and bounded concurrency. See [Spec 48](specs/48-effect-ai-context.md).
+- **Effect-TS** is the orchestration engine of the AI bounded context (`features/predictions` + the AI server fns of other features + the shared client). Effect _wraps_ the AI SDK — it does not replace it — adding structured interruption, typed retry/timeout, resource lifecycle (Layers), and bounded concurrency. See [Spec 48](specs/48-effect-ai-context.md).
 - **Layers**: `Db`, `Access` (session resolved from request headers — see Learnings), `AiClient` (single home for retry/timeout/rate-limit), `Observability` (Langfuse seam). An anti-corruption layer at the `createServerFn` boundary converts `Effect<A, E, R>` → the canonical `ResultShape`, so every server fn's external contract is unchanged and the rest of the app never sees Effect.
 - Server-side calls only — Anthropic + Google Places keys never exposed to the client.
 
@@ -229,6 +229,54 @@ Login → Better Auth → Session cookie (httpOnly, SameSite=Strict)
 Request → Middleware verifies session → User context in server functions
 Team access → Check membership + role on every mutation
 ```
+
+**Config** lives in `packages/auth/src/index.ts` (`betterAuth({...})`), a single
+shared instance imported by every app. Key pieces:
+
+- `emailAndPassword: { enabled: true, requireEmailVerification: true }` —
+  sign-up always returns "check your email" before a session is issued; there
+  is no unverified-account state.
+- `trustedOrigins` = local dev ports (`localhost:3000`–`3005`) plus
+  `process.env.BETTER_AUTH_URL`. Without `BETTER_AUTH_URL` set for an
+  environment, Better Auth rejects every sign-in from that environment's real
+  domain as an untrusted origin — this is set per-environment as a Fly secret
+  (see below), not hardcoded.
+- `advanced.database.generateId` mints a UUID for every model itself, because
+  only `users.id` has a Postgres-side default; the others (`accounts`,
+  `sessions`, `verifications`) are plain `text` PKs that would otherwise 422 on
+  insert.
+- `secondaryStorage` (Redis-backed session cache) is **opt-in**, gated on
+  `AUTH_USE_REDIS=true` + `REDIS_URL`. When present, Better Auth treats it as
+  _authoritative_ — sessions are read from Redis, not Postgres — so it is only
+  turned on when the realtime ws-server needs a shared fast lookup across
+  multiple instances. Default (unset) keeps Postgres as the single source of
+  truth, which is simpler and avoids a half-working Redis silently bouncing
+  valid sessions back to `/login`.
+
+**Per-environment isolation.** Each environment (local, beta, prod) supplies
+its own `BETTER_AUTH_SECRET` and `DATABASE_URL` as Fly secrets (see
+[Deploy & Release](../CLAUDE.md#deploy--release) in CLAUDE.md for the
+environment matrix). Different secret → a session cookie signed on one
+environment is not valid on another. Different `DATABASE_URL` → each
+environment has its own `users`/`sessions`/`accounts` rows (beta's Neon branch
+is copy-on-write off prod, so history is shared up to the branch point, but
+diverges independently after — a user created on beta does not appear on
+prod, and vice versa). Verify either at any time with `fly secrets list -a
+<app>`: the `DIGEST` column differs across apps whenever the underlying value
+differs; never print a secret's value to compare it.
+
+**Mobile readiness.** Better Auth issues cookie sessions today (web only), but
+the config and every server function must stay able to accept a bearer token
+instead — see [Platform Reach](./conventions/platform-reach.md). Don't
+hard-depend on `req.cookies` anywhere in the auth path.
+
+**Social login (Google/GitHub)** is wired end-to-end
+(`packages/auth/src/index.ts` `socialProviders`, `OAuthButtons.tsx`,
+gated on `GOOGLE_CLIENT_ID`/`GITHUB_CLIENT_ID` being set) but the OAuth apps
+have never been created on either provider's console, so no environment has
+these secrets — the buttons correctly render nothing (same "OFF = hidden"
+contract as feature flags) rather than failing. Activation procedure and
+`pnpm secrets:oauth` usage: [deploy setup log § Auth](./specs/infra/08c-deploy-setup-log.md#auth-better-auth--production-origin).
 
 ### WebSocket Auth Flow
 
@@ -468,7 +516,7 @@ touching the AI context, the shell, or running a multi-agent wave.
 
 ### AI / Effect
 
-- **Effect wraps the AI SDK; it does not replace it.** The Vercel AI SDK stays the model transport (`generateText`/`streamText`/tools). Effect adds interruption / retry / lifecycle *around* it. Name the Layer for the role (`AiClient`), not the raw vendor SDK.
+- **Effect wraps the AI SDK; it does not replace it.** The Vercel AI SDK stays the model transport (`generateText`/`streamText`/tools). Effect adds interruption / retry / lifecycle _around_ it. Name the Layer for the role (`AiClient`), not the raw vendor SDK.
 - **The boundary is the value.** Keeping `ResultShape` at every `createServerFn` made the whole AI migration (6 waves) invisible to callers — each wave was independently revertible. Translate Effect ↔ neverthrow in exactly ONE place (the ACL).
 - **Concurrency belongs to independent reads, not the tool loop.** Parallelising the Cesare tool loop would break the tracer step ordering (a product invariant) and race the auto-version-then-apply on the same entity. `Effect.all({concurrency})` is safe only for the context-assembly DB fan-out (read-only, order-independent) — prove equivalence (same result when reads complete out of order).
 - **`acquireRelease` makes "version before apply, rollback on error" impossible to forget.** The agentic-edit invariant is now structural, not a convention.

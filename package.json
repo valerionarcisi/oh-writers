@@ -45,6 +45,7 @@
     "release": "semantic-release",
     "deploy:beta": "bash scripts/deploy.sh beta",
     "deploy:prod": "bash scripts/deploy.sh prod",
+    "secrets:oauth": "bash scripts/fly-secrets-set-oauth.sh",
     "prepare": "husky"
   },
   "devDependencies": {
