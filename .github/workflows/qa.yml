@@ -225,3 +225,15 @@ jobs:
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
+      # `pnpm build` succeeding does not mean the served HTML links its own
+      # CSS (legacy @tanstack/start's HeadContent has no .css handling — see
+      # resolve-global-css-href.server.ts). Boot the real production server
+      # and assert the root document actually contains a stylesheet link.
+      - name: Verify global stylesheet is linked in production HTML
+        working-directory: apps/web
+        run: |
+          DATABASE_URL="postgres://x:x@localhost:5432/x" PORT=3100 node .output/server/index.mjs &
+          SERVER_PID=$!
+          for i in $(seq 1 20); do curl -sf http://localhost:3100/login -o /tmp/root.html && break; sleep 0.5; done
+          kill $SERVER_PID
+          grep -q '<link rel="stylesheet" href="/_build/assets/' /tmp/root.html

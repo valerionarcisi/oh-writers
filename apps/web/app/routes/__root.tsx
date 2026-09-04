@@ -17,8 +17,14 @@ export const Route = createRootRoute({
   // Default document title for every route. Leaf routes override `title` via
   // their own `head` (TanStack merges matched-route meta, last wins) so the tab
   // is never blank — the pre-main audit found `document.title` empty everywhere.
-  head: () => ({
+  // `links` carries the global/token stylesheet — see
+  // resolve-global-css-href.server.ts for why HeadContent can't be relied on
+  // to emit this on its own.
+  head: (ctx) => ({
     meta: [{ title: "Oh Writers" }],
+    links: ctx.loaderData?.globalCssHref
+      ? [{ rel: "stylesheet", href: ctx.loaderData.globalCssHref }]
+      : [],
   }),
   // Resolve the UI locale server-side (user.locale → Accept-Language → 'en')
   // so `<html lang>`, the first paint, and feature/route gates are correct and
@@ -27,6 +33,7 @@ export const Route = createRootRoute({
     locale: Locale;
     isDevEnvironment: boolean;
     isAiEnabled: boolean;
+    globalCssHref: string | undefined;
   }> => {
     // resolveLocale is a createServerFn: on client-side navigation TanStack
     // re-runs this loader, and the server fn is invoked via RPC instead of
@@ -40,6 +47,8 @@ export const Route = createRootRoute({
     // client-side re-navigation loaders).
     const { resolveAiEnabledForCurrentUser } =
       await import("~/features/feature-flags/resolve-ai-enabled-for-current-user.server");
+    const { resolveGlobalCssHref } =
+      await import("~/features/app-shell/resolve-global-css-href.server");
     // Feature flags convention: resolve server-side, never on the client.
     // Vite inlines import.meta.env.DEV at build time — reading it here (not
     // inside FeatureProvider's render) keeps it on the same loader-resolution
@@ -48,6 +57,7 @@ export const Route = createRootRoute({
       locale: await resolveLocale(),
       isDevEnvironment: import.meta.env.DEV,
       isAiEnabled: await resolveAiEnabledForCurrentUser(),
+      globalCssHref: await resolveGlobalCssHref(),
     };
   },
   component: RootLayout,
