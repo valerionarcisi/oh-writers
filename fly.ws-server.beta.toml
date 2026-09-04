@@ -1,22 +1,19 @@
-# fly.toml app configuration file generated for oh-writers-web on 2026-09-04T11:36:02+02:00
+# fly.toml app configuration file generated for oh-writers-ws-server-beta on 2026-09-04T12:43:26+02:00
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
-app = 'oh-writers-web'
+app = 'oh-writers-ws-server-beta'
 primary_region = 'fra'
 
 [build]
-  dockerfile = 'docker/Dockerfile.web'
-
-  [build.args]
-    VITE_WS_URL = 'wss://ws.ohwriters.com'
+  dockerfile = 'docker/Dockerfile.ws-server'
 
 [env]
-  PORT = '3000'
+  WS_PORT = '1234'
 
 [http_service]
-  internal_port = 3000
+  internal_port = 1234
   force_https = true
   auto_stop_machines = 'stop'
   auto_start_machines = true
@@ -27,7 +24,7 @@ primary_region = 'fra'
     timeout = '5s'
     grace_period = '10s'
     method = 'GET'
-    path = '/'
+    path = '/health'
 
 [[vm]]
   size = 'shared-cpu-1x'

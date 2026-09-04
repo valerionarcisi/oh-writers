@@ -20,10 +20,38 @@ references to where they live (Fly secrets, password manager, etc).
   - Status as of 2026-09-04: **active** — nameservers propagated same day
   - Cloudflare zone: `ohwriters.com`, Account ID `748ddfccb401b86ce89f7e77ead3a00a`
   - AI Crawl Control: Search=Allow, Agent=Allow, Training=Block on pages with ads, robots.txt block=on
-- **DNS records** (both CNAME, Proxy status = DNS only — proxied would break the
+- **DNS records** (all CNAME, Proxy status = DNS only — proxied would break the
   WebSocket persistent connection and interfere with Fly's own TLS):
   - `app.ohwriters.com` → `oh-writers-web.fly.dev`
   - `ws.ohwriters.com` → `oh-writers-ws-server.fly.dev`
+  - `beta.ohwriters.com` → `oh-writers-web-beta.fly.dev`
+  - `ws-beta.ohwriters.com` → `oh-writers-ws-server-beta.fly.dev`
+
+## Beta (staging) environment
+
+- **Purpose**: gate between a feature branch and production — PRs land on
+  `beta` first, get a real deployed environment + E2E run, then a second
+  PR (`beta`→`main`) promotes to prod. See the branch/release strategy
+  discussion in the session that created this environment.
+- **Fly apps**: `oh-writers-web-beta` (`fly.web.beta.toml`),
+  `oh-writers-ws-server-beta` (`fly.ws-server.beta.toml`) — same
+  shared-cpu-1x/512mb as prod, both scale to zero when idle (beta doesn't
+  hold real user realtime sessions, unlike prod's ws-server)
+- **Neon**: `beta` branch off `production` (copy-on-write — includes real
+  prod data as of branch-creation time, not anonymized; keep that in mind if
+  `beta` is ever used for public demos or destructive test runs)
+- **Upstash**: separate database `ohwriters_redis_beta` (Upstash free tier
+  is 1 free database per account — a payment method was added to create a
+  second one; each DB still gets its own free-tier quota independently)
+- **Secrets**: set via `scripts/fly-secrets-set-beta.sh` — same shape as
+  prod's script, points `BETTER_AUTH_URL`/`WS_URL` at the beta domains,
+  reuses the same Resend API key (no need for a second one for staging email)
+- **Found and fixed while wiring this up**: `VITE_WS_URL` (Vite/Vinxi
+  build-time env var, baked into the client bundle) was never passed to
+  `docker build` — every deploy, prod included, would have silently shipped
+  with realtime collaboration disabled (`isRealtimeEnabled()` always false).
+  Fixed: `docker/Dockerfile.web` now takes `ARG VITE_WS_URL`, each
+  `fly.web*.toml` passes its own value via `[build.args]`.
 
 ## Fly.io
 

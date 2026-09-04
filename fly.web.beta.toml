@@ -1,16 +1,16 @@
-# fly.toml app configuration file generated for oh-writers-web on 2026-09-04T11:36:02+02:00
+# fly.toml app configuration file generated for oh-writers-web-beta on 2026-09-04T12:43:12+02:00
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
-app = 'oh-writers-web'
+app = 'oh-writers-web-beta'
 primary_region = 'fra'
 
 [build]
   dockerfile = 'docker/Dockerfile.web'
 
   [build.args]
-    VITE_WS_URL = 'wss://ws.ohwriters.com'
+    VITE_WS_URL = 'wss://ws-beta.ohwriters.com'
 
 [env]
   PORT = '3000'

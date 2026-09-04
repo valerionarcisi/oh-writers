@@ -30,6 +30,13 @@ RUN pnpm --filter @oh-writers/db build
 # Web app — the only stage this file needs; must be LAST so a target-less
 # `docker build` picks it as the final image.
 FROM builder AS web-builder
+# Vite/Vinxi bakes VITE_* vars into the client bundle at build time — they
+# can't be injected at container runtime like a normal env var. Each Fly
+# environment (prod, beta) passes its own value via [build.args] in its
+# fly.*.toml; without this ARG, realtime collaboration silently disables
+# itself on every deploy (see apps/web/app/features/realtime/lib/provider.ts).
+ARG VITE_WS_URL
+ENV VITE_WS_URL=${VITE_WS_URL}
 RUN pnpm --filter @oh-writers/web build
 # drizzle-kit ships in this image (not just its dist) because Render's
 # preDeployCommand runs `pnpm --filter @oh-writers/db migrate` inside this
