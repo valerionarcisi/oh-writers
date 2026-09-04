@@ -85,6 +85,28 @@ appends `BETTER_AUTH_URL` (already set as a Fly secret) when present.
 No social login (Google/GitHub OAuth) configured yet — nothing to update on
 an external OAuth console.
 
+## Email (Resend)
+
+- **Account**: `valerio.narcisi@gmail.com` (pre-existing Resend account, one
+  older "Onboarding" API key from a prior project — unrelated, left as is)
+- **API key**: `ohwriters-prod`, "Sending access" scope (not Full access —
+  least privilege for a key that only needs to send mail), all domains
+- **Domain**: `ohwriters.com` added to Resend, DNS records (DKIM, SPF/MX,
+  DMARC optional) auto-configured onto Cloudflare via Resend's one-time
+  Domain Connect authorization (no standing access granted)
+- **Verification status as of 2026-09-04**: Pending (Resend checks DNS
+  propagation automatically; SPF/MX confirmed resolving via `dig`, DKIM
+  lagging slightly — expected to flip to Verified without action)
+- **`packages/auth/src/mailer.ts` uses plain SMTP** (nodemailer), not the
+  Resend SDK — wired as Resend's SMTP relay: `SMTP_USER=resend`,
+  `SMTP_PASS=<the Resend API key>`. See `scripts/fly-secrets-set-smtp.sh`.
+- **Secrets set on `oh-writers-web`** (ws-server doesn't send mail, so it
+  doesn't need these): `SMTP_HOST=smtp.resend.com`, `SMTP_PORT=587`,
+  `SMTP_SECURE=false`, `SMTP_USER=resend`, `SMTP_PASS`, `MAIL_FROM=Oh Writers
+<no-reply@ohwriters.com>` — ✅ all set 2026-09-04
+- **Caveat**: `MAIL_FROM` will be rejected by Resend until the domain shows
+  Verified — fine to have set now, will just work once verification completes
+
 ## Next steps (in order)
 
 1. ~~`fly secrets set` on both apps~~ — done 2026-09-04
@@ -93,4 +115,4 @@ an external OAuth console.
 4. ~~Add DNS records for `app.`/`ws.`~~ — done 2026-09-04
 5. Run `pnpm db:migrate` against the Neon database
 6. Set up GitHub Actions deploy job (skeleton already in Spec 08b)
-7. SMTP for transactional email (verification, password reset) — Resend chosen over reusing personal Gmail (Gmail SMTP rate-limits/flags automated sending from personal accounts). Not yet set up: create Resend account + API key, verify `ohwriters.com` sending domain (SPF/DKIM records go on Cloudflare DNS alongside the records above), set `SMTP_*`/`MAIL_FROM` as Fly secrets. Until then, `requireEmailVerification: true` blocks new signups from completing — this must land before real users can sign up.
+7. ~~SMTP for transactional email~~ — done 2026-09-04, see Email section above. Only remaining piece: confirm Resend domain flips to Verified (automatic, no action needed) before real signups are tested end-to-end.
