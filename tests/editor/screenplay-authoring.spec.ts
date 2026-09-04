@@ -432,12 +432,15 @@ test.describe("Screenplay Authoring [E2E user story]", () => {
 
     await goToNewLine(page);
     await page.keyboard.press("Alt+s");
-    await page.waitForTimeout(100);
+    await expect
+      .poll(() => focusedPmClass(page), { timeout: 2_000 })
+      .toContain("pm-heading");
     if ((await focusedPmClass(page)).includes("pm-heading-title")) {
       await page.keyboard.press("Backspace");
-      await page.waitForTimeout(80);
     }
-    expect(await focusedPmClass(page)).toContain("pm-heading-prefix");
+    await expect
+      .poll(() => focusedPmClass(page), { timeout: 2_000 })
+      .toContain("pm-heading-prefix");
 
     // Prefix picker: type "I" → picker suggests "INT."
     await page.keyboard.type("I");
@@ -450,9 +453,10 @@ test.describe("Screenplay Authoring [E2E user story]", () => {
 
     // Select INT. from picker with Enter
     await page.keyboard.press("Enter");
-    await page.waitForTimeout(80);
     // Cursor should have hopped to title after picker selection
-    expect(await focusedPmClass(page)).toContain("pm-heading-title");
+    await expect
+      .poll(() => focusedPmClass(page), { timeout: 2_000 })
+      .toContain("pm-heading-title");
 
     // Type title directly (dismiss any title picker that might appear)
     await page.keyboard.type("CUCINA - MATTINO");
