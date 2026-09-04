@@ -12,11 +12,21 @@ references to where they live (Fly secrets, password manager, etc).
 
 ## GitHub branch protection
 
-`main` and `beta` both require the 5 QA jobs green (Typecheck, Lint,
-Guardrails, Unit (Vitest), E2E (Mock, Playwright)) before merge, no
-force-push, no branch deletion. `enforce_admins: false` — the repo owner can
-still bypass in a genuine emergency. Set 2026-09-04 via `gh api
+`main` and `beta` both require 6 QA jobs green before merge: Typecheck,
+Lint, Guardrails, Unit (Vitest), E2E (Mock, Playwright), Production build.
+No force-push, no branch deletion. `enforce_admins: false` — the repo owner
+can still bypass in a genuine emergency. Set 2026-09-04 via `gh api
 repos/.../branches/{main,beta}/protection`.
+
+**`E2E (Full, Playwright chromium)` deliberately excluded** from required
+checks — it runs as a 4-way build matrix (`strategy.matrix.shard: [1,2,3,4]`
+in `qa.yml`), so it produces 4 differently-named checks
+(`... chromium (1)`, `(2)`, etc.), never one named exactly `E2E (Full,
+Playwright chromium)`. Requiring that literal name would block every merge
+forever waiting on a check that can never report with that name. It still
+runs on every push/PR — just not a merge gate. Revisit if the shard count
+ever needs to be a hard gate (list all 4 shard names explicitly, and update
+this list whenever the shard count changes).
 
 ---
 
