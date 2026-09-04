@@ -4,12 +4,19 @@
 // `writers` letters. Reduced-motion hiding is pure CSS (media query), so the
 // unit test only asserts the static structure + a11y label.
 
-import { describe, expect, it, vi } from "vitest";
-import { render } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { cleanup, render } from "@testing-library/react";
 import { LocaleProvider } from "~/features/i18n";
 import { SplashScreen } from "./SplashScreen";
 
 describe("SplashScreen", () => {
+  // Without this, both `it` blocks' renders stay mounted — the first test's
+  // UNMOCKED Math.random can land on the same quote (Billy Wilder) the
+  // second test pins deterministically, so `getByText` finds two matches.
+  afterEach(() => {
+    cleanup();
+  });
+
   it("renders the brand lockup with a11y label and typewriter letters", () => {
     const { getByTestId, getByRole, getByText } = render(
       <LocaleProvider locale="it">

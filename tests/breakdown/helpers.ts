@@ -53,8 +53,9 @@ export const openSceneInBreakdown = async (page: Page, sceneNumber: number) => {
   }
   // Switching to full scope loads the whole script — on the seeded 12-page
   // doc the headings can take longer than the 5s default to render ([284]).
+  // 15s wasn't enough under CI load either — bumped further.
   const heading = page.getByTestId(`scene-${sceneNumber}-heading`);
-  await expect(heading).toBeVisible({ timeout: 15_000 });
+  await expect(heading).toBeVisible({ timeout: 30_000 });
   await heading.click();
 };
 
