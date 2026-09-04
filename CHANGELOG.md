@@ -1,3 +1,9 @@
+## [1.1.0-beta.1](https://github.com/valerionarcisi/oh-writers/compare/v1.0.0...v1.1.0-beta.1) (2026-09-04)
+
+### Features
+
+* automatic Fly.io deploy after a successful Release ([080da62](https://github.com/valerionarcisi/oh-writers/commit/080da62637069c6b1d145fe103c7cf27973edfb0))
+
 ## 1.0.0 (2026-09-04)
 
 ### Features
