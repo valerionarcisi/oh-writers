@@ -42,12 +42,17 @@
     "cost:smoke:scene-summary": "tsx scripts/cost-smoke-scene-summary.ts",
     "cost:smoke:bible": "tsx scripts/cost-smoke-bible.ts",
     "ai:costs": "tsx scripts/ai-costs.mts",
+    "release": "semantic-release",
     "prepare": "husky"
   },
   "devDependencies": {
     "@oh-writers/db": "workspace:*",
     "@playwright/test": "1.58.2",
+    "@semantic-release/changelog": "7.0.0",
+    "@semantic-release/git": "11.0.1",
+    "@semantic-release/github": "12.0.9",
     "@typescript-eslint/parser": "8.59.0",
+    "conventional-changelog-conventionalcommits": "10.4.0",
     "drizzle-orm": "0.45.1",
     "eslint": "10.0.2",
     "eslint-import-resolver-typescript": "4.4.4",
@@ -57,6 +62,7 @@
     "lint-staged": "15.5.2",
     "pdfjs-dist": "5.4.54",
     "prettier": "3.8.1",
+    "semantic-release": "25.0.9",
     "tsx": "4.19.2",
     "typescript": "5.9.3",
     "typescript-eslint": "8.59.0"
