@@ -33,6 +33,13 @@ jobs:
           node-version: 22
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec semantic-release
+      - name: Release
+        run: pnpm exec semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          # The bump commit's git push would otherwise run .husky/pre-push
+          # (typecheck/lint/unit/build) inside this minimal runner, which
+          # has no @oh-writers/db build step — failing with "Failed to
+          # resolve entry for package @oh-writers/db". Redundant anyway:
+          # qa.yml already gated everything on this commit before merge.
+          HUSKY: "0"
