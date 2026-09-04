@@ -43,6 +43,8 @@
     "cost:smoke:bible": "tsx scripts/cost-smoke-bible.ts",
     "ai:costs": "tsx scripts/ai-costs.mts",
     "release": "semantic-release",
+    "deploy:beta": "bash scripts/deploy.sh beta",
+    "deploy:prod": "bash scripts/deploy.sh prod",
     "prepare": "husky"
   },
   "devDependencies": {
