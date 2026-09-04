@@ -47,6 +47,7 @@ playwright/.cache/
 !docs/specs/mockups/lead-final/**/*.png
 !docs/specs/mockups/cleanup-after/*.png
 !apps/web/public/favicon-*.png
+!apps/web/public/apple-touch-icon-*.png
 .worktrees/
 .tokensave
 
