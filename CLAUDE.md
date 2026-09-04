@@ -224,7 +224,10 @@ feature branch → PR into beta → merge (QA gate) → auto-deployed... (*)
 1. Branch off `beta`, not `main`.
 2. PR targets `beta`. Branch protection on `beta` requires 6 QA jobs green
    (Typecheck, Lint, Guardrails, Unit, E2E Mock, Production build) before
-   merge — no force-push, no direct push.
+   merge — no force-push, no direct push. **Squash-merge only** (merge
+   commit and rebase-merge are disabled repo-wide) — a PR's intermediate
+   `wip`/`fix typo` commits never reach `beta`'s history, so
+   `semantic-release`'s changelog only ever sees one clean commit per PR.
 3. Once merged, verify the change on `beta.ohwriters.com` (deploy today is a
    manual run of the wrapper: `./scripts/deploy.sh beta` — deploys web then
    ws-server; a CI-triggered auto-deploy is not built yet).
