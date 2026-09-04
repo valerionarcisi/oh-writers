@@ -47,8 +47,7 @@ export const Route = createRootRoute({
     // client-side re-navigation loaders).
     const { resolveAiEnabledForCurrentUser } =
       await import("~/features/feature-flags/resolve-ai-enabled-for-current-user.server");
-    const { resolveGlobalCssHref } =
-      await import("~/features/app-shell/resolve-global-css-href.server");
+    const { resolveGlobalCssHref } = await import("~/features/app-shell");
     // Feature flags convention: resolve server-side, never on the client.
     // Vite inlines import.meta.env.DEV at build time — reading it here (not
     // inside FeatureProvider's render) keeps it on the same loader-resolution

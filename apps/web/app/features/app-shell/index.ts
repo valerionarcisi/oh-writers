@@ -1,4 +1,5 @@
 export { AppShell } from "./components/AppShell";
+export { resolveGlobalCssHref } from "./resolve-global-css-href.server";
 export { resolveProjectIdForNav } from "./nav";
 export { RouteErrorBoundary } from "./components/RouteErrorBoundary";
 export { RouteNotFound } from "./components/RouteNotFound";
