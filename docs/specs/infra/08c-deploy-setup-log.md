@@ -17,10 +17,13 @@ references to where they live (Fly secrets, password manager, etc).
 - **`.it` defensive registration**: not purchased — was available at check time (2026-09-04), revisit if desired
 - **DNS**: moved to Cloudflare (Free plan)
   - Nameservers set on Namecheap: `mario.ns.cloudflare.com`, `natasha.ns.cloudflare.com`
-  - Status as of 2026-09-04: propagating (Cloudflare shows "waiting for registrar", typically 1-2h, up to 24h)
+  - Status as of 2026-09-04: **active** — nameservers propagated same day
   - Cloudflare zone: `ohwriters.com`, Account ID `748ddfccb401b86ce89f7e77ead3a00a`
   - AI Crawl Control: Search=Allow, Agent=Allow, Training=Block on pages with ads, robots.txt block=on
-- **Not yet done**: DNS records for `app.ohwriters.com` (→ Fly web) and `ws.ohwriters.com` (→ Fly ws-server) — blocked on nameserver propagation completing first
+- **DNS records** (both CNAME, Proxy status = DNS only — proxied would break the
+  WebSocket persistent connection and interfere with Fly's own TLS):
+  - `app.ohwriters.com` → `oh-writers-web.fly.dev`
+  - `ws.ohwriters.com` → `oh-writers-ws-server.fly.dev`
 
 ## Fly.io
 
@@ -87,6 +90,7 @@ an external OAuth console.
 1. ~~`fly secrets set` on both apps~~ — done 2026-09-04
 2. First `fly deploy --config fly.web.toml`, verify `/` health check
 3. `fly deploy --config fly.ws-server.toml`, verify `/health` and a live Yjs round-trip
-4. Once Cloudflare nameservers finish propagating: add DNS records `app.ohwriters.com` and `ws.ohwriters.com` pointing at the two Fly apps (CNAME to `<app>.fly.dev`, proxied or DNS-only — decide when we get there)
+4. ~~Add DNS records for `app.`/`ws.`~~ — done 2026-09-04
 5. Run `pnpm db:migrate` against the Neon database
 6. Set up GitHub Actions deploy job (skeleton already in Spec 08b)
+7. SMTP for transactional email (verification, password reset) — Resend chosen over reusing personal Gmail (Gmail SMTP rate-limits/flags automated sending from personal accounts). Not yet set up: create Resend account + API key, verify `ohwriters.com` sending domain (SPF/DKIM records go on Cloudflare DNS alongside the records above), set `SMTP_*`/`MAIL_FROM` as Fly secrets. Until then, `requireEmailVerification: true` blocks new signups from completing — this must land before real users can sign up.
