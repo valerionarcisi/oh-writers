@@ -2,9 +2,9 @@ name: QA
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, beta]
   push:
-    branches: [main]
+    branches: [main, beta]
 
 jobs:
   typecheck:
