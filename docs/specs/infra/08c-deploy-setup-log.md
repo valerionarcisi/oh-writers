@@ -14,9 +14,31 @@ references to where they live (Fly secrets, password manager, etc).
 
 `main` and `beta` both require 6 QA jobs green before merge: Typecheck,
 Lint, Guardrails, Unit (Vitest), E2E (Mock, Playwright), Production build.
-No force-push, no branch deletion. `enforce_admins: false` — the repo owner
-can still bypass in a genuine emergency. Set 2026-09-04 via `gh api
-repos/.../branches/{main,beta}/protection`.
+No force-push, no branch deletion.
+
+**Migrated from classic branch protection to repository rulesets** on
+2026-09-04, same day it was first set up — the classic API has no bypass
+mechanism, and `release.yml`'s bump-commit push (via `@semantic-release/git`)
+was rejected every run with "failed to push some refs" even though the
+job declared `permissions: contents: write`. Root cause: **the default
+`GITHUB_TOKEN` can never push to a protected branch, full stop** — that's a
+GitHub-side limit, not something a workflow's `permissions:` block can lift
+(confirmed against community discussions on this exact semantic-release +
+protected-branch combination). A ruleset with a `RepositoryRole` (Admin,
+`actor_id: 5`) bypass actor does not help either — that bypasses for human
+admins, not for a bot token.
+
+**Fix**: `RELEASE_TOKEN`, a fine-grained PAT (repo-scoped to `oh-writers`,
+Contents/Issues/Pull-requests read-write, 1-year expiry), saved as a repo
+secret. `release.yml`'s checkout step and the `semantic-release` run both
+use it instead of `secrets.GITHUB_TOKEN` — it authenticates as the repo
+owner, which the ruleset's `RepositoryRole: Admin` bypass actor does cover.
+**Rotate `RELEASE_TOKEN` before 2027-09-04** (or whenever the PAT expires)
+or the release workflow will start failing the same way again.
+
+Rulesets created via `gh api repos/.../rulesets` (classic
+`branches/{main,beta}/protection` deleted first — one system, not two kept
+in sync by hand).
 
 **`E2E (Full, Playwright chromium)` deliberately excluded** from required
 checks — it runs as a 4-way build matrix (`strategy.matrix.shard: [1,2,3,4]`

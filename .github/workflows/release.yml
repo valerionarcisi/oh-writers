@@ -16,9 +16,15 @@ jobs:
       issues: write
       pull-requests: write
     steps:
+      # The default GITHUB_TOKEN can never push to a protected branch, no
+      # matter the `permissions:` block above — that's a GitHub-side limit,
+      # not something workflow permissions can override. RELEASE_TOKEN is a
+      # fine-grained PAT (repo-scoped, Contents/Issues/PRs read-write) that
+      # can, since it authenticates as the repo owner rather than the bot.
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          token: ${{ secrets.RELEASE_TOKEN }}
       - uses: pnpm/action-setup@v3
         with:
           version: 10
@@ -29,4 +35,4 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec semantic-release
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
