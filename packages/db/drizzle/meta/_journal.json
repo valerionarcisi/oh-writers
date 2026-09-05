@@ -379,6 +379,27 @@
       "when": 1779000000019,
       "tag": "0048_documents_created_by_nullable",
       "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1779000000020,
+      "tag": "0049_breakdown_elements_ever_ai_touched",
+      "breakpoints": true
+    },
+    {
+      "idx": 55,
+      "version": "7",
+      "when": 1779000000021,
+      "tag": "0050_screenplay_versions_ever_ai_touched",
+      "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "7",
+      "when": 1779000000022,
+      "tag": "0051_schedules_ever_ai_touched",
+      "breakpoints": true
     }
   ]
 }

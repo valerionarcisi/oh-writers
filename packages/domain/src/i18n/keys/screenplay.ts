@@ -226,6 +226,10 @@ export const screenplayKeys = {
     "screenplay.shell.closeCesare": "Close Cesare",
     "screenplay.shell.openCesare": "Open Cesare",
     "screenplay.shell.openCesareTitle": "Open Cesare ✦",
+
+    // AI disclosure stamp (Spec 89) — export-only note, never shown in-app.
+    "screenplay.export.aiDisclosureNote":
+      "This screenplay contains text suggested by Cesare (AI).",
   },
   it: {
     // SaveIndicator — labels
@@ -456,5 +460,8 @@ export const screenplayKeys = {
     "screenplay.shell.closeCesare": "Chiudi Cesare",
     "screenplay.shell.openCesare": "Apri Cesare",
     "screenplay.shell.openCesareTitle": "Apri Cesare ✦",
+
+    "screenplay.export.aiDisclosureNote":
+      "Questa sceneggiatura contiene testo suggerito da Cesare (AI).",
   },
 } as const satisfies LocaleDict;

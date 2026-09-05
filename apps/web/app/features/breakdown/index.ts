@@ -33,6 +33,7 @@ export {
   type SpoglioProgress,
 } from "./server/llm-spoglio.server";
 export { cloneBreakdownToVersion } from "./server/clone-version.server";
+export { markBreakdownElementAiTouched } from "./server/ai-disclosure.server";
 export { exportBreakdownPdf, exportBreakdownCsv } from "./server/export.server";
 export { BreakdownPage } from "./components/BreakdownPage";
 export {

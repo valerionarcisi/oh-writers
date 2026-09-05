@@ -784,6 +784,25 @@ interface ToolResult {
   content: string;
 }
 
+// Spec 89 — AI disclosure stamp: permanent once true, never reset by a later
+// manual reorder. One flag per schedule, not per strip/day — these tools
+// mutate multiple rows in one call, so "which row" has no clean meaning.
+const markScheduleAiTouched = (
+  db: Db,
+  projectId: string,
+): ResultAsync<void, CesareError> =>
+  ResultAsync.fromPromise(
+    db
+      .update(schedules)
+      .set({ everAiTouched: true })
+      .where(eq(schedules.projectId, projectId))
+      .then(() => undefined),
+    (e) =>
+      new CesareError(
+        `markScheduleAiTouched failed: ${e instanceof Error ? e.message : String(e)}`,
+      ),
+  );
+
 export const executeScheduleTool = (
   block: ToolUseBlock,
   db: Db,
@@ -796,21 +815,19 @@ export const executeScheduleTool = (
   });
 
   if (block.name === "move_scene_to_day") {
-    return executeMoveSceneToDay(
-      block.input as MoveSceneToDayInput,
-      db,
-      ctx,
-    ).map((r) => okResult(block.id, r));
+    return executeMoveSceneToDay(block.input as MoveSceneToDayInput, db, ctx)
+      .andThen((r) => markScheduleAiTouched(db, ctx.projectId).map(() => r))
+      .map((r) => okResult(block.id, r));
   }
   if (block.name === "merge_days") {
-    return executeMergeDays(block.input as MergeDaysInput, db, ctx).map((r) =>
-      okResult(block.id, r),
-    );
+    return executeMergeDays(block.input as MergeDaysInput, db, ctx)
+      .andThen((r) => markScheduleAiTouched(db, ctx.projectId).map(() => r))
+      .map((r) => okResult(block.id, r));
   }
   if (block.name === "swap_scenes") {
-    return executeSwapScenes(block.input as SwapScenesInput, db, ctx).map((r) =>
-      okResult(block.id, r),
-    );
+    return executeSwapScenes(block.input as SwapScenesInput, db, ctx)
+      .andThen((r) => markScheduleAiTouched(db, ctx.projectId).map(() => r))
+      .map((r) => okResult(block.id, r));
   }
   if (block.name === "lock_day") {
     return setLockForDay(block.input as LockUnlockDayInput, db, ctx, true).map(
@@ -828,11 +845,9 @@ export const executeScheduleTool = (
     );
   }
   if (block.name === "suggest_reorder") {
-    return executeSuggestReorder(
-      block.input as SuggestReorderInput,
-      db,
-      ctx,
-    ).map((r) => okResult(block.id, r));
+    return executeSuggestReorder(block.input as SuggestReorderInput, db, ctx)
+      .andThen((r) => markScheduleAiTouched(db, ctx.projectId).map(() => r))
+      .map((r) => okResult(block.id, r));
   }
 
   return okAsync(

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { ResultAsync, ok } from "neverthrow";
 import { schedules } from "@oh-writers/db/schema";
+import { translations } from "@oh-writers/domain";
 import { toShape, type ResultShape } from "@oh-writers/utils";
 import { withProjectAccess } from "~/server/pipeline";
 import { ForbiddenError, DbError } from "../schedule.errors";
@@ -35,17 +36,21 @@ export const exportScheduleCsv = createServerFn({ method: "POST" })
               .findFirst({ where: eq(schedules.projectId, data.projectId) })
               .then((r) => r ?? null),
             (e) => new DbError("exportScheduleCsv/findSchedule", e),
-          )
-            .andThen((schedule) => {
-              if (!schedule) return ok({ csv: "", filename });
-              return ResultAsync.fromPromise(
-                loadScheduleView(db, schedule.id),
-                (e) => new DbError("exportScheduleCsv/loadView", e),
-              ).map((view) => ({
-                csv: view ? scheduleToCsv(view.shootingDays) : "",
-                filename,
-              }));
-            });
+          ).andThen((schedule) => {
+            if (!schedule) return ok({ csv: "", filename });
+            const aiDisclosureNote = schedule.everAiTouched
+              ? translations.it["schedule.export.aiDisclosureNote"]
+              : undefined;
+            return ResultAsync.fromPromise(
+              loadScheduleView(db, schedule.id),
+              (e) => new DbError("exportScheduleCsv/loadView", e),
+            ).map((view) => ({
+              csv: view
+                ? scheduleToCsv(view.shootingDays, aiDisclosureNote)
+                : "",
+              filename,
+            }));
+          });
         }),
       ),
   );
@@ -73,30 +78,34 @@ export const exportSchedulePdf = createServerFn({ method: "POST" })
               .findFirst({ where: eq(schedules.projectId, data.projectId) })
               .then((r) => r ?? null),
             (e) => new DbError("exportSchedulePdf/findSchedule", e),
-          )
-            .andThen((schedule) => {
-              if (!schedule) {
-                return ResultAsync.fromPromise(
-                  buildSchedulePdf(title, []),
-                  (e) => new DbError("exportSchedulePdf/buildPdf", e),
-                ).map((buf) => ({
-                  pdfBase64: buf.toString("base64"),
-                  filename,
-                }));
-              }
+          ).andThen((schedule) => {
+            if (!schedule) {
               return ResultAsync.fromPromise(
-                loadScheduleView(db, schedule.id),
-                (e) => new DbError("exportSchedulePdf/loadView", e),
-              ).andThen((view) =>
-                ResultAsync.fromPromise(
-                  buildSchedulePdf(title, view?.shootingDays ?? []),
-                  (e) => new DbError("exportSchedulePdf/buildPdf", e),
-                ).map((buf) => ({
-                  pdfBase64: buf.toString("base64"),
-                  filename,
-                })),
-              );
-            });
+                buildSchedulePdf(title, []),
+                (e) => new DbError("exportSchedulePdf/buildPdf", e),
+              ).map((buf) => ({
+                pdfBase64: buf.toString("base64"),
+                filename,
+              }));
+            }
+            const aiDisclosureNote = schedule.everAiTouched
+              ? translations.it["schedule.export.aiDisclosureNote"]
+              : undefined;
+            return ResultAsync.fromPromise(
+              loadScheduleView(db, schedule.id),
+              (e) => new DbError("exportSchedulePdf/loadView", e),
+            ).andThen((view) =>
+              ResultAsync.fromPromise(
+                buildSchedulePdf(title, view?.shootingDays ?? [], {
+                  aiDisclosureNote,
+                }),
+                (e) => new DbError("exportSchedulePdf/buildPdf", e),
+              ).map((buf) => ({
+                pdfBase64: buf.toString("base64"),
+                filename,
+              })),
+            );
+          });
         }),
       ),
   );

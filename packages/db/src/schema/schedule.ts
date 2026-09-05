@@ -24,6 +24,13 @@ export const schedules = pgTable("schedules", {
     .notNull()
     .default("draft"),
   effortWeights: jsonb("effort_weights").$type<Record<string, number>>(),
+  // Spec 89 — AI disclosure stamp. Set true the first time a Cesare tool
+  // (move_scene_to_day, merge_days, swap_scenes, suggest_reorder) mutates
+  // any strip/day of this schedule, and NEVER reset — a later manual
+  // reorder must not erase the fact that Cesare touched it once. One flag
+  // per schedule, not per strip/day: Cesare tools mutate multiple rows in
+  // one call, so tracking "which row" has no clean meaning here.
+  everAiTouched: boolean("ever_ai_touched").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

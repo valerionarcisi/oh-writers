@@ -107,3 +107,19 @@ describe("buildSchedulePdf pagination", () => {
     expect(pdfText(buf)).not.toContain("SEGUE");
   });
 });
+
+describe("buildSchedulePdf (Spec 89 — AI disclosure stamp)", () => {
+  it("has no note when aiDisclosureNote is omitted", async () => {
+    const buf = await buildSchedulePdf("Test", [dayWith(1)]);
+    expect(pdfText(buf)).not.toContain("Cesare");
+  });
+
+  it("carries the note verbatim when provided", async () => {
+    const buf = await buildSchedulePdf("Test", [dayWith(1)], {
+      aiDisclosureNote: "Contiene giornate riorganizzate da Cesare (AI).",
+    });
+    expect(pdfText(buf)).toContain(
+      "Contiene giornate riorganizzate da Cesare (AI).\n",
+    );
+  });
+});

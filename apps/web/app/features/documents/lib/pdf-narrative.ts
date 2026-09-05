@@ -1,4 +1,5 @@
 import PDFDocument from "pdfkit";
+import { translations } from "@oh-writers/domain";
 
 const stripHtml = (html: string): string =>
   html
@@ -21,6 +22,9 @@ export interface NarrativePdfInput {
   treatment: string;
   /** Cover page is opt-in (Spec 04c). Default false. */
   includeCoverPage?: boolean;
+  /** Spec 89 — AI disclosure stamp. True if ANY of Logline/Synopsis/Treatment
+   *  was ever Cesare-touched, permanent regardless of later manual edits. */
+  everAiTouched?: boolean;
 }
 
 // Industry-standard margin: 2.5cm ≈ 72pt (1in). pdfkit default is 72; we make
@@ -78,6 +82,30 @@ const writeCoverPage = (
 };
 
 /**
+ * Pure section list for `buildNarrativePdf`, split from pdfkit I/O so it's
+ * unit-testable (pdfkit compresses its output stream — content assertions
+ * against the Buffer directly aren't possible, see pdf-narrative.test.ts).
+ * The AI disclosure section (Spec 89) is appended last, only when present —
+ * a fully human-written document produces the same three sections as before.
+ */
+export const buildNarrativeSections = (
+  input: NarrativePdfInput,
+): Array<[title: string, body: string]> => {
+  const sections: Array<[title: string, body: string]> = [
+    ["Logline", input.logline],
+    ["Synopsis", input.synopsis],
+    ["Treatment", input.treatment],
+  ];
+  if (input.everAiTouched) {
+    sections.push([
+      "AI",
+      translations.it["documents.export.narrativeAiDisclosureNote"] ?? "",
+    ]);
+  }
+  return sections;
+};
+
+/**
  * Renders the three narrative documents into a single PDF buffer.
  * Returns a Promise that resolves once the PDF stream is finished.
  */
@@ -97,13 +125,7 @@ export const buildNarrativePdf = (input: NarrativePdfInput): Promise<Buffer> =>
       writeCoverPage(doc, input);
     }
 
-    const sections: Array<[title: string, body: string]> = [
-      ["Logline", input.logline],
-      ["Synopsis", input.synopsis],
-      ["Treatment", input.treatment],
-    ];
-
-    for (const [title, body] of sections) {
+    for (const [title, body] of buildNarrativeSections(input)) {
       writeSectionHeader(doc, title);
       const plain = stripHtml(body);
       writeBody(doc, plain.length > 0 ? plain : "(not written yet)");

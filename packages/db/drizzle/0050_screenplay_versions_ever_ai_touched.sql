@@ -1,0 +1,12 @@
+-- Spec 89 (AI disclosure stamp). Set true the first time a Cesare tool
+-- generates or edits a scene in this screenplay's history, and NEVER reset —
+-- a later manual rewrite of that scene must not erase the fact that Cesare
+-- touched it once.
+--
+-- No backfill: unlike breakdown_occurrences.source, this screenplay never had
+-- ANY AI-provenance signal before this column existed, so there is no
+-- historical data to recover. Marking every pre-existing screenplay_version
+-- as AI-touched would be a mass false positive, not caution — the cautious
+-- "assume touched" default applies going forward (every new Cesare-generated
+-- or Cesare-edited scene), not retroactively to history with zero signal.
+ALTER TABLE "screenplay_versions" ADD COLUMN "ever_ai_touched" boolean DEFAULT false NOT NULL;

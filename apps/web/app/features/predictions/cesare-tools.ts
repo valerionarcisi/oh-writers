@@ -79,6 +79,7 @@ import { fromResultAsync } from "~/server/effect/interop";
 import { FAST_TIER_MODEL, type ModelTier } from "./cesare-model-router";
 import type { SkillExecutor, AnthropicTool } from "./skills/types";
 import { CesareError } from "./cesare.errors";
+import { markBreakdownElementAiTouched } from "~/features/breakdown";
 import {
   CESARE_SCHEDULE_TOOLS,
   createScheduleTools,
@@ -1983,6 +1984,8 @@ const executeTagElement = (
           })
           .returning();
         if (!elRow) throw new Error("Insert element returned no rows");
+
+        await markBreakdownElementAiTouched(db, elRow.id, elRow.everAiTouched);
 
         const [occRow] = await db
           .insert(breakdownOccurrences)

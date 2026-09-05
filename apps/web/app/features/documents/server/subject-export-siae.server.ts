@@ -3,7 +3,11 @@ import { ok, err, ResultAsync } from "neverthrow";
 import { and, desc, eq } from "drizzle-orm";
 import PDFDocument from "pdfkit";
 import { documents, documentVersions } from "@oh-writers/db/schema";
-import { DocumentTypes, CHARS_PER_CARTELLA } from "@oh-writers/domain";
+import {
+  DocumentTypes,
+  CHARS_PER_CARTELLA,
+  translations,
+} from "@oh-writers/domain";
 import { toShape, type ResultShape } from "@oh-writers/utils";
 import { getDb, type Db } from "~/server/db";
 import { requireProjectAccess } from "~/server/access";
@@ -16,6 +20,7 @@ import {
   ForbiddenError,
   SubjectNotFoundError,
 } from "../documents.errors";
+import { loadDocumentEverAiTouched } from "./ai-disclosure.server";
 
 // ─── Pure helpers ────────────────────────────────────────────────────────────
 
@@ -30,6 +35,10 @@ export const formatCartellaFooter = (pageCharOffset: number): string => {
 
 export interface SiaeCoverContext {
   readonly logline: string | null;
+  /** Spec 89 — AI disclosure stamp. True if the Soggetto document was ever
+   *  Cesare-touched (any document_versions row with a non-null
+   *  cesareSessionId), permanent regardless of later manual edits. */
+  readonly everAiTouched?: boolean;
 }
 
 const formatAuthorLine = (author: {
@@ -62,6 +71,12 @@ export const buildSiaeCoverLines = (
   ];
   if (input.depositNotes && input.depositNotes.trim().length > 0) {
     lines.push("", "Note di deposito:", `  ${input.depositNotes.trim()}`);
+  }
+  if (context.everAiTouched) {
+    lines.push(
+      "",
+      translations.it["documents.export.subjectAiDisclosureNote"] ?? "",
+    );
   }
   return lines;
 };
@@ -338,13 +353,15 @@ export const exportSubjectSiae = createServerFn({ method: "POST" })
           ResultAsync.combine([
             loadLogline(db, project.id),
             loadSoggetto(db, project.id),
+            loadDocumentEverAiTouched(db, project.id, DocumentTypes.SOGGETTO),
           ]).map(
-            ([logline, soggetto]) => ({ project, logline, soggetto }) as const,
+            ([logline, soggetto, everAiTouched]) =>
+              ({ project, logline, soggetto, everAiTouched }) as const,
           ),
         )
-        .andThen(({ logline, soggetto }) =>
+        .andThen(({ logline, soggetto, everAiTouched }) =>
           ResultAsync.fromPromise(
-            renderSiaePdf(data, { logline }, soggetto),
+            renderSiaePdf(data, { logline, everAiTouched }, soggetto),
             (e) => new DbError("pdf:siae", e),
           ).map(
             (buffer): SiaeExportPayload => ({

@@ -290,6 +290,10 @@ export const breakdownKeys = {
       " scene contains elements that may no longer be present after the import.",
     "breakdown.importBanner.scenePluralSuffix":
       " scenes contain elements that may no longer be present after the import.",
+
+    // AI disclosure stamp (Spec 89) — export-only note, never shown in-app.
+    "breakdown.export.aiDisclosureNote":
+      "This breakdown contains elements suggested by Cesare (AI).",
   },
   it: {
     // Loading / skeleton
@@ -582,5 +586,9 @@ export const breakdownKeys = {
       " scena contengono elementi che potrebbero non essere più presenti dopo l'import.",
     "breakdown.importBanner.scenePluralSuffix":
       " scene contengono elementi che potrebbero non essere più presenti dopo l'import.",
+
+    // AI disclosure stamp (Spec 89) — nota solo in export, mai mostrata in-app.
+    "breakdown.export.aiDisclosureNote":
+      "Questo spoglio contiene elementi suggeriti da Cesare (AI).",
   },
 } as const satisfies LocaleDict;
