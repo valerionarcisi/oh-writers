@@ -1,7 +1,10 @@
 import { createAPIFileRoute } from "@tanstack/start/api";
 import { and, eq, sql } from "drizzle-orm";
-import { randomUUID } from "node:crypto";
-import { documents, documentVersions } from "@oh-writers/db/schema";
+import {
+  documents,
+  documentVersions,
+  cesareSessions,
+} from "@oh-writers/db/schema";
 import { DocumentTypes, type DocumentType } from "@oh-writers/domain";
 import { getDb } from "~/server/db";
 
@@ -21,8 +24,10 @@ import { getDb } from "~/server/db";
  * real "history keeps growing, nothing is erased" shape production has, and
  * a test built on it couldn't tell a true permanence bug from a false pass.
  *
- * `cesareSessionId` has no DB-level foreign key to `cesare_sessions` (see
- * document-versions.ts), so any random UUID is a valid value here.
+ * `cesareSessionId` carries a real DB-level foreign key to `cesare_sessions`
+ * (ON DELETE SET NULL) — a random UUID violates it, so `touched: true`
+ * reuses an existing session for the document's owner, or creates a
+ * minimal one if none exists yet.
  *
  * `reset: true` deletes every version this endpoint has ever inserted for
  * the document (identified by a fixed test label), restoring a clean
@@ -95,6 +100,27 @@ export const APIRoute = createAPIFileRoute("/api/test/set-document-ai-touched")(
             },
           );
         }
+        const existingSession = await db.query.cesareSessions.findFirst({
+          where: eq(cesareSessions.projectId, body.projectId),
+        });
+        const sessionId =
+          existingSession?.id ??
+          (
+            await db
+              .insert(cesareSessions)
+              .values({
+                projectId: body.projectId,
+                userId: existing.createdBy,
+                title: TEST_VERSION_LABEL,
+              })
+              .returning({ id: cesareSessions.id })
+          )[0]?.id;
+        if (!sessionId) {
+          return new Response("Failed to resolve a cesare session", {
+            status: 500,
+          });
+        }
+
         const nextNumber = (existing.max ?? 0) + 1;
         await db.insert(documentVersions).values({
           documentId: doc.id,
@@ -102,7 +128,7 @@ export const APIRoute = createAPIFileRoute("/api/test/set-document-ai-touched")(
           label: TEST_VERSION_LABEL,
           content: "",
           kind: "checkpoint",
-          cesareSessionId: randomUUID(),
+          cesareSessionId: sessionId,
           isDraft: false,
           createdBy: existing.createdBy,
         });
