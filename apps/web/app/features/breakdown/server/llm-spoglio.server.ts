@@ -40,6 +40,7 @@ import {
 } from "../breakdown.errors";
 import { canEditProject } from "@oh-writers/utils";
 import { resolveBreakdownAccessByScreenplayVersion } from "./breakdown-access";
+import { markBreakdownElementAiTouched } from "./ai-disclosure.server";
 import {
   extractCompleteScenes,
   type ParsedSceneRaw,
@@ -477,6 +478,8 @@ const persistSceneItems = (
         if (!el) continue;
         if (el.archivedAt !== null) continue;
 
+        await markBreakdownElementAiTouched(tx, el.id, el.everAiTouched);
+
         const inserted = await tx
           .insert(breakdownOccurrences)
           .values({
@@ -485,6 +488,7 @@ const persistSceneItems = (
             sceneId: input.sceneId,
             quantity,
             cesareStatus: status,
+            source: "cesare",
           })
           .onConflictDoNothing({
             target: [

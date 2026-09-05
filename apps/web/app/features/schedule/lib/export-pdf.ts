@@ -74,9 +74,16 @@ const drawStripRow = (
   }
 };
 
+export interface BuildSchedulePdfOptions {
+  /** Spec 89 — AI disclosure stamp. Already-translated text, or omitted when
+   *  the schedule was never Cesare-touched (no note = no false positive). */
+  readonly aiDisclosureNote?: string;
+}
+
 export const buildSchedulePdf = (
   projectTitle: string,
   days: ShootingDayView[],
+  options: BuildSchedulePdfOptions = {},
 ): Promise<Buffer> =>
   new Promise((resolve, reject) => {
     const doc = new PDFDocument({
@@ -105,7 +112,17 @@ export const buildSchedulePdf = (
         `Generato il ${new Date().toLocaleDateString("it-IT", { day: "2-digit", month: "long", year: "numeric" })}  ·  ${days.length} ${days.length === 1 ? "giornata" : "giornate"}`,
         { align: "center" },
       )
-      .moveDown(1.2);
+      .moveDown(0.4);
+
+    if (options.aiDisclosureNote) {
+      doc
+        .font("Courier")
+        .fontSize(8)
+        .fillColor("#555")
+        .text(options.aiDisclosureNote, { align: "center" })
+        .moveDown(0.4);
+    }
+    doc.moveDown(0.4);
 
     const pageWidth = doc.page.width - MARGIN * 2;
     const x = MARGIN + (pageWidth - tableWidth) / 2;

@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   buildNarrativePdf,
   buildNarrativeFilename,
+  buildNarrativeSections,
   slugify,
 } from "./pdf-narrative";
 
@@ -78,6 +79,40 @@ describe("buildNarrativePdf", () => {
     expect(withCover.subarray(0, 4).toString()).toBe("%PDF");
     // Cover page adds an extra page, so the buffer should be larger
     expect(withCover.length).toBeGreaterThan(withoutCover.length);
+  });
+});
+
+describe("buildNarrativeSections (Spec 89 — AI disclosure stamp)", () => {
+  const base = {
+    projectTitle: "Silent City",
+    author: "Valerio",
+    draftDate: null,
+    logline: "L.",
+    synopsis: "S.",
+    treatment: "T.",
+  };
+
+  it("has no AI disclosure section when never Cesare-touched", () => {
+    const sections = buildNarrativeSections({ ...base, everAiTouched: false });
+    expect(sections.some(([title]) => title === "AI")).toBe(false);
+  });
+
+  it("appends an AI disclosure section when ever Cesare-touched", () => {
+    const sections = buildNarrativeSections({ ...base, everAiTouched: true });
+    const aiSection = sections.find(([title]) => title === "AI");
+    expect(aiSection?.[1]).toBe(
+      "Questo documento contiene testo suggerito da Cesare (AI).",
+    );
+  });
+
+  it("still emits the three narrative sections regardless of the AI flag", () => {
+    const sections = buildNarrativeSections({ ...base, everAiTouched: true });
+    expect(sections.map(([title]) => title)).toEqual([
+      "Logline",
+      "Synopsis",
+      "Treatment",
+      "AI",
+    ]);
   });
 });
 

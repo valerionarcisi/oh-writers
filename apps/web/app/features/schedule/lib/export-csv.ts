@@ -34,7 +34,10 @@ export const buildScheduleCsvRows = (
     })),
   );
 
-export const scheduleToCsv = (days: ShootingDayView[]): string => {
+export const scheduleToCsv = (
+  days: ShootingDayView[],
+  aiDisclosureNote?: string,
+): string => {
   const header = [
     "Giorno",
     "Data",
@@ -61,5 +64,8 @@ export const scheduleToCsv = (days: ShootingDayView[]): string => {
     r.notes,
   ]);
 
-  return toCsv(header, rows);
+  const csv = toCsv(header, rows);
+  // Spec 89 — AI disclosure stamp: a plain leading line, not a CSV row (it
+  // has no columns to align with), so it's prepended outside toCsv.
+  return aiDisclosureNote ? `${aiDisclosureNote}\n${csv}` : csv;
 };

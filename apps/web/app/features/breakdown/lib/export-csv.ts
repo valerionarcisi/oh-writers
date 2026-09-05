@@ -9,7 +9,10 @@ export interface ExportRow {
   scenes: number[];
 }
 
-export const breakdownToCsv = (rows: ExportRow[]): string => {
+export const breakdownToCsv = (
+  rows: ExportRow[],
+  aiDisclosureNote?: string,
+): string => {
   const header = ["Categoria", "Nome", "Descrizione", "Totale", "Scene"];
   const lines = rows.map((r) => [
     CATEGORY_META[r.category].labelIt,
@@ -18,5 +21,8 @@ export const breakdownToCsv = (rows: ExportRow[]): string => {
     String(r.totalQuantity),
     r.scenes.join(", "),
   ]);
-  return toCsv(header, lines);
+  const csv = toCsv(header, lines);
+  // Spec 89 — AI disclosure stamp: a plain leading line, not a CSV row (it
+  // has no columns to align with), so it's prepended outside toCsv.
+  return aiDisclosureNote ? `${aiDisclosureNote}\n${csv}` : csv;
 };

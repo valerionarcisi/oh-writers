@@ -800,6 +800,9 @@ const executeProposeScreenplayRevision = (
                 isDraft: true,
                 draftDate: new Date().toISOString().slice(0, 10),
                 createdBy: userId,
+                // Spec 89 — AI disclosure stamp: permanent once true, never
+                // reset even after this draft is promoted/rewritten later.
+                everAiTouched: true,
               })
               .returning({ id: screenplayVersions.id })
               .then((rows) => rows[0] ?? null),

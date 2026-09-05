@@ -244,6 +244,10 @@ export interface ProjectBreakdownRow {
   hasStale: boolean;
   hasPending: boolean;
   latestSource: OccurrenceSource | null;
+  /** Spec 89 — true if ANY occurrence in this element's history was ever
+   *  Cesare-sourced, even if a later occurrence corrected it manually. Unlike
+   *  `latestSource`, this never flips back to false. */
+  everAiTouched: boolean;
 }
 
 export const getProjectBreakdownRows = (
@@ -304,6 +308,7 @@ export const getProjectBreakdownRows = (
           latestSource: r.occ
             ? (r.occ.source as OccurrenceSource | null)
             : null,
+          everAiTouched: r.el.everAiTouched,
           _totalOccs: r.occ ? 1 : 0,
           _latestOccAt: r.occ ? r.occ.createdAt : null,
         });

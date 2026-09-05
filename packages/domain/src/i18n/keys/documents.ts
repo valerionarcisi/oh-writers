@@ -226,6 +226,12 @@ export const documentsKeys = {
     "documents.saveStatus.saving": "Saving…",
     "documents.saveStatus.dirty": "Unsaved changes",
     "documents.saveStatus.error": "Error saving",
+
+    // AI disclosure stamp (Spec 89) — export-only note, never shown in-app.
+    "documents.export.subjectAiDisclosureNote":
+      "This subject contains text suggested by Cesare (AI).",
+    "documents.export.narrativeAiDisclosureNote":
+      "This document contains text suggested by Cesare (AI).",
   },
   it: {
     "documents.aiPanel.title": "Assistente AI",
@@ -439,5 +445,10 @@ export const documentsKeys = {
     "documents.saveStatus.saving": "Salvataggio…",
     "documents.saveStatus.dirty": "Modifiche non salvate",
     "documents.saveStatus.error": "Errore di salvataggio",
+
+    "documents.export.subjectAiDisclosureNote":
+      "Questo soggetto contiene testo suggerito da Cesare (AI).",
+    "documents.export.narrativeAiDisclosureNote":
+      "Questo documento contiene testo suggerito da Cesare (AI).",
   },
 } as const satisfies LocaleDict;
