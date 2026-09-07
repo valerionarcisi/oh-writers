@@ -80,6 +80,8 @@ import { FAST_TIER_MODEL, type ModelTier } from "./cesare-model-router";
 import type { SkillExecutor, AnthropicTool } from "./skills/types";
 import { CesareError } from "./cesare.errors";
 import { markBreakdownElementAiTouched } from "~/features/breakdown";
+import { markBudgetAiTouched } from "~/features/budget";
+import { markLocationRequirementAiTouched } from "~/features/locations";
 import {
   CESARE_SCHEDULE_TOOLS,
   createScheduleTools,
@@ -926,7 +928,10 @@ export const executeAddCandidate = (
     (async () => {
       // Verify requirement belongs to the project in one query
       const [req] = await db
-        .select({ id: locationRequirements.id })
+        .select({
+          id: locationRequirements.id,
+          everAiTouched: locationRequirements.everAiTouched,
+        })
         .from(locationRequirements)
         .where(
           and(
@@ -941,6 +946,8 @@ export const executeAddCandidate = (
           `Requirement ${input.requirement_id} not found or does not belong to project ${projectId}`,
         );
       }
+
+      await markLocationRequirementAiTouched(db, req.id, req.everAiTouched);
 
       const [inserted] = await db
         .insert(locationCandidates)
@@ -1171,6 +1178,7 @@ const executeCreateLocationRequirement = (
           description: input.brief ?? null,
           intExt,
           timeOfDay,
+          everAiTouched: true,
         })
         .returning({
           id: locationRequirements.id,
@@ -1252,6 +1260,7 @@ const executeFindOrCreateRequirementForScene = (
           name,
           intExt,
           timeOfDay,
+          everAiTouched: true,
         })
         .returning({
           id: locationRequirements.id,
@@ -2263,7 +2272,9 @@ export const executeBreakdownTool = (
       block.input as SceneNumberInput,
       db,
       projectId,
-    ).map((r) => successResult(block.id, r));
+    )
+      .andThen((r) => markBudgetAiTouched(db, projectId).map(() => r))
+      .map((r) => successResult(block.id, r));
   }
   const readFallthrough = tryExecuteReadTool(block, db, projectId);
   if (readFallthrough) return readFallthrough;
@@ -4805,7 +4816,9 @@ export const executeBudgetTool = (
       block.input as UpdateBudgetLineInput,
       db,
       projectId,
-    ).map((r) => ok(JSON.stringify(r)));
+    )
+      .andThen((r) => markBudgetAiTouched(db, projectId).map(() => r))
+      .map((r) => ok(JSON.stringify(r)));
   }
 
   if (block.name === "add_budget_line") {
@@ -4813,7 +4826,9 @@ export const executeBudgetTool = (
       block.input as AddBudgetLineInput,
       db,
       projectId,
-    ).map((r) => ok(JSON.stringify(r)));
+    )
+      .andThen((r) => markBudgetAiTouched(db, projectId).map(() => r))
+      .map((r) => ok(JSON.stringify(r)));
   }
 
   if (block.name === "redistribute_topsheet") {
@@ -4821,7 +4836,9 @@ export const executeBudgetTool = (
       block.input as RedistributeInput,
       db,
       projectId,
-    ).map((r) => ok(JSON.stringify(r)));
+    )
+      .andThen((r) => markBudgetAiTouched(db, projectId).map(() => r))
+      .map((r) => ok(JSON.stringify(r)));
   }
 
   if (block.name === "analyze_variance") {
@@ -4835,15 +4852,15 @@ export const executeBudgetTool = (
       block.input as MarkLineActualInput,
       db,
       projectId,
-    ).map((r) => ok(JSON.stringify(r)));
+    )
+      .andThen((r) => markBudgetAiTouched(db, projectId).map(() => r))
+      .map((r) => ok(JSON.stringify(r)));
   }
 
   if (block.name === "set_budget_cap") {
-    return executeSetBudgetCap(
-      block.input as SetBudgetCapInput,
-      db,
-      projectId,
-    ).map((r) => ok(JSON.stringify(r)));
+    return executeSetBudgetCap(block.input as SetBudgetCapInput, db, projectId)
+      .andThen((r) => markBudgetAiTouched(db, projectId).map(() => r))
+      .map((r) => ok(JSON.stringify(r)));
   }
 
   if (block.name === "evaluate_against_cap") {

@@ -59,6 +59,7 @@ export const locationRequirements = pgTable("location_requirements", {
   status: text("status", { enum: LOCATION_REQUIREMENT_STATUSES })
     .notNull()
     .default("pending"),
+  everAiTouched: boolean("ever_ai_touched").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

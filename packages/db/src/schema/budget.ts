@@ -54,6 +54,7 @@ export const budgets = pgTable("budgets", {
   shootingDays: integer("shooting_days"),
   status: text("status", { enum: BUDGET_STATUSES }).notNull().default("draft"),
   generatedAt: timestamp("generated_at"),
+  everAiTouched: boolean("ever_ai_touched").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

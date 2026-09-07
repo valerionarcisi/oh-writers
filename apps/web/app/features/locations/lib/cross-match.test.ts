@@ -53,6 +53,7 @@ const requirement = (
   status: "pending",
   sceneCount,
   candidates,
+  everAiTouched: false,
   createdAt: "2026-01-01T00:00:00.000Z",
   updatedAt: "2026-01-01T00:00:00.000Z",
 });

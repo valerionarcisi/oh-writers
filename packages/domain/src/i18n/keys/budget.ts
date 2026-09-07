@@ -341,6 +341,10 @@ export const budgetKeys = {
     "budget.unit.giornata": "Day",
     "budget.unit.posa": "Session",
     "budget.unit.forfait": "Flat fee",
+
+    // AI disclosure stamp (Spec 89b) — export-only note, never shown in-app.
+    "budget.export.aiDisclosureNote":
+      "This budget contains lines added or modified by Cesare (AI).",
   },
   it: {
     // View switcher (Viewbar SegmentedControl)
@@ -684,5 +688,8 @@ export const budgetKeys = {
     "budget.unit.giornata": "Giornata",
     "budget.unit.posa": "Posa",
     "budget.unit.forfait": "Forfait",
+
+    "budget.export.aiDisclosureNote":
+      "Questo budget contiene voci aggiunte o modificate da Cesare (AI).",
   },
 } as const satisfies LocaleDict;

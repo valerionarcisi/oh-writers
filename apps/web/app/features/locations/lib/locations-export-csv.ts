@@ -48,6 +48,7 @@ export const buildLocationCsvRows = (
 export const locationsToCsv = (
   requirements: LocationRequirement[],
   sceneNumbersByRequirementId: Record<string, number[]>,
+  aiDisclosureNote?: string,
 ): string => {
   const header = [
     "Scene",
@@ -70,5 +71,9 @@ export const locationsToCsv = (
     r.notes,
   ]);
 
-  return toCsv(header, rows);
+  const csv = toCsv(header, rows);
+  // Spec 89b — AI disclosure stamp: a plain leading line, not a CSV row (it
+  // has no columns to align with), so it's prepended outside toCsv. Mirrors
+  // schedule/lib/export-csv.ts's scheduleToCsv.
+  return aiDisclosureNote ? `${aiDisclosureNote}\n${csv}` : csv;
 };

@@ -74,6 +74,9 @@ export const LocationRequirementSchema = z.object({
   status: LocationRequirementStatusSchema,
   sceneCount: z.number().int(),
   candidates: z.array(LocationCandidateSchema),
+  /** Spec 89b — AI disclosure stamp: true once any Cesare tool has ever
+   *  touched this requirement (added a candidate, created it), permanent. */
+  everAiTouched: z.boolean(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
