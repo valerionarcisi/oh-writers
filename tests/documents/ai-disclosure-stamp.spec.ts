@@ -25,12 +25,11 @@ const setDocumentAiTouched = async (
   projectId: string,
   type: string,
   touched: boolean,
-  reset = false,
 ): Promise<void> => {
   const response = await page.request.post(
     `${BASE_URL}/api/test/set-document-ai-touched`,
     {
-      data: { projectId, type, touched, reset },
+      data: { projectId, type, touched },
       headers: { "Content-Type": "application/json" },
     },
   );
@@ -42,20 +41,23 @@ const setDocumentAiTouched = async (
 };
 
 test.describe("[OHW-148] Narrative documents — AI disclosure stamp on export", () => {
+  // [Permanenza] drives a real manual edit through the live editor (see
+  // below) so it exercises the real activeVersionId-update-in-place autosave
+  // path, not just this file's own test-hook inserts. reset-cesare-state
+  // (already used by the cesare-agentic-*.spec.ts suite for the same shared
+  // TEST_TEAM_PROJECT_ID) restores every narrative doc to its seed content
+  // and version history in one call — the shared fixture must come out of
+  // this file exactly as it went in, since other specs read it too (see
+  // tests/documents/editorial-advice-trigger-policy.spec.ts, which failed
+  // downstream when this cleanup was missing: the leftover "manual edit"
+  // text was too short to pass the margin-notes-column content threshold).
   test.afterEach(async ({ authenticatedPage }) => {
-    await setDocumentAiTouched(
-      authenticatedPage,
-      TEST_TEAM_PROJECT_ID,
-      DocumentTypes.SOGGETTO,
-      false,
-      true,
-    );
-    await setDocumentAiTouched(
-      authenticatedPage,
-      TEST_TEAM_PROJECT_ID,
-      DocumentTypes.SYNOPSIS,
-      false,
-      true,
+    await authenticatedPage.request.post(
+      `${BASE_URL}/api/test/reset-cesare-state`,
+      {
+        data: { projectId: TEST_TEAM_PROJECT_ID },
+        headers: { "Content-Type": "application/json" },
+      },
     );
   });
 
