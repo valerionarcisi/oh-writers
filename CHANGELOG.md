@@ -1,3 +1,9 @@
+## [1.1.0-beta.7](https://github.com/valerionarcisi/oh-writers/compare/v1.1.0-beta.6...v1.1.0-beta.7) (2026-09-07)
+
+### Features
+
+* AI disclosure stamp on exports (Spec 89) ([#153](https://github.com/valerionarcisi/oh-writers/issues/153)) ([4d3bf7a](https://github.com/valerionarcisi/oh-writers/commit/4d3bf7a3ef398e94380cd7ef75f3b6e41ef6c068)), closes [#148](https://github.com/valerionarcisi/oh-writers/issues/148) [#97](https://github.com/valerionarcisi/oh-writers/issues/97)
+
 ## [1.1.0-beta.6](https://github.com/valerionarcisi/oh-writers/compare/v1.1.0-beta.5...v1.1.0-beta.6) (2026-09-04)
 
 ### Bug Fixes
