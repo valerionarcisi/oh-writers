@@ -29,6 +29,7 @@ import {
   DbError,
 } from "../documents.errors";
 import { ProjectNotFoundError } from "~/features/projects";
+import { loadDocumentEverAiTouched } from "./ai-disclosure.server";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -355,6 +356,16 @@ export const exportNarrativePdf = createServerFn({ method: "POST" })
         byType.set(d.type as DocumentType, content);
       }
 
+      // Spec 89 — AI disclosure stamp: the combined export is stamped if ANY
+      // of the three documents it covers was ever Cesare-touched.
+      const aiTouchedResult = await ResultAsync.combine([
+        loadDocumentEverAiTouched(db, data.projectId, DocumentTypes.LOGLINE),
+        loadDocumentEverAiTouched(db, data.projectId, DocumentTypes.SYNOPSIS),
+        loadDocumentEverAiTouched(db, data.projectId, DocumentTypes.TREATMENT),
+      ]);
+      if (aiTouchedResult.isErr()) return toShape(err(aiTouchedResult.error));
+      const everAiTouched = aiTouchedResult.value.some(Boolean);
+
       // Dynamic import keeps pdfkit out of the client bundle — its transitive
       // deps (base64-js, fs, zlib) are CJS/Node-only and break Vite SSR graph.
       const { buildNarrativePdf, buildNarrativeFilename } =
@@ -368,6 +379,7 @@ export const exportNarrativePdf = createServerFn({ method: "POST" })
         logline: byType.get(DocumentTypes.LOGLINE) ?? "",
         synopsis: byType.get(DocumentTypes.SYNOPSIS) ?? "",
         treatment: byType.get(DocumentTypes.TREATMENT) ?? "",
+        everAiTouched,
       });
 
       return toShape(

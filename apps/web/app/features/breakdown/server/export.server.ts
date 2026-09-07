@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/start";
 import { z } from "zod";
 import { ResultAsync, err } from "neverthrow";
+import { translations } from "@oh-writers/domain";
 import { toShape, type ResultShape } from "@oh-writers/utils";
 import { requireUser } from "~/server/context";
 import { getDb } from "~/server/db";
@@ -56,6 +57,9 @@ export const exportBreakdownPdf = createServerFn({ method: "POST" })
                 .map((s) => s.sceneNumber)
                 .sort((a, b) => a - b),
             })),
+            rows.some((r) => r.everAiTouched)
+              ? translations.it["breakdown.export.aiDisclosureNote"]
+              : undefined,
           ),
           (e) => new DbError("export/pdf", e),
         ).map((buf) => ({
@@ -103,6 +107,9 @@ export const exportBreakdownCsv = createServerFn({ method: "POST" })
               .map((s) => s.sceneNumber)
               .sort((a, b) => a - b),
           })),
+          rows.some((r) => r.everAiTouched)
+            ? translations.it["breakdown.export.aiDisclosureNote"]
+            : undefined,
         ),
         filename: `breakdown-${access.projectSlug}-${new Date().toISOString().slice(0, 10)}.csv`,
       }));

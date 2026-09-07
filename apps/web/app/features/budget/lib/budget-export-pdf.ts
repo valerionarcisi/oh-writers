@@ -40,6 +40,7 @@ const writeHeader = (
   projectTitle: string,
   grandTotal: number,
   date: string,
+  aiDisclosureNote?: string,
 ) => {
   doc
     .font("Helvetica-Bold")
@@ -52,6 +53,17 @@ const writeHeader = (
     .fontSize(9)
     .fillColor("#666")
     .text(`Budget · ${date}`, { align: "left" });
+
+  // Spec 89b — AI disclosure stamp. Already-translated text, or omitted
+  // when the budget was never Cesare-touched. Mirrors the schedule PDF
+  // header placement in schedule/lib/export-pdf.ts.
+  if (aiDisclosureNote) {
+    doc
+      .font("Helvetica")
+      .fontSize(8)
+      .fillColor("#666")
+      .text(aiDisclosureNote, { align: "left" });
+  }
 
   doc.moveDown(0.5);
 
@@ -186,6 +198,7 @@ export const buildBudgetPdfFromSections = (
   projectTitle: string,
   sections: ReadonlyArray<FlatSection>,
   date: string,
+  aiDisclosureNote?: string,
 ): Promise<Buffer> =>
   new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: "A4", margin: MARGIN });
@@ -194,7 +207,13 @@ export const buildBudgetPdfFromSections = (
     doc.on("end", () => resolve(Buffer.concat(chunks)));
     doc.on("error", reject);
 
-    writeHeader(doc, projectTitle, grandTotalOf(sections), date);
+    writeHeader(
+      doc,
+      projectTitle,
+      grandTotalOf(sections),
+      date,
+      aiDisclosureNote,
+    );
 
     for (const section of sections) {
       if (section.rows.length === 0) continue;

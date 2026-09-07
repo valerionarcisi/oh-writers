@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { breakdownPdfGroups, type PdfRow } from "./export-pdf";
+import {
+  breakdownPdfGroups,
+  breakdownPdfDocument,
+  type PdfRow,
+} from "./export-pdf";
 
 describe("breakdownPdfGroups (BUG-N63d — export fidelity)", () => {
   it("emits EVERY scene an element appears in (no 6-scene cap, no ellipsis)", () => {
@@ -40,5 +44,30 @@ describe("breakdownPdfGroups (BUG-N63d — export fidelity)", () => {
     expect(props?.elements).toHaveLength(2);
     expect(cast?.header).toBe("Cast (1)");
     expect(cast?.elements[0]).toContain("→ scene 1, 2");
+  });
+});
+
+describe("breakdownPdfDocument (Spec 89 — AI disclosure stamp)", () => {
+  const rows: PdfRow[] = [
+    { category: "props", name: "Pistola", totalQuantity: 1, scenes: [1] },
+  ];
+
+  it("has no note line when aiDisclosureNote is omitted", () => {
+    const doc = breakdownPdfDocument("Il Mio Film", rows);
+    expect(doc.noteLine).toBeNull();
+  });
+
+  it("carries the note line verbatim when provided", () => {
+    const doc = breakdownPdfDocument(
+      "Il Mio Film",
+      rows,
+      "✦ Contiene elementi suggeriti da Cesare (AI)",
+    );
+    expect(doc.noteLine).toBe("✦ Contiene elementi suggeriti da Cesare (AI)");
+  });
+
+  it("still groups elements the same way regardless of the note", () => {
+    const doc = breakdownPdfDocument("Il Mio Film", rows, "nota");
+    expect(doc.groups).toEqual(breakdownPdfGroups(rows));
   });
 });

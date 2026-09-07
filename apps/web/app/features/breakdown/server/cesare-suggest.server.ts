@@ -31,6 +31,7 @@ import {
 import { checkAndStampRateLimit } from "~/server/rate-limit";
 import { mockCesareBreakdownForScene } from "~/mocks/ai-responses";
 import { resolveBreakdownAccessByScene } from "./breakdown-access";
+import { markBreakdownElementAiTouched } from "./ai-disclosure.server";
 import { Effect } from "effect";
 import {
   extractToolUse,
@@ -204,6 +205,7 @@ const persistSuggestions = (
           })
           .returning();
         if (!el) continue;
+        await markBreakdownElementAiTouched(tx, el.id, el.everAiTouched);
         const inserted = await tx
           .insert(breakdownOccurrences)
           .values({
@@ -212,6 +214,7 @@ const persistSuggestions = (
             sceneId: params.sceneId,
             quantity: s.quantity,
             cesareStatus: "pending",
+            source: "cesare",
           })
           .onConflictDoNothing({
             target: [

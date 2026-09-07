@@ -61,6 +61,11 @@ export const screenplayVersions = pgTable(
     draftColor: text("draft_color"),
     draftDate: date("draft_date"),
     isDraft: boolean("is_draft").notNull().default(false),
+    // Spec 89 — AI disclosure stamp. Set true the first time a Cesare tool
+    // generates or edits a scene in this screenplay's history, and NEVER
+    // reset — a later manual rewrite of that scene must not erase the fact
+    // that Cesare touched it once.
+    everAiTouched: boolean("ever_ai_touched").notNull().default(false),
     createdBy: uuid("created_by")
       .notNull()
       .references(() => users.id),

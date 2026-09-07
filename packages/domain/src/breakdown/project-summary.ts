@@ -12,6 +12,9 @@ export interface ProjectBreakdownInputRow {
   readonly sceneNumbers: readonly number[];
   readonly status: "accepted" | "pending" | "stale";
   readonly source: "regex" | "cesare" | "manual" | null;
+  /** Spec 89 — true if ANY occurrence in this element's history was ever
+   *  Cesare-sourced, even if `source` (latest) is now "manual"/"regex". */
+  readonly everAiTouched: boolean;
 }
 
 export interface SceneRange {
@@ -219,6 +222,7 @@ const csvEscape = (v: string | number | null): string => {
 
 export const toBreakdownCsv = (
   rows: readonly ProjectBreakdownInputRow[],
+  aiDisclosureNote?: string,
 ): string => {
   const header = [
     "id",
@@ -252,5 +256,8 @@ export const toBreakdownCsv = (
       ].join(","),
     );
   }
-  return lines.join("\n");
+  const csv = lines.join("\n");
+  // Spec 89 — AI disclosure stamp: a plain leading line, not a CSV row (it
+  // has no columns to align with), so it's prepended outside the row loop.
+  return aiDisclosureNote ? `${aiDisclosureNote}\n${csv}` : csv;
 };

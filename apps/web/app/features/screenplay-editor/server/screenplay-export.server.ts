@@ -15,11 +15,14 @@ import {
   listScenesInFountain,
   type FountainScene,
 } from "@oh-writers/domain";
+import { translations } from "@oh-writers/domain";
 import { requireUser } from "~/server/context";
 import { getDb } from "~/server/db";
 import { getMembership } from "~/server/permissions";
 import type { DraftColor } from "~/features/projects";
 import type { TitlePageDocLike } from "../lib/title-page-prepend";
+import { stampAiDisclosureFooter } from "../lib/stamp-pdf-footer";
+import { loadScreenplayEverAiTouched } from "./ai-disclosure.server";
 import {
   ScreenplayNotFoundError,
   ProjectNotFoundError,
@@ -128,6 +131,16 @@ export const exportScreenplayPdf = createServerFn({ method: "POST" })
           versionLabel = versionResult.value.label ?? versionLabel;
         }
       }
+      // Spec 89 — AI disclosure stamp: permanent if ANY version in the
+      // screenplay's full history was Cesare-touched, not just the active
+      // one (switching versions must not make the note disappear).
+      const everAiTouchedResult = await loadScreenplayEverAiTouched(
+        db,
+        screenplay.id,
+      );
+      if (everAiTouchedResult.isErr())
+        return toShape(err(everAiTouchedResult.error));
+      const everAiTouched = everAiTouchedResult.value;
 
       const { buildScreenplayPdf, buildScreenplayFilename } =
         await import("../lib/pdf-screenplay");
@@ -173,9 +186,18 @@ export const exportScreenplayPdf = createServerFn({ method: "POST" })
         includeCoverPage: data.includeCoverPage,
       });
 
-      const buffer = await buildScreenplayPdf(pipelineResult.fountain, {
+      const rawBuffer = await buildScreenplayPdf(pipelineResult.fountain, {
         invocation: pipelineResult.invocation,
       });
+      // Spec 89 — AI disclosure stamp: a bottom-right footer on every page,
+      // independent of includeCoverPage/format — the note is a property of
+      // the whole document, not of any one page's authored content.
+      const buffer = everAiTouched
+        ? await stampAiDisclosureFooter(
+            rawBuffer,
+            translations.it["screenplay.export.aiDisclosureNote"] ?? "",
+          )
+        : rawBuffer;
 
       const meta = EXPORT_FORMAT_META[data.format];
       return toShape(

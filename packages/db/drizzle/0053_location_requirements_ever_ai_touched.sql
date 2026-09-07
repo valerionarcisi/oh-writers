@@ -1,0 +1,12 @@
+-- Spec 89b (AI disclosure stamp, locations). Set true the first time a
+-- Cesare location tool (add_candidate, create_location_requirement, and any
+-- other requirement/candidate-mutating tool in the locations write domain)
+-- touches this requirement, and NEVER reset. Per-requirement, not per
+-- project — mirrors breakdown_elements.ever_ai_touched (Cesare's location
+-- tools address individual requirements/candidates, unlike budget/schedule
+-- tools which mutate multiple rows per call).
+--
+-- No backfill: this requirement never had ANY AI-provenance signal before
+-- this column existed — no historical data to recover, so pre-existing
+-- requirements stay false (not a mass false positive).
+ALTER TABLE "location_requirements" ADD COLUMN "ever_ai_touched" boolean DEFAULT false NOT NULL;

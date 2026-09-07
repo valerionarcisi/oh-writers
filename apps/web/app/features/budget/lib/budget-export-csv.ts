@@ -75,7 +75,14 @@ export const buildBudgetCsvRowsFromSections = (
 
 export const budgetSectionsToCsv = (
   sections: ReadonlyArray<FlatSection>,
-): string => rowsToCsv(buildBudgetCsvRowsFromSections(sections));
+  aiDisclosureNote?: string,
+): string => {
+  const csv = rowsToCsv(buildBudgetCsvRowsFromSections(sections));
+  // Spec 89b — AI disclosure stamp: a plain leading line, not a CSV row (it
+  // has no columns to align with), so it's prepended outside toCsv. Mirrors
+  // schedule/lib/export-csv.ts's scheduleToCsv.
+  return aiDisclosureNote ? `${aiDisclosureNote}\n${csv}` : csv;
+};
 
 export const budgetLinesToCsv = (lines: BudgetLine[]): string =>
   rowsToCsv(buildBudgetCsvRows(lines));

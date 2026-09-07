@@ -1,0 +1,12 @@
+-- Spec 89b (AI disclosure stamp, budget). Set true the first time a Cesare
+-- budget tool (set_budget_cap, update_budget_line, add_budget_line,
+-- add_to_budget, mark_line_actual, redistribute_topsheet,
+-- propose_excessive_lines_flags, propose_missing_lines) mutates any line of
+-- this budget, and NEVER reset. One flag per budget, not per line — Cesare
+-- tools mutate multiple lines in one call, same reasoning as
+-- schedules.ever_ai_touched.
+--
+-- No backfill: this budget never had ANY AI-provenance signal before this
+-- column existed — no historical data to recover, so pre-existing budgets
+-- stay false (not a mass false positive).
+ALTER TABLE "budgets" ADD COLUMN "ever_ai_touched" boolean DEFAULT false NOT NULL;

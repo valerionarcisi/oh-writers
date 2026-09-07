@@ -57,6 +57,13 @@ export const breakdownElements = pgTable(
     description: text("description"),
     castTier: text("cast_tier", { enum: CAST_TIERS_DB }),
     archivedAt: timestamp("archived_at"),
+    // Spec 89 — AI disclosure stamp. Set true the first time ANY occurrence
+    // of this element is ever Cesare-sourced, and NEVER reset — a later
+    // manual correction of that occurrence must not erase the fact that
+    // Cesare touched it once. Deliberately independent of the live
+    // `breakdownOccurrences.source` column (which only reflects current
+    // state, not history).
+    everAiTouched: boolean("ever_ai_touched").notNull().default(false),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },

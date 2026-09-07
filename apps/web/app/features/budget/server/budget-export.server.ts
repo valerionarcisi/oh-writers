@@ -8,7 +8,7 @@ import {
   budgetCast,
   budgetCrew,
 } from "@oh-writers/db/schema";
-import { BudgetLineSchema } from "@oh-writers/domain";
+import { BudgetLineSchema, translations } from "@oh-writers/domain";
 import { toShape, type ResultShape } from "@oh-writers/utils";
 import { withProjectAccess } from "~/server/pipeline";
 import { DbError, ForbiddenError } from "../budget.errors";
@@ -28,17 +28,24 @@ const isoDate = () => new Date().toISOString().slice(0, 10);
 // two disagree on the cast list.
 const SLUGLINE_PREFIX = /^(INT|EXT|EST|I\/E|INT\/EXT)\.?\b/i;
 
+interface BudgetSectionsResult {
+  readonly sections: FlatSection[];
+  /** Spec 89b — AI disclosure stamp. Already-translated text, or undefined
+   *  when the budget was never Cesare-touched (no note = no false positive). */
+  readonly aiDisclosureNote?: string;
+}
+
 /** Loads every budget row the screen shows and folds it through the same
  *  aggregation. Both exports go through here, so a CSV, a PDF and the page can
  *  never report different money. */
 const loadBudgetSections = async (
   db: Parameters<Parameters<typeof withProjectAccess>[2]>[0]["db"],
   projectId: string,
-): Promise<FlatSection[]> => {
+): Promise<BudgetSectionsResult> => {
   const budget = await db.query.budgets.findFirst({
     where: eq(budgets.projectId, projectId),
   });
-  if (!budget) return [];
+  if (!budget) return { sections: [] };
 
   const [rawLines, rawCast, crew] = await Promise.all([
     db.query.budgetLines.findMany({
@@ -64,11 +71,16 @@ const loadBudgetSections = async (
     }),
   );
 
-  return buildFlatSections({
-    lines,
-    cast: rawCast.filter((r) => !SLUGLINE_PREFIX.test(r.name)),
-    crew,
-  });
+  return {
+    sections: buildFlatSections({
+      lines,
+      cast: rawCast.filter((r) => !SLUGLINE_PREFIX.test(r.name)),
+      crew,
+    }),
+    aiDisclosureNote: budget.everAiTouched
+      ? translations.it["budget.export.aiDisclosureNote"]
+      : undefined,
+  };
 };
 
 // ─── exportBudgetCsv ──────────────────────────────────────────────────────────
@@ -88,12 +100,16 @@ export const exportBudgetCsv = createServerFn({ method: "POST" })
         await withProjectAccess(data.projectId, "view", ({ db, access }) => {
           const project = access.project;
           return ResultAsync.fromPromise(
-            (async () => ({
-              csv: budgetSectionsToCsv(
-                await loadBudgetSections(db, project.id),
-              ),
-              filename: `${project.slug}-budget-${isoDate()}.csv`,
-            }))(),
+            (async () => {
+              const { sections, aiDisclosureNote } = await loadBudgetSections(
+                db,
+                project.id,
+              );
+              return {
+                csv: budgetSectionsToCsv(sections, aiDisclosureNote),
+                filename: `${project.slug}-budget-${isoDate()}.csv`,
+              };
+            })(),
             (e) => new DbError("exportBudgetCsv", e),
           );
         }),
@@ -119,10 +135,15 @@ export const exportBudgetPdf = createServerFn({ method: "POST" })
           return ResultAsync.fromPromise(
             (async () => {
               const date = isoDate();
+              const { sections, aiDisclosureNote } = await loadBudgetSections(
+                db,
+                project.id,
+              );
               const buf = await buildBudgetPdfFromSections(
                 project.title,
-                await loadBudgetSections(db, project.id),
+                sections,
                 date,
+                aiDisclosureNote,
               );
               return {
                 pdfBase64: buf.toString("base64"),

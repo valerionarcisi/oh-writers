@@ -94,6 +94,24 @@ describe("buildSiaeCoverLines", () => {
     expect(lines.join("\n")).toContain("Note di deposito:");
     expect(lines.join("\n")).toContain("Prima stesura.");
   });
+
+  it("[Spec 89] has no AI disclosure line when the subject was never Cesare-touched", () => {
+    const lines = buildSiaeCoverLines(baseInput(), {
+      logline: null,
+      everAiTouched: false,
+    });
+    expect(lines.join("\n")).not.toContain("Cesare");
+  });
+
+  it("[Spec 89] appends the AI disclosure line when the subject was ever Cesare-touched", () => {
+    const lines = buildSiaeCoverLines(baseInput(), {
+      logline: null,
+      everAiTouched: true,
+    });
+    expect(lines.join("\n")).toContain(
+      "Questo soggetto contiene testo suggerito da Cesare (AI).",
+    );
+  });
 });
 
 describe("formatCartellaFooter", () => {

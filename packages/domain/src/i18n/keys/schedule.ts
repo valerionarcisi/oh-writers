@@ -184,6 +184,10 @@ export const scheduleKeys = {
 
     // Unscheduled tray
     "schedule.unscheduled.title": "Unscheduled",
+
+    // AI disclosure stamp (Spec 89) — export-only note, never shown in-app.
+    "schedule.export.aiDisclosureNote":
+      "This shooting schedule contains days reorganized by Cesare (AI).",
   },
   it: {
     "schedule.close": "Chiudi",
@@ -355,5 +359,8 @@ export const scheduleKeys = {
     "schedule.stripCard.lockScene": "Blocca scena",
 
     "schedule.unscheduled.title": "Non pianificate",
+
+    "schedule.export.aiDisclosureNote":
+      "Questo piano di lavorazione contiene giornate riorganizzate da Cesare (AI).",
   },
 } as const satisfies LocaleDict;

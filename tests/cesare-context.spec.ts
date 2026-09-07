@@ -274,10 +274,15 @@ test.describe("[Spec 31] Cesare Agentic Scouting — search_places", () => {
   }) => {
     await navigateToLocations(authenticatedPage, LOCATIONS_PROJECT_ID);
 
-    const firstReq = authenticatedPage
-      .locator('[data-testid^="requirement-row-"]')
-      .first();
-    await firstReq.click();
+    // Must be the SAME requirement REQ_ID points at (set in beforeEach) —
+    // the list has no explicit ORDER BY, so ".first()" in the DOM is not
+    // guaranteed to be SEEDED_LOCATION_REQ_1_ID. Opening a different
+    // requirement's panel here would poll the wrong candidate list below,
+    // even though Cesare's write always lands on REQ_ID correctly.
+    const targetReq = authenticatedPage.getByTestId(
+      `requirement-row-${SEEDED_LOCATION_REQ_1_ID}`,
+    );
+    await targetReq.click();
 
     const cardsBefore = await authenticatedPage
       .locator('[data-testid^="candidate-card-"]')

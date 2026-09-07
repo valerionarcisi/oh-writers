@@ -20,6 +20,7 @@ const row = (
   sceneNumbers: overrides.sceneNumbers ?? [1],
   status: overrides.status ?? "accepted",
   source: overrides.source ?? "cesare",
+  everAiTouched: overrides.everAiTouched ?? false,
 });
 
 describe("computeSceneRange", () => {
@@ -27,7 +28,10 @@ describe("computeSceneRange", () => {
     expect(computeSceneRange([])).toBeNull();
   });
   it("returns first→last across unsorted scene numbers", () => {
-    expect(computeSceneRange([5, 1, 3, 28, 12])).toEqual({ first: 1, last: 28 });
+    expect(computeSceneRange([5, 1, 3, 28, 12])).toEqual({
+      first: 1,
+      last: 28,
+    });
   });
 });
 
@@ -35,8 +39,18 @@ describe("summarizeProjectBreakdown", () => {
   it("aggregates totals by status and unique categories", () => {
     const summary = summarizeProjectBreakdown([
       row({ elementId: "a", status: "accepted", sceneNumbers: [1, 2] }),
-      row({ elementId: "b", category: "props", status: "pending", sceneNumbers: [3] }),
-      row({ elementId: "c", category: "props", status: "stale", sceneNumbers: [4, 9] }),
+      row({
+        elementId: "b",
+        category: "props",
+        status: "pending",
+        sceneNumbers: [3],
+      }),
+      row({
+        elementId: "c",
+        category: "props",
+        status: "stale",
+        sceneNumbers: [4, 9],
+      }),
     ]);
     expect(summary.totalElements).toBe(3);
     expect(summary.acceptedCount).toBe(1);
@@ -57,7 +71,12 @@ describe("groupByCategory", () => {
   it("sorts groups' rows alphabetically (it locale) and flags issues", () => {
     const groups = groupByCategory([
       row({ elementId: "a", name: "Zara", category: "cast" }),
-      row({ elementId: "b", name: "Anna", category: "cast", status: "pending" }),
+      row({
+        elementId: "b",
+        name: "Anna",
+        category: "cast",
+        status: "pending",
+      }),
       row({ elementId: "c", name: "Tavolo", category: "props" }),
     ]);
     const cast = groups.find((g) => g.category === "cast");
@@ -116,5 +135,20 @@ describe("toBreakdownCsv", () => {
     expect(lines[0]).toContain("id,categoria,nome");
     expect(lines[1]).toContain('"John, the comic"');
     expect(lines[1]).toContain("1 2");
+  });
+
+  it("has no leading note row when no row was ever AI-touched (Spec 89)", () => {
+    const csv = toBreakdownCsv([row({ everAiTouched: false })]);
+    expect(csv.split("\n")[0]).toContain("id,categoria,nome");
+  });
+
+  it("prepends the AI disclosure note when at least one row was ever AI-touched, even if the rest weren't", () => {
+    const csv = toBreakdownCsv(
+      [row({ everAiTouched: false }), row({ everAiTouched: true })],
+      "Contiene elementi suggeriti da Cesare (AI)",
+    );
+    const lines = csv.split("\n");
+    expect(lines[0]).toBe("Contiene elementi suggeriti da Cesare (AI)");
+    expect(lines[1]).toContain("id,categoria,nome");
   });
 });

@@ -57,6 +57,7 @@ const toInputRow = (r: ProjectBreakdownRow): ProjectBreakdownInputRow => ({
   sceneNumbers: r.scenesPresent.map((s) => s.sceneNumber).sort((a, b) => a - b),
   status: r.hasStale ? "stale" : r.hasPending ? "pending" : "accepted",
   source: r.latestSource ?? null,
+  everAiTouched: r.everAiTouched,
 });
 
 const formatRange = (nums: readonly number[]): string => {
@@ -238,7 +239,12 @@ export function ProjectBreakdownView({ projectId, versionId, canEdit }: Props) {
   };
 
   const exportCsv = () => {
-    const csv = toBreakdownCsv(filtered);
+    const csv = toBreakdownCsv(
+      filtered,
+      filtered.some((r) => r.everAiTouched)
+        ? t("breakdown.export.aiDisclosureNote")
+        : undefined,
+    );
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");

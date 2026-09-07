@@ -2,10 +2,8 @@ import { createServerFn } from "@tanstack/start";
 import { z } from "zod";
 import { inArray } from "drizzle-orm";
 import { ResultAsync } from "neverthrow";
-import {
-  locationRequirementScenes,
-  scenes,
-} from "@oh-writers/db/schema";
+import { locationRequirementScenes, scenes } from "@oh-writers/db/schema";
+import { translations } from "@oh-writers/domain";
 import { toShape, type ResultShape } from "@oh-writers/utils";
 import { withProjectAccess } from "~/server/pipeline";
 import { DbError, ForbiddenError } from "../locations.errors";
@@ -35,6 +33,13 @@ export const exportLocationsCsv = createServerFn({ method: "POST" })
 
           return loadRequirementsForProject(db, project.id).andThen(
             (requirements) => {
+              // Spec 89b — AI disclosure stamp: any requirement Cesare ever
+              // touched stamps the whole export. Mirrors breakdown's
+              // `rows.some((r) => r.everAiTouched)` aggregation.
+              const aiDisclosureNote = requirements.some((r) => r.everAiTouched)
+                ? translations.it["locations.export.aiDisclosureNote"]
+                : undefined;
+
               if (requirements.length === 0) {
                 return ResultAsync.fromSafePromise(
                   Promise.resolve({ csv: locationsToCsv([], {}), filename }),
@@ -50,19 +55,23 @@ export const exportLocationsCsv = createServerFn({ method: "POST" })
                     sceneId: locationRequirementScenes.sceneId,
                   })
                   .from(locationRequirementScenes)
-                  .where(inArray(locationRequirementScenes.requirementId, reqIds)),
+                  .where(
+                    inArray(locationRequirementScenes.requirementId, reqIds),
+                  ),
                 (e) => new DbError("exportLocationsCsv/loadReqScenes", e),
               ).andThen((reqScenes) => {
                 if (reqScenes.length === 0) {
                   return ResultAsync.fromSafePromise(
                     Promise.resolve({
-                      csv: locationsToCsv(requirements, {}),
+                      csv: locationsToCsv(requirements, {}, aiDisclosureNote),
                       filename,
                     }),
                   );
                 }
 
-                const sceneIds = [...new Set(reqScenes.map((rs) => rs.sceneId))];
+                const sceneIds = [
+                  ...new Set(reqScenes.map((rs) => rs.sceneId)),
+                ];
 
                 return ResultAsync.fromPromise(
                   db
@@ -75,11 +84,13 @@ export const exportLocationsCsv = createServerFn({ method: "POST" })
                     sceneRows.map((s) => [s.id, s.number]),
                   );
 
-                  const sceneNumbersByRequirementId: Record<string, number[]> = {};
+                  const sceneNumbersByRequirementId: Record<string, number[]> =
+                    {};
                   for (const rs of reqScenes) {
                     const n = sceneNumberById.get(rs.sceneId);
                     if (n === undefined) continue;
-                    const existing = sceneNumbersByRequirementId[rs.requirementId];
+                    const existing =
+                      sceneNumbersByRequirementId[rs.requirementId];
                     if (existing) {
                       existing.push(n);
                     } else {
@@ -88,7 +99,11 @@ export const exportLocationsCsv = createServerFn({ method: "POST" })
                   }
 
                   return {
-                    csv: locationsToCsv(requirements, sceneNumbersByRequirementId),
+                    csv: locationsToCsv(
+                      requirements,
+                      sceneNumbersByRequirementId,
+                      aiDisclosureNote,
+                    ),
                     filename,
                   };
                 });

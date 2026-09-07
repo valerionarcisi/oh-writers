@@ -325,7 +325,7 @@ export const MOCK_SCENARIOS: ReadonlyArray<MockScenario> = [
             name: "move_scene_to_day",
             input: {
               scene_number: "{{SCENE_NUMBER:number}}",
-              target_day: "{{TARGET_DAY:number}}",
+              target_day_number: "{{TARGET_DAY:number}}",
             },
           },
         ],

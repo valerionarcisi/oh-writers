@@ -125,6 +125,10 @@ export const locationsKeys = {
       "Locations out of sync with the active version",
     "locations.dock.syncAria": "Sync from breakdown",
     "locations.dock.export": "Export",
+
+    // AI disclosure stamp (Spec 89b) — export-only note, never shown in-app.
+    "locations.export.aiDisclosureNote":
+      "This export contains requirements or candidates added by Cesare (AI).",
   },
   it: {
     // Candidate status labels
@@ -241,5 +245,8 @@ export const locationsKeys = {
       "Location non sincronizzate con la versione attiva",
     "locations.dock.syncAria": "Sincronizza da breakdown",
     "locations.dock.export": "Esporta",
+
+    "locations.export.aiDisclosureNote":
+      "Questa esportazione contiene requirement o candidate aggiunte da Cesare (AI).",
   },
 } as const satisfies LocaleDict;

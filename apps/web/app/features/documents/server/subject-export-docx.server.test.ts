@@ -124,6 +124,7 @@ describe("buildSoggettoDocxSections", () => {
     titlePageAuthor: null,
     basedOn: null,
     draftDate: null,
+    everAiTouched: false,
     ...over,
   });
 
@@ -253,6 +254,35 @@ describe("buildSoggettoDocxSections", () => {
     expect(json).toContain('"rootKey":"w:b","root":[]');
     expect(json).toContain('"rootKey":"w:i","root":[]');
     expect(json).toContain("both");
+  });
+});
+
+describe("buildSoggettoDocxSections — Spec 89 AI disclosure stamp", () => {
+  const project = (
+    over: Partial<Parameters<typeof buildSoggettoDocxSections>[1]> = {},
+  ) => ({
+    title: "My Movie",
+    ownerName: null,
+    titlePageAuthor: null,
+    basedOn: null,
+    draftDate: null,
+    everAiTouched: false,
+    ...over,
+  });
+
+  it("has no AI disclosure paragraph when never Cesare-touched", () => {
+    const sections = buildSoggettoDocxSections([], project());
+    expect(JSON.stringify(sections)).not.toContain("Cesare");
+  });
+
+  it("appends an AI disclosure paragraph when ever Cesare-touched", () => {
+    const sections = buildSoggettoDocxSections(
+      [],
+      project({ everAiTouched: true }),
+    );
+    expect(JSON.stringify(sections)).toContain(
+      "Questo soggetto contiene testo suggerito da Cesare (AI).",
+    );
   });
 });
 

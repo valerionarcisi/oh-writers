@@ -11,7 +11,7 @@ import {
   TextRun,
 } from "docx";
 import { documents, documentVersions, users } from "@oh-writers/db/schema";
-import { DocumentTypes } from "@oh-writers/domain";
+import { DocumentTypes, translations } from "@oh-writers/domain";
 import {
   toShape,
   type ResultShape,
@@ -20,6 +20,7 @@ import {
 } from "@oh-writers/utils";
 import { getDb, type Db } from "~/server/db";
 import { requireProjectAccess } from "~/server/access";
+import { loadDocumentEverAiTouched } from "./ai-disclosure.server";
 import {
   DbError,
   ForbiddenError,
@@ -91,11 +92,7 @@ const markForTag = (tag: string): keyof ActiveMarks | null => {
 
 // A run carries text only when it's non-empty; we collapse runs that share the
 // exact same marks so the DOCX doesn't fragment a word across TextRuns.
-const pushRun = (
-  runs: InlineRun[],
-  text: string,
-  marks: ActiveMarks,
-): void => {
+const pushRun = (runs: InlineRun[], text: string, marks: ActiveMarks): void => {
   if (text.length === 0) return;
   const last = runs[runs.length - 1];
   if (
@@ -198,10 +195,15 @@ const parseMarkdownBlocks = (content: string): ParsedBlock[] => {
         return {
           kind: "heading",
           level: 2,
-          runs: [{ text: stripInlineMarkdown(block.replace(/^#{1,6}\s+/, "")) }],
+          runs: [
+            { text: stripInlineMarkdown(block.replace(/^#{1,6}\s+/, "")) },
+          ],
         };
       }
-      return { kind: "paragraph", runs: [{ text: stripInlineMarkdown(block) }] };
+      return {
+        kind: "paragraph",
+        runs: [{ text: stripInlineMarkdown(block) }],
+      };
     });
 };
 
@@ -225,6 +227,9 @@ interface ProjectForDocx {
   readonly titlePageAuthor: string | null;
   readonly basedOn: string | null;
   readonly draftDate: string | null;
+  /** Spec 89 — AI disclosure stamp. True if the Soggetto document was ever
+   *  Cesare-touched, permanent regardless of later manual edits. */
+  readonly everAiTouched: boolean;
 }
 
 const nonEmpty = (value: string | null | undefined): value is string =>
@@ -286,10 +291,23 @@ export const buildSoggettoDocxSections = (
       }),
     );
   }
-  const runsToChildren = (
-    runs: InlineRun[],
-    forceBold: boolean,
-  ): TextRun[] =>
+  if (project.everAiTouched) {
+    titlePage.push(
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 1200 },
+        children: [
+          new TextRun({
+            text:
+              translations.it["documents.export.subjectAiDisclosureNote"] ?? "",
+            italics: true,
+            size: 18,
+          }),
+        ],
+      }),
+    );
+  }
+  const runsToChildren = (runs: InlineRun[], forceBold: boolean): TextRun[] =>
     runs.map(
       (run) =>
         new TextRun({
@@ -423,11 +441,15 @@ export const exportSubjectDocx = createServerFn({ method: "POST" })
 
       const chain = await requireDocxExportAccess(db, data.projectId)
         .andThen((project) =>
-          loadCurrentSoggetto(db, project.id).map(
-            (soggetto) => ({ project, soggetto }) as const,
+          ResultAsync.combine([
+            loadCurrentSoggetto(db, project.id),
+            loadDocumentEverAiTouched(db, project.id, DocumentTypes.SOGGETTO),
+          ]).map(
+            ([soggetto, everAiTouched]) =>
+              ({ project, soggetto, everAiTouched }) as const,
           ),
         )
-        .andThen(({ project, soggetto }) => {
+        .andThen(({ project, soggetto, everAiTouched }) => {
           const parsed = parseSoggettoMarkdown(soggetto ?? "");
           const sections = buildSoggettoDocxSections(parsed, {
             title: project.title,
@@ -435,6 +457,7 @@ export const exportSubjectDocx = createServerFn({ method: "POST" })
             titlePageAuthor: project.titlePageAuthor,
             basedOn: project.basedOn,
             draftDate: project.draftDate,
+            everAiTouched,
           });
           const doc = new Document({
             sections: [{ properties: {}, children: sections }],
