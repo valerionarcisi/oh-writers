@@ -7,8 +7,9 @@ import { toShape } from "@oh-writers/utils";
 import type { ResultShape } from "@oh-writers/utils";
 import { screenplays, screenplayVersions } from "@oh-writers/db/schema";
 import type { DraftRevisionColor } from "@oh-writers/domain";
-import { requireUser } from "~/server/context";
 import { getDb } from "~/server/db";
+import { withProjectAccess } from "~/server/pipeline";
+import type { ProjectAccessError } from "~/server/access";
 import { DbError } from "../projects.errors";
 
 export type ProjectDraftMeta = {
@@ -63,16 +64,17 @@ export const loadProjectDraftMeta = async (
 export const getProjectDraftMeta = createServerFn({ method: "GET" })
   .validator(z.object({ projectId: z.string().uuid() }))
   .handler(
-    async ({ data }): Promise<ResultShape<ProjectDraftMeta, DbError>> => {
-      await requireUser();
-      const db = await getDb();
-      return toShape(
-        await ResultAsync.fromPromise(
-          loadProjectDraftMeta(db, data.projectId),
-          (e) => new DbError("getProjectDraftMeta", e),
-        ).andThen((meta) => ok(meta)),
-      );
-    },
+    async ({
+      data,
+    }): Promise<ResultShape<ProjectDraftMeta, DbError | ProjectAccessError>> =>
+      toShape(
+        await withProjectAccess(data.projectId, "view", ({ db }) =>
+          ResultAsync.fromPromise(
+            loadProjectDraftMeta(db, data.projectId),
+            (e) => new DbError("getProjectDraftMeta", e),
+          ),
+        ),
+      ),
   );
 
 export const projectDraftMetaQueryOptions = (projectId: string) =>

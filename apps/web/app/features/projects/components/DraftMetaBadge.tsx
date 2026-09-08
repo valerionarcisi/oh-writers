@@ -44,14 +44,19 @@ export function DraftMetaBadge({ projectId }: DraftMetaBadgeProps) {
         </span>
       );
     })
-    .with({ isOk: false, error: { _tag: "DbError" } }, () => (
-      <span
-        className={styles.badge}
-        title="Could not load draft metadata"
-        data-testid="draft-meta-badge-error"
-      >
-        <span className={styles.label}>Draft unavailable</span>
-      </span>
-    ))
+    .with(
+      { isOk: false, error: { _tag: "DbError" } },
+      { isOk: false, error: { _tag: "ForbiddenError" } },
+      { isOk: false, error: { _tag: "ProjectNotFoundError" } },
+      () => (
+        <span
+          className={styles.badge}
+          title="Could not load draft metadata"
+          data-testid="draft-meta-badge-error"
+        >
+          <span className={styles.label}>Draft unavailable</span>
+        </span>
+      ),
+    )
     .exhaustive();
 }

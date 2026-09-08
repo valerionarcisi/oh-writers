@@ -302,7 +302,7 @@ export function LocationsPage({ projectId }: LocationsPageProps) {
       patch: Parameters<typeof updateLocationCandidate>[0]["data"]["patch"];
     }) =>
       updateLocationCandidate({
-        data: { candidateId: vars.candidateId, projectId, patch: vars.patch },
+        data: { candidateId: vars.candidateId, patch: vars.patch },
       }).then(unwrapResult),
     onSuccess: invalidate,
   });
@@ -310,16 +310,14 @@ export function LocationsPage({ projectId }: LocationsPageProps) {
   const confirmMutation = useMutation({
     mutationFn: (vars: { requirementId: string; candidateId: string }) =>
       confirmLocationCandidate({
-        data: { ...vars, projectId },
+        data: vars,
       }).then(unwrapResult),
     onSuccess: invalidate,
   });
 
   const removeCandidateMutation = useMutation({
     mutationFn: (candidateId: string) =>
-      removeLocationCandidate({ data: { candidateId, projectId } }).then(
-        unwrapResult,
-      ),
+      removeLocationCandidate({ data: { candidateId } }).then(unwrapResult),
     onSuccess: invalidate,
   });
 

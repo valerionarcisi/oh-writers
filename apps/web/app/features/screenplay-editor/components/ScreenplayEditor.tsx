@@ -462,6 +462,7 @@ export const ScreenplayEditor = forwardRef<
         () => true,
       )
       .with({ isOk: false, error: { _tag: "DbError" } }, () => false)
+      .with({ isOk: false, error: { _tag: "ForbiddenError" } }, () => false)
       .exhaustive();
   })();
 

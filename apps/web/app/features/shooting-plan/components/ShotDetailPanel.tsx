@@ -37,16 +37,14 @@ export function ShotDetailPanel({
   const updateMutation = useMutation({
     mutationFn: (patch: Parameters<typeof updateShot>[0]["data"]["patch"]) =>
       updateShot({
-        data: { shotId: shot.id, shotPlanId, projectId, patch },
+        data: { shotId: shot.id, shotPlanId, patch },
       }).then(unwrapResult),
     onSuccess: invalidate,
   });
 
   const deleteMutation = useMutation({
     mutationFn: () =>
-      deleteShot({ data: { shotId: shot.id, shotPlanId, projectId } }).then(
-        unwrapResult,
-      ),
+      deleteShot({ data: { shotId: shot.id, shotPlanId } }).then(unwrapResult),
     onSuccess: () => {
       onClose();
       void invalidate();

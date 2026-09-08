@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/start";
-import { ok, err, ResultAsync } from "neverthrow";
+import { ok, err, errAsync, ResultAsync } from "neverthrow";
 import { eq, and, isNull } from "drizzle-orm";
 import { queryOptions } from "@tanstack/react-query";
 import { z } from "zod";
@@ -78,17 +78,27 @@ export const personalProjectsQueryOptions = () =>
 export const listTeamProjects = createServerFn({ method: "GET" })
   .validator(z.object({ teamId: z.string().uuid() }))
   .handler(async ({ data }): Promise<Project[]> => {
-    await requireUser();
+    const user = await requireUser();
     const db = await getDb();
     return ResultAsync.fromPromise(
-      db.select().from(projects).where(eq(projects.teamId, data.teamId)),
-      (e) => new DbError("listTeamProjects", e),
-    ).match(
-      (rows) => rows,
-      (error) => {
-        throw error;
-      },
-    );
+      getMembership(db, data.teamId, user.id),
+      (e) => new DbError("listTeamProjects/membership", e),
+    )
+      .andThen((membership) => {
+        if (!membership) {
+          return errAsync(new ForbiddenError("not a member of this team"));
+        }
+        return ResultAsync.fromPromise(
+          db.select().from(projects).where(eq(projects.teamId, data.teamId)),
+          (e) => new DbError("listTeamProjects", e),
+        );
+      })
+      .match(
+        (rows) => rows,
+        (error) => {
+          throw error;
+        },
+      );
   });
 
 export const teamProjectsQueryOptions = (teamId: string) =>
@@ -101,64 +111,54 @@ export const teamProjectsQueryOptions = (teamId: string) =>
 
 export const getProjectById = createServerFn({ method: "GET" })
   .validator(z.object({ projectId: z.string().uuid() }))
-  .handler(async ({ data }) => {
-    const user = await requireUser();
-    const db = await getDb();
+  .handler(async ({ data }) =>
+    toShape(
+      await withProjectAccess(data.projectId, "view", ({ db, access }) => {
+        const user = access.user;
+        const project = access.project;
 
-    const projectResult = await ResultAsync.fromPromise(
-      db.query.projects.findFirst({ where: eq(projects.id, data.projectId) }),
-      (e) => new DbError("getProjectById", e),
-    );
-    if (projectResult.isErr()) return toShape(err(projectResult.error));
-
-    const project = projectResult.value;
-    if (!project) return toShape(err(new ProjectNotFoundError(data.projectId)));
-
-    // Backfill any DocumentType rows missing from this project. Pre-04f
-    // projects (and any future pipeline-type added after a project's
-    // creation) won't have a row for every type — onConflictDoNothing keeps
-    // this idempotent and cheap. Without this, the Overview cards grid
-    // silently drops the missing card (e.g. Soggetto on legacy projects).
-    const backfillResult = await ResultAsync.fromPromise(
-      db
-        .insert(documents)
-        .values(
-          Object.values(DocumentTypes).map((type) => ({
-            projectId: project.id,
-            type,
-            title: documentTypeLabel(type, user.locale),
-            content: "",
-            createdBy: user.id,
+        // Backfill any DocumentType rows missing from this project. Pre-04f
+        // projects (and any future pipeline-type added after a project's
+        // creation) won't have a row for every type — onConflictDoNothing keeps
+        // this idempotent and cheap. Without this, the Overview cards grid
+        // silently drops the missing card (e.g. Soggetto on legacy projects).
+        return ResultAsync.fromPromise(
+          db
+            .insert(documents)
+            .values(
+              Object.values(DocumentTypes).map((type) => ({
+                projectId: project.id,
+                type,
+                title: documentTypeLabel(type, user.locale),
+                content: "",
+                createdBy: user.id,
+              })),
+            )
+            .onConflictDoNothing({
+              target: [documents.projectId, documents.type],
+            }),
+          (e) => new DbError("getProjectById.backfill", e),
+        ).andThen(() =>
+          ResultAsync.fromPromise(
+            Promise.all([
+              db
+                .select()
+                .from(documents)
+                .where(eq(documents.projectId, data.projectId)),
+              db.query.screenplays
+                .findFirst({ where: eq(screenplays.projectId, data.projectId) })
+                .then((row) => row ?? null),
+            ]),
+            (e) => new DbError("getProjectById.related", e),
+          ).map(([projectDocuments, screenplay]) => ({
+            ...project,
+            documents: projectDocuments.map(stripYjsState),
+            screenplay: screenplay ? stripYjsState(screenplay) : null,
           })),
-        )
-        .onConflictDoNothing({
-          target: [documents.projectId, documents.type],
-        }),
-      (e) => new DbError("getProjectById.backfill", e),
-    );
-    if (backfillResult.isErr()) return toShape(err(backfillResult.error));
-
-    const relatedResult = await ResultAsync.fromPromise(
-      Promise.all([
-        db
-          .select()
-          .from(documents)
-          .where(eq(documents.projectId, data.projectId)),
-        db.query.screenplays
-          .findFirst({ where: eq(screenplays.projectId, data.projectId) })
-          .then((row) => row ?? null),
-      ]),
-      (e) => new DbError("getProjectById.related", e),
-    );
-
-    return toShape(
-      relatedResult.map(([projectDocuments, screenplay]) => ({
-        ...project,
-        documents: projectDocuments.map(stripYjsState),
-        screenplay: screenplay ? stripYjsState(screenplay) : null,
-      })),
-    );
-  });
+        );
+      }),
+    ),
+  );
 
 export const projectQueryOptions = (projectId: string) =>
   queryOptions({
