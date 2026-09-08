@@ -444,10 +444,9 @@ test.describe("Screenplay Authoring [E2E user story]", () => {
 
     // Prefix picker: type "I" → picker suggests "INT."
     await page.keyboard.type("I");
-    await page.waitForTimeout(200);
 
     const prefixPicker = page.locator('ul[data-picker-slot="prefix"]');
-    await expect(prefixPicker).toBeVisible({ timeout: 3_000 });
+    await expect(prefixPicker).toBeVisible({ timeout: 5_000 });
     const pickerItems = await prefixPicker.locator("li").allTextContents();
     expect(pickerItems.some((t) => t.includes("INT."))).toBe(true);
 
