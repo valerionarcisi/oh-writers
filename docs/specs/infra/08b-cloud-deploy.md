@@ -133,17 +133,37 @@ Neon branches are copy-on-write forks of the database — instant, zero-cost unt
 
 ### Pipeline
 
+The section below (`.github/workflows/ci.yml (skeleton)`) is the original
+draft from when this spec was written — kept for historical context, but
+**it no longer matches what's actually in `.github/workflows/`**. The real
+pipeline (`qa.yml` + `release.yml`, no `ci.yml`, no `deploy.yml`) is:
+
 ```
-push / PR
-  ├── typecheck     (parallel)
-  ├── lint          (parallel)
-  ├── test:unit     (parallel)
-  ├── test:e2e      (needs DB — Docker Postgres in CI)
-  └── build         (depends on all above)
-        └── [main] → flyctl deploy (web + ws-server)
+push to beta/main
+  ├── qa.yml (typecheck, lint, guardrails, unit, mock-E2E, full-E2E ×4
+  │           shards, production build — all parallel jobs)
+  └── release.yml
+        ├── wait-for-qa   — polls the Actions API for qa.yml's run on this
+        │                   exact commit SHA; fails closed if QA doesn't
+        │                   report success (#156, added 2026-09-08 after a
+        │                   push deployed despite a red QA run on the same
+        │                   commit — Release and QA used to trigger off the
+        │                   same push with no dependency between them)
+        └── release        — needs: wait-for-qa. Runs semantic-release,
+                              then (only if a release was actually cut)
+                              `flyctl deploy` for web + ws-server, targeting
+                              fly.web.toml/fly.ws-server.toml on `main` or
+                              the `.beta.toml` configs on `beta`.
 ```
 
-### .github/workflows/ci.yml (skeleton)
+Deploy lives inside `release.yml`'s own job, not a separate `deploy.yml`
+listening via `workflow_run` — that trigger only fires reliably for
+workflow files on the repo's default branch, so it silently never fired
+for `beta` pushes when this was first wired up (fixed in commit
+`9ad76fb7`). The same constraint is why `wait-for-qa` polls the Actions API
+by commit SHA instead of using `workflow_run` to gate on `qa.yml`.
+
+### .github/workflows/ci.yml (skeleton) — historical draft, see note above
 
 ```yaml
 name: CI
