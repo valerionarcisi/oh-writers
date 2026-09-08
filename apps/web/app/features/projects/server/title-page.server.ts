@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/start";
-import { ok, err, ResultAsync } from "neverthrow";
+import { ok, err, okAsync, ResultAsync } from "neverthrow";
 import { eq } from "drizzle-orm";
 import { queryOptions } from "@tanstack/react-query";
 import { z } from "zod";
@@ -11,6 +11,7 @@ import type { DraftRevisionColor } from "@oh-writers/domain";
 import { requireUser } from "~/server/context";
 import { getDb } from "~/server/db";
 import { isOwner, getMembership } from "~/server/permissions";
+import { withProjectAccess } from "~/server/pipeline";
 import { loadProjectDraftMeta } from "./draft-meta.server";
 import {
   UpdateTitlePageInput,
@@ -51,35 +52,21 @@ export const getTitlePage = createServerFn({ method: "GET" })
   .handler(
     async ({
       data,
-    }): Promise<ResultShape<TitlePageView, ProjectNotFoundError | DbError>> => {
-      const user = await requireUser();
-      const db = await getDb();
-
-      const projectResult = await ResultAsync.fromPromise(
-        db.query.projects.findFirst({ where: eq(projects.id, data.projectId) }),
-        (e) => new DbError("getTitlePage", e),
-      );
-      if (projectResult.isErr()) return toShape(err(projectResult.error));
-
-      const project = projectResult.value;
-      if (!project)
-        return toShape(err(new ProjectNotFoundError(data.projectId)));
-
-      let membership: TeamMember | null = null;
-      if (project.teamId) {
-        const memberResult = await getMembership(db, project.teamId, user.id);
-        if (memberResult.isErr()) return toShape(err(memberResult.error));
-        membership = memberResult.value;
-      }
-
-      return toShape(
-        ok({
-          projectTitle: project.title,
-          titlePage: toTitlePage(project),
-          canEdit: isOwner(project, user.id, membership),
-        }),
-      );
-    },
+    }): Promise<
+      ResultShape<
+        TitlePageView,
+        ProjectNotFoundError | ForbiddenError | DbError
+      >
+    > =>
+      toShape(
+        await withProjectAccess(data.projectId, "view", ({ access }) =>
+          okAsync({
+            projectTitle: access.project.title,
+            titlePage: toTitlePage(access.project),
+            canEdit: isOwner(access.project, access.user.id, access.membership),
+          }),
+        ),
+      ),
   );
 
 export const titlePageQueryOptions = (projectId: string) =>
@@ -186,40 +173,30 @@ export const getTitlePageState = createServerFn({ method: "GET" })
     async ({
       data,
     }): Promise<
-      ResultShape<TitlePageStateView, ProjectNotFoundError | DbError>
-    > => {
-      const user = await requireUser();
-      const db = await getDb();
-
-      const projectResult = await ResultAsync.fromPromise(
-        db.query.projects.findFirst({ where: eq(projects.id, data.projectId) }),
-        (e) => new DbError("getTitlePageState", e),
-      );
-      if (projectResult.isErr()) return toShape(err(projectResult.error));
-
-      const project = projectResult.value;
-      if (!project)
-        return toShape(err(new ProjectNotFoundError(data.projectId)));
-
-      let membership: TeamMember | null = null;
-      if (project.teamId) {
-        const memberResult = await getMembership(db, project.teamId, user.id);
-        if (memberResult.isErr()) return toShape(err(memberResult.error));
-        membership = memberResult.value;
-      }
-
-      const owner = isOwner(project, user.id, membership);
-      const meta = await loadCurrentVersionMeta(db, data.projectId);
-
-      return toShape(
-        ok({
-          projectTitle: project.title,
-          state: buildTitlePageState(project, meta),
-          canEdit: owner,
-          isOwner: owner,
-        }),
-      );
-    },
+      ResultShape<
+        TitlePageStateView,
+        ProjectNotFoundError | ForbiddenError | DbError
+      >
+    > =>
+      toShape(
+        await withProjectAccess(data.projectId, "view", ({ db, access }) =>
+          ResultAsync.fromSafePromise(
+            loadCurrentVersionMeta(db, data.projectId),
+          ).map((meta) => {
+            const owner = isOwner(
+              access.project,
+              access.user.id,
+              access.membership,
+            );
+            return {
+              projectTitle: access.project.title,
+              state: buildTitlePageState(access.project, meta),
+              canEdit: owner,
+              isOwner: owner,
+            };
+          }),
+        ),
+      ),
   );
 
 export const titlePageStateQueryOptions = (projectId: string) =>

@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/start";
 import { z } from "zod";
 import { and, eq, inArray, notInArray, isNotNull, not } from "drizzle-orm";
-import { ResultAsync, ok, err, okAsync } from "neverthrow";
+import { ResultAsync, ok, err, okAsync, errAsync } from "neverthrow";
 import {
   locationRequirements,
   locationCandidates,
@@ -89,6 +89,31 @@ const findCandidateRow = (
     (e) => new DbError("findCandidateRow", e),
   ).andThen((row) =>
     row ? ok(row) : err(new LocationCandidateNotFoundError(candidateId)),
+  );
+
+// #160 — candidateId/requirementId alone don't carry a projectId, so the
+// mutating handlers below can't be gated with `withProjectAccess` until the
+// owning project is resolved from the DB first (mirrors the pattern in
+// shooting-plan/server/resolve-project-id.ts for #61).
+export const projectIdFromCandidate = (
+  db: Db,
+  candidateId: string,
+): ResultAsync<string, LocationCandidateNotFoundError | DbError> =>
+  ResultAsync.fromPromise(
+    db
+      .select({ projectId: locationRequirements.projectId })
+      .from(locationCandidates)
+      .innerJoin(
+        locationRequirements,
+        eq(locationCandidates.requirementId, locationRequirements.id),
+      )
+      .where(eq(locationCandidates.id, candidateId))
+      .then((rows) => rows[0] ?? null),
+    (e) => new DbError("projectIdFromCandidate", e),
+  ).andThen((row) =>
+    row
+      ? ok(row.projectId)
+      : err(new LocationCandidateNotFoundError(candidateId)),
   );
 
 const clearLocationsStale = (
@@ -300,115 +325,134 @@ export const updateLocationCandidate = createServerFn({ method: "POST" })
   .validator(
     z.object({
       candidateId: z.string().uuid(),
-      projectId: z.string().uuid(),
       patch: PatchLocationCandidateSchema,
     }),
   )
-  .handler(async ({ data }) =>
-    toShape(
-      await withProjectAccess(data.projectId, "edit", ({ db, access }) =>
-        findCandidateRow(db, data.candidateId).andThen((candidate) => {
-          const patch = {
-            ...(data.patch.name !== undefined && { name: data.patch.name }),
-            ...(data.patch.address !== undefined && {
-              address: data.patch.address,
-            }),
-            ...(data.patch.lat !== undefined && { lat: data.patch.lat }),
-            ...(data.patch.lng !== undefined && { lng: data.patch.lng }),
-            ...(data.patch.contactName !== undefined && {
-              contactName: data.patch.contactName,
-            }),
-            ...(data.patch.contactEmail !== undefined && {
-              contactEmail: data.patch.contactEmail,
-            }),
-            ...(data.patch.contactPhone !== undefined && {
-              contactPhone: data.patch.contactPhone,
-            }),
-            ...(data.patch.estimatedDailyFee !== undefined && {
-              estimatedDailyFee: data.patch.estimatedDailyFee,
-            }),
-            ...(data.patch.permitRequired !== undefined && {
-              permitRequired: data.patch.permitRequired,
-            }),
-            ...(data.patch.permitNotes !== undefined && {
-              permitNotes: data.patch.permitNotes,
-            }),
-            ...(data.patch.availableFrom !== undefined && {
-              availableFrom: data.patch.availableFrom,
-            }),
-            ...(data.patch.availableTo !== undefined && {
-              availableTo: data.patch.availableTo,
-            }),
-            ...(data.patch.notes !== undefined && { notes: data.patch.notes }),
-            ...(data.patch.status !== undefined && {
-              status: data.patch.status,
-            }),
-            updatedAt: new Date(),
-          };
+  .handler(async ({ data }) => {
+    const db = await getDb();
+    return toShape(
+      await projectIdFromCandidate(db, data.candidateId).andThen((projectId) =>
+        withProjectAccess(projectId, "edit", ({ db, access }) =>
+          findCandidateRow(db, data.candidateId).andThen((candidate) => {
+            const patch = {
+              ...(data.patch.name !== undefined && { name: data.patch.name }),
+              ...(data.patch.address !== undefined && {
+                address: data.patch.address,
+              }),
+              ...(data.patch.lat !== undefined && { lat: data.patch.lat }),
+              ...(data.patch.lng !== undefined && { lng: data.patch.lng }),
+              ...(data.patch.contactName !== undefined && {
+                contactName: data.patch.contactName,
+              }),
+              ...(data.patch.contactEmail !== undefined && {
+                contactEmail: data.patch.contactEmail,
+              }),
+              ...(data.patch.contactPhone !== undefined && {
+                contactPhone: data.patch.contactPhone,
+              }),
+              ...(data.patch.estimatedDailyFee !== undefined && {
+                estimatedDailyFee: data.patch.estimatedDailyFee,
+              }),
+              ...(data.patch.permitRequired !== undefined && {
+                permitRequired: data.patch.permitRequired,
+              }),
+              ...(data.patch.permitNotes !== undefined && {
+                permitNotes: data.patch.permitNotes,
+              }),
+              ...(data.patch.availableFrom !== undefined && {
+                availableFrom: data.patch.availableFrom,
+              }),
+              ...(data.patch.availableTo !== undefined && {
+                availableTo: data.patch.availableTo,
+              }),
+              ...(data.patch.notes !== undefined && {
+                notes: data.patch.notes,
+              }),
+              ...(data.patch.status !== undefined && {
+                status: data.patch.status,
+              }),
+              updatedAt: new Date(),
+            };
 
-          return ResultAsync.fromPromise(
-            db
-              .update(locationCandidates)
-              .set(patch)
-              .where(eq(locationCandidates.id, data.candidateId)),
-            (e) => new DbError("updateLocationCandidate", e),
-          ).andThen(() => loadRequirementsForProject(db, access.project.id));
-        }),
+            return ResultAsync.fromPromise(
+              db
+                .update(locationCandidates)
+                .set(patch)
+                .where(eq(locationCandidates.id, data.candidateId)),
+              (e) => new DbError("updateLocationCandidate", e),
+            ).andThen(() => loadRequirementsForProject(db, access.project.id));
+          }),
+        ),
       ),
-    ),
-  );
+    );
+  });
 
 export const confirmLocationCandidate = createServerFn({ method: "POST" })
   .validator(
     z.object({
       requirementId: z.string().uuid(),
       candidateId: z.string().uuid(),
-      projectId: z.string().uuid(),
     }),
   )
-  .handler(async ({ data }) =>
-    toShape(
-      await withProjectAccess(data.projectId, "edit", ({ db, access }) =>
-        ResultAsync.fromPromise(
-          Promise.all([
-            db
-              .update(locationRequirements)
-              .set({
-                confirmedCandidateId: data.candidateId,
-                status: "confirmed",
-                updatedAt: new Date(),
-              })
-              .where(eq(locationRequirements.id, data.requirementId)),
-            db
-              .update(locationCandidates)
-              .set({ status: "confirmed", updatedAt: new Date() })
-              .where(eq(locationCandidates.id, data.candidateId)),
-          ]),
-          (e) => new DbError("confirmLocationCandidate", e),
-        ).andThen(() => loadRequirementsForProject(db, access.project.id)),
+  .handler(async ({ data }) => {
+    const db = await getDb();
+    return toShape(
+      await projectIdFromCandidate(db, data.candidateId).andThen((projectId) =>
+        withProjectAccess(projectId, "edit", ({ db, access }) =>
+          findRequirementRow(db, data.requirementId).andThen((requirement) => {
+            // candidateId resolved the project above, but requirementId is
+            // a second, independently client-supplied id — without this
+            // check a caller could confirm a real candidate against a
+            // requirement belonging to another project.
+            if (requirement.projectId !== access.project.id) {
+              return errAsync(
+                new LocationRequirementNotFoundError(data.requirementId),
+              );
+            }
+            return ResultAsync.fromPromise(
+              Promise.all([
+                db
+                  .update(locationRequirements)
+                  .set({
+                    confirmedCandidateId: data.candidateId,
+                    status: "confirmed",
+                    updatedAt: new Date(),
+                  })
+                  .where(eq(locationRequirements.id, data.requirementId)),
+                db
+                  .update(locationCandidates)
+                  .set({ status: "confirmed", updatedAt: new Date() })
+                  .where(eq(locationCandidates.id, data.candidateId)),
+              ]),
+              (e) => new DbError("confirmLocationCandidate", e),
+            ).andThen(() => loadRequirementsForProject(db, access.project.id));
+          }),
+        ),
       ),
-    ),
-  );
+    );
+  });
 
 export const removeLocationCandidate = createServerFn({ method: "POST" })
   .validator(
     z.object({
       candidateId: z.string().uuid(),
-      projectId: z.string().uuid(),
     }),
   )
-  .handler(async ({ data }) =>
-    toShape(
-      await withProjectAccess(data.projectId, "edit", ({ db, access }) =>
-        ResultAsync.fromPromise(
-          db
-            .delete(locationCandidates)
-            .where(eq(locationCandidates.id, data.candidateId)),
-          (e) => new DbError("removeLocationCandidate", e),
-        ).andThen(() => loadRequirementsForProject(db, access.project.id)),
+  .handler(async ({ data }) => {
+    const db = await getDb();
+    return toShape(
+      await projectIdFromCandidate(db, data.candidateId).andThen((projectId) =>
+        withProjectAccess(projectId, "edit", ({ db, access }) =>
+          ResultAsync.fromPromise(
+            db
+              .delete(locationCandidates)
+              .where(eq(locationCandidates.id, data.candidateId)),
+            (e) => new DbError("removeLocationCandidate", e),
+          ).andThen(() => loadRequirementsForProject(db, access.project.id)),
+        ),
       ),
-    ),
-  );
+    );
+  });
 
 export const syncRequirementsFromBreakdown = createServerFn({ method: "POST" })
   .validator(z.object({ projectId: z.string().uuid() }))

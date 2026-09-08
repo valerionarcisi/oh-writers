@@ -64,7 +64,9 @@ export function ParallelPlansEditor({
   });
   const plan: ShotPlanView | null = planRes?.isOk ? planRes.value : null;
 
-  const { data: breakdownRes } = useQuery(breakdownSummaryQueryOptions(sceneId));
+  const { data: breakdownRes } = useQuery(
+    breakdownSummaryQueryOptions(sceneId),
+  );
   const breakdown: BreakdownSummary | null = breakdownRes?.isOk
     ? breakdownRes.value
     : null;
@@ -180,7 +182,7 @@ export function ParallelPlansEditor({
     mutationFn: (shotId: string) => {
       if (!plan) throw new Error("No plan");
       return deleteShot({
-        data: { shotId, shotPlanId: plan.id, projectId },
+        data: { shotId, shotPlanId: plan.id },
       }).then(unwrapResult);
     },
     onSuccess: invalidate,
@@ -207,7 +209,6 @@ export function ParallelPlansEditor({
         data: {
           shotId: vars.shotId,
           shotPlanId: plan.id,
-          projectId,
           patch: { estimatedMinutes: vars.estimatedMinutes },
         },
       }).then(unwrapResult);
@@ -275,42 +276,41 @@ export function ParallelPlansEditor({
     e.dataTransfer.effectAllowed = "move";
   };
 
-  const handleDragOverTrack =
-    (scenarioId: string) => (e: React.DragEvent) => {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = "move";
-      if (!dragState) return;
-      const trackEl = e.currentTarget as HTMLElement;
-      const rect = trackEl.getBoundingClientRect();
-      const relX = e.clientX - rect.left;
-      const scenario = plan.scenarios.find((s) => s.id === scenarioId);
-      if (!scenario) return;
-      const shotsSorted = [...scenario.shots].sort(
-        (a, b) => a.position - b.position,
-      );
-      let leftPx = 0;
-      let position = shotsSorted.length;
-      for (let i = 0; i < shotsSorted.length; i++) {
-        const sh = shotsSorted[i]!;
-        const wPct = (sh.resolvedMinutes / SHOOTING_DAY_MINUTES) * 100;
-        const wPx = (wPct / 100) * rect.width;
-        if (relX < leftPx + wPx / 2) {
-          position = i;
-          setDropTarget({
-            scenarioId,
-            position,
-            leftPct: (leftPx / rect.width) * 100,
-          });
-          return;
-        }
-        leftPx += wPx + 2;
+  const handleDragOverTrack = (scenarioId: string) => (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (!dragState) return;
+    const trackEl = e.currentTarget as HTMLElement;
+    const rect = trackEl.getBoundingClientRect();
+    const relX = e.clientX - rect.left;
+    const scenario = plan.scenarios.find((s) => s.id === scenarioId);
+    if (!scenario) return;
+    const shotsSorted = [...scenario.shots].sort(
+      (a, b) => a.position - b.position,
+    );
+    let leftPx = 0;
+    let position = shotsSorted.length;
+    for (let i = 0; i < shotsSorted.length; i++) {
+      const sh = shotsSorted[i]!;
+      const wPct = (sh.resolvedMinutes / SHOOTING_DAY_MINUTES) * 100;
+      const wPx = (wPct / 100) * rect.width;
+      if (relX < leftPx + wPx / 2) {
+        position = i;
+        setDropTarget({
+          scenarioId,
+          position,
+          leftPct: (leftPx / rect.width) * 100,
+        });
+        return;
       }
-      setDropTarget({
-        scenarioId,
-        position,
-        leftPct: Math.min(100, (leftPx / rect.width) * 100),
-      });
-    };
+      leftPx += wPx + 2;
+    }
+    setDropTarget({
+      scenarioId,
+      position,
+      leftPct: Math.min(100, (leftPx / rect.width) * 100),
+    });
+  };
 
   // When the scenario uses absolute (time-anchored) layout we persist the drop
   // position as a timeOffset instead of a reorder position.
@@ -359,15 +359,15 @@ export function ParallelPlansEditor({
   };
 
   const contextShot: ShotView | null = contextMenu
-    ? plan.scenarios
+    ? (plan.scenarios
         .flatMap((s) => s.shots)
-        .find((sh) => sh.id === contextMenu.shotId) ?? null
+        .find((sh) => sh.id === contextMenu.shotId) ?? null)
     : null;
 
   const contextShotScenario: ScenarioView | null = contextShot
-    ? plan.scenarios.find((s) =>
+    ? (plan.scenarios.find((s) =>
         s.shots.some((sh) => sh.id === contextShot.id),
-      ) ?? null
+      ) ?? null)
     : null;
 
   const canAddReverse =
@@ -428,7 +428,9 @@ export function ParallelPlansEditor({
       />
 
       <div className={styles.rulerRow}>
-        <div className={styles.rulerLabel}>{t("shootingPlan.editor.hours")}</div>
+        <div className={styles.rulerLabel}>
+          {t("shootingPlan.editor.hours")}
+        </div>
         <div className={styles.ruler}>
           {RULER_HOURS.map((h) => (
             <div
@@ -437,7 +439,9 @@ export function ParallelPlansEditor({
               data-end={h === 8 || undefined}
               style={{ insetInlineStart: `${(h / 8) * 100}%` }}
             >
-              <span>{h === 8 ? t("shootingPlan.editor.endOfDay") : `${h}h`}</span>
+              <span>
+                {h === 8 ? t("shootingPlan.editor.endOfDay") : `${h}h`}
+              </span>
             </div>
           ))}
         </div>

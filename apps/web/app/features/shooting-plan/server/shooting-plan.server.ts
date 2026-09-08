@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/start";
 import { z } from "zod";
 import { eq, asc, and, inArray, sql } from "drizzle-orm";
-import { ResultAsync, ok, okAsync, err } from "neverthrow";
+import { ResultAsync, ok, okAsync, err, errAsync } from "neverthrow";
 import { queryOptions } from "@tanstack/react-query";
 import {
   shotPlans,
@@ -614,7 +614,6 @@ export const updateShot = createServerFn({ method: "POST" })
     z.object({
       shotId: z.string().uuid(),
       shotPlanId: z.string().uuid(),
-      projectId: z.string().uuid(),
       patch: z.object({
         shotSize: z
           .enum([
@@ -653,30 +652,34 @@ export const updateShot = createServerFn({ method: "POST" })
     async ({
       data,
     }): Promise<ResultShape<void, ShotNotFoundError | ProjectAccessError>> => {
-      const result = await withProjectAccess(data.projectId, "edit", ({ db }) =>
-        ResultAsync.fromPromise(
-          db.query.shots
-            .findFirst({ where: eq(shots.id, data.shotId) })
-            .then((r) => r ?? null),
-          (e) => new DbError("updateShot/load", e),
-        )
-          .andThen((shot) => {
-            if (!shot) return err(new ShotNotFoundError(data.shotId));
-            return ok(shot);
-          })
-          .andThen((shot) =>
+      const db = await getDb();
+      const result = await projectIdFromShot(db, data.shotId).andThen(
+        (projectId) =>
+          withProjectAccess(projectId, "edit", ({ db }) =>
             ResultAsync.fromPromise(
-              (async () => {
-                await db
-                  .update(shots)
-                  .set({ ...data.patch, updatedAt: new Date() })
-                  .where(eq(shots.id, data.shotId));
-                await db.execute(
-                  sql`UPDATE shot_plan_scenarios SET is_suggested = false WHERE id = ${shot.scenarioId}`,
-                );
-              })(),
-              (e) => new DbError("updateShot/update", e),
-            ).map(() => undefined),
+              db.query.shots
+                .findFirst({ where: eq(shots.id, data.shotId) })
+                .then((r) => r ?? null),
+              (e) => new DbError("updateShot/load", e),
+            )
+              .andThen((shot) => {
+                if (!shot) return err(new ShotNotFoundError(data.shotId));
+                return ok(shot);
+              })
+              .andThen((shot) =>
+                ResultAsync.fromPromise(
+                  (async () => {
+                    await db
+                      .update(shots)
+                      .set({ ...data.patch, updatedAt: new Date() })
+                      .where(eq(shots.id, data.shotId));
+                    await db.execute(
+                      sql`UPDATE shot_plan_scenarios SET is_suggested = false WHERE id = ${shot.scenarioId}`,
+                    );
+                  })(),
+                  (e) => new DbError("updateShot/update", e),
+                ).map(() => undefined),
+              ),
           ),
       );
 
@@ -767,34 +770,37 @@ export const deleteShot = createServerFn({ method: "POST" })
     z.object({
       shotId: z.string().uuid(),
       shotPlanId: z.string().uuid(),
-      projectId: z.string().uuid(),
     }),
   )
   .handler(
     async ({
       data,
     }): Promise<ResultShape<void, ShotNotFoundError | ProjectAccessError>> => {
-      const result = await withProjectAccess(data.projectId, "edit", ({ db }) =>
-        ResultAsync.fromPromise(
-          db.query.shots
-            .findFirst({ where: eq(shots.id, data.shotId) })
-            .then((r) => r ?? null),
-          (e) => new DbError("deleteShot/load", e),
-        )
-          .andThen((shot) => {
-            if (!shot) return err(new ShotNotFoundError(data.shotId));
-            return ok(shot);
-          })
-          .andThen((shot) =>
+      const db = await getDb();
+      const result = await projectIdFromShot(db, data.shotId).andThen(
+        (projectId) =>
+          withProjectAccess(projectId, "edit", ({ db }) =>
             ResultAsync.fromPromise(
-              (async () => {
-                await db.execute(
-                  sql`UPDATE shot_plan_scenarios SET is_suggested = false WHERE id = ${shot.scenarioId}`,
-                );
-                await db.delete(shots).where(eq(shots.id, shot.id));
-              })(),
-              (e) => new DbError("deleteShot/delete", e),
-            ).map(() => undefined),
+              db.query.shots
+                .findFirst({ where: eq(shots.id, data.shotId) })
+                .then((r) => r ?? null),
+              (e) => new DbError("deleteShot/load", e),
+            )
+              .andThen((shot) => {
+                if (!shot) return err(new ShotNotFoundError(data.shotId));
+                return ok(shot);
+              })
+              .andThen((shot) =>
+                ResultAsync.fromPromise(
+                  (async () => {
+                    await db.execute(
+                      sql`UPDATE shot_plan_scenarios SET is_suggested = false WHERE id = ${shot.scenarioId}`,
+                    );
+                    await db.delete(shots).where(eq(shots.id, shot.id));
+                  })(),
+                  (e) => new DbError("deleteShot/delete", e),
+                ).map(() => undefined),
+              ),
           ),
       );
 
@@ -807,37 +813,58 @@ export const reorderShots = createServerFn({ method: "POST" })
     z.object({
       scenarioId: z.string().uuid(),
       shotPlanId: z.string().uuid(),
-      projectId: z.string().uuid(),
       orderedShotIds: z.array(z.string().uuid()),
     }),
   )
-  .handler(async ({ data }): Promise<ResultShape<void, ProjectAccessError>> => {
-    const result = await withProjectAccess(data.projectId, "edit", ({ db }) =>
-      ResultAsync.fromPromise(
-        db.transaction(async (tx) => {
-          for (let i = 0; i < data.orderedShotIds.length; i++) {
-            await tx
-              .update(shots)
-              .set({ position: i, updatedAt: new Date() })
-              .where(eq(shots.id, data.orderedShotIds[i]!));
-          }
+  .handler(
+    async ({
+      data,
+    }): Promise<ResultShape<void, ShotNotFoundError | ProjectAccessError>> => {
+      const db = await getDb();
+      const result = await projectIdFromScenarioId(db, data.scenarioId).andThen(
+        (projectId) =>
+          withProjectAccess(projectId, "edit", ({ db }) =>
+            ResultAsync.fromPromise(
+              db
+                .select({ id: shots.id })
+                .from(shots)
+                .where(eq(shots.scenarioId, data.scenarioId)),
+              (e) => new DbError("reorderShots/loadScenarioShots", e),
+            ).andThen((scenarioShots) => {
+              const scenarioShotIds = new Set(scenarioShots.map((s) => s.id));
+              const foreignId = data.orderedShotIds.find(
+                (id) => !scenarioShotIds.has(id),
+              );
+              if (foreignId) return errAsync(new ShotNotFoundError(foreignId));
 
-          await tx.execute(
-            sql`UPDATE shot_plan_scenarios SET is_suggested = false WHERE id = ${data.scenarioId}`,
-          );
+              return ResultAsync.fromPromise(
+                db.transaction(async (tx) => {
+                  for (let i = 0; i < data.orderedShotIds.length; i++) {
+                    await tx
+                      .update(shots)
+                      .set({ position: i, updatedAt: new Date() })
+                      .where(eq(shots.id, data.orderedShotIds[i]!));
+                  }
 
-          await rebuildAutoTransitions(
-            tx as unknown as Db,
-            data.scenarioId,
-            data.projectId,
-          );
-        }),
-        (e) => new DbError("reorderShots/transaction", e),
-      ),
-    );
+                  await tx.execute(
+                    sql`UPDATE shot_plan_scenarios SET is_suggested = false WHERE id = ${data.scenarioId}`,
+                  );
 
-    return toShape(result);
-  });
+                  await rebuildAutoTransitions(
+                    tx as unknown as Db,
+                    data.scenarioId,
+                    projectId,
+                  );
+                }),
+                (e) => new DbError("reorderShots/transaction", e),
+              );
+            }),
+          ),
+      );
+
+      return toShape(result);
+    },
+  );
 
 export const addManualTransition = createServerFn({ method: "POST" })
   .validator(

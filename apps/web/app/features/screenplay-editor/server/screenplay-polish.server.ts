@@ -18,8 +18,9 @@ import {
   projects,
 } from "@oh-writers/db/schema";
 import { toShape, type ResultShape } from "@oh-writers/utils";
-import { requireUser } from "~/server/context";
 import { getDb } from "~/server/db";
+import { withProjectAccess } from "~/server/pipeline";
+import type { ProjectAccessError } from "~/server/access";
 import {
   DbError,
   ForbiddenError,
@@ -139,10 +140,9 @@ export const getScreenplayPolish = createServerFn({ method: "GET" })
     }): Promise<
       ResultShape<
         { suggestions: PolishSuggestion[] },
-        ScreenplayNotFoundError | ForbiddenError | DbError
+        ScreenplayNotFoundError | ForbiddenError | ProjectAccessError | DbError
       >
     > => {
-      await requireUser();
       const db = await getDb();
 
       const spResult = await ResultAsync.fromPromise(
@@ -155,15 +155,23 @@ export const getScreenplayPolish = createServerFn({ method: "GET" })
       if (!spResult.value)
         return toShape(err(new ScreenplayNotFoundError(data.screenplayId)));
 
-      const content = spResult.value.content;
-      const wantsMock =
-        process.env["MOCK_AI"] === "true" || !process.env["ANTHROPIC_API_KEY"];
+      const screenplay = spResult.value;
 
-      const suggestions: PolishSuggestion[] = wantsMock
-        ? mockPolishForContent(content)
-        : await callPolish(spResult.value.projectId, content);
+      return toShape(
+        await withProjectAccess(screenplay.projectId, "view", () => {
+          const content = screenplay.content;
+          const wantsMock =
+            process.env["MOCK_AI"] === "true" ||
+            !process.env["ANTHROPIC_API_KEY"];
 
-      return toShape(ok({ suggestions }));
+          return ResultAsync.fromPromise(
+            wantsMock
+              ? Promise.resolve(mockPolishForContent(content))
+              : callPolish(screenplay.projectId, content),
+            (e) => new DbError("polish/callPolish", e),
+          ).map((suggestions) => ({ suggestions }));
+        }),
+      );
     },
   );
 
@@ -389,13 +397,11 @@ export const getScenePolish = createServerFn({ method: "GET" })
     }): Promise<
       ResultShape<
         { suggestions: PolishSuggestion[]; sceneId: string | null },
-        ScreenplayNotFoundError | ForbiddenError | DbError
+        ScreenplayNotFoundError | ForbiddenError | ProjectAccessError | DbError
       >
     > => {
-      await requireUser();
       const db = await getDb();
 
-      // Verify screenplay exists and user has access
       const spResult = await ResultAsync.fromPromise(
         db.query.screenplays
           .findFirst({ where: eq(screenplays.id, data.screenplayId) })
@@ -406,61 +412,69 @@ export const getScenePolish = createServerFn({ method: "GET" })
       if (!spResult.value)
         return toShape(err(new ScreenplayNotFoundError(data.screenplayId)));
 
-      // Load a ±1 window around the target scene to give Cesare enough context
-      const windowSize = 1;
-      const minNum = Math.max(1, data.sceneNumber - windowSize);
-      const maxNum = data.sceneNumber + windowSize;
+      const screenplay = spResult.value;
 
-      const sceneRows = await ResultAsync.fromPromise(
-        db
-          .select({
-            id: scenes.id,
-            number: scenes.number,
-            heading: scenes.heading,
-            notes: scenes.notes,
-          })
-          .from(scenes)
-          .where(
-            and(
-              eq(scenes.screenplayId, data.screenplayId),
-              gte(scenes.number, minNum),
-              lte(scenes.number, maxNum),
-            ),
-          )
-          .orderBy(scenes.number),
-        (e) => new DbError("scenePolish/loadScenes", e),
+      return toShape(
+        await withProjectAccess(screenplay.projectId, "view", ({ db }) => {
+          // Load a ±1 window around the target scene to give Cesare enough context
+          const windowSize = 1;
+          const minNum = Math.max(1, data.sceneNumber - windowSize);
+          const maxNum = data.sceneNumber + windowSize;
+
+          return ResultAsync.fromPromise(
+            db
+              .select({
+                id: scenes.id,
+                number: scenes.number,
+                heading: scenes.heading,
+                notes: scenes.notes,
+              })
+              .from(scenes)
+              .where(
+                and(
+                  eq(scenes.screenplayId, data.screenplayId),
+                  gte(scenes.number, minNum),
+                  lte(scenes.number, maxNum),
+                ),
+              )
+              .orderBy(scenes.number),
+            (e) => new DbError("scenePolish/loadScenes", e),
+          ).andThen((sceneRows) => {
+            // Build a small Fountain excerpt for the window
+            const excerpt = sceneRows
+              .map((r) => {
+                const marker =
+                  r.number === data.sceneNumber ? " ← SCENA CORRENTE" : "";
+                return `=== SC. ${r.number}${marker} ===\n${r.heading}\n${r.notes ?? ""}`;
+              })
+              .join("\n\n");
+
+            const wantsMock =
+              process.env["MOCK_AI"] === "true" ||
+              !process.env["ANTHROPIC_API_KEY"];
+
+            const currentSceneId =
+              sceneRows.find((r) => r.number === data.sceneNumber)?.id ?? null;
+
+            return ResultAsync.fromPromise(
+              wantsMock
+                ? Promise.resolve(
+                    mockPolishForSceneNumber(
+                      data.sceneNumber,
+                      sceneRows[0]?.heading ?? "",
+                    ),
+                  )
+                : callScenePolish(
+                    screenplay.projectId,
+                    excerpt,
+                    data.sceneNumber,
+                    currentSceneId,
+                  ),
+              (e) => new DbError("scenePolish/callScenePolish", e),
+            ).map((suggestions) => ({ suggestions, sceneId: currentSceneId }));
+          });
+        }),
       );
-
-      if (sceneRows.isErr()) return toShape(err(sceneRows.error));
-
-      // Build a small Fountain excerpt for the window
-      const excerpt = sceneRows.value
-        .map((r) => {
-          const marker =
-            r.number === data.sceneNumber ? " ← SCENA CORRENTE" : "";
-          return `=== SC. ${r.number}${marker} ===\n${r.heading}\n${r.notes ?? ""}`;
-        })
-        .join("\n\n");
-
-      const wantsMock =
-        process.env["MOCK_AI"] === "true" || !process.env["ANTHROPIC_API_KEY"];
-
-      const currentSceneId =
-        sceneRows.value.find((r) => r.number === data.sceneNumber)?.id ?? null;
-
-      const suggestions = wantsMock
-        ? mockPolishForSceneNumber(
-            data.sceneNumber,
-            sceneRows.value[0]?.heading ?? "",
-          )
-        : await callScenePolish(
-            spResult.value.projectId,
-            excerpt,
-            data.sceneNumber,
-            currentSceneId,
-          );
-
-      return toShape(ok({ suggestions, sceneId: currentSceneId }));
     },
   );
 
