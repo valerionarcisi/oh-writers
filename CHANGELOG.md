@@ -1,3 +1,9 @@
+## [1.1.0-beta.8](https://github.com/valerionarcisi/oh-writers/compare/v1.1.0-beta.7...v1.1.0-beta.8) (2026-09-08)
+
+### Bug Fixes
+
+* openSceneInBreakdown scope-switch flake — checked DOM property lies ([#157](https://github.com/valerionarcisi/oh-writers/issues/157)) ([966e312](https://github.com/valerionarcisi/oh-writers/commit/966e312ae2a9a0a349a2f3bf016ad0575e6c1055)), closes [#144](https://github.com/valerionarcisi/oh-writers/issues/144) [#144](https://github.com/valerionarcisi/oh-writers/issues/144) [#144](https://github.com/valerionarcisi/oh-writers/issues/144)
+
 ## [1.1.0-beta.7](https://github.com/valerionarcisi/oh-writers/compare/v1.1.0-beta.6...v1.1.0-beta.7) (2026-09-07)
 
 ### Features
