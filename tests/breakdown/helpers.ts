@@ -11,6 +11,8 @@ export const TEAM_PROJECT_ID = "00000000-0000-4000-a000-000000000011";
 export const TEAM_VERSION_ID = "00000000-0000-4000-a000-000000000023";
 export const TEAM_SCENE_1_ID = "00000000-0000-4000-a000-000000010010";
 export const TEAM_SCENE_2_ID = "00000000-0000-4000-a000-000000010011";
+// Matches the seed's "Manual version + 9 scenes created" for TEAM_PROJECT_ID.
+export const TEAM_PROJECT_SCENE_COUNT = 9;
 
 export const navigateToBreakdown = async (page: Page, projectId: string) => {
   await page.goto(`${BASE_URL}/projects/${projectId}/breakdown`);
@@ -44,18 +46,36 @@ export const navigateToBreakdown = async (page: Page, projectId: string) => {
  * heading (idempotent — a no-op once already in full scope).
  */
 export const openSceneInBreakdown = async (page: Page, sceneNumber: number) => {
-  const fullScope = page.getByTestId("segmented-full");
-  if ((await fullScope.count()) > 0 && !(await fullScope.isChecked())) {
-    await expect(async () => {
-      await fullScope.click();
-      await expect(fullScope).toBeChecked({ timeout: 1_000 });
-    }).toPass({ timeout: 15_000 });
-  }
-  // Switching to full scope loads the whole script — on the seeded 12-page
-  // doc the headings can take longer than the 5s default to render ([284]).
-  // 15s wasn't enough under CI load either — bumped further.
+  // #144 ([282]/[284]/[285]/[286]) root cause, confirmed with file-based
+  // logging (Playwright's own reporters swallow stdout logging from page
+  // helpers, so a direct fs.appendFileSync was needed to actually see the
+  // retry attempts): the click DOES land and the radio's `checked` DOM
+  // property DOES flip to
+  // true (`isChecked()`/`toBeChecked()` pass) — but React's `sceneScope`
+  // state sometimes never receives the `onChange`, so the reader keeps
+  // rendering the single-scene doc. The DOM `checked` property lies about
+  // whether the click actually reached the component. Don't trust it as the
+  // done-signal — poll the only thing that's actually true: the rendered
+  // heading count. Retry the click itself against that real outcome instead
+  // of against the deceptive `checked` property.
+  await expect(async () => {
+    const fullScope = page.getByTestId("segmented-full");
+    if ((await fullScope.count()) === 0) throw new Error("not mounted yet");
+    if (!(await fullScope.isChecked())) await fullScope.click();
+    // Switching to full scope destroys and re-mounts the whole PM EditorView
+    // (ReadOnlyScreenplayView re-parses the fountain doc from scratch rather
+    // than diffing — see its own "simpler than diffing" comment), so this
+    // is also the real completion signal for the scope switch, not just a
+    // post-hoc visibility check.
+    const allHeadings = page.locator(
+      '[data-testid^="scene-"][data-testid$="-heading"]',
+    );
+    await expect(allHeadings).toHaveCount(TEAM_PROJECT_SCENE_COUNT, {
+      timeout: 3_000,
+    });
+  }).toPass({ timeout: 30_000, intervals: [500] });
   const heading = page.getByTestId(`scene-${sceneNumber}-heading`);
-  await expect(heading).toBeVisible({ timeout: 30_000 });
+  await expect(heading).toBeVisible({ timeout: 5_000 });
   await heading.click();
 };
 
