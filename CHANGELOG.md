@@ -1,3 +1,10 @@
+## [1.1.0-beta.9](https://github.com/valerionarcisi/oh-writers/compare/v1.1.0-beta.8...v1.1.0-beta.9) (2026-09-08)
+
+### Bug Fixes
+
+* gate Release/Deploy on QA's result for the same commit ([#156](https://github.com/valerionarcisi/oh-writers/issues/156)) ([#158](https://github.com/valerionarcisi/oh-writers/issues/158)) ([87d2892](https://github.com/valerionarcisi/oh-writers/commit/87d2892e18b90b227adeacff32c7f11b3265f45b)), closes [#144](https://github.com/valerionarcisi/oh-writers/issues/144)
+* poll the S04 prefix picker instead of racing a fixed sleep ([#159](https://github.com/valerionarcisi/oh-writers/issues/159)) ([3577075](https://github.com/valerionarcisi/oh-writers/commit/3577075c1bafd95a41277b6d1d1bb039c195b53d)), closes [#144](https://github.com/valerionarcisi/oh-writers/issues/144) [#6553b463](https://github.com/valerionarcisi/oh-writers/issues/6553b463)
+
 ## [1.1.0-beta.8](https://github.com/valerionarcisi/oh-writers/compare/v1.1.0-beta.7...v1.1.0-beta.8) (2026-09-08)
 
 ### Bug Fixes
