@@ -5,8 +5,64 @@ on:
     branches: [main, beta]
 
 jobs:
+  wait-for-qa:
+    name: Wait for QA
+    runs-on: ubuntu-latest
+    # semantic-release pushes a version-bump commit tagged "[skip ci]" — same
+    # guard as the release job below, so this job doesn't block on itself.
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    steps:
+      # #156 — Release used to fire (and deploy) independently of QA's result
+      # on the same push: both workflows trigger off the same `push` event
+      # with no dependency between them, so a QA failure on a push already
+      # merged to beta/main was purely advisory. Can't use `workflow_run` to
+      # gate on QA — that trigger only fires reliably for workflow files on
+      # the repo's default branch, which silently breaks it for `beta` (see
+      # the release job's own deploy-trigger comment below, discovered the
+      # same way). Poll the Actions API for QA's own run against this exact
+      # commit instead — works identically regardless of which branch pushed.
+      - name: Poll for QA's conclusion on this commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # Observed qa.yml duration on beta (last 5 runs, 2026-09-08): 13.6-25.6
+        # min. 90 × 30s = 45 min gives real headroom above that ceiling — a
+        # slow-CI day must not false-block a deploy that would have gone
+        # green given more time.
+        run: |
+          SHA="${{ github.sha }}"
+          REPO="${{ github.repository }}"
+          echo "Waiting for QA workflow run on $SHA…"
+          for i in $(seq 1 90); do
+            # Multiple "QA" run objects can exist for the same head_sha (a
+            # re-run creates a new object; a rebase/force-push onto an
+            # already-tested SHA leaves a stale one) — sort by created_at and
+            # take the newest explicitly rather than relying on the API's
+            # undocumented default ordering.
+            RUN_JSON=$(gh api "repos/$REPO/actions/runs?head_sha=$SHA" \
+              --jq '[.workflow_runs[] | select(.name == "QA")] | sort_by(.created_at) | last')
+            if [ -n "$RUN_JSON" ] && [ "$RUN_JSON" != "null" ]; then
+              STATUS=$(echo "$RUN_JSON" | jq -r '.status')
+              CONCLUSION=$(echo "$RUN_JSON" | jq -r '.conclusion')
+              if [ "$STATUS" = "completed" ]; then
+                echo "QA run completed with conclusion: $CONCLUSION"
+                if [ "$CONCLUSION" != "success" ]; then
+                  echo "::error::QA did not pass on this commit (conclusion: $CONCLUSION) — blocking release/deploy."
+                  exit 1
+                fi
+                exit 0
+              fi
+              echo "QA run found, status=$STATUS — waiting…"
+            else
+              echo "No QA run found yet for $SHA — waiting…"
+            fi
+            sleep 30
+          done
+          echo "::error::Timed out waiting for QA's run on $SHA after 45 minutes."
+          exit 1
+
   release:
     name: Release
+    needs: wait-for-qa
     runs-on: ubuntu-latest
     # semantic-release pushes a version-bump commit tagged "[skip ci]" — this
     # guard stops that commit from re-triggering the QA/deploy workflows.
