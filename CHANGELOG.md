@@ -1,3 +1,9 @@
+## [1.1.0-beta.10](https://github.com/valerionarcisi/oh-writers/compare/v1.1.0-beta.9...v1.1.0-beta.10) (2026-09-08)
+
+### Bug Fixes
+
+* close IDOR gap in 6 server functions (security cluster [#160](https://github.com/valerionarcisi/oh-writers/issues/160)) ([#161](https://github.com/valerionarcisi/oh-writers/issues/161)) ([d465182](https://github.com/valerionarcisi/oh-writers/commit/d465182eb045c6cec9371db788ffbee132933eb2)), closes [144/#156](https://github.com/144/oh-writers/issues/156) [61/#73](https://github.com/61/oh-writers/issues/73)
+
 ## [1.1.0-beta.9](https://github.com/valerionarcisi/oh-writers/compare/v1.1.0-beta.8...v1.1.0-beta.9) (2026-09-08)
 
 ### Bug Fixes
