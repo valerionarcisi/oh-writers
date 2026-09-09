@@ -855,14 +855,16 @@ interface RewriteSceneInput {
 
 const REWRITE_CONTENT_LIMIT = 8000;
 
-// Load the original body length of scene N (from scenes.notes) so the
-// anti-truncation guard can compare. Null when the scene/screenplay isn't found
-// (then the guard is skipped — never block an edit on a lookup miss).
-const loadSceneBodyLength = (
+// Load the original scene N (heading + body from scenes.notes) so the
+// anti-truncation guard can both compare lengths and, on rejection, hand the
+// model the verbatim original text to copy from. Null when the
+// scene/screenplay isn't found (then the guard is skipped — never block an
+// edit on a lookup miss).
+const loadSceneBody = (
   db: Db,
   projectId: string,
   sceneNumber: number,
-): ResultAsync<number | null, CesareError> =>
+): ResultAsync<string | null, CesareError> =>
   ResultAsync.fromPromise(
     (async () => {
       const [sp] = await db
@@ -879,11 +881,13 @@ const loadSceneBodyLength = (
         )
         .limit(1);
       if (!row) return null;
-      return (row.heading?.length ?? 0) + (row.notes?.length ?? 0);
+      return [row.heading ?? "", row.notes ?? ""]
+        .filter((s) => s.length > 0)
+        .join("\n\n");
     })(),
     (e) =>
       new CesareError(
-        `loadSceneBodyLength: ${e instanceof Error ? e.message : String(e)}`,
+        `loadSceneBody: ${e instanceof Error ? e.message : String(e)}`,
       ),
   );
 
@@ -949,19 +953,24 @@ const executeRewriteScene = (
   // COMPLETE scene. A legitimate "make it shorter" survives the 0.4 threshold;
   // a "slugline only" catastrophe does not. The lookup miss / short original
   // cases skip the guard (never block a real edit on a lookup detail).
-  return loadSceneBodyLength(db, projectId, input.scene_number)
-    .orElse(() => okAsync(null as number | null))
-    .andThen((originalLen) => {
+  return loadSceneBody(db, projectId, input.scene_number)
+    .orElse(() => okAsync(null as string | null))
+    .andThen((originalText) => {
       if (
-        originalLen !== null &&
-        originalLen > 200 &&
-        content.length < originalLen * REWRITE_MIN_LENGTH_RATIO
+        originalText !== null &&
+        originalText.length > 200 &&
+        content.length < originalText.length * REWRITE_MIN_LENGTH_RATIO
       ) {
+        // Embed the verbatim original scene so a small/fast model can COPY
+        // from it directly instead of relying on what it remembers from an
+        // earlier read_scene call several turns back — regenerating a long
+        // scene from memory is exactly where a fast-tier model drops content.
         return errAsync(
           new CesareError(
-            `rewrite_scene: il new_content (${content.length} caratteri) è troppo più corto della scena originale (${originalLen} caratteri): hai perso contenuto. ` +
-              `Leggi la scena con read_scene(${input.scene_number}) e restituisci il Fountain COMPLETO della scena — TUTTE le battute e le azioni originali — con SOLO la modifica richiesta. ` +
-              `Accorcia davvero solo se l'utente ha chiesto esplicitamente di tagliare.`,
+            `rewrite_scene: il new_content (${content.length} caratteri) è troppo più corto della scena originale (${originalText.length} caratteri): hai perso contenuto. ` +
+              `Qui sotto trovi il testo ORIGINALE COMPLETO della scena — copialo esattamente e applica SOLO la modifica richiesta, senza riscrivere il resto a memoria:\n\n` +
+              `---INIZIO SCENA ORIGINALE---\n${originalText}\n---FINE SCENA ORIGINALE---\n\n` +
+              `Restituisci new_content = questo testo con SOLO la modifica richiesta applicata. Accorcia davvero solo se l'utente ha chiesto esplicitamente di tagliare, e comunque non oltre la battuta o la riga indicata.`,
           ),
         );
       }
