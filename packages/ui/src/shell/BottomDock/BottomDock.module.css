@@ -26,6 +26,16 @@
   transition: opacity var(--ds-duration-2) var(--ds-ease);
 }
 
+/* The screenplay page renders its own fixed scene/page counter strip
+   (`.stickyFooter` in ScreenplayEditor, ~40px tall) along the same
+   bottom-right corner the dock occupies — at the dock's default 18px offset
+   it visually overlapped that strip's text instead of floating clear above
+   it (found live 2026-09-09). Lift the dock past the strip's height only on
+   this page; every other page keeps the default 18px. */
+:global(body[data-view="screenplay"]) .dock {
+  inset-block-end: 56px;
+}
+
 /* Hide the dock when Cesare is non-closed. The Cesare header carries the
    bell/avatar/settings group in that state so the user never has two
    affordances for the same action competing for attention. */
