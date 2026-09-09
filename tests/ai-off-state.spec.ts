@@ -77,9 +77,10 @@ test.describe("[OHW-846] AI-off state", () => {
     await page.goto(`/projects/${TEST_PERSONAL_PROJECT_ID}/shooting-plan`);
     await expect(page.getByTestId("shooting-plan-cesare-btn")).toHaveCount(0);
 
-    // Gear menu: no "AI · credits & models" entry — /settings/ai itself
-    // redirects to the dashboard with AI off (see below), so a visible entry
-    // here would look like a dead click. Found live 2026-09-03.
+    // Gear menu: no "AI · credits & models" entry with AI off — this is a
+    // genuine shortcut for someone already connected, not the only door in
+    // (that's the always-visible /settings/ai link below), so it stays
+    // conditional on the flag.
     await page.goto(`/projects/${TEST_PERSONAL_PROJECT_ID}/screenplay`);
     const settingsBtn = page.getByTestId("settings-btn");
     await expect(settingsBtn).toBeVisible({ timeout: 15_000 });
@@ -91,12 +92,15 @@ test.describe("[OHW-846] AI-off state", () => {
     }).toPass({ timeout: 15_000 });
     await expect(page.getByTestId("gear-menu-ai-credits")).toHaveCount(0);
 
-    // Settings: no AI section, and a direct visit to /settings/ai redirects
-    // away (route guard, not just the link hidden).
+    // Settings: the AI section link and /settings/ai itself stay reachable
+    // even with AI off — that page IS the mechanism that turns AI_ENABLED
+    // on (connecting a BYOK provider), so gating it behind "AI is already
+    // enabled" was a catch-22 with no way out for a user starting from zero
+    // (found live while producing #169's demo, fixed 2026-09-09).
     await page.goto("/settings");
-    await expect(page.getByTestId("ai-section")).toHaveCount(0);
+    await expect(page.getByTestId("ai-section")).toBeVisible();
     await page.goto("/settings/ai");
-    await page.waitForURL("**/dashboard", { timeout: 15_000 });
+    await expect(page).toHaveURL(/\/settings\/ai$/);
   });
 
   test("auto-spoglio (regex/WordNet, no AI) still extracts elements on mount with AI off", async ({

@@ -79,14 +79,18 @@ describe("UserSettingsPage", () => {
     expect(screen.queryByTestId("current-password-input")).toBeNull();
   });
 
-  it("hides the AI settings section when Features.AI_ENABLED is off", async () => {
+  // The AI section's only job is linking to /settings/ai, the page that
+  // itself turns AI_ENABLED on — gating the link behind "AI is already
+  // enabled" left no reachable entry point for a user starting from zero
+  // (found live while producing #169's demo). So the link stays visible
+  // regardless of the flag, on both sides of it.
+  it("shows the AI settings link when Features.AI_ENABLED is off — it's the only entry point to turn AI on", async () => {
     renderSettings({ isAiEnabled: false });
 
-    await screen.findByText(/no password to manage here/i);
-    expect(screen.queryByTestId("ai-settings-link")).toBeNull();
+    expect(await screen.findByTestId("ai-settings-link")).toBeTruthy();
   });
 
-  it("shows the AI settings section when Features.AI_ENABLED is on", async () => {
+  it("shows the AI settings link when Features.AI_ENABLED is on", async () => {
     renderSettings({ isAiEnabled: true });
 
     expect(await screen.findByTestId("ai-settings-link")).toBeTruthy();

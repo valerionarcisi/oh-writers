@@ -19,8 +19,6 @@ import {
 } from "@oh-writers/domain";
 import { authClient } from "~/lib/auth-client";
 import { useLocale, useTranslation } from "~/features/i18n";
-import { useFeature } from "~/features/feature-flags";
-import { Features } from "@oh-writers/domain";
 import {
   updateUserProfile,
   updateUserLocale,
@@ -301,10 +299,14 @@ function LanguageSection() {
 
 // ── AI ─────────────────────────────────────────────────────────────────────
 
+// Always visible, regardless of Features.AI_ENABLED: this section's only
+// job is linking to the page that turns AI_ENABLED on. Gating it behind
+// "AI is already enabled" left no reachable entry point in the whole app
+// for a user starting from zero (found while producing #169's demo) — the
+// gear-menu shortcut below stays conditional since it's a genuine shortcut
+// once connected, not the only door in.
 function AiSection() {
   const { t } = useTranslation();
-  const isAiEnabled = useFeature(Features.AI_ENABLED);
-  if (!isAiEnabled) return null;
   return (
     <section className={styles.section} data-testid="ai-section">
       <h2 className={styles.sectionTitle}>

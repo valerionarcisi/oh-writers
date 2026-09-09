@@ -112,6 +112,56 @@ describe("selectRecommendedModels — the filter RULE, no hardcoded IDs (Spec 84
     expect(result.quality.id).toBe("anthropic/zephyr-nova-9-mid");
   });
 
+  it("never recommends a ':batch' variant, even when it would otherwise win a slot on price — batch-only endpoints reject Cesare's synchronous calls", () => {
+    const catalogue: OpenRouterModel[] = [
+      // The batch sibling is cheaper and would win the budget slot on price
+      // alone if not excluded.
+      model({
+        id: "anthropic/zephyr-nova-9-cheap:batch",
+        created: 2_000_000_000,
+        pricing: { prompt: "0.0000003", completion: "0.0000009" },
+      }),
+      model({
+        id: "anthropic/zephyr-nova-9-cheap",
+        created: 2_000_000_000,
+        pricing: { prompt: "0.0000005", completion: "0.0000015" },
+      }),
+      // Same for the quality tier.
+      model({
+        id: "anthropic/zephyr-nova-9-mid:batch",
+        created: 2_000_000_002,
+        pricing: { prompt: "0.0000018", completion: "0.0000054" },
+      }),
+      model({
+        id: "anthropic/zephyr-nova-9-mid",
+        created: 2_000_000_002,
+        pricing: { prompt: "0.000003", completion: "0.000009" },
+      }),
+    ];
+
+    const result = selectRecommendedModels(catalogue);
+    expect(result).not.toBeNull();
+    if (!result) return;
+    expect(result.fast.id).toBe("anthropic/zephyr-nova-9-cheap");
+    expect(result.quality.id).toBe("anthropic/zephyr-nova-9-mid");
+    expect(result.fast.id.endsWith(":batch")).toBe(false);
+    expect(result.quality.id.endsWith(":batch")).toBe(false);
+  });
+
+  it("returns null when every anthropic model in the catalogue is a ':batch' variant", () => {
+    const catalogue: OpenRouterModel[] = [
+      model({
+        id: "anthropic/zephyr-nova-9-cheap:batch",
+        created: 2_000_000_000,
+      }),
+      model({
+        id: "anthropic/zephyr-nova-9-mid:batch",
+        created: 2_000_000_002,
+      }),
+    ];
+    expect(selectRecommendedModels(catalogue)).toBeNull();
+  });
+
   it("adapts automatically when a new fictional model appears with a later created date and different price — no code change needed", () => {
     const before: OpenRouterModel[] = [
       model({
