@@ -61,21 +61,21 @@ export const Route = createFileRoute("/_app")({
   component: AppLayout,
 });
 
-const SECTION_LABELS: Record<string, string> = {
-  breakdown: "Breakdown",
-  budget: "Budget",
-  schedule: "Calendarizzazione",
-  "shooting-plan": "Inquadrature",
-  locations: "Location",
-  screenplay: "Sceneggiatura",
-  soggetto: "Soggetto",
-  synopsis: "Sinossi",
-  outline: "Scaletta",
-  treatment: "Trattamento",
-  settings: "Impostazioni",
-  "title-page": "Frontespizio",
-  sessions: "Cesare",
-  dashboard: "Progetti",
+const SECTION_LABEL_KEYS: Record<string, TranslationKey> = {
+  breakdown: "shell.section.breakdown",
+  budget: "shell.section.budget",
+  schedule: "shell.section.schedule",
+  "shooting-plan": "shell.section.shootingPlan",
+  locations: "shell.section.locations",
+  screenplay: "shell.section.screenplay",
+  soggetto: "shell.section.soggetto",
+  synopsis: "shell.section.synopsis",
+  outline: "shell.section.outline",
+  treatment: "shell.section.treatment",
+  settings: "shell.section.settings",
+  "title-page": "shell.section.titlePage",
+  sessions: "shell.section.sessions",
+  dashboard: "shell.section.dashboard",
 };
 
 // The SavePill is driven entirely by editor components via
@@ -85,40 +85,80 @@ const SECTION_LABELS: Record<string, string> = {
 // `undefined` and the pill stays hidden. This avoids a stale "Salvato" chip
 // on routes like /outline, /treatment and /title-page before the user types.
 
-function deriveSectionName(routeId: string, hasProjectId: boolean): string {
-  for (const [segment, label] of Object.entries(SECTION_LABELS)) {
-    if (routeId.includes(segment)) return label;
+function deriveSectionName(
+  routeId: string,
+  hasProjectId: boolean,
+  t: (key: TranslationKey) => string,
+): string {
+  for (const [segment, key] of Object.entries(SECTION_LABEL_KEYS)) {
+    if (routeId.includes(segment)) return t(key);
   }
   // Project home (no sub-route segment matched) — show an explicit label
   // so the TopBar doesn't render `Sezione: — cambia sezione`.
-  if (hasProjectId) return "Panoramica";
+  if (hasProjectId) return t("shell.section.overview");
   return "";
 }
 
-type SectionDef = { segment: string; label: string; icon: string };
+type SectionDef = { segment: string; labelKey: TranslationKey; icon: string };
 
 const SECTION_GROUPS: ReadonlyArray<{
-  label: string;
+  labelKey: TranslationKey;
   items: ReadonlyArray<SectionDef>;
 }> = [
   {
-    label: "Scrittura",
+    labelKey: "shell.sectionGroup.writing",
     items: [
-      { segment: "soggetto", label: "Soggetto", icon: "file-text" },
-      { segment: "synopsis", label: "Sinossi", icon: "book" },
-      { segment: "outline", label: "Scaletta", icon: "clipboard" },
-      { segment: "treatment", label: "Trattamento", icon: "file-text" },
-      { segment: "screenplay", label: "Sceneggiatura", icon: "file-text" },
+      {
+        segment: "soggetto",
+        labelKey: "shell.section.soggetto",
+        icon: "file-text",
+      },
+      { segment: "synopsis", labelKey: "shell.section.synopsis", icon: "book" },
+      {
+        segment: "outline",
+        labelKey: "shell.section.outline",
+        icon: "clipboard",
+      },
+      {
+        segment: "treatment",
+        labelKey: "shell.section.treatment",
+        icon: "file-text",
+      },
+      {
+        segment: "screenplay",
+        labelKey: "shell.section.screenplay",
+        icon: "file-text",
+      },
     ],
   },
   {
-    label: "Pre-produzione",
+    labelKey: "shell.sectionGroup.preProduction",
     items: [
-      { segment: "breakdown", label: "Breakdown", icon: "clipboard" },
-      { segment: "budget", label: "Budget", icon: "file-text" },
-      { segment: "shooting-plan", label: "Inquadrature", icon: "camera" },
-      { segment: "schedule", label: "Calendarizzazione", icon: "clock" },
-      { segment: "locations", label: "Location", icon: "map-pin" },
+      {
+        segment: "breakdown",
+        labelKey: "shell.section.breakdown",
+        icon: "clipboard",
+      },
+      {
+        segment: "budget",
+        labelKey: "shell.section.budget",
+        icon: "file-text",
+      },
+      {
+        segment: "shooting-plan",
+        labelKey: "shell.section.shootingPlan",
+        icon: "camera",
+      },
+      {
+        segment: "schedule",
+        labelKey: "shell.section.schedule",
+        icon: "clock",
+      },
+      {
+        segment: "locations",
+        labelKey: "shell.section.locations",
+        icon: "map-pin",
+      },
     ],
   },
 ];
@@ -133,12 +173,13 @@ const ALL_SECTIONS = SECTION_GROUPS.flatMap((g) => g.items);
 function buildSectionGroups(
   projectId: string | undefined,
   activeSegment: string,
+  t: (key: TranslationKey) => string,
 ): ReadonlyArray<TopBarSectionGroup> {
   if (!projectId) return [];
   return SECTION_GROUPS.map((g) => ({
-    label: g.label,
+    label: t(g.labelKey),
     items: g.items.map((s) => ({
-      label: s.label,
+      label: t(s.labelKey),
       icon: s.icon,
       href: `/projects/${projectId}/${s.segment}`,
       isActive: s.segment === activeSegment,
@@ -283,7 +324,7 @@ function AppLayout() {
 
   const lastMatch = matches[matches.length - 1];
   const sectionName = lastMatch
-    ? deriveSectionName(lastMatch.routeId, Boolean(projectId))
+    ? deriveSectionName(lastMatch.routeId, Boolean(projectId), t)
     : "";
   const activeSegment = lastMatch
     ? activeSegmentFromRouteId(lastMatch.routeId)
@@ -299,7 +340,7 @@ function AppLayout() {
       ? "…"
       : "";
 
-  const sectionGroups = buildSectionGroups(projectId, activeSegment);
+  const sectionGroups = buildSectionGroups(projectId, activeSegment, t);
   const cesarePage = deriveCesarePage(pathname);
 
   const { data: personalProjects } = useQuery(personalProjectsQueryOptions());

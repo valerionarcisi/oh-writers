@@ -34,6 +34,12 @@ import { sceneNodeToFountain } from "../doc-to-fountain";
 
 export interface HeadingNodeViewOptions {
   readOnly?: boolean;
+  /** Translated chrome labels. Optional — each field defaults to its IT
+   *  value so the node view renders correctly without a translator. */
+  labels?: {
+    sceneActions?: string;
+    editSceneNumber?: string;
+  };
 }
 
 const VALID_SCENE_NUMBER = /^(\d+)([A-Z]?)$/;
@@ -46,6 +52,8 @@ class HeadingNodeView implements NodeView {
   private readonly view: EditorView;
   private readonly getPos: () => number | undefined;
   private readonly readOnly: boolean;
+  private readonly sceneActionsLabel: string;
+  private readonly editSceneNumberLabel: string;
 
   private readonly leftBtn: HTMLButtonElement;
   private readonly menuBtn: HTMLButtonElement;
@@ -73,6 +81,9 @@ class HeadingNodeView implements NodeView {
     this.view = view;
     this.getPos = getPos;
     this.readOnly = options.readOnly ?? false;
+    this.sceneActionsLabel = options.labels?.sceneActions ?? "Azioni scena";
+    this.editSceneNumberLabel =
+      options.labels?.editSceneNumber ?? "Modifica numero scena";
 
     this.dom = document.createElement("h2");
     this.dom.className = "pm-heading";
@@ -98,7 +109,7 @@ class HeadingNodeView implements NodeView {
     btn.className = "scene-number-menu-btn";
     btn.textContent = "⋮";
     btn.setAttribute("data-testid", "scene-menu-trigger");
-    btn.setAttribute("aria-label", "Azioni scena");
+    btn.setAttribute("aria-label", this.sceneActionsLabel);
     btn.setAttribute("aria-haspopup", "menu");
     btn.contentEditable = "false";
     if (!this.readOnly) {
@@ -116,7 +127,7 @@ class HeadingNodeView implements NodeView {
     btn.type = "button";
     btn.className = `scene-number scene-number-btn ${side}`;
     btn.setAttribute("data-testid", "scene-number-edit-trigger");
-    btn.setAttribute("aria-label", "Modifica numero scena");
+    btn.setAttribute("aria-label", this.editSceneNumberLabel);
     btn.contentEditable = "false";
     if (!this.readOnly) {
       // mousedown (not click) so PM doesn't steal focus before we react.

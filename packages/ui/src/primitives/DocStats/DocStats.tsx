@@ -7,12 +7,20 @@ export type DocStat =
   | { kind: "cartelle"; value: number }
   | { kind: "scenes"; value: number };
 
+export type DocStatsLabels = Partial<Record<DocStat["kind"], string>>;
+
 export type DocStatsProps = {
   stats: ReadonlyArray<DocStat>;
   className?: string;
+  /** Translated unit labels. Optional — each field defaults to its IT value
+   *  so the component renders correctly without a translator. */
+  labels?: DocStatsLabels;
+  /** BCP-47 locale for number formatting (e.g. "en" or "it"). Defaults to
+   *  "it" so existing callers keep their current formatting. */
+  numberLocale?: string;
 };
 
-const labels: Record<DocStat["kind"], string> = {
+const DEFAULT_LABELS: Record<DocStat["kind"], string> = {
   chars: "caratteri",
   words: "parole",
   pages: "pagine",
@@ -20,16 +28,21 @@ const labels: Record<DocStat["kind"], string> = {
   scenes: "scene",
 };
 
-const formatNumber = (n: number): string =>
-  new Intl.NumberFormat("it-IT").format(n);
+const formatNumber = (n: number, locale: string): string =>
+  new Intl.NumberFormat(locale).format(n);
 
-const formatValue = (s: DocStat): string => {
-  const base = formatNumber(s.value);
+const formatValue = (s: DocStat, locale: string): string => {
+  const base = formatNumber(s.value, locale);
   if (s.kind === "pages" && s.approx) return `~${base}`;
   return base;
 };
 
-export function DocStats({ stats, className }: DocStatsProps) {
+export function DocStats({
+  stats,
+  className,
+  labels,
+  numberLocale = "it-IT",
+}: DocStatsProps) {
   if (stats.length === 0) return null;
   return (
     <dl
@@ -38,13 +51,11 @@ export function DocStats({ stats, className }: DocStatsProps) {
       data-testid="doc-stats"
     >
       {stats.map((stat) => (
-        <div
-          key={stat.kind}
-          className={styles.item}
-          data-stat={stat.kind}
-        >
-          <dt className={styles.label}>{labels[stat.kind]}</dt>
-          <dd className={styles.value}>{formatValue(stat)}</dd>
+        <div key={stat.kind} className={styles.item} data-stat={stat.kind}>
+          <dt className={styles.label}>
+            {labels?.[stat.kind] ?? DEFAULT_LABELS[stat.kind]}
+          </dt>
+          <dd className={styles.value}>{formatValue(stat, numberLocale)}</dd>
         </div>
       ))}
     </dl>

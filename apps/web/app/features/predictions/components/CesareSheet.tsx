@@ -786,6 +786,11 @@ export function CesareSheet({
         openAsColumn: t("shell.cesareDrawer.openAsColumn"),
         minimize: t("shell.cesareDrawer.minimize"),
         close: t("shell.cesareDrawer.close"),
+        resizeHeight: t("shell.cesareDrawer.resizeHeight"),
+        resizeWidth: t("shell.cesareDrawer.resizeWidth"),
+        selectSession: t("shell.cesareDrawer.selectSession"),
+        scrollToNewReplies: t("shell.cesareDrawer.scrollToNewReplies"),
+        sendMessage: t("shell.cesareDrawer.sendMessage"),
       }}
     >
       {conversationBody}

@@ -78,6 +78,13 @@ export type RailLabels = {
   profile?: string;
   account?: string;
   tools?: string;
+  /** Aria-label + title for the collapse-sidebar button (full mode). */
+  collapseSidebar?: string;
+  /** Aria-label for the lock-open chip (overlay mode). */
+  lockSidebar?: string;
+  /** Prefix for the project header's aria-label / dropdown trigger, e.g.
+   *  "Project:" — combined with the project title as `"{prefix} {title}"`. */
+  projectLabelPrefix?: string;
 };
 
 // Account row that lives in the rail FOOTER (Spec 47b FIX 1): notifications /
@@ -682,6 +689,10 @@ export function LeftRail({
   const profileLabel = labels?.profile ?? "Profilo";
   const accountLabel = labels?.account ?? "Account";
   const toolsLabel = labels?.tools ?? "Strumenti";
+  const collapseSidebarLabel =
+    labels?.collapseSidebar ?? "Comprimi la barra laterale (⌘\\)";
+  const lockSidebarLabel = labels?.lockSidebar ?? "Fissa sidebar (⌘\\)";
+  const projectLabelPrefix = labels?.projectLabelPrefix ?? "Progetto:";
   const railRef = useRef<HTMLElement>(null);
   const brandRef = useRef<HTMLButtonElement>(null);
   const { buttonProps: brandBtnProps } = useButton(
@@ -693,7 +704,7 @@ export function LeftRail({
     {
       onPress: project?.onPress ?? (() => undefined),
       "aria-label": project
-        ? `Progetto: ${project.title}`
+        ? `${projectLabelPrefix} ${project.title}`
         : projectFallbackLabel,
       isDisabled: !project?.onPress,
     },
@@ -703,7 +714,7 @@ export function LeftRail({
   const { buttonProps: lockBtnProps } = useButton(
     {
       onPress: overlay?.onLockOpen ?? (() => undefined),
-      "aria-label": "Fissa sidebar (⌘\\)",
+      "aria-label": lockSidebarLabel,
       isDisabled: !overlay?.onLockOpen,
     },
     lockRef,
@@ -712,7 +723,7 @@ export function LeftRail({
   const { buttonProps: collapseBtnProps } = useButton(
     {
       onPress: onCollapse ?? (() => undefined),
-      "aria-label": "Comprimi la barra laterale (⌘\\)",
+      "aria-label": collapseSidebarLabel,
       isDisabled: !onCollapse,
     },
     collapseRef,
@@ -850,7 +861,7 @@ export function LeftRail({
             ref={lockRef}
             {...lockBtnProps}
             className={styles.lockOpen}
-            title="Fissa sidebar (⌘\)"
+            title={lockSidebarLabel}
             data-testid="rail-lock-open"
           >
             »
@@ -861,7 +872,7 @@ export function LeftRail({
             ref={collapseRef}
             {...collapseBtnProps}
             className={styles.collapse}
-            title="Comprimi la barra laterale (⌘\)"
+            title={collapseSidebarLabel}
             data-testid="rail-collapse"
           >
             «
@@ -889,7 +900,7 @@ export function LeftRail({
               items={[...project.menuItems]}
               align="start"
               triggerClassName={styles.project}
-              triggerLabel={`Progetto: ${project.title}`}
+              triggerLabel={`${projectLabelPrefix} ${project.title}`}
               triggerTestId="rail-project-menu-trigger"
               data-testid="rail-project-menu"
               trigger={headerContent}

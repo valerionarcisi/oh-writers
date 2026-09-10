@@ -179,6 +179,11 @@ export const projectsKeys = {
     "projects.activity.screenplaySaved": "Screenplay updated ({count} pages).",
     "projects.activity.documentEdited": "{title} updated.",
     "projects.activity.projectCreated": "Project created.",
+
+    // New project route — found hardcoded IT-only while producing the EN
+    // demo (2026-09-10), never routed through i18n.
+    "projects.new.title": "New project",
+    "projects.new.submit": "Create project",
   },
   it: {
     // Project form
@@ -361,5 +366,9 @@ export const projectsKeys = {
       "Sceneggiatura aggiornata ({count} pagine).",
     "projects.activity.documentEdited": "{title} aggiornato.",
     "projects.activity.projectCreated": "Progetto creato.",
+
+    // New project route
+    "projects.new.title": "Nuovo progetto",
+    "projects.new.submit": "Crea progetto",
   },
 } as const satisfies LocaleDict;

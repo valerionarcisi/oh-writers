@@ -34,6 +34,7 @@ export const commonKeys = {
     "action.settings": "Settings",
     "action.overview": "Overview",
     "action.signOut": "Sign out",
+    "action.moreActions": "More actions",
   },
   it: {
     // Navigation — shell
@@ -67,5 +68,6 @@ export const commonKeys = {
     "action.settings": "Impostazioni",
     "action.overview": "Panoramica",
     "action.signOut": "Esci",
+    "action.moreActions": "Altre azioni",
   },
 } as const satisfies LocaleDict;

@@ -188,6 +188,16 @@ export type CesareDrawerLabels = {
   close?: string;
   /** Split surface only: aria-label + title for "shrink to floating" (◫). */
   shrinkToFloat?: string;
+  /** Aria-label for the resize-height drag handle (defaults to IT). */
+  resizeHeight?: string;
+  /** Aria-label for the resize-width drag handle, split state (defaults to IT). */
+  resizeWidth?: string;
+  /** Aria-label for the session-selector trigger (defaults to IT). */
+  selectSession?: string;
+  /** Aria-label + link text for the "jump to new replies" scroll nudge. */
+  scrollToNewReplies?: string;
+  /** Aria-label for the composer's send button (defaults to IT). */
+  sendMessage?: string;
 };
 
 // ─── Internal building blocks ───────────────────────────────────────────────
@@ -329,6 +339,15 @@ export function CesareDrawer({
   const minimizeLabel = labels?.minimize ?? "Minimizza";
   const closeLabel = labels?.close ?? "Chiudi";
   const shrinkToFloatLabel = labels?.shrinkToFloat ?? "Riduci a floating";
+  const resizeHeightLabel =
+    labels?.resizeHeight ?? "Ridimensiona altezza drawer";
+  const resizeWidthLabel =
+    labels?.resizeWidth ?? "Ridimensiona larghezza drawer";
+  const selectSessionLabel =
+    labels?.selectSession ?? "Seleziona sessione Cesare";
+  const scrollToNewRepliesLabel =
+    labels?.scrollToNewReplies ?? "Vai alle nuove risposte";
+  const sendMessageLabel = labels?.sendMessage ?? "Invia messaggio";
   // ─── Resize state ────────────────────────────────────────────────────────
   const isExpanded = state === "expanded";
   const isSplit = state === "expanded-split";
@@ -372,6 +391,7 @@ export function CesareDrawer({
     max: "76vh",
     onSizeChange: persistExpanded,
     isDisabled: !isExpanded,
+    ariaLabel: resizeHeightLabel,
   });
   const splitResize = useDrawerResize({
     axis: "inline",
@@ -380,6 +400,7 @@ export function CesareDrawer({
     max: "60vw",
     onSizeChange: persistSplit,
     isDisabled: !isSplit,
+    ariaLabel: resizeWidthLabel,
   });
 
   // ─── Inline custom properties driving the drawer size ───────────────────
@@ -506,7 +527,7 @@ export function CesareDrawer({
                 type="button"
                 className={styles.sessionSelector}
                 onClick={onSessionSelectorClick}
-                aria-label="Seleziona sessione Cesare"
+                aria-label={selectSessionLabel}
                 aria-haspopup="listbox"
                 data-testid="cesare-session-selector"
               >
@@ -602,9 +623,9 @@ export function CesareDrawer({
               .filter(Boolean)
               .join(" ")}
             onClick={scrollToBottom}
-            aria-label="Vai alle nuove risposte"
+            aria-label={scrollToNewRepliesLabel}
           >
-            ↓ Vai alle nuove risposte
+            ↓ {scrollToNewRepliesLabel}
           </button>
         </div>
 
@@ -682,7 +703,7 @@ export function CesareDrawer({
                     className={styles.composerSend}
                     onClick={composer.onSubmit}
                     disabled={composer.value.trim().length === 0}
-                    aria-label="Invia messaggio"
+                    aria-label={sendMessageLabel}
                     data-testid="cesare-send-btn"
                   >
                     ↑

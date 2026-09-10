@@ -226,6 +226,11 @@ export const appShellKeys = {
     "shell.cesareDrawer.openAsColumn": "Open as column",
     "shell.cesareDrawer.minimize": "Minimise",
     "shell.cesareDrawer.close": "Close",
+    "shell.cesareDrawer.resizeHeight": "Resize drawer height",
+    "shell.cesareDrawer.resizeWidth": "Resize drawer width",
+    "shell.cesareDrawer.selectSession": "Select Cesare session",
+    "shell.cesareDrawer.scrollToNewReplies": "Jump to new replies",
+    "shell.cesareDrawer.sendMessage": "Send message",
     // Banner dismiss
     "shell.banner.dismiss": "Close",
     // ConfirmDialog default actions
@@ -240,6 +245,8 @@ export const appShellKeys = {
     "shell.gearMenu.accountSettings": "Account settings",
     "shell.gearMenu.aiCredits": "AI · credits & models",
     "shell.rail.tools": "Tools",
+    "shell.rail.collapseSidebar": "Collapse sidebar (⌘\\)",
+    "shell.rail.lockSidebar": "Pin sidebar open (⌘\\)",
     "shell.skipLink": "Skip to content",
     // Relative time buckets for the session list ({n} = number)
     "shell.relative.now": "now",
@@ -269,6 +276,28 @@ export const appShellKeys = {
     "notFound.title": "Page not found",
     "notFound.body":
       "We couldn't find what you were looking for. It may have been moved or removed, or the link is incorrect.",
+
+    // TopBar breadcrumb / section nav labels (route → human label), driven
+    // from _app.tsx's SECTION_LABELS/SECTION_GROUPS — found hardcoded IT-only
+    // while producing the EN demo (2026-09-10), never routed through i18n.
+    "shell.section.dashboard": "Projects",
+    "shell.section.overview": "Overview",
+    "shell.section.soggetto": "Treatment outline",
+    "shell.section.synopsis": "Synopsis",
+    "shell.section.outline": "Outline",
+    "shell.section.treatment": "Treatment",
+    "shell.section.screenplay": "Screenplay",
+    "shell.section.breakdown": "Breakdown",
+    "shell.section.budget": "Budget",
+    "shell.section.shootingPlan": "Shots",
+    "shell.section.schedule": "Scheduling",
+    "shell.section.locations": "Locations",
+    "shell.section.settings": "Settings",
+    "shell.section.titlePage": "Title page",
+    "shell.section.sessions": "Cesare",
+    "shell.sectionGroup.writing": "Writing",
+    "shell.sectionGroup.preProduction": "Pre-production",
+    "shell.projectLabelPrefix": "Project:",
   },
   it: {
     // Cesare success toasts (live-apply markers)
@@ -494,6 +523,11 @@ export const appShellKeys = {
     "shell.cesareDrawer.openAsColumn": "Apri come colonna",
     "shell.cesareDrawer.minimize": "Minimizza",
     "shell.cesareDrawer.close": "Chiudi",
+    "shell.cesareDrawer.resizeHeight": "Ridimensiona altezza drawer",
+    "shell.cesareDrawer.resizeWidth": "Ridimensiona larghezza drawer",
+    "shell.cesareDrawer.selectSession": "Seleziona sessione Cesare",
+    "shell.cesareDrawer.scrollToNewReplies": "Vai alle nuove risposte",
+    "shell.cesareDrawer.sendMessage": "Invia messaggio",
     // Banner dismiss
     "shell.banner.dismiss": "Chiudi",
     // ConfirmDialog default actions
@@ -508,6 +542,8 @@ export const appShellKeys = {
     "shell.gearMenu.accountSettings": "Impostazioni account",
     "shell.gearMenu.aiCredits": "AI · crediti e modelli",
     "shell.rail.tools": "Strumenti",
+    "shell.rail.collapseSidebar": "Comprimi la barra laterale (⌘\\)",
+    "shell.rail.lockSidebar": "Fissa sidebar (⌘\\)",
     "shell.skipLink": "Salta al contenuto",
     // Relative time buckets for the session list ({n} = number)
     "shell.relative.now": "ora",
@@ -536,5 +572,25 @@ export const appShellKeys = {
     "notFound.title": "Pagina non trovata",
     "notFound.body":
       "Non abbiamo trovato quello che cercavi. Potrebbe essere stato spostato o rimosso, oppure il link non è corretto.",
+
+    // TopBar breadcrumb / section nav labels
+    "shell.section.dashboard": "Progetti",
+    "shell.section.overview": "Panoramica",
+    "shell.section.soggetto": "Soggetto",
+    "shell.section.synopsis": "Sinossi",
+    "shell.section.outline": "Scaletta",
+    "shell.section.treatment": "Trattamento",
+    "shell.section.screenplay": "Sceneggiatura",
+    "shell.section.breakdown": "Breakdown",
+    "shell.section.budget": "Budget",
+    "shell.section.shootingPlan": "Inquadrature",
+    "shell.section.schedule": "Calendarizzazione",
+    "shell.section.locations": "Location",
+    "shell.section.settings": "Impostazioni",
+    "shell.section.titlePage": "Frontespizio",
+    "shell.section.sessions": "Cesare",
+    "shell.sectionGroup.writing": "Scrittura",
+    "shell.sectionGroup.preProduction": "Pre-produzione",
+    "shell.projectLabelPrefix": "Progetto:",
   },
 } as const satisfies LocaleDict;
