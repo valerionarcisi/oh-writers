@@ -11,7 +11,7 @@ describe("RailHamburger", () => {
       <RailHamburger onPress={vi.fn()} isOverlayOpen={false} />,
     );
     const btn = getByTestId("rail-hamburger");
-    expect(btn.getAttribute("aria-label")).toBe("Apri sidebar");
+    expect(btn.getAttribute("aria-label")).toBe("Open sidebar");
     expect(btn.getAttribute("aria-expanded")).toBe("false");
   });
 
@@ -20,7 +20,7 @@ describe("RailHamburger", () => {
       <RailHamburger onPress={vi.fn()} isOverlayOpen={true} />,
     );
     const btn = getByTestId("rail-hamburger");
-    expect(btn.getAttribute("aria-label")).toBe("Fissa sidebar (⌘\\)");
+    expect(btn.getAttribute("aria-label")).toBe("Pin sidebar open (⌘\\)");
     expect(btn.getAttribute("aria-expanded")).toBe("true");
   });
 

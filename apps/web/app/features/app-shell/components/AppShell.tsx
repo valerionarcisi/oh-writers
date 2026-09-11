@@ -1739,6 +1739,7 @@ function AppShellInner({
                 onHoverEnd={railOverlay.scheduleClose}
                 isOverlayOpen={railOverlay.isOpen}
                 openLabel={t("shell.rail.openSidebar")}
+                lockLabel={t("shell.rail.lockSidebar")}
               />
             }
             sectionName={sectionName}

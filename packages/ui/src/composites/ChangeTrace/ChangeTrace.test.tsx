@@ -94,7 +94,7 @@ describe("ChangeTrace", () => {
     expect(screen.queryByText("Sc.2 — INT. CUCINA")).toBeNull();
   });
 
-  it("calls onShowChanges when 'Mostra modifiche' is clicked", () => {
+  it("calls onShowChanges when 'Show changes' is clicked", () => {
     const onShowChanges = vi.fn();
     render(
       <ChangeTrace
@@ -104,7 +104,7 @@ describe("ChangeTrace", () => {
         onShowChanges={onShowChanges}
       />,
     );
-    fireEvent.click(screen.getByText("Mostra modifiche"));
+    fireEvent.click(screen.getByText("Show changes"));
     expect(onShowChanges).toHaveBeenCalledTimes(1);
   });
 
@@ -120,12 +120,12 @@ describe("ChangeTrace", () => {
         onHideChanges={onHideChanges}
       />,
     );
-    fireEvent.click(screen.getByText("Mostra modifiche"));
+    fireEvent.click(screen.getByText("Show changes"));
     expect(onShowChanges).toHaveBeenCalledTimes(1);
-    expect(screen.getByText("Nascondi modifiche")).toBeTruthy();
-    fireEvent.click(screen.getByText("Nascondi modifiche"));
+    expect(screen.getByText("Hide changes")).toBeTruthy();
+    fireEvent.click(screen.getByText("Hide changes"));
     expect(onHideChanges).toHaveBeenCalledTimes(1);
-    expect(screen.getByText("Mostra modifiche")).toBeTruthy();
+    expect(screen.getByText("Show changes")).toBeTruthy();
   });
 
   it("respects controlled isShowingChanges flag", () => {
@@ -138,7 +138,7 @@ describe("ChangeTrace", () => {
         isShowingChanges={false}
       />,
     );
-    expect(screen.getByText("Mostra modifiche")).toBeTruthy();
+    expect(screen.getByText("Show changes")).toBeTruthy();
     rerender(
       <ChangeTrace
         title="Aggiornata"
@@ -148,7 +148,7 @@ describe("ChangeTrace", () => {
         isShowingChanges
       />,
     );
-    expect(screen.getByText("Nascondi modifiche")).toBeTruthy();
+    expect(screen.getByText("Hide changes")).toBeTruthy();
   });
 
   // Spec 47e — the inline "Annulla" affordance was removed: the edit is always
@@ -177,7 +177,7 @@ describe("ChangeTrace", () => {
         isShowingChanges
       />,
     );
-    const btn = screen.getByText("Nascondi modifiche");
+    const btn = screen.getByText("Hide changes");
     expect(btn.getAttribute("aria-pressed")).toBe("true");
   });
 

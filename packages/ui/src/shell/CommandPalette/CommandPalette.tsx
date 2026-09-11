@@ -26,7 +26,7 @@ export type CommandPaletteProps = {
   items: ReadonlyArray<CommandPaletteItem>;
   placeholder?: string;
   emptyLabel?: string;
-  /** Aria-label for the results listbox (defaults to IT "Risultati"). */
+  /** Aria-label for the results listbox (defaults to EN "Results"). */
   resultsLabel?: string;
 };
 
@@ -77,7 +77,7 @@ export function CommandPalette({
   items,
   placeholder = "Cerca comandi, scene, persone…",
   emptyLabel = "Nessun risultato",
-  resultsLabel = "Risultati",
+  resultsLabel = "Results",
 }: CommandPaletteProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -232,7 +232,9 @@ export function CommandPalette({
                   aria-selected={entry.selectableIndex === activeIndex}
                   className={[
                     styles.item,
-                    entry.selectableIndex === activeIndex ? styles.itemActive : "",
+                    entry.selectableIndex === activeIndex
+                      ? styles.itemActive
+                      : "",
                   ]
                     .filter(Boolean)
                     .join(" ")}

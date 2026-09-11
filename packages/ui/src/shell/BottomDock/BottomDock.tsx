@@ -13,9 +13,9 @@ export type BottomDockProps = {
   /** When true (default), the Cesare label is shown next to the spark.
    *  Set to false to render an icon-only pill on tight screens. */
   showCesareLabel?: boolean;
-  /** Aria-label + title for the Cesare launcher (defaults to IT "Apri Cesare"). */
+  /** Aria-label + title for the Cesare launcher (defaults to EN "Open Cesare"). */
   openCesareLabel?: string;
-  /** Aria-label for the dock toolbar (defaults to IT "Azioni globali"). */
+  /** Aria-label for the dock toolbar (defaults to EN "Global actions"). */
   actionsLabel?: string;
 };
 
@@ -54,8 +54,8 @@ function CesareButton({
 export function BottomDock({
   onCesareToggle,
   showCesareLabel = true,
-  openCesareLabel = "Apri Cesare",
-  actionsLabel = "Azioni globali",
+  openCesareLabel = "Open Cesare",
+  actionsLabel = "Global actions",
 }: BottomDockProps) {
   return (
     <div

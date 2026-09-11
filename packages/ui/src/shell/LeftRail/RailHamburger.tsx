@@ -23,11 +23,13 @@ export interface RailHamburgerProps {
   onHoverEnd?: () => void;
   /** Reflects the current overlay state for screen readers + visual styling. */
   isOverlayOpen: boolean;
-  /** Optional aria-label override applied to both states (Italian by default).
-   *  When omitted, the per-state `openLabel` / `pinLabel` are used. */
+  /** Optional aria-label override applied to both states (EN by default).
+   *  When omitted, the per-state `openLabel` / `lockLabel` are used. */
   ariaLabel?: string;
-  /** Aria-label when the overlay is closed (defaults to IT "Apri sidebar"). */
+  /** Aria-label when the overlay is closed (defaults to EN "Open sidebar"). */
   openLabel?: string;
+  /** Aria-label when the overlay is open (defaults to EN "Pin sidebar open (⌘\\)"). */
+  lockLabel?: string;
 }
 
 export function RailHamburger({
@@ -37,11 +39,14 @@ export function RailHamburger({
   isOverlayOpen,
   ariaLabel,
   openLabel,
+  lockLabel,
 }: RailHamburgerProps) {
   const ref = useRef<HTMLButtonElement>(null);
   const label =
     ariaLabel ??
-    (isOverlayOpen ? "Fissa sidebar (⌘\\)" : (openLabel ?? "Apri sidebar"));
+    (isOverlayOpen
+      ? (lockLabel ?? "Pin sidebar open (⌘\\)")
+      : (openLabel ?? "Open sidebar"));
   const { buttonProps } = useButton(
     {
       onPress,

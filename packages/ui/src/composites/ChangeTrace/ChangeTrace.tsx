@@ -79,9 +79,9 @@ export interface ChangeTraceProps {
    *  Drives the button label (`Mostra` ↔ `Nascondi`). When omitted the
    *  component holds its own state. */
   readonly isShowingChanges?: boolean;
-  /** Label for the "show diff" toggle (defaults to IT "Mostra modifiche"). */
+  /** Label for the "show diff" toggle (defaults to EN "Show changes"). */
   readonly showChangesLabel?: string;
-  /** Label for the "hide diff" toggle (defaults to IT "Nascondi modifiche"). */
+  /** Label for the "hide diff" toggle (defaults to EN "Hide changes"). */
   readonly hideChangesLabel?: string;
   /** Fires when the user clicks the "open this entity's page" button. Omitted →
    *  the button is not rendered. Lets a chat-session result card jump to the
@@ -122,8 +122,8 @@ export function ChangeTrace({
   onShowChanges,
   onHideChanges,
   isShowingChanges,
-  showChangesLabel = "Mostra modifiche",
-  hideChangesLabel = "Nascondi modifiche",
+  showChangesLabel = "Show changes",
+  hideChangesLabel = "Hide changes",
   onOpenEntity,
   openEntityLabel,
   onOpenSplit,

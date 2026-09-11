@@ -12,7 +12,7 @@ export type DocStatsLabels = Partial<Record<DocStat["kind"], string>>;
 export type DocStatsProps = {
   stats: ReadonlyArray<DocStat>;
   className?: string;
-  /** Translated unit labels. Optional — each field defaults to its IT value
+  /** Translated unit labels. Optional — each field defaults to EN
    *  so the component renders correctly without a translator. */
   labels?: DocStatsLabels;
   /** BCP-47 locale for number formatting (e.g. "en" or "it"). */

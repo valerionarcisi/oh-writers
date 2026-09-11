@@ -171,7 +171,7 @@ export type LeftRailProps = {
   tools?: ReadonlyArray<RailToolItem>;
   /** Optional aria-label override for the rail nav landmark. */
   ariaLabel?: string;
-  /** Translated chrome labels. Optional — each field defaults to its IT value
+  /** Translated chrome labels. Optional — each field defaults to EN
    *  so the rail renders correctly without a translator. */
   labels?: RailLabels;
   /** Collapse the shell from inside the rail. When provided (full mode only),

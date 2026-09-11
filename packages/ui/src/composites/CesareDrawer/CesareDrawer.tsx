@@ -166,37 +166,37 @@ export interface CesareDrawerProps {
   /** Accessible label for the drawer landmark. */
   ariaLabel?: string;
 
-  /** Translated chrome labels. Each field is optional and defaults to its IT
-   *  value, so the drawer renders correctly without a translator. */
+  /** Translated chrome labels. Each field is optional and defaults to EN,
+   *  so the drawer renders correctly without a translator. */
   labels?: CesareDrawerLabels;
 }
 
-// User-facing labels for the drawer chrome. Optional with IT defaults so
+// User-facing labels for the drawer chrome. Optional with EN defaults so
 // `packages/ui` stays framework-agnostic.
 export type CesareDrawerLabels = {
-  /** Peek-row aria-label for the expand affordance (defaults to IT). */
+  /** Peek-row aria-label for the expand affordance (defaults to EN). */
   peekExpand?: string;
-  /** Peek-row aria-label for the close affordance (defaults to IT). */
+  /** Peek-row aria-label for the close affordance (defaults to EN). */
   peekClose?: string;
-  /** Header aria-label + title for expand (defaults to IT "Espandi"). */
+  /** Header aria-label + title for expand (defaults to EN "Expand"). */
   expand?: string;
-  /** Header aria-label + title for "open as column" (defaults to IT). */
+  /** Header aria-label + title for "open as column" (defaults to EN). */
   openAsColumn?: string;
-  /** Header aria-label + title for minimise (defaults to IT "Minimizza"). */
+  /** Header aria-label + title for minimise (defaults to EN "Minimize"). */
   minimize?: string;
-  /** Header aria-label + title for close (defaults to IT "Chiudi"). */
+  /** Header aria-label + title for close (defaults to EN "Close"). */
   close?: string;
   /** Split surface only: aria-label + title for "shrink to floating" (◫). */
   shrinkToFloat?: string;
-  /** Aria-label for the resize-height drag handle (defaults to IT). */
+  /** Aria-label for the resize-height drag handle (defaults to EN). */
   resizeHeight?: string;
-  /** Aria-label for the resize-width drag handle, split state (defaults to IT). */
+  /** Aria-label for the resize-width drag handle, split state (defaults to EN). */
   resizeWidth?: string;
-  /** Aria-label for the session-selector trigger (defaults to IT). */
+  /** Aria-label for the session-selector trigger (defaults to EN). */
   selectSession?: string;
   /** Aria-label + link text for the "jump to new replies" scroll nudge. */
   scrollToNewReplies?: string;
-  /** Aria-label for the composer's send button (defaults to IT). */
+  /** Aria-label for the composer's send button (defaults to EN). */
   sendMessage?: string;
 };
 

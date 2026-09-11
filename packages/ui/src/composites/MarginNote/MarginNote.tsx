@@ -8,9 +8,9 @@ export type MarginNoteProps = {
   text: string;
   onAccept?: () => void;
   onIgnore?: () => void;
-  /** Aria-label for the accept button (defaults to IT). */
+  /** Aria-label for the accept button (defaults to EN). */
   acceptLabel?: string;
-  /** Aria-label for the ignore button (defaults to IT). */
+  /** Aria-label for the ignore button (defaults to EN). */
   ignoreLabel?: string;
 };
 
@@ -24,8 +24,8 @@ export function MarginNote({
   text,
   onAccept,
   onIgnore,
-  acceptLabel = "Accetta suggerimento di Cesare",
-  ignoreLabel = "Ignora suggerimento di Cesare",
+  acceptLabel = "Accept Cesare's suggestion",
+  ignoreLabel = "Ignore Cesare's suggestion",
 }: MarginNoteProps) {
   const isProducer = kind === "producer";
 

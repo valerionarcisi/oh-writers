@@ -68,11 +68,11 @@ export interface SplitDrawerProps {
   /** Accessible label for the drawer landmark. */
   ariaLabel?: string;
 
-  /** Aria-label + title for the expand control (defaults to IT "Espandi"). */
+  /** Aria-label + title for the expand control (defaults to EN "Expand"). */
   expandLabel?: string;
-  /** Aria-label + title for the close control (defaults to IT "Chiudi"). */
+  /** Aria-label + title for the close control (defaults to EN "Close"). */
   closeLabel?: string;
-  /** Aria-label + title for the step-back control (defaults to IT "Riduci"). */
+  /** Aria-label + title for the step-back control (defaults to EN "Reduce"). */
   reduceLabel?: string;
 
   /**
@@ -136,9 +136,9 @@ export function SplitDrawer({
   onSizeChange,
   className,
   ariaLabel = "Split drawer",
-  expandLabel = "Espandi",
-  closeLabel = "Chiudi",
-  reduceLabel = "Riduci",
+  expandLabel = "Expand",
+  closeLabel = "Close",
+  reduceLabel = "Reduce",
   placement = "overlay",
   testId,
 }: SplitDrawerProps) {

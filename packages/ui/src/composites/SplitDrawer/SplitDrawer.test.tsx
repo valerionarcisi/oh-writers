@@ -203,7 +203,7 @@ describe("SplitDrawer", () => {
     const { getByLabelText } = render(
       <SplitDrawer {...baseProps} onClose={onClose} />,
     );
-    fireEvent.click(getByLabelText("Chiudi"));
+    fireEvent.click(getByLabelText("Close"));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
@@ -212,7 +212,7 @@ describe("SplitDrawer", () => {
     const { getByLabelText } = render(
       <SplitDrawer {...baseProps} onCycle={onCycle} />,
     );
-    fireEvent.click(getByLabelText("Espandi"));
+    fireEvent.click(getByLabelText("Expand"));
     expect(onCycle).toHaveBeenCalledTimes(1);
   });
 
@@ -221,12 +221,12 @@ describe("SplitDrawer", () => {
     const { queryByLabelText, rerender, getByLabelText } = render(
       <SplitDrawer {...baseProps} onStepBack={onStepBack} />,
     );
-    expect(queryByLabelText("Riduci")).toBeNull();
+    expect(queryByLabelText("Reduce")).toBeNull();
 
     rerender(
       <SplitDrawer {...baseProps} state="full" onStepBack={onStepBack} />,
     );
-    fireEvent.click(getByLabelText("Riduci"));
+    fireEvent.click(getByLabelText("Reduce"));
     expect(onStepBack).toHaveBeenCalledTimes(1);
   });
 
