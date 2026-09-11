@@ -26,7 +26,7 @@ describe("MarginNote", () => {
     const { getByText } = render(
       <MarginNote kind="dramaturg" text="Test." onAccept={onAccept} />,
     );
-    fireEvent.click(getByText("Accetta"));
+    fireEvent.click(getByText("Accept"));
     expect(onAccept).toHaveBeenCalledTimes(1);
   });
 
@@ -35,7 +35,7 @@ describe("MarginNote", () => {
     const { getByText } = render(
       <MarginNote kind="dramaturg" text="Test." onIgnore={onIgnore} />,
     );
-    fireEvent.click(getByText("Ignora"));
+    fireEvent.click(getByText("Ignore"));
     expect(onIgnore).toHaveBeenCalledTimes(1);
   });
 
@@ -43,7 +43,7 @@ describe("MarginNote", () => {
     const { queryByText } = render(
       <MarginNote kind="dramaturg" text="Solo nota." />,
     );
-    expect(queryByText("Accetta")).toBeNull();
-    expect(queryByText("Ignora")).toBeNull();
+    expect(queryByText("Accept")).toBeNull();
+    expect(queryByText("Ignore")).toBeNull();
   });
 });

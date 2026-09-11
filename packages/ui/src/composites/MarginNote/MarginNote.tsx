@@ -56,7 +56,7 @@ export function MarginNote({
               onClick={onAccept}
               aria-label={acceptLabel}
             >
-              Accetta
+              Accept
             </button>
           )}
           {onIgnore && (
@@ -66,7 +66,7 @@ export function MarginNote({
               onClick={onIgnore}
               aria-label={ignoreLabel}
             >
-              Ignora
+              Ignore
             </button>
           )}
         </div>
