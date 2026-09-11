@@ -1,3 +1,9 @@
+## [1.1.0-beta.11](https://github.com/valerionarcisi/oh-writers/compare/v1.1.0-beta.10...v1.1.0-beta.11) (2026-09-11)
+
+### Features
+
+* public home page for ohwriters.com ([#168](https://github.com/valerionarcisi/oh-writers/issues/168)) ([#170](https://github.com/valerionarcisi/oh-writers/issues/170)) ([d11cba7](https://github.com/valerionarcisi/oh-writers/commit/d11cba79e530e8b5a1cd907b99446922508dda50)), closes [#136](https://github.com/valerionarcisi/oh-writers/issues/136)
+
 ## [1.1.0-beta.10](https://github.com/valerionarcisi/oh-writers/compare/v1.1.0-beta.9...v1.1.0-beta.10) (2026-09-08)
 
 ### Bug Fixes
