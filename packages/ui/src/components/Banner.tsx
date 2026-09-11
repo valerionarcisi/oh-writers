@@ -14,7 +14,7 @@ export interface BannerProps {
   message: ReactNode;
   actions?: BannerAction[];
   onDismiss?: () => void;
-  /** Aria-label for the dismiss button (defaults to IT "Chiudi"). */
+  /** Aria-label for the dismiss button (defaults to EN "Close"). */
   dismissLabel?: string;
   className?: string;
   "data-testid"?: string;
@@ -31,7 +31,7 @@ export function Banner({
   message,
   actions,
   onDismiss,
-  dismissLabel = "Chiudi",
+  dismissLabel = "Close",
   className,
   ...rest
 }: BannerProps) {

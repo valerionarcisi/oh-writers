@@ -252,7 +252,7 @@ describe("CesareDrawer", () => {
     const { getByLabelText } = render(
       <CesareDrawer {...baseProps} onCycle={onCycle} />,
     );
-    fireEvent.click(getByLabelText("Espandi"));
+    fireEvent.click(getByLabelText("Expand"));
     expect(onCycle).toHaveBeenCalledTimes(1);
   });
 
@@ -262,8 +262,8 @@ describe("CesareDrawer", () => {
     const { getByLabelText } = render(
       <CesareDrawer {...baseProps} onPeek={onPeek} onClose={onClose} />,
     );
-    fireEvent.click(getByLabelText("Minimizza"));
-    fireEvent.click(getByLabelText("Chiudi"));
+    fireEvent.click(getByLabelText("Minimize"));
+    fireEvent.click(getByLabelText("Close"));
     expect(onPeek).toHaveBeenCalledTimes(1);
     expect(onClose).toHaveBeenCalledTimes(1);
   });
@@ -281,7 +281,7 @@ describe("CesareDrawer", () => {
         onSessionSelectorClick={() => undefined}
       />,
     );
-    const trigger = getByLabelText("Seleziona sessione Cesare");
+    const trigger = getByLabelText("Select Cesare session");
     expect(trigger.textContent).toContain("Breakdown Sc.2");
   });
 
@@ -293,9 +293,9 @@ describe("CesareDrawer", () => {
       <CesareDrawer {...baseProps} onNewChat={() => undefined} />,
     );
     // Allowed primary icons.
-    expect(getByLabelText("Espandi")).toBeTruthy();
-    expect(getByLabelText("Minimizza")).toBeTruthy();
-    expect(getByLabelText("Chiudi")).toBeTruthy();
+    expect(getByLabelText("Expand")).toBeTruthy();
+    expect(getByLabelText("Minimize")).toBeTruthy();
+    expect(getByLabelText("Close")).toBeTruthy();
     // No overflow trigger.
     expect(queryByLabelText("Altre azioni")).toBeNull();
     // Account actions are never inline in the chat header.
@@ -317,13 +317,13 @@ describe("CesareDrawer", () => {
       />,
     );
     // ↗ and ↙ and × are present on the split surface.
-    expect(getByLabelText("Espandi")).toBeTruthy();
-    expect(getByLabelText("Riduci a floating")).toBeTruthy();
-    expect(getByLabelText("Chiudi")).toBeTruthy();
+    expect(getByLabelText("Expand")).toBeTruthy();
+    expect(getByLabelText("Shrink to floating")).toBeTruthy();
+    expect(getByLabelText("Close")).toBeTruthy();
     // The ◫ open-as-column marker is gone (it had this label when present).
     expect(queryByLabelText("Apri come colonna")).toBeNull();
     // The − minimise control is floating-only and never shows in split.
-    expect(queryByLabelText("Minimizza")).toBeNull();
+    expect(queryByLabelText("Minimize")).toBeNull();
   });
 
   it("never renders the `…` overflow trigger, even with onNewChat wired", () => {
@@ -378,8 +378,8 @@ describe("CesareDrawer", () => {
     expect(getAllByText("Cesare").length).toBeGreaterThanOrEqual(1);
     expect(getByText("· 3 passaggi")).toBeTruthy();
     // The peek row is rendered; its dedicated close button comes from
-    // PeekRow with the label "Chiudi Cesare" and is a child of the peek row.
-    const peekClose = queryByLabelText("Chiudi Cesare");
+    // PeekRow with the label "Close Cesare" and is a child of the peek row.
+    const peekClose = queryByLabelText("Close Cesare");
     expect(peekClose).toBeTruthy();
     // Drawer state attribute should be peek.
     expect(getByTestId("cesare-drawer").getAttribute("data-state")).toBe(

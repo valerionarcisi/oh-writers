@@ -81,7 +81,7 @@ import {
   SaveStatusIndicator,
 } from "~/features/app-shell";
 import type { ContextActionHandlers } from "~/features/app-shell";
-import { useTranslation } from "~/features/i18n";
+import { useLocale, useTranslation } from "~/features/i18n";
 import { useSaveScreenplay } from "../hooks/useScreenplay";
 import {
   useTitlePageState,
@@ -233,6 +233,7 @@ export const ScreenplayEditor = forwardRef<
   ref,
 ) {
   const { t } = useTranslation();
+  const locale = useLocale();
   const [content, setContent] = useState(screenplay.content);
   const [pmDoc, setPmDoc] = useState<Record<string, unknown> | null>(
     screenplay.pmDoc ?? null,
@@ -1095,9 +1096,10 @@ export const ScreenplayEditor = forwardRef<
         <ActionsMenu
           data-testid="screenplay-actions-menu"
           items={actionItems}
+          label={t("action.moreActions")}
         />
       ),
-    [actionItems, isFocusMode],
+    [actionItems, isFocusMode, t],
   );
   useTopBarSlotPublisher("actions", topBarActionsNode);
 
@@ -1302,6 +1304,11 @@ export const ScreenplayEditor = forwardRef<
               { kind: "scenes", value: totalScenes },
               { kind: "pages", value: totalPages },
             ]}
+            labels={{
+              scenes: t("screenplay.stats.scenes"),
+              pages: t("screenplay.stats.pages"),
+            }}
+            numberLocale={locale}
           />
         </div>
       )}

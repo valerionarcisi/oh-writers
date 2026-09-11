@@ -775,6 +775,7 @@ export function CesareSheet({
         onStop: () => chat.stop(activeSessionId ?? undefined),
         onRecallLast: handleRecallLast,
         isSubmitBlocked: submitBlockedPulse,
+        placeholder: t("cesare.session.composerPlaceholder"),
       }}
       peekSubtitle={
         isLoading ? t("cesare.peek.thinking") : t("cesare.peek.waiting")
@@ -786,6 +787,11 @@ export function CesareSheet({
         openAsColumn: t("shell.cesareDrawer.openAsColumn"),
         minimize: t("shell.cesareDrawer.minimize"),
         close: t("shell.cesareDrawer.close"),
+        resizeHeight: t("shell.cesareDrawer.resizeHeight"),
+        resizeWidth: t("shell.cesareDrawer.resizeWidth"),
+        selectSession: t("shell.cesareDrawer.selectSession"),
+        scrollToNewReplies: t("shell.cesareDrawer.scrollToNewReplies"),
+        sendMessage: t("shell.cesareDrawer.sendMessage"),
       }}
     >
       {conversationBody}

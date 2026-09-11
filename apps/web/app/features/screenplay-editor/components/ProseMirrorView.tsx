@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { useTranslation } from "~/features/i18n";
 import { EditorState, Plugin } from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
 import { history, undo, redo } from "prosemirror-history";
@@ -132,6 +133,7 @@ export function ProseMirrorView({
   realtime = false,
 }: ProseMirrorViewProps) {
   const isRealtime = realtime && !!ydoc && !!provider;
+  const { t } = useTranslation();
   const mountRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   // Track the last fountain string we fed in so we don't re-parse on our own
@@ -222,7 +224,13 @@ export function ProseMirrorView({
       state,
       editable: () => !readOnly,
       nodeViews: {
-        heading: (node, v, getPos) => createHeadingNodeView(node, v, getPos),
+        heading: (node, v, getPos) =>
+          createHeadingNodeView(node, v, getPos, {
+            labels: {
+              sceneActions: t("screenplay.heading.sceneActions"),
+              editSceneNumber: t("screenplay.heading.editSceneNumber"),
+            },
+          }),
       },
       dispatchTransaction(this: EditorView, tr) {
         // PM invokes this with the view as `this`. We read from `this` (never

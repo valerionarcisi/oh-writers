@@ -78,6 +78,13 @@ export type RailLabels = {
   profile?: string;
   account?: string;
   tools?: string;
+  /** Aria-label + title for the collapse-sidebar button (full mode). */
+  collapseSidebar?: string;
+  /** Aria-label for the lock-open chip (overlay mode). */
+  lockSidebar?: string;
+  /** Prefix for the project header's aria-label / dropdown trigger, e.g.
+   *  "Project:" — combined with the project title as `"{prefix} {title}"`. */
+  projectLabelPrefix?: string;
 };
 
 // Account row that lives in the rail FOOTER (Spec 47b FIX 1): notifications /
@@ -164,7 +171,7 @@ export type LeftRailProps = {
   tools?: ReadonlyArray<RailToolItem>;
   /** Optional aria-label override for the rail nav landmark. */
   ariaLabel?: string;
-  /** Translated chrome labels. Optional — each field defaults to its IT value
+  /** Translated chrome labels. Optional — each field defaults to EN
    *  so the rail renders correctly without a translator. */
   labels?: RailLabels;
   /** Collapse the shell from inside the rail. When provided (full mode only),
@@ -666,22 +673,26 @@ export function LeftRail({
   overlay,
   onCollapse,
 }: LeftRailProps) {
-  const sessionsTitleLabel = labels?.sessionsTitle ?? "Sessioni Cesare";
-  const sessionsOpenLabel = labels?.sessionsOpen ?? "Apri sessioni Cesare";
-  const notificationsLabel = labels?.notifications ?? "Notifiche";
+  const sessionsTitleLabel = labels?.sessionsTitle ?? "Cesare sessions";
+  const sessionsOpenLabel = labels?.sessionsOpen ?? "Open Cesare sessions";
+  const notificationsLabel = labels?.notifications ?? "Notifications";
   const notificationsUnreadLabel =
-    labels?.notificationsUnread ?? "Notifiche — nuove";
-  const settingsLabel = labels?.settings ?? "Impostazioni";
-  const projectFallbackLabel = labels?.projectFallback ?? "Progetto";
-  const newSessionLabel = labels?.newSession ?? "Nuova sessione Cesare";
-  const navLabel = labels?.nav ?? "Navigazione progetto";
-  const pinSessionLabel = labels?.pinSession ?? "Fissa in alto";
-  const unpinSessionLabel = labels?.unpinSession ?? "Rimuovi dai fissati";
-  const seeAllSessionsLabel = labels?.seeAllSessions ?? "Vedi tutte ({n})";
-  const newSessionShortLabel = labels?.newSessionShort ?? "+ Nuova";
-  const profileLabel = labels?.profile ?? "Profilo";
+    labels?.notificationsUnread ?? "Notifications — new";
+  const settingsLabel = labels?.settings ?? "Settings";
+  const projectFallbackLabel = labels?.projectFallback ?? "Project";
+  const newSessionLabel = labels?.newSession ?? "New Cesare session";
+  const navLabel = labels?.nav ?? "Project navigation";
+  const pinSessionLabel = labels?.pinSession ?? "Pin to top";
+  const unpinSessionLabel = labels?.unpinSession ?? "Remove from pinned";
+  const seeAllSessionsLabel = labels?.seeAllSessions ?? "See all ({n})";
+  const newSessionShortLabel = labels?.newSessionShort ?? "+ New";
+  const profileLabel = labels?.profile ?? "Profile";
   const accountLabel = labels?.account ?? "Account";
-  const toolsLabel = labels?.tools ?? "Strumenti";
+  const toolsLabel = labels?.tools ?? "Tools";
+  const collapseSidebarLabel =
+    labels?.collapseSidebar ?? "Collapse sidebar (⌘\\)";
+  const lockSidebarLabel = labels?.lockSidebar ?? "Lock sidebar (⌘\\)";
+  const projectLabelPrefix = labels?.projectLabelPrefix ?? "Project:";
   const railRef = useRef<HTMLElement>(null);
   const brandRef = useRef<HTMLButtonElement>(null);
   const { buttonProps: brandBtnProps } = useButton(
@@ -693,7 +704,7 @@ export function LeftRail({
     {
       onPress: project?.onPress ?? (() => undefined),
       "aria-label": project
-        ? `Progetto: ${project.title}`
+        ? `${projectLabelPrefix} ${project.title}`
         : projectFallbackLabel,
       isDisabled: !project?.onPress,
     },
@@ -703,7 +714,7 @@ export function LeftRail({
   const { buttonProps: lockBtnProps } = useButton(
     {
       onPress: overlay?.onLockOpen ?? (() => undefined),
-      "aria-label": "Fissa sidebar (⌘\\)",
+      "aria-label": lockSidebarLabel,
       isDisabled: !overlay?.onLockOpen,
     },
     lockRef,
@@ -712,7 +723,7 @@ export function LeftRail({
   const { buttonProps: collapseBtnProps } = useButton(
     {
       onPress: onCollapse ?? (() => undefined),
-      "aria-label": "Comprimi la barra laterale (⌘\\)",
+      "aria-label": collapseSidebarLabel,
       isDisabled: !onCollapse,
     },
     collapseRef,
@@ -850,7 +861,7 @@ export function LeftRail({
             ref={lockRef}
             {...lockBtnProps}
             className={styles.lockOpen}
-            title="Fissa sidebar (⌘\)"
+            title={lockSidebarLabel}
             data-testid="rail-lock-open"
           >
             »
@@ -861,7 +872,7 @@ export function LeftRail({
             ref={collapseRef}
             {...collapseBtnProps}
             className={styles.collapse}
-            title="Comprimi la barra laterale (⌘\)"
+            title={collapseSidebarLabel}
             data-testid="rail-collapse"
           >
             «
@@ -889,7 +900,7 @@ export function LeftRail({
               items={[...project.menuItems]}
               align="start"
               triggerClassName={styles.project}
-              triggerLabel={`Progetto: ${project.title}`}
+              triggerLabel={`${projectLabelPrefix} ${project.title}`}
               triggerTestId="rail-project-menu-trigger"
               data-testid="rail-project-menu"
               trigger={headerContent}

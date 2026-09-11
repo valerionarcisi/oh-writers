@@ -8,42 +8,42 @@ afterEach(cleanup);
 describe("MarginNote", () => {
   it("renders kind label and text", () => {
     const { getByText } = render(
-      <MarginNote kind="dramaturg" text="Il personaggio perde coerenza qui." />
+      <MarginNote kind="dramaturg" text="Il personaggio perde coerenza qui." />,
     );
-    expect(getByText(/Scrittura/)).toBeTruthy();
+    expect(getByText(/Writing/)).toBeTruthy();
     expect(getByText("Il personaggio perde coerenza qui.")).toBeTruthy();
   });
 
   it("renders producer kind correctly", () => {
     const { getByText } = render(
-      <MarginNote kind="producer" text="Reparto trucco +15%." />
+      <MarginNote kind="producer" text="Reparto trucco +15%." />,
     );
-    expect(getByText(/Produzione/)).toBeTruthy();
+    expect(getByText(/Production/)).toBeTruthy();
   });
 
   it("calls onAccept when accept button clicked", () => {
     const onAccept = vi.fn();
     const { getByText } = render(
-      <MarginNote kind="dramaturg" text="Test." onAccept={onAccept} />
+      <MarginNote kind="dramaturg" text="Test." onAccept={onAccept} />,
     );
-    fireEvent.click(getByText("Accetta"));
+    fireEvent.click(getByText("Accept"));
     expect(onAccept).toHaveBeenCalledTimes(1);
   });
 
   it("calls onIgnore when ignore button clicked", () => {
     const onIgnore = vi.fn();
     const { getByText } = render(
-      <MarginNote kind="dramaturg" text="Test." onIgnore={onIgnore} />
+      <MarginNote kind="dramaturg" text="Test." onIgnore={onIgnore} />,
     );
-    fireEvent.click(getByText("Ignora"));
+    fireEvent.click(getByText("Ignore"));
     expect(onIgnore).toHaveBeenCalledTimes(1);
   });
 
   it("hides actions when no callbacks provided", () => {
     const { queryByText } = render(
-      <MarginNote kind="dramaturg" text="Solo nota." />
+      <MarginNote kind="dramaturg" text="Solo nota." />,
     );
-    expect(queryByText("Accetta")).toBeNull();
-    expect(queryByText("Ignora")).toBeNull();
+    expect(queryByText("Accept")).toBeNull();
+    expect(queryByText("Ignore")).toBeNull();
   });
 });

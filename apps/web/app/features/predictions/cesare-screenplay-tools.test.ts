@@ -393,4 +393,14 @@ describe("[spec 81] rewrite_scene anti-truncation guard", () => {
     const result = await runRewriteWithDb(full, 1000);
     expect(result.isOk()).toBe(true);
   });
+
+  it("embeds the verbatim original scene in the rejection so a fast model can copy from it instead of regenerating from memory", async () => {
+    const result = await runRewriteWithDb("INT. STANZA - NOTTE", 1000);
+    expect(result.isErr()).toBe(true);
+    if (result.isErr()) {
+      expect(result.error.message).toContain("---INIZIO SCENA ORIGINALE---");
+      expect(result.error.message).toContain("x".repeat(500)); // original body, copyable verbatim
+      expect(result.error.message).toContain("---FINE SCENA ORIGINALE---");
+    }
+  });
 });

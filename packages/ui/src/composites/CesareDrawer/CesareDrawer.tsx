@@ -166,28 +166,38 @@ export interface CesareDrawerProps {
   /** Accessible label for the drawer landmark. */
   ariaLabel?: string;
 
-  /** Translated chrome labels. Each field is optional and defaults to its IT
-   *  value, so the drawer renders correctly without a translator. */
+  /** Translated chrome labels. Each field is optional and defaults to EN,
+   *  so the drawer renders correctly without a translator. */
   labels?: CesareDrawerLabels;
 }
 
-// User-facing labels for the drawer chrome. Optional with IT defaults so
+// User-facing labels for the drawer chrome. Optional with EN defaults so
 // `packages/ui` stays framework-agnostic.
 export type CesareDrawerLabels = {
-  /** Peek-row aria-label for the expand affordance (defaults to IT). */
+  /** Peek-row aria-label for the expand affordance (defaults to EN). */
   peekExpand?: string;
-  /** Peek-row aria-label for the close affordance (defaults to IT). */
+  /** Peek-row aria-label for the close affordance (defaults to EN). */
   peekClose?: string;
-  /** Header aria-label + title for expand (defaults to IT "Espandi"). */
+  /** Header aria-label + title for expand (defaults to EN "Expand"). */
   expand?: string;
-  /** Header aria-label + title for "open as column" (defaults to IT). */
+  /** Header aria-label + title for "open as column" (defaults to EN). */
   openAsColumn?: string;
-  /** Header aria-label + title for minimise (defaults to IT "Minimizza"). */
+  /** Header aria-label + title for minimise (defaults to EN "Minimize"). */
   minimize?: string;
-  /** Header aria-label + title for close (defaults to IT "Chiudi"). */
+  /** Header aria-label + title for close (defaults to EN "Close"). */
   close?: string;
   /** Split surface only: aria-label + title for "shrink to floating" (◫). */
   shrinkToFloat?: string;
+  /** Aria-label for the resize-height drag handle (defaults to EN). */
+  resizeHeight?: string;
+  /** Aria-label for the resize-width drag handle, split state (defaults to EN). */
+  resizeWidth?: string;
+  /** Aria-label for the session-selector trigger (defaults to EN). */
+  selectSession?: string;
+  /** Aria-label + link text for the "jump to new replies" scroll nudge. */
+  scrollToNewReplies?: string;
+  /** Aria-label for the composer's send button (defaults to EN). */
+  sendMessage?: string;
 };
 
 // ─── Internal building blocks ───────────────────────────────────────────────
@@ -317,18 +327,24 @@ export function CesareDrawer({
   onAddScope,
   composer,
   children,
-  peekSubtitle = "in attesa",
+  peekSubtitle = "waiting",
   className,
-  ariaLabel = "Assistente Cesare",
+  ariaLabel = "Cesare assistant",
   labels,
 }: CesareDrawerProps) {
-  const peekExpandLabel = labels?.peekExpand ?? "Espandi Cesare";
-  const peekCloseLabel = labels?.peekClose ?? "Chiudi Cesare";
-  const expandLabel = labels?.expand ?? "Espandi";
-  const openAsColumnLabel = labels?.openAsColumn ?? "Apri come colonna";
-  const minimizeLabel = labels?.minimize ?? "Minimizza";
-  const closeLabel = labels?.close ?? "Chiudi";
-  const shrinkToFloatLabel = labels?.shrinkToFloat ?? "Riduci a floating";
+  const peekExpandLabel = labels?.peekExpand ?? "Expand Cesare";
+  const peekCloseLabel = labels?.peekClose ?? "Close Cesare";
+  const expandLabel = labels?.expand ?? "Expand";
+  const openAsColumnLabel = labels?.openAsColumn ?? "Open as column";
+  const minimizeLabel = labels?.minimize ?? "Minimize";
+  const closeLabel = labels?.close ?? "Close";
+  const shrinkToFloatLabel = labels?.shrinkToFloat ?? "Shrink to floating";
+  const resizeHeightLabel = labels?.resizeHeight ?? "Resize drawer height";
+  const resizeWidthLabel = labels?.resizeWidth ?? "Resize drawer width";
+  const selectSessionLabel = labels?.selectSession ?? "Select Cesare session";
+  const scrollToNewRepliesLabel =
+    labels?.scrollToNewReplies ?? "Jump to new replies";
+  const sendMessageLabel = labels?.sendMessage ?? "Send message";
   // ─── Resize state ────────────────────────────────────────────────────────
   const isExpanded = state === "expanded";
   const isSplit = state === "expanded-split";
@@ -372,6 +388,7 @@ export function CesareDrawer({
     max: "76vh",
     onSizeChange: persistExpanded,
     isDisabled: !isExpanded,
+    ariaLabel: resizeHeightLabel,
   });
   const splitResize = useDrawerResize({
     axis: "inline",
@@ -380,6 +397,7 @@ export function CesareDrawer({
     max: "60vw",
     onSizeChange: persistSplit,
     isDisabled: !isSplit,
+    ariaLabel: resizeWidthLabel,
   });
 
   // ─── Inline custom properties driving the drawer size ───────────────────
@@ -506,12 +524,12 @@ export function CesareDrawer({
                 type="button"
                 className={styles.sessionSelector}
                 onClick={onSessionSelectorClick}
-                aria-label="Seleziona sessione Cesare"
+                aria-label={selectSessionLabel}
                 aria-haspopup="listbox"
                 data-testid="cesare-session-selector"
               >
                 {sessions.find((s) => s.id === activeSessionId)?.title ??
-                  "Sessione"}
+                  "Session"}
                 <span className={styles.sessionSelectorChev} aria-hidden="true">
                   ▾
                 </span>
@@ -602,9 +620,9 @@ export function CesareDrawer({
               .filter(Boolean)
               .join(" ")}
             onClick={scrollToBottom}
-            aria-label="Vai alle nuove risposte"
+            aria-label={scrollToNewRepliesLabel}
           >
-            ↓ Vai alle nuove risposte
+            ↓ {scrollToNewRepliesLabel}
           </button>
         </div>
 
@@ -641,7 +659,7 @@ export function CesareDrawer({
                 value={composer.value}
                 onChange={composer.onChange}
                 onSubmit={composer.onSubmit}
-                placeholder={composer.placeholder ?? "Chiedi a Cesare…"}
+                placeholder={composer.placeholder ?? "Ask Cesare…"}
                 ariaLabel="Composer Cesare"
                 onArrowUp={composer.onRecallLast}
               />
@@ -682,7 +700,7 @@ export function CesareDrawer({
                     className={styles.composerSend}
                     onClick={composer.onSubmit}
                     disabled={composer.value.trim().length === 0}
-                    aria-label="Invia messaggio"
+                    aria-label={sendMessageLabel}
                     data-testid="cesare-send-btn"
                   >
                     ↑

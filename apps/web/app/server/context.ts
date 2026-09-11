@@ -36,7 +36,7 @@ const DEV_BYPASS_USER: AppUser = {
   id: DEV_AUTH_BYPASS_USER_ID as UserId,
   name: "Test User",
   email: "test@ohwriters.dev",
-  locale: "it" as Locale,
+  locale: "en" as Locale,
   avatarUrl: null,
 };
 

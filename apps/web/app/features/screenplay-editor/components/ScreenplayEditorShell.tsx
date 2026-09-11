@@ -288,7 +288,7 @@ export function ScreenplayEditorShell({
         className={styles.viewbarWrap}
         data-scrolled={isScrolled || undefined}
       >
-        <Viewbar>
+        <Viewbar ariaLabel={t("screenplay.viewbar.ariaLabel")}>
           <div className={styles.viewbarGrid}>
             <div className={styles.viewbarCenter}>{viewbarCenter ?? null}</div>
             {viewbarRightNode}

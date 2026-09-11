@@ -24,9 +24,11 @@ export type CommandPaletteProps = {
   isOpen: boolean;
   onClose: () => void;
   items: ReadonlyArray<CommandPaletteItem>;
+  /** Search input placeholder (defaults to EN "Search commands, scenes, people…"). */
   placeholder?: string;
+  /** Empty-state copy (defaults to EN "No results"). */
   emptyLabel?: string;
-  /** Aria-label for the results listbox (defaults to IT "Risultati"). */
+  /** Aria-label for the results listbox (defaults to EN "Results"). */
   resultsLabel?: string;
 };
 
@@ -75,9 +77,9 @@ export function CommandPalette({
   isOpen,
   onClose,
   items,
-  placeholder = "Cerca comandi, scene, persone…",
-  emptyLabel = "Nessun risultato",
-  resultsLabel = "Risultati",
+  placeholder = "Search commands, scenes, people…",
+  emptyLabel = "No results",
+  resultsLabel = "Results",
 }: CommandPaletteProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -178,7 +180,7 @@ export function CommandPalette({
     >
       <div className={styles.panel} onKeyDown={handleKeyDown}>
         <h2 id={titleId} className={styles.srOnly}>
-          Tavolozza comandi
+          Command palette
         </h2>
         <div className={styles.searchRow}>
           <Icon
@@ -232,7 +234,9 @@ export function CommandPalette({
                   aria-selected={entry.selectableIndex === activeIndex}
                   className={[
                     styles.item,
-                    entry.selectableIndex === activeIndex ? styles.itemActive : "",
+                    entry.selectableIndex === activeIndex
+                      ? styles.itemActive
+                      : "",
                   ]
                     .filter(Boolean)
                     .join(" ")}

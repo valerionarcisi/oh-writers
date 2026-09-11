@@ -41,6 +41,9 @@ export interface UseDrawerResizeOptions {
   onSizeChange?: (sizePx: number) => void;
   /** Optional disable switch (e.g. user is in `prefers-reduced-motion`). */
   isDisabled?: boolean;
+  /** Aria-label for the drag handle. Defaults to its IT value so the hook
+   *  renders correctly without a translator. */
+  ariaLabel?: string;
 }
 
 type DrawerHandleProps = MoveResult["moveProps"] & {
@@ -129,6 +132,7 @@ export function useDrawerResize(
     max,
     onSizeChange,
     isDisabled = false,
+    ariaLabel,
   } = options;
 
   // `maxPx` is held in state and initialised to the SSR-stable value so the
@@ -224,14 +228,15 @@ export function useDrawerResize(
       tabIndex: isDisabled ? -1 : 0,
       "aria-orientation": axis === "block" ? "horizontal" : "vertical",
       "aria-label":
-        axis === "block"
+        ariaLabel ??
+        (axis === "block"
           ? "Ridimensiona altezza drawer"
-          : "Ridimensiona larghezza drawer",
+          : "Ridimensiona larghezza drawer"),
       "aria-valuenow": size,
       "aria-valuemin": min,
       "aria-valuemax": maxPx,
     };
-  }, [moveProps, axis, isDisabled, maxPx, min, size]);
+  }, [moveProps, axis, isDisabled, maxPx, min, size, ariaLabel]);
 
   return { handleProps, size, isResizing };
 }

@@ -230,6 +230,19 @@ export const screenplayKeys = {
     // AI disclosure stamp (Spec 89) — export-only note, never shown in-app.
     "screenplay.export.aiDisclosureNote":
       "This screenplay contains text suggested by Cesare (AI).",
+
+    // Scene heading NodeView (ProseMirror, imperative DOM) — found hardcoded
+    // IT-only while producing the EN demo (2026-09-10), never routed
+    // through i18n since the node view lives outside the React tree.
+    "screenplay.heading.sceneActions": "Scene actions",
+    "screenplay.heading.editSceneNumber": "Edit scene number",
+
+    // Bottom counter strip (DocStats) — "pages" was the one unit DocStats
+    // never took as a prop, found hardcoded IT-only while producing the EN
+    // demo (2026-09-10).
+    "screenplay.stats.pages": "pages",
+    "screenplay.stats.scenes": "scenes",
+    "screenplay.viewbar.ariaLabel": "View options",
   },
   it: {
     // SaveIndicator — labels
@@ -463,5 +476,12 @@ export const screenplayKeys = {
 
     "screenplay.export.aiDisclosureNote":
       "Questa sceneggiatura contiene testo suggerito da Cesare (AI).",
+
+    "screenplay.heading.sceneActions": "Azioni scena",
+    "screenplay.heading.editSceneNumber": "Modifica numero scena",
+
+    "screenplay.stats.pages": "pagine",
+    "screenplay.stats.scenes": "scene",
+    "screenplay.viewbar.ariaLabel": "Opzioni di visualizzazione",
   },
 } as const satisfies LocaleDict;

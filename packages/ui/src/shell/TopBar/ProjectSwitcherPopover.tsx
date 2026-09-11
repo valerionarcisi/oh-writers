@@ -14,11 +14,11 @@ export type ProjectSwitcherPopoverProps = {
   onSelect: (id: string) => void;
   onAllProjects: () => void;
   onClose: () => void;
-  /** Aria-label for the listbox (defaults to IT "Cambia progetto"). */
+  /** Aria-label for the listbox (defaults to EN "Switch project"). */
   switchLabel?: string;
-  /** Empty-state copy (defaults to IT "Nessun progetto"). */
+  /** Empty-state copy (defaults to EN "No projects"). */
   emptyLabel?: string;
-  /** Aria-label for the current-project dot (defaults to IT "Progetto corrente"). */
+  /** Aria-label for the current-project dot (defaults to EN "Current project"). */
   currentLabel?: string;
 };
 
@@ -28,9 +28,9 @@ export function ProjectSwitcherPopover({
   onSelect,
   onAllProjects,
   onClose,
-  switchLabel = "Cambia progetto",
-  emptyLabel = "Nessun progetto",
-  currentLabel = "Progetto corrente",
+  switchLabel = "Switch project",
+  emptyLabel = "No projects",
+  currentLabel = "Current project",
 }: ProjectSwitcherPopoverProps) {
   const initialFocusIndex = (() => {
     if (projects.length === 0) return -1;

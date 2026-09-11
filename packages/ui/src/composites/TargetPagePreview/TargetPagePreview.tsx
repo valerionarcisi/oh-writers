@@ -64,9 +64,9 @@ export interface TargetPagePreviewProps {
   onAcceptAll: () => void;
   onRejectAll: () => void;
   testId?: string;
-  /** Empty-state copy for the timeline (defaults to IT "Nessuna modifica"). */
+  /** Empty-state copy for the timeline (defaults to EN "No changes"). */
   emptyLabel?: string;
-  /** Title for the fallback stub (defaults to IT "Anteprima trace"). */
+  /** Title for the fallback stub (defaults to EN "Trace preview"). */
   stubTitle?: string;
 }
 
@@ -261,8 +261,8 @@ export function TargetPagePreview({
   onAcceptAll: _onAcceptAll,
   onRejectAll: _onRejectAll,
   testId,
-  emptyLabel = "Nessuna modifica",
-  stubTitle = "Anteprima trace",
+  emptyLabel = "No changes",
+  stubTitle = "Trace preview",
 }: TargetPagePreviewProps) {
   const previewRef = useRef<HTMLDivElement>(null);
 

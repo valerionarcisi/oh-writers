@@ -1706,6 +1706,9 @@ function AppShellInner({
               profile: t("shell.rail.profile"),
               account: t("shell.rail.account"),
               tools: t("shell.rail.tools"),
+              collapseSidebar: t("shell.rail.collapseSidebar"),
+              lockSidebar: t("shell.rail.lockSidebar"),
+              projectLabelPrefix: t("shell.projectLabelPrefix"),
             }}
             onNavigate={handleNavigate}
             onCollapse={
@@ -1736,6 +1739,7 @@ function AppShellInner({
                 onHoverEnd={railOverlay.scheduleClose}
                 isOverlayOpen={railOverlay.isOpen}
                 openLabel={t("shell.rail.openSidebar")}
+                lockLabel={t("shell.rail.lockSidebar")}
               />
             }
             sectionName={sectionName}

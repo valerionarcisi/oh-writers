@@ -1,9 +1,7 @@
 import { createFileRoute, getRouteApi } from "@tanstack/react-router";
 import { z } from "zod";
-import { Features } from "@oh-writers/domain";
 import { titleHead } from "~/lib/document-title";
 import { AiSettingsPage } from "~/features/ai-providers";
-import { requireFeatureOrDashboard } from "~/lib/feature-route-guard";
 
 // Spec 84 §2.3 (Wave 3) — the wizard's real destination. `?connected=1`
 // arrives from the OAuth callback right after a successful key exchange;
@@ -15,10 +13,16 @@ const AiSettingsSearchSchema = z.object({
   error: z.string().optional(),
 });
 
+// No `Features.AI_ENABLED` route guard here, unlike every other AI-gated
+// route: this page IS the mechanism that turns AI_ENABLED on (connecting a
+// BYOK provider). Gating it behind "AI is already enabled" is a catch-22 —
+// a user with no provider and no trial can never reach the wizard that
+// would let them connect one. `AiSettingsPage` already handles all three
+// states (disconnected/post-connect/connected) itself via the provider
+// status query, so no route-level gate is needed for correctness.
 export const Route = createFileRoute("/_app/settings_/ai")({
   head: () => titleHead("AI"),
   validateSearch: AiSettingsSearchSchema,
-  beforeLoad: () => requireFeatureOrDashboard(Features.AI_ENABLED),
   component: AiSettingsRoute,
 });
 

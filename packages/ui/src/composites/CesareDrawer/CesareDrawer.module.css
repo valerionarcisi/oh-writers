@@ -51,6 +51,19 @@
     opacity var(--ds-duration-3) var(--ds-ease),
     transform var(--ds-duration-3) var(--ds-ease);
 
+  /* The screenplay page renders its own fixed scene/page counter strip along
+     the same bottom-right corner the drawer's closed/peek states anchor to —
+     at the default 18px offset the "Cesare · <status>" peek row sat on top of
+     the counter text instead of floating clear above it (same root cause as
+     the BottomDock fix, found live 2026-09-09 — this is a SEPARATE component
+     with its own `position: fixed`, so that fix didn't cover it). Only
+     closed/peek sit low enough to reach the strip; expanded/full already
+     grow tall enough to clear it on their own. */
+  :global(body[data-view="screenplay"]) &[data-state="closed"],
+  :global(body[data-view="screenplay"]) &[data-state="peek"] {
+    inset-block-end: 56px;
+  }
+
   &.isResizing {
     transition: none;
   }

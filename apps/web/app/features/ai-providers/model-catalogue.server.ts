@@ -149,11 +149,23 @@ const splitIntoPriceBands = (
 const newestOf = (band: readonly CatalogueModel[]): CatalogueModel =>
   band.reduce((a, b) => (b.created > a.created ? b : a));
 
+// OpenRouter lists ":batch" variants as separate catalogue entries (often
+// cheaper, since the Batch API trades latency for price) — but Cesare calls
+// models synchronously, and OpenRouter rejects a synchronous call against a
+// batch-only endpoint outright. Excluded before banding/pricing so a batch
+// variant can never win either recommended slot (found live: both slots had
+// silently picked their ":batch" sibling, breaking every Cesare call for a
+// user who accepted the defaults).
+const isBatchOnlyVariant = (modelId: string): boolean =>
+  modelId.endsWith(":batch");
+
 export const selectRecommendedModels = (
   models: readonly OpenRouterModel[],
 ): RecommendedModels | null => {
   const anthropicModels = models
-    .filter((m) => m.id.startsWith(ANTHROPIC_PREFIX))
+    .filter(
+      (m) => m.id.startsWith(ANTHROPIC_PREFIX) && !isBatchOnlyVariant(m.id),
+    )
     .map(withEstimate);
 
   if (anthropicModels.length === 0) return null;

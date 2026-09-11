@@ -87,7 +87,7 @@ describe("LeftRail", () => {
         onNavigate={vi.fn()}
       />,
     );
-    expect(getByText("Sessioni Cesare")).toBeTruthy();
+    expect(getByText("Cesare sessions")).toBeTruthy();
     expect(getByText("Breakdown Sc.2")).toBeTruthy();
   });
 
@@ -132,7 +132,7 @@ describe("LeftRail", () => {
         onNavigate={vi.fn()}
       />,
     );
-    expect(queryByText("Sessioni Cesare")).toBeNull();
+    expect(queryByText("Cesare sessions")).toBeNull();
   });
 
   it("renders the + Nuova affordance only when onSessionNew is supplied", () => {
@@ -145,7 +145,7 @@ describe("LeftRail", () => {
         onNavigate={vi.fn()}
       />,
     );
-    expect(queryByLabelText("Nuova sessione Cesare")).toBeNull();
+    expect(queryByLabelText("New Cesare session")).toBeNull();
     rerender(
       <LeftRail
         brand={{ label: "Oh Writers", onPress: vi.fn() }}
@@ -156,7 +156,7 @@ describe("LeftRail", () => {
         onNavigate={vi.fn()}
       />,
     );
-    expect(queryByLabelText("Nuova sessione Cesare")).toBeTruthy();
+    expect(queryByLabelText("New Cesare session")).toBeTruthy();
   });
 
   it("invokes onSessionNew when the + Nuova affordance is clicked", () => {
@@ -171,7 +171,7 @@ describe("LeftRail", () => {
         onNavigate={vi.fn()}
       />,
     );
-    fireEvent.click(getByLabelText("Nuova sessione Cesare"));
+    fireEvent.click(getByLabelText("New Cesare session"));
     expect(onSessionNew).toHaveBeenCalledTimes(1);
   });
 
@@ -257,7 +257,7 @@ describe("LeftRail", () => {
         onNavigate={vi.fn()}
       />,
     );
-    fireEvent.click(getByLabelText(/Progetto: Non fa ridere/));
+    fireEvent.click(getByLabelText(/Project: Non fa ridere/));
     expect(onProject).toHaveBeenCalledTimes(1);
   });
 
@@ -315,9 +315,9 @@ describe("LeftRail", () => {
       />,
     );
     expect(getByTestId("rail-account")).toBeTruthy();
-    expect(getByLabelText("Notifiche")).toBeTruthy();
-    expect(getByLabelText("Profilo")).toBeTruthy();
-    expect(getByLabelText("Impostazioni")).toBeTruthy();
+    expect(getByLabelText("Notifications")).toBeTruthy();
+    expect(getByLabelText("Profile")).toBeTruthy();
+    expect(getByLabelText("Settings")).toBeTruthy();
   });
 
   it("does NOT render the account row when account is omitted", () => {
@@ -349,9 +349,9 @@ describe("LeftRail", () => {
         }}
       />,
     );
-    fireEvent.click(getByLabelText("Notifiche — nuove"));
-    fireEvent.click(getByLabelText("Profilo"));
-    fireEvent.click(getByLabelText("Impostazioni"));
+    fireEvent.click(getByLabelText("Notifications — new"));
+    fireEvent.click(getByLabelText("Profile"));
+    fireEvent.click(getByLabelText("Settings"));
     expect(onBell).toHaveBeenCalledTimes(1);
     expect(onAvatar).toHaveBeenCalledTimes(1);
     expect(onGear).toHaveBeenCalledTimes(1);
@@ -464,12 +464,12 @@ describe("LeftRail", () => {
       />,
     );
     fireEvent.click(getByTestId("session-actions-btn"));
-    expect(getByText("Fissa in alto")).toBeTruthy();
-    fireEvent.click(getByText("Fissa in alto"));
+    expect(getByText("Pin to top")).toBeTruthy();
+    fireEvent.click(getByText("Pin to top"));
     expect(onSessionPin).toHaveBeenCalledWith("s1", true);
   });
 
-  it("shows 'Rimuovi dai fissati' for an already-pinned session", () => {
+  it("shows 'Remove from pinned' for an already-pinned session", () => {
     const onSessionPin = vi.fn();
     const sessions = [
       { id: "s1", title: "Sessione", lastAt: "ora", pinned: true },
@@ -485,7 +485,7 @@ describe("LeftRail", () => {
       />,
     );
     fireEvent.click(getByTestId("session-actions-btn"));
-    fireEvent.click(getByText("Rimuovi dai fissati"));
+    fireEvent.click(getByText("Remove from pinned"));
     expect(onSessionPin).toHaveBeenCalledWith("s1", false);
   });
 
@@ -502,10 +502,10 @@ describe("LeftRail", () => {
     );
     // No rename/delete either, so the whole …-menu never renders.
     expect(queryByTestId("session-actions-btn")).toBeNull();
-    expect(queryByText("Fissa in alto")).toBeNull();
+    expect(queryByText("Pin to top")).toBeNull();
   });
 
-  it("renders all rows and no 'Vedi tutte' link when total sessions <= 5", () => {
+  it("renders all rows and no 'See all' link when total sessions <= 5", () => {
     const sessions = manySessions(5, 2);
     const { getByText, queryByTestId } = render(
       <LeftRail
@@ -521,7 +521,7 @@ describe("LeftRail", () => {
     expect(queryByTestId("rail-sessions-see-all")).toBeNull();
   });
 
-  it("caps the rail at 3 pinned + up to 5 total rows, with a 'Vedi tutte (N)' link", () => {
+  it("caps the rail at 3 pinned + up to 5 total rows, with a 'See all (N)' link", () => {
     // 3 pinned + 5 unpinned = 8 total. Rail shows 3 pinned + 2 unpinned = 5 rows.
     const sessions = manySessions(8, 3);
     const { getByText, queryByText, getByTestId } = render(
@@ -544,12 +544,12 @@ describe("LeftRail", () => {
     expect(queryByText("Sessione 5")).toBeNull();
     expect(queryByText("Sessione 6")).toBeNull();
     expect(queryByText("Sessione 7")).toBeNull();
-    // "Vedi tutte (8)" link is present and reflects the full count.
+    // "See all (8)" link is present and reflects the full count.
     const link = getByTestId("rail-sessions-see-all");
-    expect(link.textContent).toBe("Vedi tutte (8)");
+    expect(link.textContent).toBe("See all (8)");
   });
 
-  it("invokes onSessionsOpen when 'Vedi tutte' is clicked", () => {
+  it("invokes onSessionsOpen when 'See all' is clicked", () => {
     const onSessionsOpen = vi.fn();
     const sessions = manySessions(6);
     const { getByTestId } = render(
@@ -566,7 +566,7 @@ describe("LeftRail", () => {
     expect(onSessionsOpen).toHaveBeenCalledTimes(1);
   });
 
-  it("does not render 'Vedi tutte' when onSessionsOpen is omitted, even past the cap", () => {
+  it("does not render 'See all' when onSessionsOpen is omitted, even past the cap", () => {
     const sessions = manySessions(6);
     const { queryByTestId } = render(
       <LeftRail

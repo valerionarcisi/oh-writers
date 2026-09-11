@@ -60,6 +60,9 @@ export default defineConfig({
         // project uses fails BY CONSTRUCTION (DEV_ONLY pages must be visible
         // in dev). Without this ignore, `--project=chromium` runs it wrongly.
         /shell-production-gating\.spec\.ts$/,
+        // Belongs to playwright.landing.config.ts only: static apps/landing
+        // pages have no DB/auth and run under a separate, lighter config.
+        /landing\/.*\.spec\.ts$/,
       ],
       // `viewport` override comes AFTER the spread — devices.Desktop Chrome
       // sets it to 1280x720 by default which is too small for the Cesare

@@ -13,7 +13,7 @@ describe("BottomDock", () => {
     const { getByLabelText, queryByLabelText } = render(
       <BottomDock onCesareToggle={vi.fn()} />,
     );
-    expect(getByLabelText(/Apri Cesare/)).toBeTruthy();
+    expect(getByLabelText(/Open Cesare/)).toBeTruthy();
     // Account actions live in the rail footer now — not the dock.
     expect(queryByLabelText(/Notifiche/)).toBeNull();
     expect(queryByLabelText(/Impostazioni/)).toBeNull();
@@ -25,7 +25,7 @@ describe("BottomDock", () => {
     const { getByLabelText } = render(
       <BottomDock onCesareToggle={onCesareToggle} />,
     );
-    fireEvent.click(getByLabelText(/Apri Cesare/));
+    fireEvent.click(getByLabelText(/Open Cesare/));
     expect(onCesareToggle).toHaveBeenCalledTimes(1);
   });
 

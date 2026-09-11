@@ -3,6 +3,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { z } from "zod";
 import { titleHead } from "~/lib/document-title";
 import { ProjectForm, useCreateProject } from "~/features/projects";
+import { useTranslation } from "~/features/i18n";
 import styles from "./_app.projects.new.module.css";
 
 // `?teamId=` arrives from a team's "New project" button (TeamDashboardPage) —
@@ -22,6 +23,7 @@ function NewProjectPage() {
   const navigate = useNavigate();
   const createProject = useCreateProject();
   const { teamId } = Route.useSearch();
+  const { t } = useTranslation();
 
   const handleSubmit: ComponentProps<typeof ProjectForm>["onSubmit"] = (
     values,
@@ -43,13 +45,13 @@ function NewProjectPage() {
 
   return (
     <div className={styles.page}>
-      <h1 className={styles.title}>Nuovo progetto</h1>
+      <h1 className={styles.title}>{t("projects.new.title")}</h1>
       <div className={styles.formWrapper}>
         <ProjectForm
           onSubmit={handleSubmit}
           onCancel={() => navigate({ to: "/dashboard" })}
           isSubmitting={createProject.isPending}
-          submitLabel="Crea progetto"
+          submitLabel={t("projects.new.submit")}
         />
         {createProject.error && (
           <p className={styles.error}>{createProject.error.message}</p>
