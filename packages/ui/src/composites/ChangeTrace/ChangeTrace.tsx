@@ -218,7 +218,7 @@ export function ChangeTrace({
               </ul>
             )}
             {updates.length > 0 && (
-              <ul className={styles.updatesList} aria-label="Entità aggiornate">
+              <ul className={styles.updatesList} aria-label="Updated entities">
                 {updates.map((u, i) => (
                   <li
                     key={u.id ?? `u-${i}`}

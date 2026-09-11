@@ -17,7 +17,7 @@ interface SkeletonProps {
   widths?: string[];
   /** Gap between lines. Default `var(--ds-space-2)`. */
   gap?: string;
-  /** ARIA label for the loading region. Default "Caricamento". */
+  /** ARIA label for the loading region. Default "Loading". */
   ariaLabel?: string;
   /** Brand the shimmer with the agent color. */
   tone?: SkeletonTone;
@@ -33,7 +33,7 @@ export function Skeleton({
   lines,
   widths,
   gap,
-  ariaLabel = "Caricamento",
+  ariaLabel = "Loading",
   tone = "default",
 }: SkeletonProps) {
   if (typeof lines === "number" && lines > 0) {
@@ -90,7 +90,7 @@ interface SkeletonCardProps {
 
 export function SkeletonCard({
   className,
-  ariaLabel = "Caricamento",
+  ariaLabel = "Loading",
 }: SkeletonCardProps) {
   return (
     <div

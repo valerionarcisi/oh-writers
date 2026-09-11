@@ -15,8 +15,8 @@ export type MarginNoteProps = {
 };
 
 const kindLabels: Record<MarginNoteKind, string> = {
-  dramaturg: "Scrittura",
-  producer: "Produzione",
+  dramaturg: "Writing",
+  producer: "Production",
 };
 
 export function MarginNote({
