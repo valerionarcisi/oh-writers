@@ -282,7 +282,7 @@ export const appShellKeys = {
     // while producing the EN demo (2026-09-10), never routed through i18n.
     "shell.section.dashboard": "Projects",
     "shell.section.overview": "Overview",
-    "shell.section.soggetto": "Treatment outline",
+    "shell.section.soggetto": "Soggetto",
     "shell.section.synopsis": "Synopsis",
     "shell.section.outline": "Outline",
     "shell.section.treatment": "Treatment",
