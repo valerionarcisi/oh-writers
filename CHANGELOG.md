@@ -1,3 +1,9 @@
+## [1.1.0-beta.12](https://github.com/valerionarcisi/oh-writers/compare/v1.1.0-beta.11...v1.1.0-beta.12) (2026-09-11)
+
+### Bug Fixes
+
+* shell.section.soggetto mistranslated as "Treatment outline" ([#177](https://github.com/valerionarcisi/oh-writers/issues/177)) ([4b22add](https://github.com/valerionarcisi/oh-writers/commit/4b22add5e44cdcfc695bd4fb7f4383e65a49e4e9))
+
 ## [1.1.0-beta.11](https://github.com/valerionarcisi/oh-writers/compare/v1.1.0-beta.10...v1.1.0-beta.11) (2026-09-11)
 
 ### Features
