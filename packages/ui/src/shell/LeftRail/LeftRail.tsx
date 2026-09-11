@@ -673,26 +673,26 @@ export function LeftRail({
   overlay,
   onCollapse,
 }: LeftRailProps) {
-  const sessionsTitleLabel = labels?.sessionsTitle ?? "Sessioni Cesare";
-  const sessionsOpenLabel = labels?.sessionsOpen ?? "Apri sessioni Cesare";
-  const notificationsLabel = labels?.notifications ?? "Notifiche";
+  const sessionsTitleLabel = labels?.sessionsTitle ?? "Cesare sessions";
+  const sessionsOpenLabel = labels?.sessionsOpen ?? "Open Cesare sessions";
+  const notificationsLabel = labels?.notifications ?? "Notifications";
   const notificationsUnreadLabel =
-    labels?.notificationsUnread ?? "Notifiche — nuove";
-  const settingsLabel = labels?.settings ?? "Impostazioni";
-  const projectFallbackLabel = labels?.projectFallback ?? "Progetto";
-  const newSessionLabel = labels?.newSession ?? "Nuova sessione Cesare";
-  const navLabel = labels?.nav ?? "Navigazione progetto";
-  const pinSessionLabel = labels?.pinSession ?? "Fissa in alto";
-  const unpinSessionLabel = labels?.unpinSession ?? "Rimuovi dai fissati";
-  const seeAllSessionsLabel = labels?.seeAllSessions ?? "Vedi tutte ({n})";
-  const newSessionShortLabel = labels?.newSessionShort ?? "+ Nuova";
-  const profileLabel = labels?.profile ?? "Profilo";
+    labels?.notificationsUnread ?? "Notifications — new";
+  const settingsLabel = labels?.settings ?? "Settings";
+  const projectFallbackLabel = labels?.projectFallback ?? "Project";
+  const newSessionLabel = labels?.newSession ?? "New Cesare session";
+  const navLabel = labels?.nav ?? "Project navigation";
+  const pinSessionLabel = labels?.pinSession ?? "Pin to top";
+  const unpinSessionLabel = labels?.unpinSession ?? "Remove from pinned";
+  const seeAllSessionsLabel = labels?.seeAllSessions ?? "See all ({n})";
+  const newSessionShortLabel = labels?.newSessionShort ?? "+ New";
+  const profileLabel = labels?.profile ?? "Profile";
   const accountLabel = labels?.account ?? "Account";
-  const toolsLabel = labels?.tools ?? "Strumenti";
+  const toolsLabel = labels?.tools ?? "Tools";
   const collapseSidebarLabel =
-    labels?.collapseSidebar ?? "Comprimi la barra laterale (⌘\\)";
-  const lockSidebarLabel = labels?.lockSidebar ?? "Fissa sidebar (⌘\\)";
-  const projectLabelPrefix = labels?.projectLabelPrefix ?? "Progetto:";
+    labels?.collapseSidebar ?? "Collapse sidebar (⌘\\)";
+  const lockSidebarLabel = labels?.lockSidebar ?? "Lock sidebar (⌘\\)";
+  const projectLabelPrefix = labels?.projectLabelPrefix ?? "Project:";
   const railRef = useRef<HTMLElement>(null);
   const brandRef = useRef<HTMLButtonElement>(null);
   const { buttonProps: brandBtnProps } = useButton(

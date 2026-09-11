@@ -15,17 +15,16 @@ export type DocStatsProps = {
   /** Translated unit labels. Optional — each field defaults to its IT value
    *  so the component renders correctly without a translator. */
   labels?: DocStatsLabels;
-  /** BCP-47 locale for number formatting (e.g. "en" or "it"). Defaults to
-   *  "it" so existing callers keep their current formatting. */
+  /** BCP-47 locale for number formatting (e.g. "en" or "it"). */
   numberLocale?: string;
 };
 
 const DEFAULT_LABELS: Record<DocStat["kind"], string> = {
-  chars: "caratteri",
-  words: "parole",
-  pages: "pagine",
+  chars: "characters",
+  words: "words",
+  pages: "pages",
   cartelle: "cartelle",
-  scenes: "scene",
+  scenes: "scenes",
 };
 
 const formatNumber = (n: number, locale: string): string =>
@@ -41,7 +40,7 @@ export function DocStats({
   stats,
   className,
   labels,
-  numberLocale = "it-IT",
+  numberLocale = "en-US",
 }: DocStatsProps) {
   if (stats.length === 0) return null;
   return (

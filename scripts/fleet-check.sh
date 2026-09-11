@@ -129,6 +129,23 @@ g_hardcoded_radius() {
   grep_in css_files "border-radius:\s*[2-9][0-9]?px\b" \
     | grep -vE '(var\(--radius|999px|100px)'
 }
+g_hardcoded_locale() {
+  # A locale literal hardcoded outside the i18n catalogue — the exact shape of
+  # the DEV_AUTH_BYPASS bug where `locale: "it" as Locale` on a static user
+  # object silently forced Italian regardless of the Settings page, because it
+  # short-circuits before any DB read. EN is the product default (see
+  # CLAUDE.md); a hardcoded "it" is either a bug or must self-document why.
+  #
+  # Exclusions are split by field to avoid a substring anywhere on the line
+  # suppressing a real hit: a FILE exclusion only matches the "path:" prefix
+  # grep_in emits, a CONTENT exclusion only matches after it. Matching
+  # "resolveLocale" (or any other identifier) against the whole line would
+  # whitelist an unrelated hardcoded "it" that merely shares a line with it.
+  grep_in ts_files "\blocale:\s*[\"']it[\"']|[\"']it[\"']\s+as\s+Locale" \
+    | grep -vE '^[^:]*(i18n/keys/|resolveLocale\.server\.ts|\.test\.)' \
+    | grep -vE ':[0-9]+:\s*(\*|//)' \
+    | grep -vE '"it"\s*\|\s*"en"|"en"\s*\|\s*"it"' # union-type mention, e.g. `{ locale: "it" | "en" }`, not an assignment
+}
 
 # --- run ----------------------------------------------------------------
 if [[ $STAGED -eq 1 ]]; then SCOPE_LABEL="staged"; else SCOPE_LABEL="${DIFF_BASE:-full tree}"; fi
@@ -148,6 +165,7 @@ echo -e "${BOLD}guardrails${RESET} ${DIM}(CLAUDE.md hard-no rules)${RESET}"
 guardrail "no Italian identifiers"        g_italian_identifiers
 guardrail "no rogue hex (use tokens)"     g_rogue_hex
 guardrail "no hardcoded border-radius"    g_hardcoded_radius
+guardrail "no hardcoded 'it' locale"      g_hardcoded_locale
 guardrail "no secret in logs"             g_secret_log
 guardrail "no native dialogs"             g_native_dialog
 guardrail "no Tailwind/utility classes"   g_tailwind

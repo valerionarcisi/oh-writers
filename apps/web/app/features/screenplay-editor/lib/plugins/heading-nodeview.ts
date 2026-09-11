@@ -34,8 +34,8 @@ import { sceneNodeToFountain } from "../doc-to-fountain";
 
 export interface HeadingNodeViewOptions {
   readOnly?: boolean;
-  /** Translated chrome labels. Optional — each field defaults to its IT
-   *  value so the node view renders correctly without a translator. */
+  /** Translated chrome labels. Optional — each field defaults to EN so
+   *  the node view renders correctly without a translator. */
   labels?: {
     sceneActions?: string;
     editSceneNumber?: string;
@@ -81,9 +81,9 @@ class HeadingNodeView implements NodeView {
     this.view = view;
     this.getPos = getPos;
     this.readOnly = options.readOnly ?? false;
-    this.sceneActionsLabel = options.labels?.sceneActions ?? "Azioni scena";
+    this.sceneActionsLabel = options.labels?.sceneActions ?? "Scene actions";
     this.editSceneNumberLabel =
-      options.labels?.editSceneNumber ?? "Modifica numero scena";
+      options.labels?.editSceneNumber ?? "Edit scene number";
 
     this.dom = document.createElement("h2");
     this.dom.className = "pm-heading";

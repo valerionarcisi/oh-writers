@@ -21,6 +21,9 @@ QA is a **mandatory pipeline gate**, not an afterthought. Every non-trivial feat
 4. **Cost smoke (Cesare-touching features only)**
    `scripts/cost-smoke-<feature>.ts` invoked via `pnpm cost:smoke:<feature>`. Disables `MOCK_AI`, runs 2-3 real chats, logs `usage.cache_read_input_tokens`, `usage.cache_creation_input_tokens`, `usage.input_tokens`, `usage.output_tokens`. NOT in CI (costs real API calls). Documented in the feature's vernissage report.
 
+5. **`apps/landing` static pages** — separate, lighter setup
+   `apps/landing` is plain static HTML/CSS/JS with no DB and no auth, so its Playwright suite runs under its own config, not the main app's: `playwright.landing.config.ts` + `tests/landing/`, run with `pnpm test:landing`. The main `playwright.config.ts`'s `webServer` is an array that always starts every entry regardless of `--project` — folding a static page in there would make every landing test wait on the full vinxi dev server and Postgres for no reason. Keep new landing-page suites here, not in `tests/`.
+
 ## Pipeline enforcement
 
 Three layers block bad code from reaching `main`:

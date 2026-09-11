@@ -26,6 +26,7 @@ backups/
 # Testing
 test-results/
 playwright-report/
+playwright-report-landing/
 playwright/.cache/
 
 # Logs

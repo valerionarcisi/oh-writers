@@ -327,27 +327,24 @@ export function CesareDrawer({
   onAddScope,
   composer,
   children,
-  peekSubtitle = "in attesa",
+  peekSubtitle = "waiting",
   className,
-  ariaLabel = "Assistente Cesare",
+  ariaLabel = "Cesare assistant",
   labels,
 }: CesareDrawerProps) {
-  const peekExpandLabel = labels?.peekExpand ?? "Espandi Cesare";
-  const peekCloseLabel = labels?.peekClose ?? "Chiudi Cesare";
-  const expandLabel = labels?.expand ?? "Espandi";
-  const openAsColumnLabel = labels?.openAsColumn ?? "Apri come colonna";
-  const minimizeLabel = labels?.minimize ?? "Minimizza";
-  const closeLabel = labels?.close ?? "Chiudi";
-  const shrinkToFloatLabel = labels?.shrinkToFloat ?? "Riduci a floating";
-  const resizeHeightLabel =
-    labels?.resizeHeight ?? "Ridimensiona altezza drawer";
-  const resizeWidthLabel =
-    labels?.resizeWidth ?? "Ridimensiona larghezza drawer";
-  const selectSessionLabel =
-    labels?.selectSession ?? "Seleziona sessione Cesare";
+  const peekExpandLabel = labels?.peekExpand ?? "Expand Cesare";
+  const peekCloseLabel = labels?.peekClose ?? "Close Cesare";
+  const expandLabel = labels?.expand ?? "Expand";
+  const openAsColumnLabel = labels?.openAsColumn ?? "Open as column";
+  const minimizeLabel = labels?.minimize ?? "Minimize";
+  const closeLabel = labels?.close ?? "Close";
+  const shrinkToFloatLabel = labels?.shrinkToFloat ?? "Shrink to floating";
+  const resizeHeightLabel = labels?.resizeHeight ?? "Resize drawer height";
+  const resizeWidthLabel = labels?.resizeWidth ?? "Resize drawer width";
+  const selectSessionLabel = labels?.selectSession ?? "Select Cesare session";
   const scrollToNewRepliesLabel =
-    labels?.scrollToNewReplies ?? "Vai alle nuove risposte";
-  const sendMessageLabel = labels?.sendMessage ?? "Invia messaggio";
+    labels?.scrollToNewReplies ?? "Jump to new replies";
+  const sendMessageLabel = labels?.sendMessage ?? "Send message";
   // ─── Resize state ────────────────────────────────────────────────────────
   const isExpanded = state === "expanded";
   const isSplit = state === "expanded-split";
@@ -532,7 +529,7 @@ export function CesareDrawer({
                 data-testid="cesare-session-selector"
               >
                 {sessions.find((s) => s.id === activeSessionId)?.title ??
-                  "Sessione"}
+                  "Session"}
                 <span className={styles.sessionSelectorChev} aria-hidden="true">
                   ▾
                 </span>
@@ -662,7 +659,7 @@ export function CesareDrawer({
                 value={composer.value}
                 onChange={composer.onChange}
                 onSubmit={composer.onSubmit}
-                placeholder={composer.placeholder ?? "Chiedi a Cesare…"}
+                placeholder={composer.placeholder ?? "Ask Cesare…"}
                 ariaLabel="Composer Cesare"
                 onArrowUp={composer.onRecallLast}
               />

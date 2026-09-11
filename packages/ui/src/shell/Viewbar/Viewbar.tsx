@@ -6,8 +6,8 @@ export type ViewbarProps = {
   children: ReactNode;
   isScrolled?: boolean;
   className?: string;
-  /** Aria-label for the viewbar nav landmark. Defaults to its IT value so
-   *  the viewbar renders correctly without a translator. */
+  /** Aria-label for the viewbar nav landmark. Defaults to EN so the
+   *  viewbar renders correctly without a translator. */
   ariaLabel?: string;
 };
 
@@ -15,7 +15,7 @@ export function Viewbar({
   children,
   isScrolled = false,
   className,
-  ariaLabel = "Opzioni di visualizzazione",
+  ariaLabel = "Display options",
 }: ViewbarProps) {
   return (
     <nav

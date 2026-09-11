@@ -775,6 +775,7 @@ export function CesareSheet({
         onStop: () => chat.stop(activeSessionId ?? undefined),
         onRecallLast: handleRecallLast,
         isSubmitBlocked: submitBlockedPulse,
+        placeholder: t("cesare.session.composerPlaceholder"),
       }}
       peekSubtitle={
         isLoading ? t("cesare.peek.thinking") : t("cesare.peek.waiting")
