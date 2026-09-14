@@ -1,3 +1,10 @@
+## [1.1.0-beta.13](https://github.com/valerionarcisi/oh-writers/compare/v1.1.0-beta.12...v1.1.0-beta.13) (2026-09-14)
+
+### Bug Fixes
+
+* bundle zod into SSR output so screenplay saves stop 500ing ([#174](https://github.com/valerionarcisi/oh-writers/issues/174)) ([#182](https://github.com/valerionarcisi/oh-writers/issues/182)) ([ff1c4b9](https://github.com/valerionarcisi/oh-writers/commit/ff1c4b92277d63bf286c91a3b153b13c63ff9abd))
+* run DB migrations in release.yml before Fly deploy ([#175](https://github.com/valerionarcisi/oh-writers/issues/175)) ([#183](https://github.com/valerionarcisi/oh-writers/issues/183)) ([c574365](https://github.com/valerionarcisi/oh-writers/commit/c5743652cf2ed04bf6c77490201992bbba731571))
+
 ## [1.1.0-beta.12](https://github.com/valerionarcisi/oh-writers/compare/v1.1.0-beta.11...v1.1.0-beta.12) (2026-09-11)
 
 ### Bug Fixes
