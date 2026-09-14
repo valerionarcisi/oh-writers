@@ -1,3 +1,9 @@
+## [1.1.0-beta.14](https://github.com/valerionarcisi/oh-writers/compare/v1.1.0-beta.13...v1.1.0-beta.14) (2026-09-14)
+
+### Bug Fixes
+
+* pin screenplay PDF export to US Letter, matching the editor ([#180](https://github.com/valerionarcisi/oh-writers/issues/180)) ([#184](https://github.com/valerionarcisi/oh-writers/issues/184)) ([2003f96](https://github.com/valerionarcisi/oh-writers/commit/2003f9691258a7c7344c21114c14efe417ec2cc3))
+
 ## [1.1.0-beta.13](https://github.com/valerionarcisi/oh-writers/compare/v1.1.0-beta.12...v1.1.0-beta.13) (2026-09-14)
 
 ### Bug Fixes
