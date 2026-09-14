@@ -21,6 +21,17 @@ export default defineConfig({
     },
     ssr: {
       external: ["postgres", "@oh-writers/db", "pdfkit", "pdf-parse", "jszip"],
+      // The app pins zod@3, but better-auth (a direct dependency) requires
+      // zod@4 — pnpm resolves both correctly side-by-side in node_modules.
+      // Vite's SSR build defaults to leaving npm packages as a bare runtime
+      // `import "zod"`, so at deploy time a single `node_modules/zod` has to
+      // serve every consumer and can resolve to the wrong major for a given
+      // call site (issue #174: zod@4's `z.record().unknown().nullable()`
+      // crashes with "Async validation not supported" when validated
+      // through code that was written against zod@3's Standard Schema
+      // behavior). noExternal forces Vite to bundle each chunk's own
+      // correctly-resolved zod copy instead of leaving it external.
+      noExternal: ["zod"],
     },
     // Expose the MOCK_AI build-env flag to the client bundle so the UI
     // can opt out of side effects that race the test harness (e.g. the

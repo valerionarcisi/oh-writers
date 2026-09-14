@@ -60,6 +60,11 @@ export default defineConfig({
         // project uses fails BY CONSTRUCTION (DEV_ONLY pages must be visible
         // in dev). Without this ignore, `--project=chromium` runs it wrongly.
         /shell-production-gating\.spec\.ts$/,
+        // Belongs to the prod-build project only: it regression-tests issue
+        // #174, a bug that only exists in the bundled Nitro output — the
+        // dev server never goes through that build pipeline, so this would
+        // be redundant with editor.spec.ts's "[086] content persists" test.
+        /screenplay-save-production-build\.spec\.ts$/,
         // Belongs to playwright.landing.config.ts only: static apps/landing
         // pages have no DB/auth and run under a separate, lighter config.
         /landing\/.*\.spec\.ts$/,
@@ -98,7 +103,10 @@ export default defineConfig({
       // Location, Piano di ripresa). Separate webServer entry below builds
       // and starts a production server on PROD_BASE_URL for this project only.
       name: "prod-build",
-      testMatch: /shell-production-gating\.spec\.ts$/,
+      testMatch: [
+        /shell-production-gating\.spec\.ts$/,
+        /screenplay-save-production-build\.spec\.ts$/,
+      ],
       use: {
         ...devices["Desktop Chrome"],
         baseURL: PROD_BASE_URL,
