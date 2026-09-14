@@ -31,8 +31,12 @@ export const breakdownPdfGroups = (rows: PdfRow[]): BreakdownPdfGroup[] => {
     groups.push({
       header: `${CATEGORY_META[cat].labelIt} (${items.length})`,
       elements: items.map(
+        // "Courier" is one of PDFKit's non-embedded Standard-14 fonts, mapped
+        // to WinAnsiEncoding — it renders "•" and "×" fine but has no glyph
+        // for "→" (U+2192), which came out as garbled characters in the PDF.
+        // "->" is plain ASCII, safe in every PDFKit standard font.
         (it) =>
-          `  • ${it.name}  ×${it.totalQuantity}  → scene ${it.scenes.join(", ")}`,
+          `  • ${it.name}  ×${it.totalQuantity}  -> scene ${it.scenes.join(", ")}`,
       ),
     });
   }

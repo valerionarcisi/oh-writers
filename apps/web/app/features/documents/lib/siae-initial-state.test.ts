@@ -20,13 +20,13 @@ describe("buildSiaeInitialState", () => {
   let counter = 0;
   const idFactory = () => `author-${++counter}`;
 
-  it("seeds a single author from the owner name", () => {
+  it("seeds a single author from the fallback name", () => {
     counter = 0;
     const state = buildSiaeInitialState(
       {
         title: "Dune",
         declaredGenre: "sci-fi",
-        ownerFullName: "Frank Herbert",
+        authorFallbackName: "Frank Herbert",
       },
       fixedNow,
       idFactory,
@@ -41,10 +41,10 @@ describe("buildSiaeInitialState", () => {
     });
   });
 
-  it("seeds one empty author when the owner name is null", () => {
+  it("seeds one empty author when the fallback name is null", () => {
     counter = 0;
     const state = buildSiaeInitialState(
-      { title: "Untitled", declaredGenre: "", ownerFullName: null },
+      { title: "Untitled", declaredGenre: "", authorFallbackName: null },
       fixedNow,
       idFactory,
     );
@@ -73,7 +73,7 @@ describe("buildSiaeInitialState — with savedMetadata", () => {
       {
         title: "Ignored Title",
         declaredGenre: "ignored",
-        ownerFullName: "Ignored Owner",
+        authorFallbackName: "Ignored Owner",
         savedMetadata: SAVED_METADATA,
       },
       fixedNow,
@@ -99,7 +99,7 @@ describe("buildSiaeInitialState — with savedMetadata", () => {
       {
         title: "Untitled",
         declaredGenre: "drama",
-        ownerFullName: "Jane Doe",
+        authorFallbackName: "Jane Doe",
         savedMetadata: null,
       },
       fixedNow,
