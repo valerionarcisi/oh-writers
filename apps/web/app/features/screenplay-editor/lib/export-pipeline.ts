@@ -169,6 +169,12 @@ export const buildFountainFilename = (
  *   unless this flag is set, so the exported PDF lost the bold the writer sees.
  *   Force it on so the cover-to-body formatting matches the editor (BUG-N63,
  *   WYSIWYG).
+ * - `print_profile`: afterwriting defaults this to `"a4"`. The in-editor
+ *   paginator (`lib/plugins/paginator.ts`) assumes US Letter page geometry —
+ *   left unset, the exported PDF's page size and page breaks silently
+ *   disagreed with what the editor showed (issue #180, WYSIWYG). Pinned to
+ *   `usletter` so editor and export always agree; exposing an A4 choice to
+ *   users is a separate, deliberately out-of-scope product decision.
  */
 const withSharedSettings = (
   invocation: AwcInvocation,
@@ -179,6 +185,7 @@ const withSharedSettings = (
     ...invocation.cliSettings,
     `print_title_page=${includeCoverPage}`,
     "embolden_scene_headers=true",
+    "print_profile=usletter",
   ],
 });
 
