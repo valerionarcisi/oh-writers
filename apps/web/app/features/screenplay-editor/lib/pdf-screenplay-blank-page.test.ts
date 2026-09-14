@@ -68,7 +68,55 @@ const renderPages = async (
   return pages;
 };
 
+/**
+ * Page 1's physical size in points (1/72in), read via pdfjs-dist. US Letter
+ * is 612×792pt, A4 is 595×842pt — the two page-size families the app's
+ * afterwriting print profiles support (see export-pipeline.ts) are far
+ * enough apart that this needs no tolerance window to tell them apart.
+ * pdfjs-dist (not pdf-parse) because pdf-parse@1.1.1's bundled 2017 pdf.js
+ * lexer flakes nondeterministically on Node 25 (see tests/helpers/pdf.ts).
+ */
+const firstPageSizePt = async (
+  buffer: Buffer,
+): Promise<{ widthPt: number; heightPt: number }> => {
+  const { getDocument } = await import("pdfjs-dist/legacy/build/pdf.mjs");
+  const doc = await getDocument({ data: new Uint8Array(buffer), verbosity: 0 })
+    .promise;
+  const page = await doc.getPage(1);
+  const [x0, y0, x1, y1] = page.view;
+  await doc.destroy();
+  if (
+    x0 === undefined ||
+    y0 === undefined ||
+    x1 === undefined ||
+    y1 === undefined
+  ) {
+    throw new Error("PDF page view box is missing coordinates");
+  }
+  return { widthPt: x1 - x0, heightPt: y1 - y0 };
+};
+
 const TIMEOUT_MS = 60_000;
+
+describe("screenplay PDF — page size matches the editor's paginator (issue #180)", () => {
+  it(
+    "exported PDF is US Letter (612×792pt), not afterwriting's A4 default",
+    async () => {
+      const result = buildExportPipeline("standard", {
+        fountain: SAMPLE_FOUNTAIN,
+        includeCoverPage: false,
+      });
+      const buffer = await buildScreenplayPdf(result.fountain, {
+        invocation: result.invocation,
+      });
+      const { widthPt, heightPt } = await firstPageSizePt(buffer);
+
+      expect(widthPt).toBeCloseTo(612, 0);
+      expect(heightPt).toBeCloseTo(792, 0);
+    },
+    TIMEOUT_MS,
+  );
+});
 
 describe("screenplay PDF — no blank leading page (BUG-N63e)", () => {
   it(

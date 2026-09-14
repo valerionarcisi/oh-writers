@@ -41,6 +41,31 @@ export const pdfCompactText = async (buffer: Buffer): Promise<string> =>
   (await pdfText(buffer)).replace(/\s+/g, "");
 
 /**
+ * Page 1's physical size in points (1/72in). US Letter is 612×792pt, A4 is
+ * 595×842pt — the two page-size families the app's afterwriting print
+ * profiles support (`usletter`/`a4`, see export-pipeline.ts) are far enough
+ * apart that a ±2pt tolerance safely distinguishes them without being flaky
+ * on rounding.
+ */
+export const pdfFirstPageSize = async (
+  buffer: Buffer,
+): Promise<{ widthPt: number; heightPt: number }> => {
+  const doc = await loadPdf(buffer);
+  const page = await doc.getPage(1);
+  const [x0, y0, x1, y1] = page.view;
+  await doc.destroy();
+  if (
+    x0 === undefined ||
+    y0 === undefined ||
+    x1 === undefined ||
+    y1 === undefined
+  ) {
+    throw new Error("PDF page view box is missing coordinates");
+  }
+  return { widthPt: x1 - x0, heightPt: y1 - y0 };
+};
+
+/**
  * Per-item x-position + fontName of the first page. The x tells dialogue
  * (indented) from action (flush-left); the fontName tells a bold run (a
  * distinct font face) from the regular body — the PDF compresses the font

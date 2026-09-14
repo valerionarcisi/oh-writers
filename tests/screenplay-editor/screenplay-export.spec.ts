@@ -11,7 +11,11 @@
 import { test, expect, TEST_TEAM_PROJECT_ID } from "../fixtures";
 import { BASE_URL, waitForEditor } from "../helpers";
 import type { Download, Page, Response } from "@playwright/test";
-import { pdfCompactText, pdfFirstPageItems } from "../helpers/pdf";
+import {
+  pdfCompactText,
+  pdfFirstPageItems,
+  pdfFirstPageSize,
+} from "../helpers/pdf";
 
 const SCREENPLAY_PATH = (projectId: string) =>
   `${BASE_URL}/projects/${projectId}/screenplay`;
@@ -101,6 +105,23 @@ test.describe("Screenplay Export — Spec 05j", () => {
     // — they must surface in the rendered PDF text (whitespace-stripped).
     const text = await pdfCompactText(buffer);
     expect(text).toMatch(/INT\.|EXT\./);
+  });
+
+  test("[594] exported PDF is US Letter, matching the editor's paginator (issue #180)", async ({
+    authenticatedPage: page,
+    testProjectId,
+  }) => {
+    await page.goto(SCREENPLAY_PATH(testProjectId));
+    await waitForEditor(page);
+
+    const { response } = await openScreenplayExportAndGenerate(page);
+    const body = await response.json();
+    const buffer = Buffer.from(body.result.value.pdfBase64, "base64");
+    // US Letter = 612x792pt, A4 = 595x842pt — afterwriting defaults to A4
+    // unless print_profile is explicitly pinned (export-pipeline.ts).
+    const { widthPt, heightPt } = await pdfFirstPageSize(buffer);
+    expect(widthPt).toBeCloseTo(612, 0);
+    expect(heightPt).toBeCloseTo(792, 0);
   });
 
   test("[234] includeCoverPage=true → cover page with Written by", async ({

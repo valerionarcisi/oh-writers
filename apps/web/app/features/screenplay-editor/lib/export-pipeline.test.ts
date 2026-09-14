@@ -51,6 +51,22 @@ describe("buildExportPipeline", () => {
     }
   });
 
+  it("pins US Letter on every format to match the editor's paginator (issue #180 WYSIWYG)", () => {
+    for (const format of [
+      "standard",
+      "sides",
+      "ad_copy",
+      "reading_copy",
+      "one_scene_per_page",
+    ] as const) {
+      const r = buildExportPipeline(format, {
+        fountain: FOUNTAIN,
+        sceneSelection: ["1"],
+      });
+      expect(r.invocation.cliSettings).toContain("print_profile=usletter");
+    }
+  });
+
   it("forces the title page off for sides even if a cover is requested", () => {
     const r = buildExportPipeline("sides", {
       fountain: FOUNTAIN,
