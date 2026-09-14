@@ -114,6 +114,22 @@ jobs:
           else
             echo "did_release=false" >> "$GITHUB_OUTPUT"
           fi
+      # #175 — beta went 5 migrations behind because this step didn't exist:
+      # release.yml deployed new Drizzle-schema code on every release without
+      # ever running the migration against Neon, so the deployed code
+      # referenced columns the live table didn't have yet (DbError on every
+      # write). Runs before the Fly deploy steps so the schema is always
+      # ahead of (or level with) the code that's about to serve traffic.
+      - name: Migrate database (production)
+        if: steps.released.outputs.did_release == 'true' && github.ref_name == 'main'
+        run: pnpm db:migrate
+        env:
+          DATABASE_URL: ${{ secrets.PROD_DATABASE_URL_DIRECT }}
+      - name: Migrate database (beta)
+        if: steps.released.outputs.did_release == 'true' && github.ref_name == 'beta'
+        run: pnpm db:migrate
+        env:
+          DATABASE_URL: ${{ secrets.BETA_DATABASE_URL_DIRECT }}
       - uses: superfly/flyctl-actions/setup-flyctl@master
         if: steps.released.outputs.did_release == 'true'
       - name: Deploy web (production)
