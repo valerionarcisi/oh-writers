@@ -29,7 +29,7 @@ import {
   emptyNarrativeDocument,
 } from "~/features/documents";
 import { toErrorView } from "~/components/ResultErrorView";
-import { useProject } from "~/features/projects";
+import { useProject, useTitlePage } from "~/features/projects";
 import {
   useCesareOpen,
   useContextActions,
@@ -190,10 +190,19 @@ function SoggettoPageReady({
   const siaeMetadataQuery = useSiaeMetadata(projectId);
   const savedMetadata =
     siaeMetadataQuery.data !== undefined ? siaeMetadataQuery.data : null;
+  const titlePageQuery = useTitlePage(projectId);
+  const titlePageAuthor =
+    titlePageQuery.data && titlePageQuery.data.isOk
+      ? titlePageQuery.data.value.titlePage.author
+      : null;
+  // Prefer the AUTHORED title-page author (the credited writer, which may
+  // differ from the account owner on a team project) over the account
+  // owner's name — same precedence as the DOCX export's cover, so a SIAE
+  // deposit and the DOCX cover never silently disagree on who wrote it.
   const siaeDefaults = {
     title: projectOk?.title ?? "",
     declaredGenre: projectOk?.genre ?? "",
-    ownerFullName: session?.user?.name ?? null,
+    authorFallbackName: titlePageAuthor ?? session?.user?.name ?? null,
     savedMetadata,
   };
 

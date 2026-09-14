@@ -43,7 +43,21 @@ describe("breakdownPdfGroups (BUG-N63d — export fidelity)", () => {
     expect(props?.header).toBe("Oggetti (2)");
     expect(props?.elements).toHaveLength(2);
     expect(cast?.header).toBe("Cast (1)");
-    expect(cast?.elements[0]).toContain("→ scene 1, 2");
+    expect(cast?.elements[0]).toContain("-> scene 1, 2");
+  });
+
+  // Regression: the PDF renders this line with PDFKit's "Courier" font, a
+  // non-embedded Standard-14 font mapped to WinAnsiEncoding. "→" (U+2192) has
+  // no glyph there and came out as garbled characters in the actual PDF —
+  // "•" and "×" are fine (both exist in WinAnsiEncoding), only the arrow
+  // isn't. Assert plain ASCII so this can't silently regress.
+  it("never emits a non-WinAnsiEncoding arrow character (PDFKit Courier glyph gap)", () => {
+    const rows: PdfRow[] = [
+      { category: "props", name: "Pistola", totalQuantity: 1, scenes: [1] },
+    ];
+    const [group] = breakdownPdfGroups(rows);
+    expect(group!.elements[0]).not.toContain("→");
+    expect(group!.elements[0]).toContain("->");
   });
 });
 

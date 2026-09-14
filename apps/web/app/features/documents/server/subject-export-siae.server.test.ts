@@ -20,11 +20,23 @@ const baseInput = (over: Partial<SiaeExportInput> = {}): SiaeExportInput => ({
 });
 
 describe("buildSiaeCoverLines", () => {
-  it("renders the fixed Italian legal header", () => {
+  it("renders the fixed cover header", () => {
     const lines = buildSiaeCoverLines(baseInput(), { logline: "A logline." });
-    expect(lines[0]).toBe("REPUBBLICA ITALIANA");
-    expect(lines[1]).toBe("SIAE — Sezione OLAF");
-    expect(lines[2]).toBe("SOGGETTO PER OPERA CINEMATOGRAFICA");
+    expect(lines[0]).toBe("SOGGETTO PER OPERA CINEMATOGRAFICA");
+    expect(lines[1]).toBe("Documento per deposito SIAE");
+  });
+
+  // Regression: an earlier version of this cover fabricated an institutional
+  // letterhead ("REPUBBLICA ITALIANA" / "SIAE — Sezione OLAF" — OLAF is the
+  // EU anti-fraud office, unrelated to SIAE, and no such SIAE section exists).
+  // A document that impersonates an official government/SIAE form is
+  // misleading and must never resurface.
+  it("never fabricates an institutional letterhead", () => {
+    const joined = buildSiaeCoverLines(baseInput(), {
+      logline: "A logline.",
+    }).join("\n");
+    expect(joined).not.toContain("REPUBBLICA ITALIANA");
+    expect(joined).not.toContain("OLAF");
   });
 
   it("includes title, genre, duration, compilation date", () => {

@@ -6,7 +6,10 @@ export const DEFAULT_DURATION_MINUTES = 90;
 export interface SiaeFormDefaults {
   readonly title: string;
   readonly declaredGenre: string;
-  readonly ownerFullName: string | null;
+  // Caller resolves this — prefer the project's title-page author over the
+  // account owner's name, so the SIAE deposit's declared author matches the
+  // DOCX export's cover (which reads title-page author the same way).
+  readonly authorFallbackName: string | null;
   readonly savedMetadata?: SiaeMetadata | null;
 }
 
@@ -56,7 +59,7 @@ export const buildSiaeInitialState = (
     authors: [
       {
         id: authorIdFactory(),
-        fullName: defaults.ownerFullName ?? "",
+        fullName: defaults.authorFallbackName ?? "",
         taxCode: null,
       },
     ],

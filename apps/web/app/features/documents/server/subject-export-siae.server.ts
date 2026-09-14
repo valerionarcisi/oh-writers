@@ -54,9 +54,8 @@ export const buildSiaeCoverLines = (
   context: SiaeCoverContext,
 ): ReadonlyArray<string> => {
   const lines: string[] = [
-    "REPUBBLICA ITALIANA",
-    "SIAE — Sezione OLAF",
     "SOGGETTO PER OPERA CINEMATOGRAFICA",
+    "Documento per deposito SIAE",
     "",
     `Titolo:              ${input.title}`,
     `Genere dichiarato:   ${input.declaredGenre || "non dichiarato"}`,
@@ -166,13 +165,12 @@ const renderCover = (
   context: SiaeCoverContext,
 ) => {
   doc.font("Helvetica-Bold").fontSize(16).fillColor("#000");
-  doc.text("REPUBBLICA ITALIANA", { align: "center" });
-  doc.text("SIAE — Sezione OLAF", { align: "center" });
   doc.text("SOGGETTO PER OPERA CINEMATOGRAFICA", { align: "center" });
+  doc.fontSize(12).text("Documento per deposito SIAE", { align: "center" });
   doc.moveDown(2);
 
   doc.font("Times-Roman").fontSize(12);
-  const body = buildSiaeCoverLines(input, context).slice(3); // skip the 3 title lines already rendered above
+  const body = buildSiaeCoverLines(input, context).slice(2); // skip the 2 title lines already rendered above
   for (const line of body) {
     doc.text(line);
   }
