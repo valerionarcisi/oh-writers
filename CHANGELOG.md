@@ -1,3 +1,9 @@
+## [1.1.0-beta.16](https://github.com/valerionarcisi/oh-writers/compare/v1.1.0-beta.15...v1.1.0-beta.16) (2026-09-18)
+
+### Bug Fixes
+
+* screenplay PDF export 500 on beta, leaking error details ([c8a0041](https://github.com/valerionarcisi/oh-writers/commit/c8a0041e80dbf0b8484fbba5bfbd5f6577661161))
+
 ## [1.1.0-beta.15](https://github.com/valerionarcisi/oh-writers/compare/v1.1.0-beta.14...v1.1.0-beta.15) (2026-09-14)
 
 ### Bug Fixes
