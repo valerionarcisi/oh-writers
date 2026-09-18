@@ -1,3 +1,9 @@
+## [1.1.0-beta.17](https://github.com/valerionarcisi/oh-writers/compare/v1.1.0-beta.16...v1.1.0-beta.17) (2026-09-18)
+
+### Bug Fixes
+
+* screenplay PDF export drops scene 1's number and WYSIWYG casing ([dd53ef9](https://github.com/valerionarcisi/oh-writers/commit/dd53ef9771b247122d912e7a694be02a168372e2)), closes [#187](https://github.com/valerionarcisi/oh-writers/issues/187)
+
 ## [1.1.0-beta.16](https://github.com/valerionarcisi/oh-writers/compare/v1.1.0-beta.15...v1.1.0-beta.16) (2026-09-18)
 
 ### Bug Fixes
