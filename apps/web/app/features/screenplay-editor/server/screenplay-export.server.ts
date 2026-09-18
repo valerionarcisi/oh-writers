@@ -186,18 +186,34 @@ export const exportScreenplayPdf = createServerFn({ method: "POST" })
         includeCoverPage: data.includeCoverPage,
       });
 
-      const rawBuffer = await buildScreenplayPdf(pipelineResult.fountain, {
-        invocation: pipelineResult.invocation,
-      });
+      // afterwriting runs as a child process inheriting the full server env
+      // (needed for its own config lookups) — its error/stderr can echo that
+      // env back in the message, so any throw here must be caught and
+      // reduced to DbError.message (never the raw error object) before it
+      // reaches the client.
+      const rawBufferResult = await ResultAsync.fromPromise(
+        buildScreenplayPdf(pipelineResult.fountain, {
+          invocation: pipelineResult.invocation,
+        }),
+        (e) => new DbError("exportScreenplayPdf.render", e),
+      );
+      if (rawBufferResult.isErr()) return toShape(err(rawBufferResult.error));
+      const rawBuffer = rawBufferResult.value;
+
       // Spec 89 — AI disclosure stamp: a bottom-right footer on every page,
       // independent of includeCoverPage/format — the note is a property of
       // the whole document, not of any one page's authored content.
-      const buffer = everAiTouched
-        ? await stampAiDisclosureFooter(
-            rawBuffer,
-            translations.it["screenplay.export.aiDisclosureNote"] ?? "",
+      const bufferResult = everAiTouched
+        ? await ResultAsync.fromPromise(
+            stampAiDisclosureFooter(
+              rawBuffer,
+              translations.it["screenplay.export.aiDisclosureNote"] ?? "",
+            ),
+            (e) => new DbError("exportScreenplayPdf.stamp", e),
           )
-        : rawBuffer;
+        : ok(rawBuffer);
+      if (bufferResult.isErr()) return toShape(err(bufferResult.error));
+      const buffer = bufferResult.value;
 
       const meta = EXPORT_FORMAT_META[data.format];
       return toShape(

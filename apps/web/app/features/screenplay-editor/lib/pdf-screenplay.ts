@@ -18,7 +18,18 @@ import type { AwcInvocation } from "./export-pipeline";
 
 const execFileAsync = promisify(execFile);
 
-const RUNNER_PATH = fileURLToPath(new URL("./awc-runner.cjs", import.meta.url));
+// Vinxi bundles this module into a hashed chunk under .output/server/chunks,
+// so a path relative to import.meta.url only resolves in dev (where the
+// source tree is intact) — in the deployed image the sibling file doesn't
+// exist. execFile needs a real file on disk (it can't run a bundled child
+// process in-process — see awc-runner.cjs's module-graph isolation comment),
+// so the Dockerfile copies it to a fixed path next to the server entrypoint
+// instead: server/index.mjs sits at .output/server/, so ../awc-runner.cjs
+// from there is .output/awc-runner.cjs.
+const RUNNER_PATH =
+  process.env["NODE_ENV"] === "production"
+    ? path.join(path.dirname(process.argv[1] ?? ""), "..", "awc-runner.cjs")
+    : fileURLToPath(new URL("./awc-runner.cjs", import.meta.url));
 
 export interface BuildPdfOptions {
   readonly invocation?: AwcInvocation;
