@@ -22,6 +22,28 @@ describe("detectElement — scene headings", () => {
   it("does not recognise INT without trailing dot", () => {
     expect(detectElement("INT KITCHEN")).not.toBe("scene");
   });
+
+  // Regression covering bug (1) from normalize-fountain.ts's doc comment —
+  // full writeup there. SCENE_HEADING_RE is now case-insensitive on the
+  // standard INT/EXT/EST forms, matching list-scenes.ts's HEADING_PREFIX.
+  it("recognises a mixed-case compound prefix (EXT/Int.)", () => {
+    expect(detectElement("EXT/Int. QUARTIERE RESIDENZIALE - POMERIGGIO")).toBe(
+      "scene",
+    );
+  });
+
+  it("recognises lowercase int./ext. prefixes", () => {
+    expect(detectElement("int. kitchen - night")).toBe("scene");
+    expect(detectElement("Ext. Street - Day")).toBe("scene");
+  });
+
+  it("still rejects lowercase non-standard sluglines (Montage, Intercut, ...)", () => {
+    // NON_STANDARD_HEADING_PREFIX stays case-sensitive on purpose (see
+    // fountain-constants.ts) — a lowercase "Montage di Filippo che lavora" is
+    // prose, not a structural slugline.
+    expect(detectElement("Montage di Filippo che lavora")).toBe("action");
+    expect(detectElement("montage")).toBe("action");
+  });
 });
 
 describe("detectElement — parenthetical", () => {

@@ -94,3 +94,36 @@ describe("normalizeFountainForExport — BUG-N63", () => {
     );
   });
 });
+
+// Regression covering bug (1) from normalize-fountain.ts's doc comment
+// (case-sensitive SCENE_HEADING_RE demoting a mixed-case heading to action)
+// — full writeup there.
+describe("normalizeFountainForExport — mixed-case scene heading (Walkie Talkie scene 1)", () => {
+  const withMixedCaseHeading = [
+    "EXT/Int. QUARTIERE RESIDENZIALE, CASA - POMERIGGIO",
+    "",
+    "Case basse, cancelli chiusi, siepi immobili nel caldo.",
+    "",
+    "INT. SALOTTO/CAMERA CASA - POMERIGGIO",
+    "",
+    "Mia e' seduta sul pavimento del salotto.",
+  ].join("\n");
+
+  it("keeps the mixed-case heading recognisable as a scene, not action", () => {
+    const out = normalizeFountainForExport(withMixedCaseHeading);
+    const lines = out.split("\n");
+    const headingIndex = lines.findIndex((l) =>
+      l.includes("QUARTIERE RESIDENZIALE"),
+    );
+    // A demoted heading gets swallowed into the following action paragraph
+    // (no blank line kept above/below); a real scene heading stays its own
+    // line, flush left, followed by a blank line before the action prose.
+    expect(headingIndex).toBeGreaterThanOrEqual(0);
+    expect(lines[headingIndex + 1]).toBe("");
+  });
+
+  it("does not corrupt the second, cleanly-cased scene heading", () => {
+    const out = normalizeFountainForExport(withMixedCaseHeading);
+    expect(out).toContain("INT. SALOTTO/CAMERA CASA - POMERIGGIO");
+  });
+});

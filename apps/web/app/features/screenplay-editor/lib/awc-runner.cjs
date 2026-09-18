@@ -22,6 +22,11 @@
 global.window = undefined;
 
 const path = require("path");
+// Node's real `Module` class, captured before `require` itself is
+// reassigned to afterwriting's AMD shim below — needed later to reach into
+// its module cache the same way awrequire.js does internally (see the
+// utils/liner patch further down).
+const NodeModule = require("module");
 const afterwritingDir = path.dirname(
   require.resolve("afterwriting/package.json"),
 );
@@ -105,6 +110,88 @@ try {
   }
 } catch (e) {
   console.error("[awc-runner] failed to apply OHW_PROFILE_OVERRIDES:", e);
+  process.exit(1);
+}
+
+// --- Patch liner.js: scene 1 never gets a printed scene number ---
+// Verified against afterwriting@1.17.3 (pinned exactly in apps/web/package.json,
+// no caret range — a version bump is always a deliberate, reviewed dependency
+// change, never a silent `pnpm install` side effect). If this stops backfilling
+// after a future afterwriting bump, pdf-screenplay-scene-numbering.test.ts's
+// "clean, canonical scene 1" case is the tripwire — nothing else will catch it.
+//
+// Upstream bug: js/utils/liner.js only copies a scene heading's number onto
+// its first rendered line when `lines.length` (already-accumulated output) is
+// non-zero — `if (token.is("scene_heading") && lines.length) {...}`. Since
+// scene 1 is virtually always the document's first line, `lines` is empty
+// right then, so scene 1 never gets a printed number in ANY export, even
+// though aw-parser assigns `token.number = 1` to it like any other scene.
+// Full narrative (this + the two other stacked export bugs it was found
+// alongside): normalize-fountain.ts's uppercaseWysiwygElements doc comment.
+// No maintained fork exists to patch upstream instead.
+//
+// Patch mechanics: the module's export is the `Liner` CONSTRUCTOR itself —
+// script-model.js does `new fliner(helpers)`, and `.line` is assigned onto a
+// fresh closure-local object INSIDE the constructor on every call, not a
+// shared prototype — so this can't patch one instance's `.line`; it has to
+// replace what `require("utils/liner")` itself returns, for every future
+// caller. awrequire.js resolves that name through Node's own module cache
+// (`Module._cache[resolvedPath].exports`), so mutating this require's result
+// in place IS the same object every other `require("utils/liner")` call
+// (including script-model.js's) gets back.
+try {
+  const OriginalLiner = require("utils/liner");
+  const PatchedLiner = function (...args) {
+    const instance =
+      new.target ? Reflect.construct(OriginalLiner, args, new.target)
+      : OriginalLiner.apply(this, args) || this;
+    const originalLine = instance.line;
+    instance.line = function patchedLine(tokens, cfg) {
+      const lines = originalLine(tokens, cfg);
+      // Backfill from the SOURCE tokens' own `.number` (already assigned by
+      // aw-parser, including any explicit `#N#`/locked value) — never
+      // reinvent a counter, which could disagree with a non-sequential
+      // locked number. Scene-heading tokens and their first rendered line
+      // appear in the same relative order in `tokens` and `lines`, so a
+      // single forward pointer over `tokens` keeps them paired.
+      let tokenIndex = 0;
+      let prevWasSceneHeadingLine = false;
+      for (const line of lines) {
+        const isFirstLineOfHeading =
+          line.local_index === 0 &&
+          line.type === "scene_heading" &&
+          !prevWasSceneHeadingLine;
+        if (isFirstLineOfHeading) {
+          while (
+            tokenIndex < tokens.length &&
+            !(tokens[tokenIndex].is && tokens[tokenIndex].is("scene_heading"))
+          ) {
+            tokenIndex++;
+          }
+          const sourceToken = tokens[tokenIndex];
+          if (!line.number && sourceToken) line.number = sourceToken.number;
+          tokenIndex++;
+        }
+        prevWasSceneHeadingLine = line.type === "scene_heading";
+      }
+      return lines;
+    };
+    return instance;
+  };
+  // Replace the cached module export in place, via Node's REAL module
+  // cache (awrequire.js resolves "utils/liner" to this same absolute path
+  // and looks it up through Module._cache too) — see comment above for why
+  // this reaches every other `require("utils/liner")` call site too.
+  const linerAbsolutePath = path.join(
+    afterwritingDir,
+    "js/utils/liner.js",
+  );
+  if (!NodeModule._cache[linerAbsolutePath]) {
+    throw new Error(`utils/liner not yet in the module cache: ${linerAbsolutePath}`);
+  }
+  NodeModule._cache[linerAbsolutePath].exports = PatchedLiner;
+} catch (e) {
+  console.error("[awc-runner] failed to patch utils/liner scene numbering:", e);
   process.exit(1);
 }
 
