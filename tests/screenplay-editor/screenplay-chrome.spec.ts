@@ -149,6 +149,17 @@ test.describe("[Spec 55a] screenplay chrome", () => {
     await expect(exit).toBeVisible();
     await expect(page.getByText("Exit Focus")).toHaveCount(0);
 
+    // The writing-element chips (Scene/Action/Character/...) must stay
+    // reachable in Focus — the overlay covers the whole shell (including the
+    // Viewbar they normally sit in via viewbarCenter), so without their own
+    // copy inside the focus toolbar a writer had no way to switch block
+    // types except memorised keyboard shortcuts.
+    const focusToolbar = page.getByTestId("focus-toolbar");
+    await expect(focusToolbar.locator('[data-element="scene"]')).toBeVisible();
+    await expect(
+      focusToolbar.locator('[data-element="character"]'),
+    ).toBeVisible();
+
     // Exiting restores the normal chrome (the Viewbar Focus button is usable
     // again — proving the overlay was dismissed, not just hidden behind it).
     await exit.click();

@@ -122,7 +122,9 @@
 
 .focusToolbar {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
   padding: var(--space-3) var(--space-5);
   border-block-end: var(--border);
   flex-shrink: 0;

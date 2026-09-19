@@ -68,6 +68,7 @@ import {
 import { useImportPdf } from "../hooks/useImportPdf";
 import { useImportFountain } from "../hooks/useImportFountain";
 import { ExportScreenplayPdfModal } from "./ExportScreenplayPdfModal";
+import { ScreenplayElementChips } from "./ScreenplayElementChips";
 import { useExportScreenplayPdf } from "../hooks/useExportScreenplayPdf";
 import { ContextActionIds, type ExportFormat } from "@oh-writers/domain";
 import { buildFountainFilename } from "../lib/export-pipeline";
@@ -1149,7 +1150,18 @@ export const ScreenplayEditor = forwardRef<
   return (
     <div className={`${styles.page} ${isFocusMode ? styles.focusMode : ""}`}>
       {isFocusMode && (
-        <div className={styles.focusToolbar}>
+        <div className={styles.focusToolbar} data-testid="focus-toolbar">
+          {/* Focus mode covers the whole shell (position: fixed, inset: 0),
+           * hiding the Viewbar the writing-element chips normally sit in via
+           * `viewbarCenter` — without this, a writer in Focus had no way to
+           * switch block types (Scene/Action/Character/...) except memorised
+           * keyboard shortcuts. Reuses the editor's own handleSetElement, the
+           * same command the imperative `setElement` handle and the shell's
+           * chips both already call. */}
+          <ScreenplayElementChips
+            currentElement={currentElement}
+            onSetElement={handleSetElement}
+          />
           <button
             className={styles.focusExitBtn}
             onClick={() => setFocusMode(false)}
