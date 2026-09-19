@@ -153,19 +153,12 @@ test("[143] Cmd/Ctrl+S forces a save", async ({ page }) => {
   ]);
   expect(resp.ok()).toBe(true);
 
-  // After the forced save settles, the pill is no longer mid-save: it either
-  // reads "saved" or self-hides (the screenplay publishes no "saved" state once
-  // the change is flushed via the manual-save path).
-  await expect
-    .poll(
-      () =>
-        page.evaluate(
-          () =>
-            document
-              .querySelector('[data-testid="save-status-indicator"]')
-              ?.getAttribute("data-state") ?? "absent",
-        ),
-      { timeout: 10_000 },
-    )
-    .not.toBe("saving");
+  // Cmd/Ctrl+S must route through the SAME mutation useAutoSave's isDirty/
+  // isSaving/lastSavedAt derive from (its own `flush`) — a separate,
+  // uncoordinated mutation would still POST successfully (the assertion
+  // above would still pass) while leaving the pill never reflecting the
+  // save at all, which is indistinguishable from Cmd+S silently doing
+  // nothing from the writer's point of view. Assert the pill actually
+  // reaches "saved", not just "not saving".
+  await expect(savedPill(page)).toBeVisible({ timeout: 10_000 });
 });

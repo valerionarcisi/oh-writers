@@ -82,7 +82,6 @@ import {
 } from "~/features/app-shell";
 import type { ContextActionHandlers } from "~/features/app-shell";
 import { useLocale, useTranslation } from "~/features/i18n";
-import { useSaveScreenplay } from "../hooks/useScreenplay";
 import {
   useTitlePageState,
   useUpdateTitlePageState,
@@ -673,8 +672,6 @@ export const ScreenplayEditor = forwardRef<
       isViewing,
       normalizeFountain,
     );
-  const save = useSaveScreenplay();
-
   const restore = useRestoreVersion();
 
   // Prefetch the version content when the user requests it
@@ -782,7 +779,13 @@ export const ScreenplayEditor = forwardRef<
     };
   }, [flush]);
 
-  // Cmd/Ctrl+S — force save, bypassing autosave debounce.
+  // Cmd/Ctrl+S — force save, bypassing autosave debounce. Routes through
+  // useAutoSave's own `flush` (the same path the TopBar pill's "save now"
+  // and the E2E force-save hook above already use) rather than firing a
+  // second, independent useSaveScreenplay() mutation — a separate mutation
+  // instance left isDirty/isSaving/lastSavedAt (all derived from the
+  // useAutoSave-owned mutation) never reflecting a Cmd+S save, so the UI
+  // looked like Cmd+S "didn't work" even though it did POST.
   useEffect(() => {
     if (!(screenplay.canEdit ?? false)) return;
     const onKey = (e: KeyboardEvent) => {
@@ -790,12 +793,11 @@ export const ScreenplayEditor = forwardRef<
         (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s";
       if (!isSaveCombo) return;
       e.preventDefault();
-      if (!isSaving)
-        save.mutate({ screenplayId: screenplay.id, content, pmDoc });
+      if (!isSaving) void flush();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [save, screenplay.id, screenplay.canEdit, content, pmDoc, isSaving]);
+  }, [flush, screenplay.canEdit, isSaving]);
 
   // Scene-number conflict bus — heading NodeView dispatches on Enter/blur
   // when the proposed number collides with another scene. We open the modal
