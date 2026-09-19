@@ -1,3 +1,9 @@
+## [1.1.0-beta.18](https://github.com/valerionarcisi/oh-writers/compare/v1.1.0-beta.17...v1.1.0-beta.18) (2026-09-19)
+
+### Bug Fixes
+
+* auto-insert () with cursor inside when switching to parenthetical ([41f66e8](https://github.com/valerionarcisi/oh-writers/commit/41f66e8fd9d790620e85e8dcf7dce89bb765c2f3))
+
 ## [1.1.0-beta.17](https://github.com/valerionarcisi/oh-writers/compare/v1.1.0-beta.16...v1.1.0-beta.17) (2026-09-18)
 
 ### Bug Fixes
