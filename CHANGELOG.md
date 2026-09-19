@@ -1,3 +1,9 @@
+## [1.1.0-beta.21](https://github.com/valerionarcisi/oh-writers/compare/v1.1.0-beta.20...v1.1.0-beta.21) (2026-09-19)
+
+### Bug Fixes
+
+* parenthetical prints flush with dialogue instead of its own column ([5f552a9](https://github.com/valerionarcisi/oh-writers/commit/5f552a975c2fe59f1b0e05897c3c5cd18495f82e))
+
 ## [1.1.0-beta.20](https://github.com/valerionarcisi/oh-writers/compare/v1.1.0-beta.19...v1.1.0-beta.20) (2026-09-19)
 
 ### Bug Fixes
