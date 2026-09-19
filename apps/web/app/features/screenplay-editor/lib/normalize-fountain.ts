@@ -65,10 +65,22 @@ const uppercaseWysiwygElements = (fountain: string): string => {
         ? CHARACTER_INDENT + line.slice(CHARACTER_INDENT.length).toUpperCase()
         : line.toUpperCase();
     }
+    if (type === "parenthetical") return stripLeadingIndent(line);
     return line;
   });
   return out.join("\n");
 };
+
+// docToFountain writes parentheticals at CHARACTER_INDENT (6 spaces) so the
+// editor's own round-trip (fountainToDoc reads the indent back to classify
+// the line) keeps working — see doc-to-fountain.ts. But aw-parser's
+// parenthetical regex is an EXACT match, `/^(\(.+\))$/` — no leading
+// whitespace allowed — so an indented "      (dal walkie-talkie)" fails
+// that match and falls through to plain "dialogue", printing flush with the
+// dialogue column instead of the parenthetical's own (further left) one.
+// Stripping the indent here is export-only; the stored document (and the
+// editor's own centred/italic CSS rendering of parentheticals) is untouched.
+const stripLeadingIndent = (line: string): string => line.trimStart();
 
 // afterwriting's OWN fountain grammar (aw-parser's `scene_heading` regex,
 // node_modules/aw-parser/parser.js) recognises the compound "int/ext" prefix
