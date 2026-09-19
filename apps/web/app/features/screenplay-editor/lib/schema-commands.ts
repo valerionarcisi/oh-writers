@@ -77,6 +77,27 @@ const escapeHeadingToBodyElement = (
   };
 };
 
+// Parenthetical on an EMPTY block: seed "()" and land the caret between
+// them, mirroring the Monaco (desktop) editor's Alt+P — see caretColumnFor
+// in fountain-keybindings.ts. setBlockType alone only changes the node
+// type; it never touches text content, so an empty parenthetical block
+// would otherwise sit blank with nothing to type into except manually-typed
+// parens. A block that already has text (e.g. dialogue → parenthetical) is
+// left untouched — only an empty block gets the auto-seed.
+const setEmptyBlockToParenthetical: Command = (state, dispatch) => {
+  if (!dispatch) return true;
+  let builtTr: EditorState["tr"] | undefined;
+  const applied = setBlockType(schema.nodes.parenthetical!)(state, (tr) => {
+    builtTr = tr;
+  });
+  if (!applied || !builtTr) return false;
+  const insertPos = state.selection.$from.before() + 1;
+  builtTr.insertText("()", insertPos);
+  builtTr.setSelection(TextSelection.create(builtTr.doc, insertPos + 1));
+  dispatch(builtTr);
+  return true;
+};
+
 export const setElement = (element: ElementType): Command => {
   if (element !== "scene") {
     const nodeType =
@@ -94,6 +115,12 @@ export const setElement = (element: ElementType): Command => {
       const parent = state.selection.$from.parent.type.name;
       if (parent === "prefix" || parent === "title" || parent === "heading") {
         return escape(state, dispatch, view);
+      }
+      if (
+        element === "parenthetical" &&
+        state.selection.$from.parent.content.size === 0
+      ) {
+        return setEmptyBlockToParenthetical(state, dispatch, view);
       }
       return setBlockType(nodeType)(state, dispatch, view);
     };

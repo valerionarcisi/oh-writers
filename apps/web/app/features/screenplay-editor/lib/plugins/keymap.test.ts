@@ -222,6 +222,44 @@ describe("setElement — Cmd+N / Alt+letter shortcuts (matrix verification)", ()
       expect(typeof setElement(el)).toBe("function");
     }
   });
+
+  // setBlockType alone only changes the node TYPE, never text content — an
+  // empty parenthetical block converted from action would otherwise sit
+  // blank with nothing to type into except manually-typed parens. Mirrors
+  // the Monaco (desktop) editor's Alt+P, which already seeds "()" and lands
+  // the caret between them (see caretColumnFor in fountain-keybindings.ts).
+  it("converting an EMPTY block to parenthetical seeds () with the caret inside", () => {
+    const doc = buildDoc([
+      node("scene", [heading("INT. X - DAY"), node("action")]),
+    ]);
+    const state = stateAtBlock(doc, [0, 1], 0);
+    const { ok, state: next } = runCommand(state, setElement("parenthetical"));
+    expect(ok).toBe(true);
+    const parenthetical = next.doc.firstChild!.child(1);
+    expect(parenthetical.type.name).toBe("parenthetical");
+    expect(parenthetical.textContent).toBe("()");
+    // Caret between "(" and ")" — one position inside the block's start.
+    const blockStart = next.selection.$from.before() + 1;
+    expect(next.selection.from).toBe(blockStart + 1);
+  });
+
+  // A block that already has text (e.g. converting dialogue back to
+  // parenthetical) must NOT get "()" injected on top of existing content —
+  // the auto-seed is only for the empty case.
+  it("converting a NON-EMPTY block to parenthetical leaves its text untouched", () => {
+    const doc = buildDoc([
+      node("scene", [
+        heading("INT. X - DAY"),
+        node("action", [t("sottovoce")]),
+      ]),
+    ]);
+    const state = stateAtBlock(doc, [0, 1], 0);
+    const { ok, state: next } = runCommand(state, setElement("parenthetical"));
+    expect(ok).toBe(true);
+    const parenthetical = next.doc.firstChild!.child(1);
+    expect(parenthetical.type.name).toBe("parenthetical");
+    expect(parenthetical.textContent).toBe("sottovoce");
+  });
 });
 
 // ─── Inline marks (⌘B / ⌘I / ⌘U) ───────────────────────────────────────────
