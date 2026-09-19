@@ -1,3 +1,10 @@
+## [1.1.0-beta.19](https://github.com/valerionarcisi/oh-writers/compare/v1.1.0-beta.18...v1.1.0-beta.19) (2026-09-19)
+
+### Bug Fixes
+
+* add missing FADE TO BLACK. to canonical transitions list ([3fc7808](https://github.com/valerionarcisi/oh-writers/commit/3fc7808f31724c48a455433a690edc928733b62c))
+* Cmd/Ctrl+S routes through the same save mutation as autosave ([b4a495a](https://github.com/valerionarcisi/oh-writers/commit/b4a495a1ec2e968dbae02305004ca754db9d768d))
+
 ## [1.1.0-beta.18](https://github.com/valerionarcisi/oh-writers/compare/v1.1.0-beta.17...v1.1.0-beta.18) (2026-09-19)
 
 ### Bug Fixes
