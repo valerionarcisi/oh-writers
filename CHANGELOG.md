@@ -1,3 +1,9 @@
+## [1.1.0-beta.20](https://github.com/valerionarcisi/oh-writers/compare/v1.1.0-beta.19...v1.1.0-beta.20) (2026-09-19)
+
+### Bug Fixes
+
+* keep the writing-element toolbar visible in Focus mode ([dc3b816](https://github.com/valerionarcisi/oh-writers/commit/dc3b816a1ce41e016697af3e8814ae4376698b5a))
+
 ## [1.1.0-beta.19](https://github.com/valerionarcisi/oh-writers/compare/v1.1.0-beta.18...v1.1.0-beta.19) (2026-09-19)
 
 ### Bug Fixes
