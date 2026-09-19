@@ -53,6 +53,7 @@ export const FOUNTAIN_TRANSITIONS = [
   "FADE OUT.",
   "FADE OUT:",
   "FADE TO:",
+  "FADE TO BLACK.",
   "DISSOLVE TO:",
   "SMASH CUT TO:",
   "MATCH CUT TO:",
